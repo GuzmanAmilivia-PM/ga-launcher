@@ -38,11 +38,11 @@ Para instalarla con este &iacute;cono:<br>
 </div>
 </div>
 <script>
-// Solo redirige cuando corre INSTALADA como web app (pantalla de inicio).
-// En Safari normal se queda quieta para que puedas agregarla con el ícono GA.
-var standalone = (window.navigator.standalone === true) ||
-  (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-if (standalone) {
+// Solo redirige cuando corre INSTALADA desde la pantalla de inicio del iPhone.
+// navigator.standalone es true SOLO en ese caso (Safari normal, pestañas
+// privadas y visores embebidos de otras apps dan false) — así la portada
+// nunca te saca de la página mientras la estás instalando.
+if (window.navigator.standalone === true) {
   document.getElementById('howto').style.display = 'none';
   window.location.replace(document.querySelector('.btn').href);
 }
