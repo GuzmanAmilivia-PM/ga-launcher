@@ -94,6 +94,7 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .holdtable .sym { font-size: 16px; }
 .holdtable .desc { font-size: 12.5px; }
 .holdtable tr.hidden-row { display: none; }
+.daychg { display: block; font-size: 11.5px; font-weight: 700; margin-bottom: 1px; }
 .holdpct { color: var(--gold); font-weight: 700; font-size: 13px; }
 .morebtn { position: relative; z-index: 5; display: none; width: 100%; margin-top: 10px; padding: 9px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid var(--border); color: var(--muted); font-size: 11.5px; font-weight: 700; cursor: pointer; }
 @media (max-width: 560px) { .col-pct { display: none; } .holdtable { font-size: 13.5px; } .holdtable td, .holdtable th { padding: 9px 5px; } }
@@ -604,7 +605,7 @@ var tr = document.createElement('tr');
 tr.innerHTML = '<td><span class="sym">' + esc(h.symbol) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></td>' +
 '<td>' + esc(fmtNum(h.qty)) + '</td>' +
 '<td>' + esc(fmtNum(h.precioActual)) + '</td>' +
-'<td>' + fmt(h.valor) + '</td>' +
+'<td>' + daychgHtml(h) + fmt(h.valor) + '</td>' +
 '<td class="holdpct col-pct">' + (h.pct * 100).toFixed(1) + '%</td>';
 tr.className = 'asset-row';
 tr.onclick = function () { toggleDetalle(tr, h); };
@@ -871,6 +872,13 @@ function getFilteredDataPoints(serie) {
   document.getElementById('expandBtn').onclick = openChartModal;
   document.getElementById('chartModalClose').onclick = closeChartModal;
 
+// Variacion del dia de mercado (verde/rojo), estilo Binance
+function daychgHtml(p) {
+  if (p.cambioDia === null || p.cambioDia === undefined || p.cambioDia === '') return '';
+  var v = Number(p.cambioDia);
+  if (!isFinite(v)) return '';
+  return '<span class="daychg ' + (v >= 0 ? 'up' : 'down') + '">' + (v >= 0 ? '+' : '') + v.toFixed(2) + '%</span>';
+}
 // ---------- Detalle desplegable por activo + grafico TradingView ----------
 var detalleAbierto = null;
 function crearTvWidget(container, symbol) {
@@ -934,7 +942,7 @@ var pctDisplay = (h.pct * 100).toFixed(1) + '%';
 tr.innerHTML = '<td><span class="sym">' + esc(h.symbol) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></td>' +
 '<td>' + esc(fmtNum(h.qty)) + '</td>' +
 '<td>' + esc(fmtNum(h.precioActual)) + '</td>' +
-'<td>' + fmt(h.valor) + '</td>' +
+'<td>' + daychgHtml(h) + fmt(h.valor) + '</td>' +
 '<td class="holdpct col-pct">' + pctDisplay + '</td>';
 tr.className += ' asset-row';
 tr.onclick = function () { toggleDetalle(tr, h); };
