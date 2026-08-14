@@ -33,12 +33,35 @@ body { font-family: 'Manrope', -apple-system, "Segoe UI", Roboto, Arial, sans-se
 .galogo-sm:active { opacity: .75; }
 
 /* --- Drawer (menú hamburguesa) --- */
-.drawerback { position: fixed; inset: 0; background: rgba(4,7,14,.6); z-index: 70; display: none; }
-.drawerback.open { display: block; }
-.drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 250px; max-width: 80vw; background: var(--navy); border-right: 1px solid var(--border); z-index: 71; transform: translateX(-102%); transition: transform .22s ease; padding: 18px 12px calc(18px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; }
-.drawer.open { transform: translateX(0); }
-.drawer-top { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px 16px; }
-.drawer-title { font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--gold); }
+.menupanel { position: fixed; inset: 0; z-index: 80; background: var(--navy); transform: translateX(-103%); transition: transform .25s ease; overflow-y: auto; padding: calc(8px + env(safe-area-inset-top, 0px)) 18px calc(22px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; }
+.menupanel.open { transform: translateX(0); }
+.menu-top { padding: 6px 0 2px; }
+.menu-back { background: none; border: none; color: var(--text); font-size: 23px; padding: 6px 12px 6px 0; cursor: pointer; line-height: 1; }
+.menu-profile { display: flex; align-items: center; gap: 14px; padding: 10px 2px 24px; }
+.menu-avatar { width: 58px; height: 58px; border-radius: 16px; flex: none; }
+.menu-name { font-size: 19px; font-weight: 800; margin: 0 0 7px; }
+.menu-badges { display: flex; gap: 6px; }
+.mbadge { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 6px; background: rgba(255,255,255,.06); color: var(--muted); }
+.mbadge.gold { color: var(--gold); background: rgba(212,175,55,.14); }
+.mbadge.green { color: var(--green); background: rgba(34,197,94,.13); }
+.menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 6px; padding: 2px 0 14px; }
+.mtile { display: flex; flex-direction: column; align-items: center; gap: 9px; background: none; border: none; color: var(--text); font-family: inherit; font-size: 11.5px; font-weight: 600; padding: 6px 2px; cursor: pointer; text-decoration: none; text-align: center; }
+.mtile-ic { width: 48px; height: 48px; border-radius: 15px; background: var(--navy2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+.mtile:active .mtile-ic { background: var(--navy3); }
+.mtile-ic svg { width: 22px; height: 22px; fill: none; stroke: var(--gold); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.menu-banner { margin-top: auto; display: flex; align-items: center; gap: 12px; background: var(--navy2); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; font-size: 13.5px; color: var(--muted); }
+.menu-banner b { color: var(--text); font-weight: 800; }
+.menu-banner .mb-logo { width: 28px; height: 28px; border-radius: 8px; flex: none; }
+.menu-banner .mb-go { margin-left: auto; color: var(--muted); font-size: 19px; }
+.ia-meta { font-size: 11px; color: var(--muted); margin: -6px 0 12px; }
+.ia-p { font-size: 13.5px; line-height: 1.55; color: var(--text); margin: 0 0 12px; }
+.ia-h { font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; margin: 16px 0 6px; color: var(--text); font-weight: 700; }
+.ia-h.pos { color: var(--green); }
+.ia-h.neg { color: var(--red); }
+.ia-ul { margin: 0 0 4px; padding-left: 18px; font-size: 13px; line-height: 1.5; color: var(--text); }
+.ia-ul li { margin-bottom: 5px; }
+.ia-coment { font-size: 11.5px; color: var(--muted); }
+.ia-nota { font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 10px; margin-top: 16px; line-height: 1.5; }
 .closebtn { background: transparent; border: none; color: var(--muted); font-size: 22px; cursor: pointer; line-height: 1; padding: 4px; }
 .navbtn { display: block; width: 100%; text-align: left; padding: 13px 12px; border-radius: 10px; background: transparent; color: var(--text); font-size: 14px; font-weight: 600; border: none; cursor: pointer; margin-bottom: 4px; white-space: nowrap; font-family: inherit; text-decoration: none; }
 .navbtn:active { background: var(--navy3); }
@@ -185,7 +208,8 @@ html.light .detrow td { background: rgba(20,40,80,.035); }
 html.light #splash, html.light #lock { background: linear-gradient(180deg,#f7f9fd,#e9edf5); }
 html.light #lock input { background: #fff; }
 html.light .chartmodal { background: rgba(235,240,248,.92); }
-html.light .drawerback { background: rgba(30,45,70,.35); }
+html.light .mtile-ic { background: #fff; }
+html.light .mbadge { background: rgba(20,40,80,.07); }
 html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,144,31,.4); }
 .nbicon { width: 18px; height: 18px; vertical-align: -4px; margin-right: 8px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .platrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14.5px; font-weight: 600; }
@@ -214,13 +238,25 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div class="splash-from">From GA platforms</div>
 </div>
 
-<div class="drawerback" id="drawerBack"></div>
-<aside class="drawer" id="drawer">
-<div class="drawer-top"><span class="drawer-title">Men&uacute;</span><button class="closebtn" id="drawerClose">&times;</button></div>
-<button class="navbtn" id="mRefrescar">&#8635; Refrescar precios</button>
-<a class="navbtn" href="https://docs.google.com/spreadsheets/d/145R-cxu6zK6o7A1ht2R8mNypEacmeSmQQzzDPwy5tjg/edit" target="_blank" rel="noopener"><svg class="nbicon" viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-13"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></svg>Data base</a>
-<button class="navbtn" id="mConfig"><svg class="nbicon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.5-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4L9.6 5A7.6 7.6 0 0 0 7 6.5l-2.4-1-2 3.5 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.5 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.5z"/></svg>Configuraci&oacute;n</button>
-</aside>
+<div class="menupanel" id="menuPanel">
+<div class="menu-top"><button class="menu-back" id="menuBack" aria-label="Cerrar men&uacute;">&larr;</button></div>
+<div class="menu-profile">
+<span class="menu-avatar galogo-img"></span>
+<div>
+<p class="menu-name">GA Portfolio</p>
+<div class="menu-badges"><span class="mbadge gold">v50</span><span class="mbadge green">&#10003; Sincronizado</span></div>
+</div>
+</div>
+<div class="menu-grid">
+<button class="mtile" id="mIA"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M12 3.5 13.8 9 19.5 11 13.8 13 12 18.5 10.2 13 4.5 11 10.2 9z"/><path d="M18.5 16.5 19.2 18.6 21.3 19.3 19.2 20 18.5 22.1 17.8 20 15.7 19.3 17.8 18.6z"/></svg></span>IA Insights</button>
+<button class="mtile" id="mRefrescar"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.7 3.5v3.8h-3.8"/></svg></span><span id="mRefrescarTxt">Refrescar precios</span></button>
+<a class="mtile" href="https://docs.google.com/spreadsheets/d/145R-cxu6zK6o7A1ht2R8mNypEacmeSmQQzzDPwy5tjg/edit" target="_blank" rel="noopener"><span class="mtile-ic"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-13"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></svg></span>Data base</a>
+<button class="mtile" id="mConfig"><span class="mtile-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.5-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4L9.6 5A7.6 7.6 0 0 0 7 6.5l-2.4-1-2 3.5 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.5 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.5z"/></svg></span>Configuraci&oacute;n</button>
+<button class="mtile" id="mSeguridad"><span class="mtile-ic"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg></span>Seguridad</button>
+<button class="mtile" id="mTrans"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M6 3.5h12V20.5l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9 8.5h6M9 12h6M9 15.5h4"/></svg></span>Transacciones</button>
+</div>
+<div class="menu-banner"><span class="mb-logo galogo-img"></span><span><b>GA</b> platforms</span><span class="mb-go">&rsaquo;</span></div>
+</div>
 
 <div class="mainarea">
 
@@ -351,6 +387,16 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <h2>Seguridad</h2>
 <p class="newsempty">Pr&oacute;ximamente: cambio de clave, bloqueo con Face ID y m&aacute;s.</p>
 </div>
+<div class="card">
+<h2>IA Insights</h2>
+<p class="newsempty" id="iaEstadoTxt">Comprobando configuraci&oacute;n...</p>
+<div class="tradeform" style="margin-top:10px">
+<label for="iaKey">Clave de la API de Anthropic</label>
+<input id="iaKey" type="password" autocomplete="off" placeholder="sk-ant-...">
+<button class="bigbtn" id="iaKeyGuardar">Guardar clave</button>
+<div id="iaKeyResultado"></div>
+</div>
+</div>
 </div>
 
 <!-- ============ TRADE ============ -->
@@ -390,6 +436,23 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <p class="viewtitle">Noticias</p>
 <p class="subtotal" style="margin:-8px 0 14px">Titulares de medios financieros serios sobre tus posiciones m&aacute;s grandes</p>
 <div id="noticiasBody"><p class="loadingtxt">Cargando...</p></div>
+</div>
+
+<!-- ============ IA INSIGHTS ============ -->
+<div id="view-ia" style="display:none">
+<span class="backlink" id="iaBack">&larr; Volver</span>
+<p class="viewtitle">IA Insights</p>
+<p class="subtotal" style="margin:-8px 0 14px">An&aacute;lisis informativo generado con Claude &middot; no es asesoramiento financiero</p>
+<div class="card" id="iaKeyAviso" style="display:none">
+<h2>Falta un paso</h2>
+<p class="newsempty">Para usar IA Insights ten&eacute;s que cargar tu clave de Anthropic en Configuraci&oacute;n.</p>
+<button class="ghostbtn" id="iaIrConfig">Ir a Configuraci&oacute;n</button>
+</div>
+<div class="card">
+<h2>Eleg&iacute; un activo para analizar</h2>
+<div id="iaList"><p class="loadingtxt">Cargando...</p></div>
+</div>
+<div id="iaResultado"></div>
 </div>
 
 </div>
@@ -441,7 +504,7 @@ function apiCall(fn, args) {
 }
 // Shim compatible con google.script.run: el resto del codigo no cambia.
 (function () {
-  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getTransacciones: 'transacciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar' };
+  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getTransacciones: 'transacciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar', estadoIA: 'ia_estado', guardarClaveIA: 'ia_config', analizarConIA: 'ia_analizar' };
   function mk(ok, fail) {
     var o = {
       withSuccessHandler: function (f) { return mk(f, fail); },
@@ -536,30 +599,32 @@ if (n === null || n === undefined) return '';
 return n >= 0 ? 'up' : 'down';
 }
 
-// ---------- Menú hamburguesa ----------
-function toggleDrawer(open) {
-document.getElementById('drawer').classList.toggle('open', open);
-document.getElementById('drawerBack').classList.toggle('open', open);
+// ---------- Panel de menú (se abre con el logo) ----------
+function toggleMenu(open) {
+document.getElementById('menuPanel').classList.toggle('open', open);
 }
-document.getElementById('logoBtn').onclick = function () { toggleDrawer(true); };
-document.getElementById('drawerClose').onclick = function () { toggleDrawer(false); };
-document.getElementById('drawerBack').onclick = function () { toggleDrawer(false); };
+document.getElementById('logoBtn').onclick = function () { toggleMenu(true); };
+document.getElementById('menuBack').onclick = function () { toggleMenu(false); };
+document.getElementById('mIA').onclick = function () { toggleMenu(false); setView('ia'); };
+document.getElementById('mConfig').onclick = function () { toggleMenu(false); setView('config'); };
+document.getElementById('mSeguridad').onclick = function () { toggleMenu(false); setView('config'); };
+document.getElementById('mTrans').onclick = function () { toggleMenu(false); setView('trade'); };
 document.getElementById('mRefrescar').onclick = function () {
-var btn = this;
+var btn = this, txt = document.getElementById('mRefrescarTxt');
 if (btn._busy) return;
 btn._busy = true;
-btn.textContent = 'Refrescando precios...';
+txt.textContent = 'Refrescando...';
 google.script.run.withSuccessHandler(function () {
-btn._busy = false; btn.innerHTML = '&#8635; Refrescar precios';
-toggleDrawer(false);
+btn._busy = false; txt.textContent = 'Refrescar precios';
+toggleMenu(false);
 loadData();
 }).withFailureHandler(function (err) {
-btn._busy = false; btn.textContent = 'Error: ' + err.message;
+btn._busy = false; txt.textContent = 'Error al refrescar';
 }).refrescarPrecios();
 };
 
 // ---------- Navegación (barra inferior) ----------
-var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'config'];
+var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'config', 'ia'];
 function setView(name) {
 VIEWS.forEach(function (v) {
 var el = document.getElementById('view-' + v);
@@ -570,7 +635,8 @@ document.querySelectorAll('.navtab').forEach(function (b) {
 b.classList.toggle('active', b.getAttribute('data-view') === navName);
 });
 if (name === 'portafolio') renderPortafolio();
-if (name === 'config') cargarPlataformas();
+if (name === 'config') { cargarPlataformas(); cargarEstadoIA(); }
+if (name === 'ia') prepararIA();
 if (name === 'noticias' && !noticiasCargadas) {
 noticiasCargadas = true;
 google.script.run.withSuccessHandler(renderNoticias).getNoticias();
@@ -1158,8 +1224,90 @@ platsMsg(esc(((res && res.mensajes) || ['Error']).join(' ')), false);
 }).withFailureHandler(function (err) { btn.disabled = false; platsMsg('Error: ' + esc(err.message), false); });
 if (esNueva) runner.agregarPlataforma(payload); else runner.editarPlataforma(payload);
 };
-document.getElementById('mConfig').onclick = function () { toggleDrawer(false); setView('config'); };
 document.getElementById('cfgBack').onclick = function () { setView('inicio'); };
+
+// ---------- IA Insights ----------
+var iaConfigurada = null, iaCargando = false;
+function cargarEstadoIA() {
+google.script.run.withSuccessHandler(function (st) {
+iaConfigurada = !!(st && st.configurada);
+var t = document.getElementById('iaEstadoTxt');
+if (t) t.innerHTML = iaConfigurada
+? '&#10003; Clave configurada. Los an&aacute;lisis se generan con Claude (claude-opus-5) y se guardan 6 horas.'
+: 'Sin configurar. Cre&aacute; una clave de API en <b>console.anthropic.com</b> y pegala ac&aacute;. Se guarda en tu Apps Script privado, nunca en esta p&aacute;gina.';
+var aviso = document.getElementById('iaKeyAviso');
+if (aviso) aviso.style.display = iaConfigurada ? 'none' : '';
+}).withFailureHandler(function () {}).estadoIA();
+}
+document.getElementById('iaKeyGuardar').onclick = function () {
+var btn = this, inp = document.getElementById('iaKey'), res = document.getElementById('iaKeyResultado');
+btn.disabled = true;
+google.script.run.withSuccessHandler(function (r) {
+btn.disabled = false;
+if (r && r.ok) { inp.value = ''; res.innerHTML = '<div class="tmsg ok">&#10003; Clave guardada.</div>'; cargarEstadoIA(); }
+else { res.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</div>'; }
+}).withFailureHandler(function (err) {
+btn.disabled = false;
+res.innerHTML = '<div class="tmsg err">Error: ' + esc(err.message) + '</div>';
+}).guardarClaveIA({ apiKey: inp.value });
+};
+document.getElementById('iaIrConfig').onclick = function () { setView('config'); };
+document.getElementById('iaBack').onclick = function () { setView('inicio'); };
+function prepararIA() {
+if (iaConfigurada === null) cargarEstadoIA();
+else document.getElementById('iaKeyAviso').style.display = iaConfigurada ? 'none' : '';
+var el = document.getElementById('iaList');
+el.innerHTML = '';
+var lista = ((lastData && lastData.posiciones) || []).filter(function (p) { return p.symbol !== 'USDT'; });
+if (!lista.length) { el.innerHTML = '<p class="newsempty">Todav&iacute;a no hay posiciones cargadas.</p>'; return; }
+lista.forEach(function (p) {
+var row = document.createElement('div');
+row.className = 'row clickable';
+row.innerHTML = '<span><span class="sym">' + esc(p.symbol) + '</span><span class="desc">' + esc(p.nombre || '') + '</span></span><span class="chev">&rsaquo;</span>';
+row.onclick = function () { analizarIA(p.symbol, false); };
+el.appendChild(row);
+});
+}
+function analizarIA(symbol, forzar) {
+if (iaCargando) return;
+iaCargando = true;
+var out = document.getElementById('iaResultado');
+out.innerHTML = '<div class="card"><h2>' + esc(symbol) + '</h2><p class="loadingtxt">Claude est&aacute; analizando ' + esc(symbol) + '... puede tardar hasta un minuto.</p></div>';
+out.scrollIntoView({ behavior: 'smooth', block: 'start' });
+google.script.run.withSuccessHandler(function (r) {
+iaCargando = false;
+if (!r || !r.ok) {
+if (r && r.sinClave) { iaConfigurada = false; out.innerHTML = ''; document.getElementById('iaKeyAviso').style.display = ''; window.scrollTo(0, 0); return; }
+out.innerHTML = '<div class="card"><h2>' + esc(symbol) + '</h2><p class="newsempty">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</p></div>';
+return;
+}
+out.innerHTML = fichaIAHtml(r);
+var btn = document.getElementById('iaRegen');
+if (btn) btn.onclick = function () { analizarIA(symbol, true); };
+}).withFailureHandler(function (err) {
+iaCargando = false;
+out.innerHTML = '<div class="card"><h2>' + esc(symbol) + '</h2><p class="newsempty">Error: ' + esc(err.message) + '</p></div>';
+}).analizarConIA({ symbol: symbol, forzar: !!forzar });
+}
+function fichaIAHtml(r) {
+var a = r.analisis || {};
+var h = '<div class="card"><h2>' + esc(r.symbol) + ' &middot; ficha IA</h2>';
+h += '<p class="ia-meta">Generado ' + esc(r.generado || '') + ' hs &middot; ' + esc(r.modelo || '') + '</p>';
+if (a.resumen) h += '<p class="ia-p">' + esc(a.resumen) + '</p>';
+if (a.indicadores && a.indicadores.length) {
+h += '<div style="overflow-x:auto"><table class="holdtable"><thead><tr><th>Indicador</th><th>Valor</th><th>Lectura</th></tr></thead><tbody>';
+a.indicadores.forEach(function (i) {
+h += '<tr><td>' + esc(i.nombre) + '</td><td><b>' + esc(i.valor) + '</b></td><td class="ia-coment">' + esc(i.comentario) + '</td></tr>';
+});
+h += '</tbody></table></div>';
+}
+if (a.fortalezas && a.fortalezas.length) h += '<h3 class="ia-h pos">Fortalezas</h3><ul class="ia-ul">' + a.fortalezas.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>';
+if (a.riesgos && a.riesgos.length) h += '<h3 class="ia-h neg">Riesgos</h3><ul class="ia-ul">' + a.riesgos.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>';
+if (a.proyeccion) h += '<h3 class="ia-h">Proyecci&oacute;n de crecimiento</h3><p class="ia-p">' + esc(a.proyeccion) + '</p>';
+h += '<p class="ia-nota">' + esc((a.nota ? a.nota + ' ' : '')) + 'Contenido informativo generado por IA: no es una recomendaci&oacute;n de compra o venta ni asesoramiento financiero.</p>';
+h += '<button class="ghostbtn" id="iaRegen">Actualizar an&aacute;lisis</button></div>';
+return h;
+}
 
 // ---------- Ojito de privacidad ----------
 document.getElementById('eyeBtn').onclick = function () {
