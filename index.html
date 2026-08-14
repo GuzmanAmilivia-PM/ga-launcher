@@ -289,7 +289,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <p class="total" id="total">&mdash;</p>
 </div>
 <div class="liqblock">
-<p class="lbl" style="justify-content:flex-end">Liquidez</p>
+<p class="lbl" style="justify-content:flex-end">Cash</p>
 <p class="liqval" id="liquidezVal">&mdash;</p>
 <p class="liqpct" id="liquidezPct">&mdash;</p>
 </div>
@@ -351,14 +351,14 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <!-- ============ LIQUIDEZ (depositar / retirar) ============ -->
 <div id="view-cash" style="display:none">
 <p class="viewtitle">Banking</p>
-<p class="lbl">Liquidez total</p>
+<p class="lbl">Cash total</p>
 <p class="total" id="cashTotal" style="font-size:clamp(24px,7vw,34px)">&mdash;</p>
 <div class="cashbtns">
 <button class="pillbtn ghost" id="btnRetirar">Retirar</button>
 <button class="pillbtn goldpill" id="btnDepositar">Depositar</button>
 </div>
 <div class="card tradeform" id="cashPanel" style="display:none;margin-top:14px">
-<h2 id="cashTitle">Depositar liquidez</h2>
+<h2 id="cashTitle">Depositar cash</h2>
 <label for="cashCuenta">Cuenta</label>
 <select id="cashCuenta"></select>
 <label for="cashMonto">Monto (USD)</label>
@@ -368,7 +368,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div id="cashResultado"></div>
 </div>
 <div class="card" style="margin-top:16px">
-<h2>Liquidez por cuenta</h2>
+<h2>Cash por cuenta</h2>
 <div id="cashList"></div>
 </div>
 </div>
@@ -393,7 +393,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <input id="pNombre" autocomplete="off" placeholder="Nombre de la plataforma">
 <label for="pValor">Valor (USD)</label>
 <input id="pValor" type="number" inputmode="decimal" step="any" min="0" placeholder="0">
-<label for="pLiquido">L&iacute;quido (USD) &middot; dejalo vac&iacute;o si toda la cuenta es l&iacute;quida</label>
+<label for="pLiquido">Cash (USD) &middot; dejalo vac&iacute;o si toda la cuenta es cash</label>
 <input id="pLiquido" type="number" inputmode="decimal" step="any" min="0" placeholder="">
 <button class="bigbtn" id="platGuardar">Guardar</button>
 <button class="ghostbtn" id="platCancelar">Cancelar</button>
@@ -707,7 +707,7 @@ document.getElementById('accBack').onclick = function () { setView(accountReturn
 function renderAccount(acc, data) {
 lastAcc = acc; lastAccData = data;
 document.getElementById('accTotal').textContent = fmt(data.total);
-document.getElementById('accLiq').textContent = 'Liquidez en la cuenta: ' + fmt(data.liquidez);
+document.getElementById('accLiq').textContent = 'Cash en la cuenta: ' + fmt(data.liquidez);
 var body = document.getElementById('accBody');
 body.innerHTML = '';
 data.posiciones.forEach(function (p) {
@@ -1154,7 +1154,7 @@ else { btn.style.display = 'none'; }
 var cashTipo = 'deposito';
 function abrirCashPanel(tipo) {
 cashTipo = tipo;
-document.getElementById('cashTitle').textContent = (tipo === 'deposito' ? 'Depositar' : 'Retirar') + ' liquidez';
+document.getElementById('cashTitle').textContent = (tipo === 'deposito' ? 'Depositar' : 'Retirar') + ' cash';
 document.getElementById('cashResultado').innerHTML = '';
 var panel = document.getElementById('cashPanel');
 panel.style.display = '';
