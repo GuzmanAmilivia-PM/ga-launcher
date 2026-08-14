@@ -183,6 +183,8 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .newsmeta { color: var(--muted); font-size: 12px; margin-top: 4px; }
 .newsmeta .src { color: var(--gold); font-weight: 700; }
 .newssym { font-size: 12px; color: var(--gold); font-weight: 700; text-transform: uppercase; margin-bottom: 4px; display: block; }
+.newsmove { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 9px 0 2px; font-size: 13.5px; }
+.newsmove + .newsitem { border-top: none; }
 .newsempty { color: var(--muted); font-size: 12px; }
 .loadingtxt { color: var(--muted); font-size: 13px; padding: 12px 0; }
 
@@ -914,27 +916,57 @@ if (diffH < 1) return 'hace un momento';
 if (diffH < 24) return 'hace ' + diffH + 'h';
 return 'hace ' + Math.round(diffH / 24) + 'd';
 }
-function renderNoticias(lista) {
+function newsItemsHtml(noticias) {
+var html = '';
+(noticias || []).forEach(function (n) {
+html += '<div class="newsitem"><a href="' + esc(safeUrl(n.link)) + '" target="_blank" rel="noopener">' + esc(n.titulo) + '</a>' +
+'<div class="newsmeta"><span class="src">' + esc(n.fuente || '') + '</span>' + (n.fuente && n.fecha ? ' · ' : '') + timeAgo(n.fecha) + '</div></div>';
+});
+return html;
+}
+function renderNoticias(data) {
 var body = document.getElementById('noticiasBody');
 body.innerHTML = '';
-if (!lista || !lista.length) {
+if (!data || (Array.isArray(data) && !data.length)) {
 body.innerHTML = '<p class="newsempty">No se encontraron noticias por ahora.</p>';
 return;
 }
-lista.forEach(function (item) {
+// Compatibilidad: el backend viejo devuelve un array plano por empresa.
+if (Array.isArray(data)) data = { bruscos: [], mercado: [], empresas: data };
+
+// 1) Movimientos bruscos (±3% o más en 24h), siempre arriba.
 var card = document.createElement('div');
 card.className = 'card';
-var html = '<span class="newssym">' + esc(item.symbol) + (item.nombre ? ' — ' + esc(item.nombre) : '') + '</span>';
-if (!item.noticias || !item.noticias.length) {
-html += '<p class="newsempty">Sin noticias de medios serios por ahora.</p>';
+var html = '<span class="newssym">Movimientos bruscos (24h)</span>';
+if (!data.bruscos || !data.bruscos.length) {
+html += '<p class="newsempty">Ninguna posición se movió &plusmn;3% en las últimas 24hs.</p>';
 } else {
-item.noticias.forEach(function (n) {
-html += '<div class="newsitem"><a href="' + esc(safeUrl(n.link)) + '" target="_blank" rel="noopener">' + esc(n.titulo) + '</a>' +
-'<div class="newsmeta"><span class="src">' + esc(n.fuente || '') + '</span>' + (n.fuente && n.fecha ? ' · ' : '') + timeAgo(n.fecha) + '</div></div>';
+data.bruscos.forEach(function (b) {
+var up = Number(b.cambio) >= 0;
+html += '<div class="newsmove"><span><b>' + esc(b.symbol) + '</b>' + (b.nombre ? ' — ' + esc(b.nombre) : '') + '</span>' +
+'<span class="' + (up ? 'up' : 'down') + '">' + (up ? '+' : '') + Number(b.cambio).toFixed(2) + '%</span></div>' +
+newsItemsHtml(b.noticias);
 });
 }
 card.innerHTML = html;
 body.appendChild(card);
+
+// 2) Mercado USA (S&P 500 / Nasdaq).
+card = document.createElement('div');
+card.className = 'card';
+html = '<span class="newssym">Mercado USA — S&amp;P 500 &middot; Nasdaq</span>';
+html += (data.mercado && data.mercado.length) ? newsItemsHtml(data.mercado) : '<p class="newsempty">Sin noticias de medios serios por ahora.</p>';
+card.innerHTML = html;
+body.appendChild(card);
+
+// 3) Noticias por empresa (sin ETFs).
+(data.empresas || []).forEach(function (item) {
+var c = document.createElement('div');
+c.className = 'card';
+var h = '<span class="newssym">' + esc(item.symbol) + (item.nombre ? ' — ' + esc(item.nombre) : '') + '</span>';
+h += (item.noticias && item.noticias.length) ? newsItemsHtml(item.noticias) : '<p class="newsempty">Sin noticias de medios serios por ahora.</p>';
+c.innerHTML = h;
+body.appendChild(c);
 });
 }
 
