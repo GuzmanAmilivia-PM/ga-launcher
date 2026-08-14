@@ -205,8 +205,8 @@ html.light .rangebtn, html.light .morebtn, html.light .tipobtn { background: rgb
 html.light .rangebtn.active { background: var(--gold); color: #fff; border-color: var(--gold); }
 html.light .tradeform input, html.light .tradeform select { background: #fff; border-color: rgba(20,40,80,.18); }
 html.light .detrow td { background: rgba(20,40,80,.035); }
-html.light #splash, html.light #lock { background: linear-gradient(180deg,#f7f9fd,#e9edf5); }
-html.light #lock input { background: #fff; }
+html.light #splash, html.light #lock, html.light #seclock { background: linear-gradient(180deg,#f7f9fd,#e9edf5); }
+html.light #lock input, html.light #seclock input { background: #fff; }
 html.light .chartmodal { background: rgba(235,240,248,.92); }
 html.light .mtile-ic { background: #fff; }
 html.light .mbadge { background: rgba(20,40,80,.07); }
@@ -218,6 +218,8 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 .platbtns { white-space: nowrap; }
 .platbtns button { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; margin-left: 6px; font-family: inherit; font-weight: 700; }
 #lock{position:fixed;inset:0;z-index:9998;background:radial-gradient(circle at top left,#10192b,#080d16 60%);display:none;align-items:flex-start;justify-content:center;padding:calc(14vh + env(safe-area-inset-top,0px)) 24px 24px;overflow-y:auto;}#lock .inner{max-width:320px;width:100%;text-align:center;}#lock input{width:100%;padding:14px;border-radius:13px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-size:16px;font-family:inherit;text-align:center;outline:none;margin:18px 0 10px;}#lock input:focus{border-color:var(--gold);}#lock .err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px;}
+#seclock{position:fixed;inset:0;z-index:9997;background:radial-gradient(circle at top left,#10192b,#080d16 60%);display:none;align-items:flex-start;justify-content:center;padding:calc(14vh + env(safe-area-inset-top,0px)) 24px 24px;overflow-y:auto;}#seclock .inner{max-width:320px;width:100%;text-align:center;}#seclock input{width:100%;padding:14px;border-radius:13px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-size:16px;font-family:inherit;text-align:center;outline:none;margin:18px 0 10px;}#seclock input:focus{border-color:var(--gold);}#seclock .err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px;}
+.seclink{color:var(--muted);font-size:12.5px;text-decoration:underline;cursor:pointer;margin-top:18px;}
 #splash{position:fixed;inset:0;z-index:9999;background:radial-gradient(circle at top left,#10192b,#080d16 60%);display:flex;align-items:center;justify-content:center;transition:opacity .5s ease;}.splash-inner{transform:translateY(-6vh);}.splash-from{position:absolute;left:0;right:0;bottom:calc(26px + env(safe-area-inset-bottom,0px));text-align:center;font-size:12px;font-weight:600;letter-spacing:.08em;color:#90a0b8;opacity:.8;}#splash.hide{opacity:0;pointer-events:none;}.splash-inner{text-align:center;}
 .splash-sub{font-size:15px;font-weight:600;letter-spacing:.05em;color:var(--muted);margin-top:4px;}
 </style>
@@ -238,13 +240,26 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div class="splash-from">From GA platforms</div>
 </div>
 
+<div id="seclock"><div class="inner">
+<div class="galogo-big galogo-img" aria-label="GA"></div>
+<p class="viewtitle" style="margin:0">GA Portfolio</p>
+<p class="subtotal">App bloqueada</p>
+<button class="bigbtn" id="secBioGo" style="display:none;margin-top:20px">Desbloquear</button>
+<div id="secPinWrap" style="display:none">
+<input id="secPinInput" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="Clave">
+<button class="bigbtn" id="secPinGo">Entrar</button>
+</div>
+<p class="err" id="secErr"></p>
+<p class="seclink" id="secOlvide" style="display:none">Olvid&eacute; mi clave</p>
+</div></div>
+
 <div class="menupanel" id="menuPanel">
 <div class="menu-top"><button class="menu-back" id="menuBack" aria-label="Cerrar men&uacute;">&larr;</button></div>
 <div class="menu-profile">
 <span class="menu-avatar galogo-img"></span>
 <div>
 <p class="menu-name">GA Portfolio</p>
-<div class="menu-badges"><span class="mbadge gold">v50</span><span class="mbadge green">&#10003; Sincronizado</span></div>
+<div class="menu-badges"><span class="mbadge gold">v51</span><span class="mbadge green">&#10003; Sincronizado</span></div>
 </div>
 </div>
 <div class="menu-grid">
@@ -384,10 +399,6 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div id="platResultado"></div>
 </div>
 <div class="card">
-<h2>Seguridad</h2>
-<p class="newsempty">Pr&oacute;ximamente: cambio de clave, bloqueo con Face ID y m&aacute;s.</p>
-</div>
-<div class="card">
 <h2>IA Insights</h2>
 <p class="newsempty" id="iaEstadoTxt">Comprobando configuraci&oacute;n...</p>
 <div class="tradeform" style="margin-top:10px">
@@ -453,6 +464,33 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div id="iaList"><p class="loadingtxt">Cargando...</p></div>
 </div>
 <div id="iaResultado"></div>
+</div>
+
+<!-- ============ SEGURIDAD ============ -->
+<div id="view-seguridad" style="display:none">
+<span class="backlink" id="segBack">&larr; Volver</span>
+<p class="viewtitle">Seguridad</p>
+<p class="subtotal" style="margin:-8px 0 14px">Bloqueo al abrir la app en este dispositivo</p>
+<div class="card">
+<h2>Estado</h2>
+<p class="newsempty" id="segEstado">...</p>
+</div>
+<div class="card">
+<h2>Biometr&iacute;a</h2>
+<p class="newsempty">Face ID, Touch ID o huella, seg&uacute;n el dispositivo.</p>
+<button class="bigbtn" id="segBioBtn" style="margin-top:12px">Activar biometr&iacute;a</button>
+<div id="segBioMsg"></div>
+</div>
+<div class="card tradeform">
+<h2>Clave num&eacute;rica</h2>
+<label for="segPin1">Nueva clave (4 a 8 d&iacute;gitos)</label>
+<input id="segPin1" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="&bull;&bull;&bull;&bull;">
+<label for="segPin2">Repetila</label>
+<input id="segPin2" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="&bull;&bull;&bull;&bull;">
+<button class="bigbtn" id="segPinBtn">Guardar clave</button>
+<button class="ghostbtn" id="segPinQuitar" style="display:none">Quitar clave</button>
+<div id="segPinMsg"></div>
+</div>
 </div>
 
 </div>
@@ -607,7 +645,7 @@ document.getElementById('logoBtn').onclick = function () { toggleMenu(true); };
 document.getElementById('menuBack').onclick = function () { toggleMenu(false); };
 document.getElementById('mIA').onclick = function () { toggleMenu(false); setView('ia'); };
 document.getElementById('mConfig').onclick = function () { toggleMenu(false); setView('config'); };
-document.getElementById('mSeguridad').onclick = function () { toggleMenu(false); setView('config'); };
+document.getElementById('mSeguridad').onclick = function () { toggleMenu(false); setView('seguridad'); };
 document.getElementById('mTrans').onclick = function () { toggleMenu(false); setView('trade'); };
 document.getElementById('mRefrescar').onclick = function () {
 var btn = this, txt = document.getElementById('mRefrescarTxt');
@@ -624,7 +662,7 @@ btn._busy = false; txt.textContent = 'Error al refrescar';
 };
 
 // ---------- Navegación (barra inferior) ----------
-var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'config', 'ia'];
+var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'config', 'ia', 'seguridad'];
 function setView(name) {
 VIEWS.forEach(function (v) {
 var el = document.getElementById('view-' + v);
@@ -637,6 +675,7 @@ b.classList.toggle('active', b.getAttribute('data-view') === navName);
 if (name === 'portafolio') renderPortafolio();
 if (name === 'config') { cargarPlataformas(); cargarEstadoIA(); }
 if (name === 'ia') prepararIA();
+if (name === 'seguridad') prepararSeguridad();
 if (name === 'noticias' && !noticiasCargadas) {
 noticiasCargadas = true;
 google.script.run.withSuccessHandler(renderNoticias).getNoticias();
@@ -1308,6 +1347,130 @@ h += '<p class="ia-nota">' + esc((a.nota ? a.nota + ' ' : '')) + 'Contenido info
 h += '<button class="ghostbtn" id="iaRegen">Actualizar an&aacute;lisis</button></div>';
 return h;
 }
+
+// ---------- Seguridad (bloqueo local: biometría y/o clave) ----------
+// La clave se guarda como hash SHA-256 y la biometría como credencial WebAuthn
+// del dispositivo (Face ID / huella). Es un bloqueo de acceso local en este
+// dispositivo; los datos siguen protegidos por la clave de la API.
+function secLeer() { try { return JSON.parse(localStorage.getItem('ga_sec') || '{}'); } catch (e) { return {}; } }
+function secGuardar(s) { try { localStorage.setItem('ga_sec', JSON.stringify(s)); } catch (e) {} }
+function b64u(buf) { var a = new Uint8Array(buf), s = ''; for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function b64uBytes(b) { b = b.replace(/-/g, '+').replace(/_/g, '/'); var s = atob(b), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
+function hashPin(pin) { return crypto.subtle.digest('SHA-256', new TextEncoder().encode('ga-sec|' + pin)).then(b64u); }
+function bioDisponible() {
+if (!window.PublicKeyCredential || !navigator.credentials || !window.isSecureContext) return Promise.resolve(false);
+try { return PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(function () { return false; }); } catch (e) { return Promise.resolve(false); }
+}
+function bioRegistrar() {
+return navigator.credentials.create({ publicKey: {
+challenge: crypto.getRandomValues(new Uint8Array(32)),
+rp: { name: 'GA Portfolio', id: location.hostname },
+user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'GA', displayName: 'GA Portfolio' },
+pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+timeout: 60000
+} });
+}
+function bioVerificar(idB64) {
+return navigator.credentials.get({ publicKey: {
+challenge: crypto.getRandomValues(new Uint8Array(32)),
+allowCredentials: [{ type: 'public-key', id: b64uBytes(idB64) }],
+userVerification: 'required',
+timeout: 60000
+} });
+}
+function segMsg(id, txt, esOk) {
+document.getElementById(id).innerHTML = txt ? '<div class="tmsg ' + (esOk ? 'ok' : 'err') + '">' + txt + '</div>' : '';
+}
+function prepararSeguridad() {
+var s = secLeer();
+var partes = [];
+if (s.bio) partes.push('biometr\u00eda');
+if (s.pin) partes.push('clave');
+document.getElementById('segEstado').textContent = partes.length
+? 'Bloqueo activado con ' + partes.join(' y ') + '. Se pide cada vez que abr\u00eds la app en este dispositivo.'
+: 'Sin bloqueo: la app abre directo. Activ\u00e1 la biometr\u00eda o una clave.';
+document.getElementById('segPinQuitar').style.display = s.pin ? '' : 'none';
+document.getElementById('segPinBtn').textContent = s.pin ? 'Cambiar clave' : 'Guardar clave';
+segMsg('segBioMsg', ''); segMsg('segPinMsg', '');
+var bioBtn = document.getElementById('segBioBtn');
+if (s.bio) { bioBtn.textContent = 'Desactivar biometr\u00eda'; bioBtn.disabled = false; }
+else {
+bioBtn.textContent = 'Activar biometr\u00eda'; bioBtn.disabled = true;
+bioDisponible().then(function (dispo) {
+if (dispo) bioBtn.disabled = false;
+else bioBtn.textContent = 'Biometr\u00eda no disponible ac\u00e1';
+});
+}
+}
+document.getElementById('segBack').onclick = function () { setView('inicio'); };
+document.getElementById('segBioBtn').onclick = function () {
+var s = secLeer(), btn = this;
+if (s.bio) { delete s.bio; secGuardar(s); prepararSeguridad(); segMsg('segBioMsg', '&#10003; Biometr\u00eda desactivada.', true); return; }
+btn.disabled = true;
+bioRegistrar().then(function (cred) {
+s.bio = b64u(cred.rawId);
+secGuardar(s); prepararSeguridad();
+segMsg('segBioMsg', '&#10003; Listo: la app va a pedir tu biometr\u00eda al abrir.', true);
+}).catch(function () {
+btn.disabled = false;
+segMsg('segBioMsg', 'No se pudo activar. Prob\u00e1 de nuevo.', false);
+});
+};
+document.getElementById('segPinBtn').onclick = function () {
+var p1 = document.getElementById('segPin1').value, p2 = document.getElementById('segPin2').value;
+if (!/^[0-9]{4,8}$/.test(p1)) { segMsg('segPinMsg', 'La clave debe tener de 4 a 8 d\u00edgitos.', false); return; }
+if (p1 !== p2) { segMsg('segPinMsg', 'Las claves no coinciden.', false); return; }
+var btn = this;
+btn.disabled = true;
+hashPin(p1).then(function (h) {
+var s = secLeer(); s.pin = h; secGuardar(s);
+btn.disabled = false;
+document.getElementById('segPin1').value = ''; document.getElementById('segPin2').value = '';
+prepararSeguridad();
+segMsg('segPinMsg', '&#10003; Clave guardada.', true);
+}).catch(function () { btn.disabled = false; segMsg('segPinMsg', 'No se pudo guardar la clave.', false); });
+};
+document.getElementById('segPinQuitar').onclick = function () {
+var s = secLeer(); delete s.pin; secGuardar(s); prepararSeguridad();
+segMsg('segPinMsg', '&#10003; Clave quitada.', true);
+};
+// Arranque: si hay bloqueo configurado y ya hay token, pedir desbloqueo
+(function () {
+var s = secLeer();
+if (!(s.pin || s.bio) || !getApiToken()) return;
+var el = document.getElementById('seclock');
+el.style.display = 'flex';
+if (s.bio) document.getElementById('secBioGo').style.display = '';
+if (s.pin) { document.getElementById('secPinWrap').style.display = ''; document.getElementById('secOlvide').style.display = ''; }
+function abrir() { el.style.display = 'none'; document.getElementById('secErr').textContent = ''; }
+document.getElementById('secBioGo').onclick = function () {
+document.getElementById('secErr').textContent = '';
+bioVerificar(s.bio).then(abrir).catch(function () {
+document.getElementById('secErr').textContent = 'No se pudo verificar. Prob\u00e1 de nuevo' + (s.pin ? ' o us\u00e1 la clave.' : '.');
+});
+};
+document.getElementById('secPinGo').onclick = function () {
+var v = document.getElementById('secPinInput').value;
+if (!v) return;
+hashPin(v).then(function (h) {
+if (h === s.pin) abrir();
+else { document.getElementById('secPinInput').value = ''; document.getElementById('secErr').textContent = 'Clave incorrecta.'; }
+});
+};
+document.getElementById('secPinInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('secPinGo').click(); });
+document.getElementById('secOlvide').onclick = function () {
+var l = document.getElementById('secOlvide');
+if (!l._confirm) {
+l._confirm = true;
+l.textContent = 'Se borra el bloqueo y vas a tener que poner de nuevo la clave de la API. \u00bfSeguro?';
+setTimeout(function () { l._confirm = false; l.textContent = 'Olvid\u00e9 mi clave'; }, 6000);
+return;
+}
+try { localStorage.removeItem('ga_sec'); localStorage.removeItem('ga_token'); } catch (e) {}
+try { location.reload(); } catch (e) {}
+};
+})();
 
 // ---------- Ojito de privacidad ----------
 document.getElementById('eyeBtn').onclick = function () {
