@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GA Portfolio</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GA Portfolio">
+<meta name="theme-color" content="#0d1420">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="manifest" href="manifest.json">
+<style>
+html, body { margin: 0; padding: 0; height: 100%; }
+body { background: radial-gradient(circle at top left, #10192b, #080d16 60%); display: flex; align-items: center; justify-content: center; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #90a0b8; }
+.inner { text-align: center; }
+.logo { width: 96px; height: 96px; border-radius: 24px; margin: 0 auto 18px; box-shadow: 0 10px 40px rgba(212,175,55,.35); display: block; }
+.txt { font-size: 15px; font-weight: 600; letter-spacing: .04em; }
+a { color: #d4af37; font-weight: 700; text-decoration: none; display: inline-block; margin-top: 14px; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="inner">
+<img class="logo" src="apple-touch-icon.png" alt="GA">
+<div class="txt">Abriendo GA Portfolio&hellip;</div>
+<a id="manual" href="https://script.google.com/macros/s/AKfycbyrMsdxH2PM0s1I5X2p48ottTNltbayYoKBfTE8npOLUk_hapjFcSMIWJ0hvkbF2XBV/exec">Tocá acá si no abre solo</a>
+</div>
+<script>
+// Redirige a la app en vivo (siempre la última versión publicada).
+setTimeout(function () {
+  window.location.replace(document.getElementById('manual').href);
+}, 400);
+</script>
+</body>
+</html>

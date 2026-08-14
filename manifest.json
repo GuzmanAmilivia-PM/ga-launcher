@@ -1,0 +1,12 @@
+{
+  "name": "GA Portfolio",
+  "short_name": "GA Portfolio",
+  "display": "standalone",
+  "background_color": "#0d1420",
+  "theme_color": "#0d1420",
+  "start_url": "./",
+  "icons": [
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
