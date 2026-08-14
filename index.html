@@ -2,6 +2,7 @@
 <html>
 <head>
 <title>GA Portfolio</title>
+<script>try{if(localStorage.getItem('ga_tema')==='claro')document.documentElement.classList.add('light');}catch(e){}</script>
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -170,6 +171,29 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .navtab-center .cbtn { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), #f4d371); display: flex; align-items: center; justify-content: center; margin-top: -20px; box-shadow: 0 6px 18px rgba(212,175,55,.45); border: 3px solid #0d1420; }
 .navtab-center .cbtn svg { stroke: #241b02; width: 22px; height: 22px; }
 
+/* ---- Tema claro ---- */
+html.light { background: #eef1f6; }
+html.light { --navy:#eef1f6; --navy2:#ffffff; --navy3:#e5eaf3; --gold:#b8901f; --green:#0f9d58; --red:#d93043; --text:#182234; --muted:#5d6c85; --border: rgba(20,40,80,.12); }
+html.light .mainarea { background: linear-gradient(180deg,#f7f9fd,#eef1f6); }
+html.light .card { box-shadow: 0 6px 18px rgba(30,50,90,.06); }
+html.light .bottomnav { background: rgba(255,255,255,.96); }
+html.light .navtab-center .cbtn { border-color: #fff; background: linear-gradient(135deg,#d4af37,#f4d371); }
+html.light .rangebtn, html.light .morebtn, html.light .tipobtn { background: rgba(20,40,80,.05); }
+html.light .rangebtn.active { background: var(--gold); color: #fff; border-color: var(--gold); }
+html.light .tradeform input, html.light .tradeform select { background: #fff; border-color: rgba(20,40,80,.18); }
+html.light .detrow td { background: rgba(20,40,80,.035); }
+html.light #splash, html.light #lock { background: linear-gradient(180deg,#f7f9fd,#e9edf5); }
+html.light #lock input { background: #fff; }
+html.light .chartmodal { background: rgba(235,240,248,.92); }
+html.light .drawerback { background: rgba(30,45,70,.35); }
+html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,144,31,.4); }
+html.light .menubtn { background: #fff; }
+.nbicon { width: 18px; height: 18px; vertical-align: -4px; margin-right: 8px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.platrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14.5px; font-weight: 600; }
+.platrow:last-child { border-bottom: none; }
+.platmeta { color: var(--muted); font-size: 11.5px; display: block; font-weight: 400; margin-top: 2px; }
+.platbtns { white-space: nowrap; }
+.platbtns button { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; margin-left: 6px; font-family: inherit; font-weight: 700; }
 #lock{position:fixed;inset:0;z-index:9998;background:radial-gradient(circle at top left,#10192b,#080d16 60%);display:none;align-items:flex-start;justify-content:center;padding:calc(14vh + env(safe-area-inset-top,0px)) 24px 24px;overflow-y:auto;}#lock .inner{max-width:320px;width:100%;text-align:center;}#lock input{width:100%;padding:14px;border-radius:13px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-size:16px;font-family:inherit;text-align:center;outline:none;margin:18px 0 10px;}#lock input:focus{border-color:var(--gold);}#lock .err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px;}
 #splash{position:fixed;inset:0;z-index:9999;background:radial-gradient(circle at top left,#10192b,#080d16 60%);display:flex;align-items:center;justify-content:center;transition:opacity .5s ease;}.splash-inner{transform:translateY(-6vh);}.splash-from{position:absolute;left:0;right:0;bottom:calc(26px + env(safe-area-inset-bottom,0px));text-align:center;font-size:12px;font-weight:600;letter-spacing:.08em;color:#90a0b8;opacity:.8;}#splash.hide{opacity:0;pointer-events:none;}.splash-inner{text-align:center;}
 .splash-sub{font-size:15px;font-weight:600;letter-spacing:.05em;color:var(--muted);margin-top:4px;}
@@ -195,8 +219,8 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 <aside class="drawer" id="drawer">
 <div class="drawer-top"><span class="drawer-title">Men&uacute;</span><button class="closebtn" id="drawerClose">&times;</button></div>
 <button class="navbtn" id="mRefrescar">&#8635; Refrescar precios</button>
-<a class="navbtn" href="https://docs.google.com/spreadsheets/d/145R-cxu6zK6o7A1ht2R8mNypEacmeSmQQzzDPwy5tjg/edit" target="_blank" rel="noopener">&#128202; Abrir Google Sheet</a>
-<button class="navbtn soon">&#9881; Configuraci&oacute;n &middot; pr&oacute;ximamente</button>
+<a class="navbtn" href="https://docs.google.com/spreadsheets/d/145R-cxu6zK6o7A1ht2R8mNypEacmeSmQQzzDPwy5tjg/edit" target="_blank" rel="noopener"><svg class="nbicon" viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-13"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></svg>Data base</a>
+<button class="navbtn" id="mConfig"><svg class="nbicon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.5-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4L9.6 5A7.6 7.6 0 0 0 7 6.5l-2.4-1-2 3.5 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.5 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.5z"/></svg>Configuraci&oacute;n</button>
 </aside>
 
 <div class="mainarea">
@@ -298,6 +322,39 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 </div>
 </div>
 
+<!-- ============ CONFIGURACION ============ -->
+<div id="view-config" style="display:none">
+<span class="backlink" id="cfgBack">&larr; Volver</span>
+<p class="viewtitle">Configuraci&oacute;n</p>
+<div class="card">
+<h2>Apariencia</h2>
+<div class="tipobar">
+<button type="button" class="tipobtn" id="temaOscuroBtn">&#127769; Oscuro</button>
+<button type="button" class="tipobtn" id="temaClaroBtn">&#9728;&#65039; Claro</button>
+</div>
+</div>
+<div class="card">
+<h2>Plataformas</h2>
+<div id="platList"><p class="loadingtxt">Cargando...</p></div>
+<button class="ghostbtn" id="platNuevaBtn">+ Agregar plataforma</button>
+<div id="platForm" class="tradeform" style="display:none">
+<label for="pNombre">Nombre</label>
+<input id="pNombre" autocomplete="off" placeholder="Nombre de la plataforma">
+<label for="pValor">Valor (USD)</label>
+<input id="pValor" type="number" inputmode="decimal" step="any" min="0" placeholder="0">
+<label for="pLiquido">L&iacute;quido (USD) &middot; dejalo vac&iacute;o si toda la cuenta es l&iacute;quida</label>
+<input id="pLiquido" type="number" inputmode="decimal" step="any" min="0" placeholder="">
+<button class="bigbtn" id="platGuardar">Guardar</button>
+<button class="ghostbtn" id="platCancelar">Cancelar</button>
+</div>
+<div id="platResultado"></div>
+</div>
+<div class="card">
+<h2>Seguridad</h2>
+<p class="newsempty">Pr&oacute;ximamente: cambio de clave, bloqueo con Face ID y m&aacute;s.</p>
+</div>
+</div>
+
 <!-- ============ TRADE ============ -->
 <div id="view-trade" style="display:none">
 <p class="viewtitle">Registrar operaci&oacute;n</p>
@@ -386,7 +443,7 @@ function apiCall(fn, args) {
 }
 // Shim compatible con google.script.run: el resto del codigo no cambia.
 (function () {
-  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getTransacciones: 'transacciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar' };
+  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getTransacciones: 'transacciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar' };
   function mk(ok, fail) {
     var o = {
       withSuccessHandler: function (f) { return mk(f, fail); },
@@ -504,7 +561,7 @@ btn._busy = false; btn.textContent = 'Error: ' + err.message;
 };
 
 // ---------- Navegación (barra inferior) ----------
-var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account'];
+var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'config'];
 function setView(name) {
 VIEWS.forEach(function (v) {
 var el = document.getElementById('view-' + v);
@@ -515,6 +572,7 @@ document.querySelectorAll('.navtab').forEach(function (b) {
 b.classList.toggle('active', b.getAttribute('data-view') === navName);
 });
 if (name === 'portafolio') renderPortafolio();
+if (name === 'config') cargarPlataformas();
 if (name === 'noticias' && !noticiasCargadas) {
 noticiasCargadas = true;
 google.script.run.withSuccessHandler(renderNoticias).getNoticias();
@@ -581,7 +639,7 @@ pieChartInstance = new Chart(document.getElementById('pieChart'), {
 type: 'doughnut',
 data: {
 labels: cuentas.map(function (c) { return c.nombre; }),
-datasets: [{ data: cuentas.map(function (c) { return c.valor; }), backgroundColor: PIE_COLORS.slice(0, cuentas.length), borderColor: '#0d1420', borderWidth: 3 }]
+datasets: [{ data: cuentas.map(function (c) { return c.valor; }), backgroundColor: PIE_COLORS.slice(0, cuentas.length), borderColor: temaChart().pieBorder, borderWidth: 3 }]
 },
 options: { cutout: '62%', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
 });
@@ -831,6 +889,7 @@ function getFilteredDataPoints(serie) {
   }).map(function (p) { return { x: p.fecha, y: p.valor }; });
   }
   function buildChartOptions(pts) {
+  var TC = temaChart();
   var xMin = (pts && pts.length) ? pts[0].x : undefined;
   var xMax = (pts && pts.length) ? pts[pts.length - 1].x : undefined;
   return {
@@ -838,8 +897,8 @@ function getFilteredDataPoints(serie) {
   maintainAspectRatio: false,
   plugins: { legend: { display: false } },
   scales: {
-  x: { type: 'linear', min: xMin, max: xMax, bounds: 'data', ticks: { color: '#90a0b8', maxTicksLimit: 6, callback: function (value) { return new Date(value).toLocaleDateString('es-UY', { day: '2-digit', month: 'short' }); } }, grid: { color: 'rgba(255,255,255,.05)' } },
-  y: { ticks: { color: '#90a0b8', callback: function (v) { return montosOcultos ? '' : v; } }, grid: { color: 'rgba(255,255,255,.05)' } }
+  x: { type: 'linear', min: xMin, max: xMax, bounds: 'data', ticks: { color: TC.tick, maxTicksLimit: 6, callback: function (value) { return new Date(value).toLocaleDateString('es-UY', { day: '2-digit', month: 'short' }); } }, grid: { color: TC.grid } },
+  y: { ticks: { color: TC.tick, callback: function (v) { return montosOcultos ? '' : v; } }, grid: { color: TC.grid } }
   }
   };
   }
@@ -889,7 +948,7 @@ function crearTvWidget(container, symbol) {
   var s = document.createElement('script');
   s.src = 'https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js';
   s.async = true;
-  s.text = JSON.stringify({ symbol: symbol, width: '100%', height: 180, locale: 'es', dateRange: '12M', colorTheme: 'dark', isTransparent: true, autosize: false });
+  s.text = JSON.stringify({ symbol: symbol, width: '100%', height: 180, locale: 'es', dateRange: '12M', colorTheme: (esTemaClaro() ? 'light' : 'dark'), isTransparent: true, autosize: false });
   wrap.appendChild(s);
   container.appendChild(wrap);
 }
@@ -1006,6 +1065,103 @@ btn.disabled = false; btn.textContent = 'Confirmar';
 resEl.innerHTML = '<div class="tmsg err">Error: ' + esc(err.message) + '</div>';
 }).registrarMovimientoCash({ cuenta: document.getElementById('cashCuenta').value, tipo: cashTipo, monto: monto });
 };
+
+// ---------- Tema (oscuro / claro) ----------
+function esTemaClaro() { return document.documentElement.classList.contains('light'); }
+function temaChart() {
+return esTemaClaro()
+? { tick: '#5d6c85', grid: 'rgba(20,40,80,.08)', pieBorder: '#ffffff' }
+: { tick: '#90a0b8', grid: 'rgba(255,255,255,.05)', pieBorder: '#0d1420' };
+}
+function pintarTemaBtns() {
+var claro = esTemaClaro();
+document.getElementById('temaOscuroBtn').className = 'tipobtn' + (claro ? '' : ' active-compra');
+document.getElementById('temaClaroBtn').className = 'tipobtn' + (claro ? ' active-compra' : '');
+}
+function setTema(claro) {
+document.documentElement.classList.toggle('light', claro);
+try { localStorage.setItem('ga_tema', claro ? 'claro' : 'oscuro'); } catch (e) {}
+pintarTemaBtns();
+if (lastData) render(lastData);
+if (lastAcc && lastAccData) renderAccount(lastAcc, lastAccData);
+}
+document.getElementById('temaOscuroBtn').onclick = function () { setTema(false); };
+document.getElementById('temaClaroBtn').onclick = function () { setTema(true); };
+pintarTemaBtns();
+
+// ---------- Configuración: plataformas ----------
+var platModo = 'agregar';
+function platsMsg(html, esOk) {
+document.getElementById('platResultado').innerHTML = html ? '<div class="tmsg ' + (esOk ? 'ok' : 'err') + '">' + html + '</div>' : '';
+}
+function cargarPlataformas() {
+google.script.run.withSuccessHandler(renderPlataformas).getPlataformas();
+}
+function renderPlataformas(lista) {
+var el = document.getElementById('platList');
+el.innerHTML = '';
+(lista || []).forEach(function (pl) {
+var row = document.createElement('div');
+row.className = 'platrow';
+row.innerHTML = '<span>' + esc(pl.nombre) +
+'<span class="platmeta">' + fmt(pl.valor) + (pl.gestionada ? ' &middot; con hoja de posiciones' : ' &middot; manual') + '</span></span>' +
+'<span class="platbtns"></span>';
+var btns = row.querySelector('.platbtns');
+var be = document.createElement('button');
+be.textContent = 'Editar';
+be.onclick = function () { abrirPlatForm(pl); };
+btns.appendChild(be);
+if (!pl.gestionada) {
+var bq = document.createElement('button');
+bq.textContent = 'Quitar';
+bq.onclick = function () {
+if (bq._confirm) {
+google.script.run.withSuccessHandler(function (res) {
+platsMsg(esc(((res && res.mensajes) || []).join(' ')), res && res.ok);
+cargarPlataformas(); loadData();
+}).withFailureHandler(function (err) { platsMsg('Error: ' + esc(err.message), false); }).quitarPlataforma({ nombre: pl.nombre });
+} else {
+bq._confirm = true; bq.textContent = '\u00bfSeguro?';
+setTimeout(function () { bq._confirm = false; bq.textContent = 'Quitar'; }, 3000);
+}
+};
+btns.appendChild(bq);
+}
+el.appendChild(row);
+});
+}
+function abrirPlatForm(pl) {
+platModo = pl ? pl.nombre : 'agregar';
+document.getElementById('platForm').style.display = '';
+document.getElementById('pNombre').value = pl ? pl.nombre : '';
+document.getElementById('pNombre').disabled = !!(pl && pl.gestionada);
+document.getElementById('pValor').value = pl ? pl.valor : '';
+document.getElementById('pLiquido').value = (pl && pl.liquido !== null && pl.liquido !== undefined) ? pl.liquido : '';
+platsMsg('');
+}
+document.getElementById('platNuevaBtn').onclick = function () { abrirPlatForm(null); };
+document.getElementById('platCancelar').onclick = function () { document.getElementById('platForm').style.display = 'none'; };
+document.getElementById('platGuardar').onclick = function () {
+var btn = this;
+var esNueva = platModo === 'agregar';
+var payload = esNueva
+? { nombre: document.getElementById('pNombre').value, valor: document.getElementById('pValor').value, liquido: document.getElementById('pLiquido').value }
+: { nombreActual: platModo, nombreNuevo: document.getElementById('pNombre').value, valor: document.getElementById('pValor').value, liquido: document.getElementById('pLiquido').value };
+btn.disabled = true;
+var runner = google.script.run.withSuccessHandler(function (res) {
+btn.disabled = false;
+if (res && res.ok) {
+document.getElementById('platForm').style.display = 'none';
+platsMsg('&#10003; Guardado. ' + esc((res.mensajes || []).join(' ')), true);
+cargarPlataformas(); loadData();
+} else {
+platsMsg(esc(((res && res.mensajes) || ['Error']).join(' ')), false);
+}
+}).withFailureHandler(function (err) { btn.disabled = false; platsMsg('Error: ' + esc(err.message), false); });
+if (esNueva) runner.agregarPlataforma(payload); else runner.editarPlataforma(payload);
+};
+document.getElementById('mConfig').onclick = function () { toggleDrawer(false); setView('config'); };
+document.getElementById('cfgBack').onclick = function () { setView('inicio'); };
 
 // ---------- Ojito de privacidad ----------
 document.getElementById('eyeBtn').onclick = function () {
