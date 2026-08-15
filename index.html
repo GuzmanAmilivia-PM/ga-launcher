@@ -1542,7 +1542,9 @@ return bioVerificar(s.bio).then(function () {
 btn.textContent = 'Desbloquear';
 abrir();
 }).catch(function (e) {
-btn.textContent = auto ? 'Desbloquear' : 'Reintentar';
+// Si el intento automatico se rechaza es, casi siempre, porque iOS pide un
+// gesto: se invita a tocar en vez de mostrar un error.
+btn.textContent = auto ? 'Toc\u00e1 para desbloquear' : 'Reintentar';
 if (!auto) err.textContent = bioErrTxt(e, !!s.pin);
 });
 }
@@ -1557,6 +1559,14 @@ return;
 setTimeout(function () { if (el.style.display !== 'none') intentarBio(true); }, 350);
 });
 document.getElementById('secBioGo').onclick = function () { intentarBio(false); };
+// Si iOS rechaza el intento automatico por falta de gesto, cualquier toque en
+// la pantalla de bloqueo sirve: no hay que apuntarle al boton.
+el.addEventListener('click', function (ev) {
+if (!s.bio) return;
+var id = (ev.target && ev.target.id) || '';
+if (id === 'secBioGo' || id === 'secOlvide' || id === 'secPinInput' || id === 'secPinGo') return;
+intentarBio(false);
+});
 document.getElementById('secPinGo').onclick = function () {
 var v = document.getElementById('secPinInput').value;
 if (!v) return;
