@@ -177,6 +177,10 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .tmsg { margin-top: 14px; font-size: 13.5px; line-height: 1.5; padding: 12px 14px; border-radius: 12px; }
 .tmsg.ok { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.35); color: var(--text); }
 .tmsg.err { background: rgba(244,63,94,.1); border: 1px solid rgba(244,63,94,.35); color: var(--text); }
+.confighelp { margin: 10px 0 2px; font-size: 13px; color: var(--muted); }
+.confighelp summary { cursor: pointer; color: var(--gold); -webkit-tap-highlight-color: transparent; }
+.confighelp ol { margin: 8px 0 0 18px; padding: 0; }
+.confighelp li { margin: 7px 0; line-height: 1.5; }
 .txrow { display: flex; justify-content: space-between; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
 .txrow:last-child { border-bottom: none; }
 .txrow .txmeta { color: var(--muted); font-size: 11px; display: block; }
@@ -417,6 +421,34 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div id="iaKeyResultado"></div>
 </div>
 </div>
+<div class="card">
+<h2>Conexi&oacute;n IBKR</h2>
+<p class="newsempty" id="ibkrEstadoTxt">Comprobando configuraci&oacute;n...</p>
+<details class="confighelp">
+<summary>&iquest;C&oacute;mo consigo el token y el Query ID?</summary>
+<ol>
+<li>Entr&aacute; al <b>Portal de Cliente</b> de IBKR (interactivebrokers.com).</li>
+<li>Men&uacute; <b>Rendimiento e informes &rarr; Consultas Flex</b> (Performance &amp; Reports &rarr; Flex Queries).</li>
+<li>En <b>Actividad</b> (Activity Flex Query) toc&aacute; el <b>+</b>: nombre <i>posiciones</i>, formato <b>XML</b>, per&iacute;odo <b>&Uacute;ltimo d&iacute;a h&aacute;bil</b>. En las secciones marc&aacute; <b>Open Positions</b> (opci&oacute;n Summary, seleccion&aacute; todos los campos) y <b>Cash Report</b> (todos los campos). Guard&aacute; y anot&aacute; el <b>Query ID</b> (n&uacute;mero corto que queda junto al nombre).</li>
+<li>En la misma pantalla: <b>Servicio web Flex</b> (Flex Web Service Configuration, el engranaje) &rarr; activalo y gener&aacute; el <b>token</b> (n&uacute;mero largo). Vencimiento: 1 a&ntilde;o.</li>
+<li>Peg&aacute; los dos ac&aacute; abajo. Este acceso es de solo lectura: no permite operar ni mover plata.</li>
+</ol>
+</details>
+<div class="tradeform" style="margin-top:10px">
+<label for="ibkrToken">Token del Flex Web Service</label>
+<input id="ibkrToken" type="password" autocomplete="off" inputmode="numeric" placeholder="N&uacute;mero largo">
+<label for="ibkrQuery">Query ID de la Flex Query</label>
+<input id="ibkrQuery" autocomplete="off" inputmode="numeric" placeholder="N&uacute;mero corto (ej. 123456)">
+<button class="bigbtn" id="ibkrGuardar">Guardar conexi&oacute;n</button>
+<div id="ibkrKeyResultado"></div>
+</div>
+<div id="ibkrSyncWrap" style="display:none;margin-top:12px">
+<button class="bigbtn" id="ibkrVerCambios">Comparar con IBKR</button>
+<div id="ibkrCambios"></div>
+<button class="bigbtn" id="ibkrAplicar" style="display:none">Aplicar estos cambios</button>
+<div id="ibkrSyncResultado"></div>
+</div>
+</div>
 </div>
 
 <!-- ============ TRADE ============ -->
@@ -564,7 +596,7 @@ function apiCall(fn, args) {
 }
 // Shim compatible con google.script.run: el resto del codigo no cambia.
 (function () {
-  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getTransacciones: 'transacciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar', estadoIA: 'ia_estado', guardarClaveIA: 'ia_config', analizarConIA: 'ia_analizar', buscarTicker: 'buscar' };
+  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getTransacciones: 'transacciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar', estadoIA: 'ia_estado', guardarClaveIA: 'ia_config', analizarConIA: 'ia_analizar', buscarTicker: 'buscar', estadoIBKR: 'ibkr_estado', guardarConfigIBKR: 'ibkr_config', sincronizarIBKR: 'ibkr_sync' };
   function mk(ok, fail) {
     var o = {
       withSuccessHandler: function (f) { return mk(f, fail); },
@@ -697,7 +729,7 @@ document.querySelectorAll('.navtab').forEach(function (b) {
 b.classList.toggle('active', b.getAttribute('data-view') === navName);
 });
 if (name === 'portafolio') renderPortafolio();
-if (name === 'config') { cargarPlataformas(); cargarEstadoIA(); }
+if (name === 'config') { cargarPlataformas(); cargarEstadoIA(); cargarEstadoIBKR(); }
 if (name === 'ia') prepararIA();
 if (name === 'seguridad') prepararSeguridad();
 if (name === 'noticias' && !noticiasCargadas) {
@@ -1318,6 +1350,106 @@ platsMsg(esc(((res && res.mensajes) || ['Error']).join(' ')), false);
 if (esNueva) runner.agregarPlataforma(payload); else runner.editarPlataforma(payload);
 };
 document.getElementById('cfgBack').onclick = function () { setView('inicio'); };
+
+// ---------- Configuración: conexión IBKR ----------
+function ibkrMsgErr(err) {
+var m = (err && err.message) ? err.message : String(err);
+if (m.indexOf('unknown_fn') !== -1) m = 'La conexión IBKR se activa con la próxima actualización del servidor. Avisale a Claude que despliegue el backend.';
+return m;
+}
+function fechaCortaMs(ms) {
+var d = new Date(ms);
+function p2(n) { return (n < 10 ? '0' : '') + n; }
+return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
+}
+function cargarEstadoIBKR() {
+var t = document.getElementById('ibkrEstadoTxt');
+t.innerHTML = 'Comprobando configuraci&oacute;n...';
+google.script.run.withSuccessHandler(function (st) {
+var wrap = document.getElementById('ibkrSyncWrap');
+if (st && st.configurada) {
+var html = '&#10003; Conectado a IBKR. La hoja IB se actualiza sola una vez por d&iacute;a (~8:00).';
+if (st.ultimaSync && st.ultimaSync.cuando) {
+html += '<br>&Uacute;ltima sincronizaci&oacute;n: ' + (st.ultimaSync.ok ? '' : '&#9888; ') + esc(fechaCortaMs(st.ultimaSync.cuando)) + ' &middot; ' + esc(st.ultimaSync.detalle || '');
+}
+if (st.triggerDiario === false) html += '<br>&#9888; La sincronizaci&oacute;n diaria autom&aacute;tica no est&aacute; activa: volv&eacute; a guardar la conexi&oacute;n.';
+t.innerHTML = html;
+wrap.style.display = '';
+} else {
+t.innerHTML = 'Sin configurar. Gener&aacute; el token en el portal de IBKR (pasos ac&aacute; abajo) y pegalo: se guarda en tu Apps Script privado, nunca en esta p&aacute;gina. El acceso es de solo lectura.';
+wrap.style.display = 'none';
+}
+}).withFailureHandler(function (err) {
+t.innerHTML = esc(ibkrMsgErr(err));
+}).estadoIBKR();
+}
+document.getElementById('ibkrGuardar').onclick = function () {
+var btn = this, tk = document.getElementById('ibkrToken'), q = document.getElementById('ibkrQuery'), res = document.getElementById('ibkrKeyResultado');
+btn.disabled = true;
+google.script.run.withSuccessHandler(function (r) {
+btn.disabled = false;
+if (r && r.ok) {
+tk.value = ''; q.value = '';
+res.innerHTML = '<div class="tmsg ok">&#10003; Conexi&oacute;n guardada.' + ((r.mensajes && r.mensajes.length) ? ' ' + esc(r.mensajes.join(' ')) : '') + '</div>';
+cargarEstadoIBKR();
+} else {
+res.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</div>';
+}
+}).withFailureHandler(function (err) {
+btn.disabled = false;
+res.innerHTML = '<div class="tmsg err">' + esc(ibkrMsgErr(err)) + '</div>';
+}).guardarConfigIBKR({ token: tk.value, queryId: q.value });
+};
+var ibkrSyncEnCurso = false;
+function correrSyncIBKR(dryRun) {
+if (ibkrSyncEnCurso) return;
+ibkrSyncEnCurso = true;
+var out = document.getElementById('ibkrCambios');
+var btnAplicar = document.getElementById('ibkrAplicar');
+var resEl = document.getElementById('ibkrSyncResultado');
+resEl.innerHTML = '';
+if (dryRun) btnAplicar.style.display = 'none';
+out.innerHTML = '<p class="loadingtxt">' + (dryRun ? 'Consultando IBKR... puede tardar medio minuto (el reporte se genera al momento).' : 'Aplicando cambios en la hoja IB...') + '</p>';
+google.script.run.withSuccessHandler(function (r) {
+ibkrSyncEnCurso = false;
+if (!r || !r.ok) {
+out.innerHTML = '';
+resEl.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</div>';
+return;
+}
+var html = '';
+if (!r.cambios.length) {
+html = '<p class="newsempty" style="margin-top:10px">&#10003; La hoja IB ya coincide con IBKR (' + esc(r.posicionesIBKR) + ' posiciones). Nada para cambiar.</p>';
+} else {
+html = '<p class="subtotal" style="margin:12px 0 6px">' + (dryRun ? 'Cambios detectados (todav&iacute;a no se aplic&oacute; nada):' : 'Cambios aplicados:') + '</p>';
+r.cambios.forEach(function (c) {
+var txt;
+if (c.tipo === 'qty') txt = '<span class="sym">' + esc(c.symbol) + '</span> cantidad ' + esc(c.antes) + ' &rarr; ' + esc(c.despues);
+else if (c.tipo === 'cerrada') txt = '<span class="sym">' + esc(c.symbol) + '</span> cerrada en IBKR &rarr; queda en 0';
+else if (c.tipo === 'nueva') txt = '<span class="sym">' + esc(c.symbol) + '</span> nueva &middot; ' + esc(c.despues) + (c.descripcion ? ' &middot; ' + esc(c.descripcion) : '');
+else if (c.tipo === 'cash') txt = '<span class="sym">CASH</span> ' + esc(c.antes) + ' &rarr; ' + esc(c.despues);
+else txt = esc(c.tipo + ' ' + (c.symbol || ''));
+html += '<div class="row"><span>' + txt + '</span></div>';
+});
+}
+(r.mensajes || []).forEach(function (m) { html += '<p class="newsempty">&#9888; ' + esc(m) + '</p>'; });
+out.innerHTML = html;
+if (dryRun) {
+btnAplicar.style.display = r.cambios.length ? '' : 'none';
+} else {
+btnAplicar.style.display = 'none';
+if (r.cambios.length) resEl.innerHTML = '<div class="tmsg ok">&#10003; Listo. La hoja IB qued&oacute; igual que tu cuenta de IBKR.</div>';
+cargarEstadoIBKR();
+loadData();
+}
+}).withFailureHandler(function (err) {
+ibkrSyncEnCurso = false;
+out.innerHTML = '';
+resEl.innerHTML = '<div class="tmsg err">' + esc(ibkrMsgErr(err)) + '</div>';
+}).sincronizarIBKR({ dryRun: !!dryRun });
+}
+document.getElementById('ibkrVerCambios').onclick = function () { correrSyncIBKR(true); };
+document.getElementById('ibkrAplicar').onclick = function () { correrSyncIBKR(false); };
 
 // ---------- IA Insights ----------
 var iaConfigurada = null, iaCargando = false;
