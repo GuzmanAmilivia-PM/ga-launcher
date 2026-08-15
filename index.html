@@ -464,6 +464,46 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 </div>
 </div>
 
+<!-- ============ BINANCE (se entra desde Configuracion > Plataformas) ============ -->
+<div id="view-bnb" style="display:none">
+<span class="backlink" id="bnbBack">&larr; Volver</span>
+<p class="viewtitle">Binance</p>
+<p class="subtotal" style="margin:-8px 0 14px">Saldos le&iacute;dos en vivo desde tu tel&eacute;fono &middot; clave de solo lectura</p>
+<div class="card">
+<h2>Estado</h2>
+<p class="newsempty" id="bnbEstadoTxt">...</p>
+</div>
+<div class="card" id="bnbSyncCard" style="display:none">
+<h2>Sincronizaci&oacute;n</h2>
+<button class="bigbtn" id="bnbVerCambios">Comparar con Binance</button>
+<div id="bnbCambios"></div>
+<button class="bigbtn" id="bnbAplicar" style="display:none">Aplicar estos cambios</button>
+<div id="bnbSyncResultado"></div>
+</div>
+<div class="card">
+<h2>Conexi&oacute;n</h2>
+<details class="confighelp">
+<summary>&iquest;C&oacute;mo creo la clave de solo lectura?</summary>
+<ol>
+<li>En la app de Binance: perfil &rarr; <b>Cuenta</b> &rarr; <b>Gesti&oacute;n de API</b>.</li>
+<li><b>Crear API</b> &rarr; "Generada por el sistema" &rarr; nombre <i>GA Tracker</i>.</li>
+<li>En permisos dej&aacute; marcado SOLO <b>Habilitar lectura</b>. Nada de trading ni retiros: la clave no podr&aacute; operar jam&aacute;s.</li>
+<li>Copi&aacute; la <b>API Key</b> y la <b>Secret Key</b> (la secreta se muestra una sola vez) y pegalas ac&aacute;.</li>
+<li>Quedan guardadas &uacute;nicamente en este tel&eacute;fono, protegidas por el bloqueo de la app. Nunca viajan a un servidor propio.</li>
+</ol>
+</details>
+<div class="tradeform" style="margin-top:10px">
+<label for="bnbKey">API Key</label>
+<input id="bnbKey" type="password" autocomplete="off" placeholder="API Key">
+<label for="bnbSecret">Secret Key</label>
+<input id="bnbSecret" type="password" autocomplete="off" placeholder="Secret Key">
+<button class="bigbtn" id="bnbGuardar">Guardar en este dispositivo</button>
+<button class="ghostbtn" id="bnbBorrar" style="display:none">Borrar la clave de este dispositivo</button>
+<div id="bnbKeyResultado"></div>
+</div>
+</div>
+</div>
+
 <!-- ============ TRADE ============ -->
 <div id="view-trade" style="display:none">
 <p class="viewtitle">Registrar operaci&oacute;n</p>
@@ -609,7 +649,7 @@ function apiCall(fn, args) {
 }
 // Shim compatible con google.script.run: el resto del codigo no cambia.
 (function () {
-  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getTransacciones: 'transacciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar', estadoIA: 'ia_estado', guardarClaveIA: 'ia_config', analizarConIA: 'ia_analizar', buscarTicker: 'buscar', estadoIBKR: 'ibkr_estado', guardarConfigIBKR: 'ibkr_config', sincronizarIBKR: 'ibkr_sync' };
+  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getTransacciones: 'transacciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar', estadoIA: 'ia_estado', guardarClaveIA: 'ia_config', analizarConIA: 'ia_analizar', buscarTicker: 'buscar', estadoIBKR: 'ibkr_estado', guardarConfigIBKR: 'ibkr_config', sincronizarIBKR: 'ibkr_sync', sincronizarBNB: 'bnb_sync' };
   function mk(ok, fail) {
     var o = {
       withSuccessHandler: function (f) { return mk(f, fail); },
@@ -735,7 +775,7 @@ btn._busy = false; txt.textContent = 'Error al refrescar';
 };
 
 // ---------- Navegación (barra inferior) ----------
-var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'config', 'ia', 'seguridad', 'buscar', 'ibkr'];
+var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'config', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb'];
 var currentView = 'inicio';
 function setView(name) {
 currentView = name;
@@ -750,6 +790,7 @@ b.classList.toggle('active', b.getAttribute('data-view') === navName);
 if (name === 'portafolio') renderPortafolio();
 if (name === 'config') { cargarPlataformas(); cargarEstadoIA(); }
 if (name === 'ibkr') cargarEstadoIBKR();
+if (name === 'bnb') prepararBNB();
 if (name === 'ia') prepararIA();
 if (name === 'seguridad') prepararSeguridad();
 if (name === 'noticias' && !noticiasCargadas) {
@@ -1311,20 +1352,22 @@ var el = document.getElementById('platList');
 el.innerHTML = '';
 (lista || []).forEach(function (pl) {
 var esIB = /interactive brokers/i.test(pl.nombre);
+var esBNB = /^binance$/i.test(pl.nombre);
 var row = document.createElement('div');
 row.className = 'platrow';
 row.innerHTML = '<span>' + esc(nombrePlataforma(pl.nombre)) +
-'<span class="platmeta">' + fmt(pl.valor) + (esIB ? ' &middot; conexi&oacute;n autom&aacute;tica' : (pl.gestionada ? ' &middot; con hoja de posiciones' : ' &middot; manual')) + '</span></span>' +
+'<span class="platmeta">' + fmt(pl.valor) + (esIB ? ' &middot; conexi&oacute;n autom&aacute;tica' : (esBNB ? ' &middot; saldos en vivo' : (pl.gestionada ? ' &middot; con hoja de posiciones' : ' &middot; manual'))) + '</span></span>' +
 '<span class="platbtns"></span>';
 var btns = row.querySelector('.platbtns');
-if (esIB) {
-// Toda la fila (y su bot\u00f3n) llevan a la pantalla de conexi\u00f3n IBKR.
+// Plataformas con pantalla de conexi\u00f3n propia: la fila entera navega ah\u00ed.
+var vistaConexion = esIB ? 'ibkr' : (/^binance$/i.test(pl.nombre) ? 'bnb' : null);
+if (vistaConexion) {
 var bc = document.createElement('button');
 bc.innerHTML = 'Conexi&oacute;n &rsaquo;';
-bc.onclick = function (ev) { ev.stopPropagation(); setView('ibkr'); };
+bc.onclick = function (ev) { ev.stopPropagation(); setView(vistaConexion); };
 btns.appendChild(bc);
 row.style.cursor = 'pointer';
-row.onclick = function () { setView('ibkr'); };
+row.onclick = function () { setView(vistaConexion); };
 }
 var be = document.createElement('button');
 be.textContent = 'Editar';
@@ -1484,6 +1527,171 @@ resEl.innerHTML = '<div class="tmsg err">' + esc(ibkrMsgErr(err)) + '</div>';
 document.getElementById('ibkrVerCambios').onclick = function () { correrSyncIBKR(true); };
 document.getElementById('ibkrAplicar').onclick = function () { correrSyncIBKR(false); };
 document.getElementById('ibkrBack').onclick = function () { setView('config'); };
+
+// ---------- Binance: saldos en vivo (WebSocket + clave de solo lectura) ----------
+// El REST de Binance no pasa el CORS del navegador (el preflight no habilita
+// el header de la API key), pero su API por WebSocket sí funciona. La clave
+// vive SOLO en este dispositivo (localStorage ga_bnb, detrás del bloqueo de
+// la app); el backend nunca la ve: recibe únicamente la lista de saldos.
+function bnbConfig() {
+try { var j = JSON.parse(localStorage.getItem('ga_bnb') || 'null'); if (j && j.key && j.secret) return j; } catch (e) {}
+return null;
+}
+function bnbMsgErr(err) {
+var m = (err && err.message) ? err.message : String(err);
+if (m.indexOf('unknown_fn') !== -1) m = 'La sincronización con Binance se activa con la próxima actualización del servidor. Avisale a Claude que despliegue el backend.';
+return m;
+}
+function prepararBNB() {
+var cfg = bnbConfig();
+var t = document.getElementById('bnbEstadoTxt');
+document.getElementById('bnbSyncCard').style.display = cfg ? '' : 'none';
+document.getElementById('bnbBorrar').style.display = cfg ? '' : 'none';
+var html = cfg
+? '&#10003; Clave guardada en este dispositivo. Los saldos se leen directo de Binance desde tu tel&eacute;fono; la clave solo puede leer, nunca operar ni retirar.'
+: 'Sin conectar. Cre&aacute; una clave API de <b>solo lectura</b> en la app de Binance (pasos m&aacute;s abajo) y guardala ac&aacute;: queda &uacute;nicamente en este tel&eacute;fono.';
+var u = null; try { u = localStorage.getItem('ga_bnb_ultima'); } catch (e) {}
+if (cfg && u) html += '<br>&Uacute;ltima sincronizaci&oacute;n aplicada: ' + esc(u);
+t.innerHTML = html;
+}
+document.getElementById('bnbGuardar').onclick = function () {
+var k = document.getElementById('bnbKey').value.trim();
+var s = document.getElementById('bnbSecret').value.trim();
+var res = document.getElementById('bnbKeyResultado');
+if (k.length < 10 || s.length < 10) {
+res.innerHTML = '<div class="tmsg err">Peg&aacute; la API Key y la Secret Key completas.</div>';
+return;
+}
+try { localStorage.setItem('ga_bnb', JSON.stringify({ key: k, secret: s })); } catch (e) {}
+document.getElementById('bnbKey').value = '';
+document.getElementById('bnbSecret').value = '';
+res.innerHTML = '<div class="tmsg ok">&#10003; Clave guardada en el dispositivo.</div>';
+prepararBNB();
+};
+document.getElementById('bnbBorrar').onclick = function () {
+try { localStorage.removeItem('ga_bnb'); localStorage.removeItem('ga_bnb_ultima'); } catch (e) {}
+document.getElementById('bnbKeyResultado').innerHTML = '<div class="tmsg ok">Clave borrada de este dispositivo.</div>';
+prepararBNB();
+};
+document.getElementById('bnbBack').onclick = function () { setView('config'); };
+
+// Firma HMAC-SHA256 en hexadecimal, calculada en el propio teléfono.
+function bnbFirmar(secret, payload) {
+var enc = new TextEncoder();
+return crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+.then(function (k) { return crypto.subtle.sign('HMAC', k, enc.encode(payload)); })
+.then(function (buf) {
+return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+});
+}
+// Lee los saldos spot con una petición firmada de account.status.
+function bnbLeerSaldos(cb, fail) {
+var cfg = bnbConfig();
+if (!cfg) { fail(new Error('Falta guardar la clave API de Binance.')); return; }
+var ws = null, done = false;
+function terminar(err, saldos) {
+if (done) return;
+done = true;
+clearTimeout(timer);
+try { if (ws) ws.close(); } catch (e) {}
+if (err) fail(err); else cb(saldos);
+}
+var timer = setTimeout(function () { terminar(new Error('Binance no respondió (se agotó el tiempo). Probá de nuevo.')); }, 15000);
+try { ws = new WebSocket('wss://ws-api.binance.com/ws-api/v3'); } catch (e) { terminar(e); return; }
+ws.onerror = function () { terminar(new Error('No pude conectar con Binance. Revisá tu conexión a internet.')); };
+ws.onopen = function () {
+var ts = Date.now();
+// Los parámetros van ordenados alfabéticamente en la firma.
+var payload = 'apiKey=' + cfg.key + '&recvWindow=10000&timestamp=' + ts;
+bnbFirmar(cfg.secret, payload).then(function (sig) {
+ws.send(JSON.stringify({ id: 'ga-' + ts, method: 'account.status', params: { apiKey: cfg.key, recvWindow: 10000, timestamp: ts, signature: sig } }));
+}).catch(function (e) { terminar(e); });
+};
+ws.onmessage = function (ev) {
+var j = null;
+try { j = JSON.parse(ev.data); } catch (e) { return; }
+if (!j || j.id === undefined) return;
+if (j.status === 200 && j.result && j.result.balances) {
+var saldos = [];
+j.result.balances.forEach(function (b) {
+var qty = (parseFloat(b.free) || 0) + (parseFloat(b.locked) || 0);
+if (qty > 1e-8) saldos.push({ symbol: String(b.asset || '').toUpperCase(), qty: qty });
+});
+terminar(null, saldos);
+return;
+}
+var code = j.error && j.error.code;
+var msg = (j.error && j.error.msg) ? j.error.msg : ('Binance respondió con error (' + (j.status || '?') + ').');
+if (code === -2015 || code === -2014) msg = 'Binance rechazó la clave API: revisá que esté bien pegada y con el permiso de lectura activo.';
+if (code === -1022) msg = 'La firma no validó: revisá la Secret Key (borrala y pegala de nuevo).';
+if (code === -1021) msg = 'La hora del teléfono difiere de la de Binance: activá fecha y hora automáticas.';
+terminar(new Error(msg));
+};
+}
+var bnbEnCurso = false, bnbSaldos = null;
+function correrSyncBNB(dryRun) {
+if (bnbEnCurso) return;
+bnbEnCurso = true;
+var out = document.getElementById('bnbCambios');
+var btnAplicar = document.getElementById('bnbAplicar');
+var resEl = document.getElementById('bnbSyncResultado');
+resEl.innerHTML = '';
+if (dryRun) { btnAplicar.style.display = 'none'; bnbSaldos = null; }
+out.innerHTML = '<p class="loadingtxt">' + (dryRun ? 'Leyendo tus saldos reales de Binance...' : 'Aplicando en la hoja BNB...') + '</p>';
+function fallo(err) {
+bnbEnCurso = false;
+out.innerHTML = '';
+resEl.innerHTML = '<div class="tmsg err">' + esc(bnbMsgErr(err)) + '</div>';
+}
+function render(r) {
+bnbEnCurso = false;
+if (!r || !r.ok) {
+out.innerHTML = '';
+resEl.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</div>';
+return;
+}
+var html = '';
+if (!r.cambios.length) {
+html = '<p class="newsempty" style="margin-top:10px">&#10003; La hoja BNB ya coincide con Binance (' + esc(r.saldosBinance) + ' saldos). Nada para cambiar.</p>';
+} else {
+html = '<p class="subtotal" style="margin:12px 0 6px">' + (dryRun ? 'Cambios detectados (todav&iacute;a no se aplic&oacute; nada):' : 'Cambios aplicados:') + '</p>';
+r.cambios.forEach(function (c) {
+var txt;
+if (c.tipo === 'qty') txt = '<span class="sym">' + esc(c.symbol) + '</span> cantidad ' + esc(c.antes) + ' &rarr; ' + esc(c.despues);
+else if (c.tipo === 'cerrada') txt = '<span class="sym">' + esc(c.symbol) + '</span> sin saldo en Binance &rarr; queda en 0';
+else if (c.tipo === 'nueva') txt = '<span class="sym">' + esc(c.symbol) + '</span> nueva &middot; ' + esc(c.despues);
+else txt = esc(c.tipo + ' ' + (c.symbol || ''));
+html += '<div class="row"><span>' + txt + '</span></div>';
+});
+var cerradas = r.cambios.filter(function (c) { return c.tipo === 'cerrada'; }).length;
+if (dryRun && cerradas >= 2) {
+html += '<p class="newsempty">&#9888; Varias posiciones aparecen sin saldo. Ojo: la clave solo ve la billetera <b>spot</b>; si ten&eacute;s fondos en Binance Earn u otra billetera, NO apliques y avisale a Claude.</p>';
+}
+}
+(r.mensajes || []).forEach(function (m) { html += '<p class="newsempty">&#9888; ' + esc(m) + '</p>'; });
+out.innerHTML = html;
+if (dryRun) {
+btnAplicar.style.display = r.cambios.length ? '' : 'none';
+} else {
+btnAplicar.style.display = 'none';
+if (r.cambios.length) resEl.innerHTML = '<div class="tmsg ok">&#10003; Listo. La hoja BNB qued&oacute; igual que tu cuenta de Binance.</div>';
+try { localStorage.setItem('ga_bnb_ultima', fechaCortaMs(Date.now())); } catch (e) {}
+prepararBNB();
+loadData();
+}
+}
+if (dryRun) {
+bnbLeerSaldos(function (saldos) {
+bnbSaldos = saldos;
+google.script.run.withSuccessHandler(render).withFailureHandler(fallo).sincronizarBNB({ balances: saldos, dryRun: true });
+}, fallo);
+} else {
+if (!bnbSaldos) { bnbEnCurso = false; return; }
+google.script.run.withSuccessHandler(render).withFailureHandler(fallo).sincronizarBNB({ balances: bnbSaldos, dryRun: false });
+}
+}
+document.getElementById('bnbVerCambios').onclick = function () { correrSyncBNB(true); };
+document.getElementById('bnbAplicar').onclick = function () { correrSyncBNB(false); };
 
 // ---------- IA Insights ----------
 var iaConfigurada = null, iaCargando = false;
