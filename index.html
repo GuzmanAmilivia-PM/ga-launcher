@@ -1433,6 +1433,16 @@ userVerification: 'required',
 timeout: 60000
 } });
 }
+// Mensaje segun el error real de WebAuthn (antes se tragaba el motivo y siempre
+// decia lo mismo, imposible de diagnosticar desde el celular).
+function bioErrTxt(err, haySalida) {
+var n = (err && err.name) ? err.name : '';
+var extra = haySalida ? ' Us\u00e1 la clave.' : ' Si sigue fallando, toc\u00e1 "No puedo entrar".';
+if (n === 'NotAllowedError') return 'Cancelado o sin respuesta del sensor.' + extra;
+if (n === 'InvalidStateError') return 'Esta credencial ya no existe en el dispositivo.' + extra;
+if (n === 'NotSupportedError' || n === 'SecurityError' || n === 'AbortError') return 'La biometr\u00eda no est\u00e1 disponible ac\u00e1 (' + n + ').' + extra;
+return 'No se pudo verificar' + (n ? ' (' + n + ')' : '') + '.' + extra;
+}
 function segMsg(id, txt, esOk) {
 document.getElementById(id).innerHTML = txt ? '<div class="tmsg ' + (esOk ? 'ok' : 'err') + '">' + txt + '</div>' : '';
 }
@@ -1495,13 +1505,26 @@ var s = secLeer();
 if (!(s.pin || s.bio) || !getApiToken()) return;
 var el = document.getElementById('seclock');
 el.style.display = 'flex';
+// El splash (z 9999) tapa este lock (z 9997) y solo se iba al terminar de
+// cargar datos: sin red la app quedaba congelada en el logo. Ahora el lock
+// aparece siempre, pase lo que pase con la API.
+setTimeout(hideSplash, 700);
 if (s.bio) document.getElementById('secBioGo').style.display = '';
-if (s.pin) { document.getElementById('secPinWrap').style.display = ''; document.getElementById('secOlvide').style.display = ''; }
-function abrir() { el.style.display = 'none'; document.getElementById('secErr').textContent = ''; }
+if (s.pin) document.getElementById('secPinWrap').style.display = '';
+// La salida de emergencia se muestra SIEMPRE que haya bloqueo: con solo
+// biometria y el sensor fallando, antes no quedaba forma de entrar.
+var olv = document.getElementById('secOlvide');
+var olvTxt = s.pin ? 'Olvid\u00e9 mi clave' : 'No puedo entrar';
+olv.textContent = olvTxt;
+olv.style.display = '';
+function abrir() { el.style.display = 'none'; document.getElementById('secErr').textContent = ''; hideSplash(); }
+if (s.bio) bioDisponible().then(function (dispo) {
+if (!dispo) document.getElementById('secErr').textContent = 'La biometr\u00eda no est\u00e1 disponible en este navegador.' + (s.pin ? ' Us\u00e1 la clave.' : ' Toc\u00e1 "No puedo entrar".');
+});
 document.getElementById('secBioGo').onclick = function () {
 document.getElementById('secErr').textContent = '';
-bioVerificar(s.bio).then(abrir).catch(function () {
-document.getElementById('secErr').textContent = 'No se pudo verificar. Prob\u00e1 de nuevo' + (s.pin ? ' o us\u00e1 la clave.' : '.');
+bioVerificar(s.bio).then(abrir).catch(function (err) {
+document.getElementById('secErr').textContent = bioErrTxt(err, !!s.pin);
 });
 };
 document.getElementById('secPinGo').onclick = function () {
@@ -1518,7 +1541,7 @@ var l = document.getElementById('secOlvide');
 if (!l._confirm) {
 l._confirm = true;
 l.textContent = 'Se borra el bloqueo y vas a tener que poner de nuevo la clave de la API. \u00bfSeguro?';
-setTimeout(function () { l._confirm = false; l.textContent = 'Olvid\u00e9 mi clave'; }, 6000);
+setTimeout(function () { l._confirm = false; l.textContent = olvTxt; }, 6000);
 return;
 }
 try { localStorage.removeItem('ga_sec'); localStorage.removeItem('ga_token'); } catch (e) {}
@@ -1652,7 +1675,7 @@ renderHoldings(data.topHoldings);
 actualizarSymbols();
 if (document.getElementById('view-portafolio').style.display !== 'none') renderPortafolio();
   } catch(e) { document.getElementById('total').textContent = 'ERR2: ' + String(e); } }
-  function loadData(){ google.script.run.withFailureHandler(function(err){var t=document.getElementById('total'); if(t){ t.textContent='ERR: '+err.message; }}).withSuccessHandler(render).getPortfolioData(); }
+  function loadData(){ google.script.run.withFailureHandler(function(err){hideSplash(); var t=document.getElementById('total'); if(t){ t.textContent='ERR: '+err.message; }}).withSuccessHandler(render).getPortfolioData(); }
 function hideSplash(){ var s=document.getElementById('splash'); if(s && !s.classList.contains('hide')){ s.classList.add('hide'); setTimeout(function(){ if(s&&s.parentNode){ s.style.display='none'; } },600); } }
 setInterval(function(){ if(document.visibilityState==='visible'){ loadData(); } }, 60000);
 document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ loadData(); } });
