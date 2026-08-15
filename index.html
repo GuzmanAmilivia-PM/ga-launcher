@@ -8,7 +8,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<!-- Chart.js 4.4.0 servido desde el repo: desde el CDN no se podia cachear, y
+     sin internet la app reventaba en el grafico y no llegaba a pintar las
+     posiciones (justo el caso que el pintado instantaneo tenia que cubrir). -->
+<script src="./chart.umd.min.js"></script>
 <meta name="theme-color" content="#0d1420">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -750,9 +753,26 @@ function mostrarLock(msg) {
 }
 function apiCall(fn, args) {
   return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: getApiToken(), fn: fn, args: args || null }) })
-    .then(function (r) { return r.json(); })
+    .then(function (r) {
+      // Apps Script no siempre responde JSON: con cuota excedida, deploy roto
+      // o redireccion de login devuelve HTML, y un r.json() pelado explota con
+      // "Unexpected token <", que no le dice nada a nadie.
+      return r.text().then(function (t) {
+        try { return JSON.parse(t); }
+        catch (e) {
+          throw new Error(r.ok
+            ? 'El servidor respondio algo inesperado. Proba de nuevo en un minuto.'
+            : 'El servidor no responde (error ' + r.status + '). Proba de nuevo en un minuto.');
+        }
+      });
+    })
     .then(function (j) {
-      if (j && j.error === 'auth') { mostrarLock('Clave incorrecta o vencida.'); throw new Error('auth'); }
+      if (j && j.error === 'auth') {
+        mostrarLock('Clave incorrecta o vencida.');
+        var eAuth = new Error('La clave de la app vencio: volve a ingresarla.');
+        eAuth.auth = true;
+        throw eAuth;
+      }
       if (j && j.error) throw new Error(j.message || j.error);
       return j.data;
     });
@@ -768,8 +788,13 @@ function apiCall(fn, args) {
     Object.keys(MAP).forEach(function (name) {
       o[name] = function (arg) {
         var args = (name === 'getAccountData') ? { key: arg } : arg;
+        // OJO: el handler de fallo se llama SIEMPRE, incluido el caso 'auth'.
+        // Si no, cada vencimiento de clave dejaba trabados para siempre los
+        // candados de sincronizacion y los botones deshabilitados, y la app
+        // parecia rota hasta reiniciarla. La pantalla de clave ya la mostro
+        // apiCall; aca solo hay que soltar lo que quedo en curso.
         apiCall(MAP[name], args).then(function (data) { if (ok) ok(data); })
-          .catch(function (err) { if (err.message !== 'auth' && fail) fail(err); });
+          .catch(function (err) { if (fail) fail(err); });
       };
     });
     return o;
@@ -1600,8 +1625,15 @@ btn.disabled = false;
 res.innerHTML = '<div class="tmsg err">' + esc(ibkrMsgErr(err)) + '</div>';
 }).guardarConfigIBKR({ token: tk.value, queryId: q.value, queryActId: qa.value });
 };
-var ibkrSyncEnCurso = false;
-function correrSyncIBKR(dryRun) {
+// El backend frena solo las sincronizaciones que dejarian demasiadas
+// posiciones en cero (reporte incompleto del broker). Si Guzman ya miro la
+// comparacion y sabe que los cierres son reales, este confirm manda forzar.
+function confirmarParcial(parcial, quien) {
+if (!parcial) return false;
+return window.confirm('Varias posiciones quedarían en CERO.\n\nSi vendiste todo eso, está bien. Si no, el reporte de ' + quien + ' vino incompleto y conviene no aplicar.\n\n¿Aplicar igual?');
+}
+var ibkrSyncEnCurso = false, ibkrParcial = false;
+function correrSyncIBKR(dryRun, forzar) {
 if (ibkrSyncEnCurso) return;
 ibkrSyncEnCurso = true;
 var out = document.getElementById('ibkrCambios');
@@ -1635,8 +1667,10 @@ html += '<div class="row"><span>' + txt + '</span></div>';
 (r.mensajes || []).forEach(function (m) { html += '<p class="newsempty">&#9888; ' + esc(m) + '</p>'; });
 out.innerHTML = html;
 if (dryRun) {
+ibkrParcial = !!r.parcial;
 btnAplicar.style.display = r.cambios.length ? '' : 'none';
 } else {
+ibkrParcial = false;
 btnAplicar.style.display = 'none';
 if (r.cambios.length) resEl.innerHTML = '<div class="tmsg ok">&#10003; Listo. La hoja IB qued&oacute; igual que tu cuenta de IBKR.</div>';
 cargarEstadoIBKR();
@@ -1646,10 +1680,10 @@ loadData();
 ibkrSyncEnCurso = false;
 out.innerHTML = '';
 resEl.innerHTML = '<div class="tmsg err">' + esc(ibkrMsgErr(err)) + '</div>';
-}).sincronizarIBKR({ dryRun: !!dryRun });
+}).sincronizarIBKR({ dryRun: !!dryRun, forzar: !!forzar });
 }
 document.getElementById('ibkrVerCambios').onclick = function () { correrSyncIBKR(true); };
-document.getElementById('ibkrAplicar').onclick = function () { correrSyncIBKR(false); };
+document.getElementById('ibkrAplicar').onclick = function () { correrSyncIBKR(false, confirmarParcial(ibkrParcial, 'IBKR')); };
 document.getElementById('ibkrBack').onclick = function () { setView('config'); };
 
 // ---------- Binance: saldos en vivo (WebSocket + clave de solo lectura) ----------
@@ -1889,8 +1923,8 @@ btn.disabled = false;
 res.innerHTML = '<div class="tmsg err">' + esc(csMsgErr(err)) + '</div>';
 }).portalCS();
 };
-var csEnCurso = false;
-function correrSyncCS(dryRun) {
+var csEnCurso = false, csParcial = false;
+function correrSyncCS(dryRun, forzar) {
 if (csEnCurso) return;
 csEnCurso = true;
 var out = document.getElementById('csCambios');
@@ -1924,8 +1958,10 @@ html += '<div class="row"><span>' + txt + '</span></div>';
 (r.mensajes || []).forEach(function (m) { html += '<p class="newsempty">&#9888; ' + esc(m) + '</p>'; });
 out.innerHTML = html;
 if (dryRun) {
+csParcial = !!r.parcial;
 btnAplicar.style.display = r.cambios.length ? '' : 'none';
 } else {
+csParcial = false;
 btnAplicar.style.display = 'none';
 if (r.cambios.length) resEl.innerHTML = '<div class="tmsg ok">&#10003; Listo. La hoja CS qued&oacute; igual que tu cuenta de Schwab.</div>';
 cargarEstadoCS();
@@ -1935,10 +1971,10 @@ loadData();
 csEnCurso = false;
 out.innerHTML = '';
 resEl.innerHTML = '<div class="tmsg err">' + esc(csMsgErr(err)) + '</div>';
-}).sincronizarCS({ dryRun: !!dryRun });
+}).sincronizarCS({ dryRun: !!dryRun, forzar: !!forzar });
 }
 document.getElementById('csVerCambios').onclick = function () { correrSyncCS(true); };
-document.getElementById('csAplicar').onclick = function () { correrSyncCS(false); };
+document.getElementById('csAplicar').onclick = function () { correrSyncCS(false, confirmarParcial(csParcial, 'Schwab')); };
 document.getElementById('csBack').onclick = function () { setView('config'); };
 
 // ---------- Torta: alternar por cuenta / por tipo ----------
@@ -2709,8 +2745,16 @@ cashListEl.appendChild(row);
 });
 fullSerie = data.serie;
 currentTotal = data.total;
+// El grafico va aparte: si Chart.js no cargo (o falla), antes se llevaba
+// puesto todo lo que venia despues — posiciones, precios y el auto-sync de
+// Binance quedaban sin pintar. Ahora falla solo el grafico.
+try {
 drawLineChart(filterSerie(currentRangeDias));
 updateRangePct();
+} catch (eChart) {
+var cb = document.getElementById('chartbox') || document.querySelector('.chartbox');
+if (cb) cb.innerHTML = '<p class="newsempty">No se pudo dibujar el gr&aacute;fico.</p>';
+}
 renderHoldings(data.topHoldings);
 actualizarSymbols();
 if (document.getElementById('view-portafolio').style.display !== 'none') renderPortafolio();
