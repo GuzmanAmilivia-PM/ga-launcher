@@ -247,6 +247,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 .seclink{color:var(--muted);font-size:12.5px;text-decoration:underline;cursor:pointer;margin-top:18px;}
 #splash{position:fixed;inset:0;z-index:9999;background:radial-gradient(circle at top left,#10192b,#080d16 60%);display:flex;align-items:center;justify-content:center;transition:opacity .5s ease;}.splash-inner{transform:translateY(-6vh);}.splash-from{position:absolute;left:0;right:0;bottom:calc(26px + env(safe-area-inset-bottom,0px));text-align:center;font-size:12px;font-weight:600;letter-spacing:.08em;color:#90a0b8;opacity:.8;}#splash.hide{opacity:0;pointer-events:none;}.splash-inner{text-align:center;}
 .splash-sub{font-size:15px;font-weight:600;letter-spacing:.05em;color:var(--muted);margin-top:4px;}
+.splash-brand{font-size:18px;font-weight:800;letter-spacing:.26em;text-indent:.26em;text-transform:uppercase;color:var(--gold);margin-top:7px;}
 </style>
 </head>
 <body>
@@ -260,7 +261,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 </div></div>
 <div id="splash"><div class="splash-inner">
 <div class="galogo-big galogo-img" aria-label="GA"></div>
-<div class="splash-sub">Portfolio Tracker</div>
+<div class="splash-sub splash-brand">GUZMANA</div>
 </div>
 <div class="splash-from">From GA platforms</div>
 </div>
@@ -2590,7 +2591,17 @@ buildRangeBar('rangeBar');
 buildRangeBar('rangeBarBig');
 buildTradeForm();
 buildCashForm();
-if (getApiToken()) { loadData(); } else { mostrarLock(); }
+// Pintado instantáneo: al abrir se muestran los últimos datos vistos
+// (guardados en este dispositivo) y el refresco real corre por atrás.
+function pintarCache() {
+  try {
+    var c = JSON.parse(localStorage.getItem('ga_cache_data') || 'null');
+    if (!c || !c.data || !c.data.cuentas) return false;
+    render(c.data);
+    return true;
+  } catch (e) { return false; }
+}
+if (getApiToken()) { pintarCache(); loadData(); } else { mostrarLock(); }
 function render(data) {
 hideSplash();
   try {
@@ -2626,7 +2637,20 @@ actualizarSymbols();
 if (document.getElementById('view-portafolio').style.display !== 'none') renderPortafolio();
 bnbAutoSync();
   } catch(e) { document.getElementById('total').textContent = 'ERR2: ' + String(e); } }
-  function loadData(){ google.script.run.withFailureHandler(function(err){hideSplash(); var t=document.getElementById('total'); if(t){ t.textContent='ERR: '+err.message; }}).withSuccessHandler(render).getPortfolioData(); }
+  function loadData(){
+    google.script.run.withFailureHandler(function(err){
+      hideSplash();
+      // Con datos ya pintados (del caché), un fallo de red no rompe la vista:
+      // se avisa y quedan los últimos datos guardados.
+      if (lastData) { avisoInicio('&#9888; Sin conexi&oacute;n con el servidor: mostrando los &uacute;ltimos datos guardados.'); return; }
+      var t=document.getElementById('total'); if(t){ t.textContent='ERR: '+err.message; }
+    }).withSuccessHandler(function(data){
+      try { localStorage.setItem('ga_cache_data', JSON.stringify({ t: Date.now(), data: data })); } catch(e) {}
+      var av = document.getElementById('autoAviso');
+      if (av && av.innerHTML.indexOf('Sin conexi') !== -1) { av.style.display='none'; av.innerHTML=''; }
+      render(data);
+    }).getPortfolioData();
+  }
 function hideSplash(){ var s=document.getElementById('splash'); if(s && !s.classList.contains('hide')){ s.classList.add('hide'); setTimeout(function(){ if(s&&s.parentNode){ s.style.display='none'; } },600); } }
 setInterval(function(){ if(document.visibilityState==='visible'){ loadData(); } }, 60000);
 document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ loadData(); } });
