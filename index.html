@@ -293,7 +293,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 </div>
 <div class="menu-grid">
 <button class="mtile" id="mIA"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M12 3.5 13.8 9 19.5 11 13.8 13 12 18.5 10.2 13 4.5 11 10.2 9z"/><path d="M18.5 16.5 19.2 18.6 21.3 19.3 19.2 20 18.5 22.1 17.8 20 15.7 19.3 17.8 18.6z"/></svg></span>IA Insights</button>
-<button class="mtile" id="mRefrescar"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.7 3.5v3.8h-3.8"/></svg></span><span id="mRefrescarTxt">Refrescar precios</span></button>
+<button class="mtile" id="mRefrescar"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.7 3.5v3.8h-3.8"/></svg></span><span id="mRefrescarTxt">Sincronizar</span></button>
 <a class="mtile" href="https://docs.google.com/spreadsheets/d/145R-cxu6zK6o7A1ht2R8mNypEacmeSmQQzzDPwy5tjg/edit" target="_blank" rel="noopener"><span class="mtile-ic"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-13"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></svg></span>Data base</a>
 <button class="mtile" id="mConfig"><span class="mtile-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.5-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4L9.6 5A7.6 7.6 0 0 0 7 6.5l-2.4-1-2 3.5 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.5 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.5z"/></svg></span>Configuraci&oacute;n</button>
 <button class="mtile" id="mSeguridad"><span class="mtile-ic"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg></span>Seguridad</button>
@@ -870,19 +870,7 @@ document.getElementById('mIA').onclick = function () { toggleMenu(false); setVie
 document.getElementById('mConfig').onclick = function () { toggleMenu(false); setView('config'); };
 document.getElementById('mSeguridad').onclick = function () { toggleMenu(false); setView('seguridad'); };
 document.getElementById('mTrans').onclick = function () { toggleMenu(false); setView('trade'); };
-document.getElementById('mRefrescar').onclick = function () {
-var btn = this, txt = document.getElementById('mRefrescarTxt');
-if (btn._busy) return;
-btn._busy = true;
-txt.textContent = 'Refrescando...';
-google.script.run.withSuccessHandler(function () {
-btn._busy = false; txt.textContent = 'Refrescar precios';
-toggleMenu(false);
-loadData();
-}).withFailureHandler(function (err) {
-btn._busy = false; txt.textContent = 'Error al refrescar';
-}).refrescarPrecios();
-};
+document.getElementById('mRefrescar').onclick = function () { sincronizarTodo(); };
 
 // ---------- Navegación (barra inferior) ----------
 var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'config', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb', 'cs'];
@@ -2231,6 +2219,94 @@ avisoInicio('&#10003; Binance sincronizado: ' + r2.cambios.length + ' cambio' + 
 }).withFailureHandler(fin).sincronizarBNB({ balances: saldos, dryRun: false });
 }).withFailureHandler(fin).sincronizarBNB({ balances: saldos, dryRun: true });
 }, fin);
+}
+
+// ---------- Sincronizar todo (menu) ----------
+// Corre en cadena IBKR -> Schwab -> Binance -> refrescar precios. Cada broker
+// que no este configurado se saltea en silencio (sinConfig del backend, o
+// bnbConfig() vacio en el caso de Binance, que se lee desde el telefono).
+// Nunca corre en paralelo con las sincronizaciones manuales de cada plataforma.
+var syncTodoEnCurso = false;
+function sincronizarTodo() {
+if (syncTodoEnCurso || ibkrSyncEnCurso || csEnCurso || bnbEnCurso) return;
+syncTodoEnCurso = true;
+var txt = document.getElementById('mRefrescarTxt');
+var lineas = [], huboError = false;
+function paso(n) { txt.textContent = n; }
+function nota(msg) { lineas.push(msg); }
+function ok(nombre, r) {
+var n = (r.cambios || []).length;
+nota('&#10003; ' + nombre + ': ' + (n ? n + ' cambio' + (n === 1 ? '' : 's') : 'sin cambios'));
+}
+function error(nombre, r) {
+huboError = true;
+nota('&#9888; ' + nombre + ': ' + esc(((r && r.mensajes) || ['no se pudo sincronizar']).join(' ')));
+}
+function terminar() {
+syncTodoEnCurso = false;
+txt.textContent = 'Sincronizar';
+toggleMenu(false);
+loadData();
+if (lineas.length) avisoInicio(lineas.join('<br>'), !huboError);
+}
+function precios() {
+paso('Refrescando precios...');
+google.script.run.withSuccessHandler(terminar).withFailureHandler(function () {
+nota('&#9888; No se pudieron refrescar los precios.');
+huboError = true;
+terminar();
+}).refrescarPrecios();
+}
+function binance() {
+if (!bnbConfig()) { precios(); return; }
+paso('Sincronizando Binance...');
+bnbEnCurso = true;
+function salir(msg) { bnbEnCurso = false; if (msg) { nota(msg); huboError = true; } precios(); }
+bnbLeerSaldos(function (saldos) {
+google.script.run.withSuccessHandler(function (r) {
+if (!r || !r.ok) { bnbEnCurso = false; error('Binance', r); precios(); return; }
+var cerradas = (r.cambios || []).filter(function (c) { return c.tipo === 'cerrada'; }).length;
+if (cerradas >= 2) {
+salir('&#9888; Binance: varias posiciones aparecen sin saldo (&iquest;fondos en Earn?). No se aplic&oacute; nada &mdash; revisalo en Plataformas.');
+return;
+}
+if (!r.cambios.length) { bnbEnCurso = false; ok('Binance', r); precios(); return; }
+google.script.run.withSuccessHandler(function (r2) {
+bnbEnCurso = false;
+if (!r2 || !r2.ok) { error('Binance', r2); } else { ok('Binance', r2); try { localStorage.setItem('ga_bnb_ultima', fechaCortaMs(Date.now())); } catch (e) {} }
+precios();
+}).withFailureHandler(function () { salir('&#9888; Binance: fall&oacute; al aplicar los cambios.'); })
+.sincronizarBNB({ balances: saldos, dryRun: false });
+}).withFailureHandler(function () { salir('&#9888; Binance: no respondi&oacute; el servidor.'); })
+.sincronizarBNB({ balances: saldos, dryRun: true });
+}, function () { salir('&#9888; Binance: no se pudieron leer los saldos desde el tel&eacute;fono.'); });
+}
+function schwab() {
+paso('Sincronizando Schwab...');
+csEnCurso = true;
+google.script.run.withSuccessHandler(function (r) {
+csEnCurso = false;
+if (r && r.sinConfig) { binance(); return; }
+if (!r || !r.ok) error('Schwab', r); else { ok('Schwab', r); cargarEstadoCS(); }
+binance();
+}).withFailureHandler(function (err) {
+csEnCurso = false;
+error('Schwab', { mensajes: [csMsgErr(err)] });
+binance();
+}).sincronizarCS({ dryRun: false });
+}
+paso('Sincronizando IBKR...');
+ibkrSyncEnCurso = true;
+google.script.run.withSuccessHandler(function (r) {
+ibkrSyncEnCurso = false;
+if (r && r.sinConfig) { schwab(); return; }
+if (!r || !r.ok) error('IBKR', r); else { ok('IBKR', r); cargarEstadoIBKR(); }
+schwab();
+}).withFailureHandler(function (err) {
+ibkrSyncEnCurso = false;
+error('IBKR', { mensajes: [ibkrMsgErr(err)] });
+schwab();
+}).sincronizarIBKR({ dryRun: false });
 }
 
 // ---------- IA Insights ----------
