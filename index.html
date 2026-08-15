@@ -294,6 +294,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 
 <!-- ============ INICIO ============ -->
 <div id="view-inicio">
+<div id="autoAviso" style="display:none"></div>
 <div class="topstats">
 <div>
 <p class="lbl">Valor total estimado <button class="eyebtn" id="eyeBtn" aria-label="Ocultar montos"></button></p>
@@ -1548,7 +1549,7 @@ var t = document.getElementById('bnbEstadoTxt');
 document.getElementById('bnbSyncCard').style.display = cfg ? '' : 'none';
 document.getElementById('bnbBorrar').style.display = cfg ? '' : 'none';
 var html = cfg
-? '&#10003; Clave guardada en este dispositivo. Los saldos se leen directo de Binance desde tu tel&eacute;fono; la clave solo puede leer, nunca operar ni retirar.'
+? '&#10003; Clave guardada en este dispositivo. Los saldos se leen directo de Binance desde tu tel&eacute;fono y se sincronizan solos al abrir la app (como mucho cada 30 min); la clave solo puede leer, nunca operar ni retirar.'
 : 'Sin conectar. Cre&aacute; una clave API de <b>solo lectura</b> en la app de Binance (pasos m&aacute;s abajo) y guardala ac&aacute;: queda &uacute;nicamente en este tel&eacute;fono.';
 var u = null; try { u = localStorage.getItem('ga_bnb_ultima'); } catch (e) {}
 if (cfg && u) html += '<br>&Uacute;ltima sincronizaci&oacute;n aplicada: ' + esc(u);
@@ -1692,6 +1693,50 @@ google.script.run.withSuccessHandler(render).withFailureHandler(fallo).sincroniz
 }
 document.getElementById('bnbVerCambios').onclick = function () { correrSyncBNB(true); };
 document.getElementById('bnbAplicar').onclick = function () { correrSyncBNB(false); };
+
+// Sincronización automática: al abrir la app (y al volver a ella) lee Binance
+// en silencio y aplica solo los cambios seguros. Con >=2 posiciones "cerradas"
+// (probable billetera Earn fuera de la vista de la clave) NO aplica y avisa.
+// Cualquier fallo es silencioso: queda siempre el camino manual en view-bnb.
+var BNB_AUTO_MIN_MS = 30 * 60 * 1000;
+function avisoInicio(msg, esOk) {
+var el = document.getElementById('autoAviso');
+if (!el) return;
+el.innerHTML = '<div class="tmsg ' + (esOk ? 'ok' : 'err') + '">' + msg + '</div>';
+el.style.display = '';
+if (esOk) setTimeout(function () { el.style.display = 'none'; el.innerHTML = ''; }, 8000);
+}
+function bnbAutoSync() {
+if (!bnbConfig() || !getApiToken() || bnbEnCurso) return;
+var ts = 0;
+try { ts = parseInt(localStorage.getItem('ga_bnb_auto_ts') || '0', 10) || 0; } catch (e) {}
+if (Date.now() - ts < BNB_AUTO_MIN_MS) return;
+try { localStorage.setItem('ga_bnb_auto_ts', String(Date.now())); } catch (e) {}
+bnbEnCurso = true;
+function fin() { bnbEnCurso = false; }
+function sincronizado() {
+fin();
+try { localStorage.setItem('ga_bnb_ultima', fechaCortaMs(Date.now())); } catch (e) {}
+}
+bnbLeerSaldos(function (saldos) {
+google.script.run.withSuccessHandler(function (r) {
+if (!r || !r.ok) { fin(); return; }
+if (!r.cambios || !r.cambios.length) { sincronizado(); return; }
+var cerradas = r.cambios.filter(function (c) { return c.tipo === 'cerrada'; }).length;
+if (cerradas >= 2) {
+fin();
+avisoInicio('&#9888; Binance: varias posiciones aparecen sin saldo (&iquest;fondos en Earn?). No se aplic&oacute; nada solo: revisalo en Configuraci&oacute;n &rarr; Plataformas &rarr; Binance.');
+return;
+}
+google.script.run.withSuccessHandler(function (r2) {
+if (!r2 || !r2.ok) { fin(); return; }
+sincronizado();
+loadData();
+avisoInicio('&#10003; Binance sincronizado: ' + r2.cambios.length + ' cambio' + (r2.cambios.length === 1 ? '' : 's') + ' aplicado' + (r2.cambios.length === 1 ? '' : 's') + '.', true);
+}).withFailureHandler(fin).sincronizarBNB({ balances: saldos, dryRun: false });
+}).withFailureHandler(fin).sincronizarBNB({ balances: saldos, dryRun: true });
+}, fin);
+}
 
 // ---------- IA Insights ----------
 var iaConfigurada = null, iaCargando = false;
@@ -2088,6 +2133,7 @@ updateRangePct();
 renderHoldings(data.topHoldings);
 actualizarSymbols();
 if (document.getElementById('view-portafolio').style.display !== 'none') renderPortafolio();
+bnbAutoSync();
   } catch(e) { document.getElementById('total').textContent = 'ERR2: ' + String(e); } }
   function loadData(){ google.script.run.withFailureHandler(function(err){hideSplash(); var t=document.getElementById('total'); if(t){ t.textContent='ERR: '+err.message; }}).withSuccessHandler(render).getPortfolioData(); }
 function hideSplash(){ var s=document.getElementById('splash'); if(s && !s.classList.contains('hide')){ s.classList.add('hide'); setTimeout(function(){ if(s&&s.parentNode){ s.style.display='none'; } },600); } }
