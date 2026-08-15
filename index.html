@@ -335,7 +335,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div class="sweeppanel">
 <div class="cardhead">
 <h2>Dividendos <span class="rangepct" id="divAnio"></span></h2>
-<button class="expandbtn" id="divRefreshBtn" title="Actualizar">&#8635;</button>
+<div style="display:flex;gap:4px"><button class="expandbtn" id="divRefreshBtn" title="Actualizar">&#8635;</button><button class="expandbtn" id="divExpandBtn" title="Ampliar">&#9974;</button></div>
 </div>
 <div id="divStats" style="display:none">
 <p class="lbl">Estimado del a&ntilde;o</p>
@@ -720,6 +720,18 @@ News</button>
 <div class="chartmodal-top"><h2 style="margin:0">Evoluci&oacute;n</h2><button class="chartmodal-close" id="chartModalClose">&times;</button></div>
 <div class="rangebar" id="rangeBarBig" style="margin-bottom:14px"></div>
 <div class="chartbox chartbox-big"><canvas id="lineChartBig"></canvas></div>
+</div>
+</div>
+
+<!-- Dividendos ampliados: desglose por broker -->
+<div class="chartmodal" id="divModal" style="display:none">
+<div class="chartmodal-inner" style="max-height:92vh;overflow-y:auto">
+<div class="chartmodal-top"><h2 style="margin:0">Dividendos <span class="rangepct" id="divModalAnio"></span></h2><button class="chartmodal-close" id="divModalClose">&times;</button></div>
+<p class="divavg" id="divModalTotales"></p>
+<div id="divModalBrokers"></div>
+<div class="chartbox chartbox-big" style="margin-top:12px"><canvas id="divChartBig"></canvas></div>
+<p class="newsempty" style="font-size:11.5px;margin:8px 0 0">Un color por app &middot; toc&aacute; una barra para ver el detalle del mes</p>
+<div id="divModalDetalle"></div>
 </div>
 </div>
 
@@ -2045,6 +2057,7 @@ y: { stacked: true, grid: { color: t.grid }, ticks: { color: t.tick, font: { siz
 var html = '';
 (r.avisos || []).forEach(function (a) { html += '<p class="newsempty" style="font-size:12px">&#9888; ' + esc(a) + '</p>'; });
 body.innerHTML = html;
+renderDivModal(); // si la ventana ampliada está abierta, se actualiza sola
 }
 function mostrarDetalleDiv(mes) {
 var box = document.getElementById('divDetalle');
@@ -2062,6 +2075,80 @@ return esc(d.broker) + ' &middot; <span class="sym">' + esc(d.symbol || 'CASH') 
 box.innerHTML = '<div class="divdetbox"><b>' + MESES_CORTOS[mes - 1] + ' ' + esc((divDatos && divDatos.anio) || '') + '</b><br>' + (filas || '<span class="desc">Sin movimientos ese mes</span>') + '</div>';
 }
 document.getElementById('divRefreshBtn').onclick = function () { cargarDividendos(true); };
+
+// ---------- Dividendos ampliados: cuánto viene de cada app ----------
+var divChartBigInstance = null;
+function abrirDivModal() {
+document.getElementById('divModal').style.display = 'flex';
+if (!divDatos && !divCargado) cargarDividendos(false);
+renderDivModal();
+}
+function cerrarDivModal() {
+document.getElementById('divModal').style.display = 'none';
+document.getElementById('divModalDetalle').innerHTML = '';
+document.getElementById('divModalDetalle').removeAttribute('data-mes');
+}
+function renderDivModal() {
+if (document.getElementById('divModal').style.display === 'none') return;
+var brokersBox = document.getElementById('divModalBrokers');
+if (!divDatos) { brokersBox.innerHTML = '<p class="loadingtxt">Leyendo los dividendos...</p>'; return; }
+var r = divDatos;
+document.getElementById('divModalAnio').textContent = r.anio;
+var totalAnio = Math.round(((r.totalCobrado || 0) + (r.totalProximo || 0)) * 100) / 100;
+document.getElementById('divModalTotales').innerHTML =
+'Estimado del a&ntilde;o: <b>' + esc(mask('US$ ' + totalAnio.toFixed(2))) + '</b> &middot; Cobrado: ' + esc(mask('US$ ' + (r.totalCobrado || 0).toFixed(2))) + ' &middot; A cobrar: ' + esc(mask('US$ ' + (r.totalProximo || 0).toFixed(2)));
+var brokers = Object.keys(r.porBroker || {});
+brokersBox.innerHTML = brokers.length ? brokers.map(function (b, i) {
+var pb = r.porBroker[b];
+var tot = Math.round((pb.cobrado + pb.proximo) * 100) / 100;
+return '<div class="apostat"><span><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:' + PIE_COLORS[i % PIE_COLORS.length] + '"></span>' + esc(nombrePlataforma(b)) + '<span class="desc" style="margin-left:8px">cobrado ' + esc(mask('US$ ' + pb.cobrado.toFixed(2))) + ' &middot; a cobrar ' + esc(mask('US$ ' + pb.proximo.toFixed(2))) + '</span></span><b>' + esc(mask('US$ ' + tot.toFixed(2))) + '</b></div>';
+}).join('') : '<p class="newsempty">Sin datos por broker todav&iacute;a.</p>';
+var t = temaChart();
+if (divChartBigInstance) divChartBigInstance.destroy();
+divChartBigInstance = new Chart(document.getElementById('divChartBig'), {
+type: 'bar',
+data: {
+labels: MESES_CORTOS,
+datasets: brokers.map(function (b, i) {
+var pb = r.porBroker[b];
+return {
+label: nombrePlataforma(b),
+data: pb.meses.map(function (mm) { return Math.round((mm.cobrado + mm.proximo) * 100) / 100; }),
+backgroundColor: PIE_COLORS[i % PIE_COLORS.length],
+stack: 'b',
+borderRadius: 3
+};
+})
+},
+options: {
+responsive: true,
+maintainAspectRatio: false,
+onClick: function (evt, els) { if (els && els.length) mostrarDetalleDivModal(els[0].index + 1); },
+plugins: { legend: { display: true, labels: { color: t.tick, boxWidth: 10, font: { size: 11 } } } },
+scales: {
+x: { stacked: true, grid: { display: false }, ticks: { color: t.tick, font: { size: 10 } } },
+y: { stacked: true, grid: { color: t.grid }, ticks: { color: t.tick, font: { size: 10 }, callback: function (v) { return montosOcultos ? '' : v; } } }
+}
+}
+});
+}
+function mostrarDetalleDivModal(mes) {
+var box = document.getElementById('divModalDetalle');
+if (box.getAttribute('data-mes') === String(mes)) {
+box.innerHTML = '';
+box.removeAttribute('data-mes');
+return;
+}
+box.setAttribute('data-mes', String(mes));
+var det = (divDatos && divDatos.detalle && divDatos.detalle[mes]) || [];
+var filas = det.map(function (d) {
+var etiqueta = d.estado === 'proximo' ? (d.estimado ? ' <span class="desc">~ estimado</span>' : ' <span class="desc">a pagar</span>') : '';
+return esc(nombrePlataforma(d.broker)) + ' &middot; <span class="sym">' + esc(d.symbol || 'CASH') + '</span> &middot; ' + esc(mask('US$ ' + d.monto.toFixed(2))) + etiqueta;
+}).join('<br>');
+box.innerHTML = '<div class="divdetbox"><b>' + MESES_CORTOS[mes - 1] + ' ' + esc((divDatos && divDatos.anio) || '') + '</b><br>' + (filas || '<span class="desc">Sin movimientos ese mes</span>') + '</div>';
+}
+document.getElementById('divExpandBtn').onclick = abrirDivModal;
+document.getElementById('divModalClose').onclick = cerrarDivModal;
 
 function cargarAportes() {
 apoCargado = true;
