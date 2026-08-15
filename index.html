@@ -1421,17 +1421,27 @@ challenge: crypto.getRandomValues(new Uint8Array(32)),
 rp: { name: 'GA Portfolio', id: location.hostname },
 user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'GA', displayName: 'GA Portfolio' },
 pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
-authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
 timeout: 60000
 } });
 }
+// Una sola peticion de WebAuthn viva a la vez: si queda una pendiente (el
+// usuario cerro la hoja de Face ID sin responder, o el intento automatico
+// sigue abierto), el navegador rechaza las siguientes al toque y el sensor
+// no vuelve a aparecer. Por eso se aborta la anterior antes de pedir otra.
+var bioAbort = null;
 function bioVerificar(idB64) {
-return navigator.credentials.get({ publicKey: {
+try { if (bioAbort) bioAbort.abort(); } catch (e) {}
+bioAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+var opts = { publicKey: {
 challenge: crypto.getRandomValues(new Uint8Array(32)),
+rpId: location.hostname,
 allowCredentials: [{ type: 'public-key', id: b64uBytes(idB64) }],
 userVerification: 'required',
 timeout: 60000
-} });
+} };
+if (bioAbort) opts.signal = bioAbort.signal;
+return navigator.credentials.get(opts);
 }
 // Mensaje segun el error real de WebAuthn (antes se tragaba el motivo y siempre
 // decia lo mismo, imposible de diagnosticar desde el celular).
@@ -1518,15 +1528,35 @@ var olvTxt = s.pin ? 'Olvid\u00e9 mi clave' : 'No puedo entrar';
 olv.textContent = olvTxt;
 olv.style.display = '';
 function abrir() { el.style.display = 'none'; document.getElementById('secErr').textContent = ''; hideSplash(); }
+// Intento de biometria. `auto` = disparado solo al abrir la app, sin toque:
+// Safari exige un gesto del usuario para WebAuthn, asi que si ese intento se
+// rechaza no se muestra error, queda el boton para reintentar a mano.
+function intentarBio(auto) {
+var err = document.getElementById('secErr');
+if (!auto) err.textContent = '';
+// El boton NUNCA se deshabilita: si la peticion queda colgada (el caso que
+// dejaba la app trancada), volver a tocarlo aborta la anterior y reintenta.
+var btn = document.getElementById('secBioGo');
+if (!auto) btn.textContent = 'Verificando...';
+return bioVerificar(s.bio).then(function () {
+btn.textContent = 'Desbloquear';
+abrir();
+}).catch(function (e) {
+btn.textContent = auto ? 'Desbloquear' : 'Reintentar';
+if (!auto) err.textContent = bioErrTxt(e, !!s.pin);
+});
+}
 if (s.bio) bioDisponible().then(function (dispo) {
-if (!dispo) document.getElementById('secErr').textContent = 'La biometr\u00eda no est\u00e1 disponible en este navegador.' + (s.pin ? ' Us\u00e1 la clave.' : ' Toc\u00e1 "No puedo entrar".');
+if (!dispo) {
+document.getElementById('secErr').textContent = 'La biometr\u00eda no est\u00e1 disponible en este navegador.' + (s.pin ? ' Us\u00e1 la clave.' : ' Toc\u00e1 "No puedo entrar".');
+return;
+}
+// Arranque directo con la biometria, sin tocar el boton. Un solo intento
+// automatico por apertura (si no, cancelar la hoja del sistema la vuelve
+// a abrir en loop).
+setTimeout(function () { if (el.style.display !== 'none') intentarBio(true); }, 350);
 });
-document.getElementById('secBioGo').onclick = function () {
-document.getElementById('secErr').textContent = '';
-bioVerificar(s.bio).then(abrir).catch(function (err) {
-document.getElementById('secErr').textContent = bioErrTxt(err, !!s.pin);
-});
-};
+document.getElementById('secBioGo').onclick = function () { intentarBio(false); };
 document.getElementById('secPinGo').onclick = function () {
 var v = document.getElementById('secPinInput').value;
 if (!v) return;
