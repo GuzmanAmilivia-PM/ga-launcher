@@ -7,7 +7,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <meta name="theme-color" content="#0d1420">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -247,7 +247,10 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 .seclink{color:var(--muted);font-size:12.5px;text-decoration:underline;cursor:pointer;margin-top:18px;}
 #splash{position:fixed;inset:0;z-index:9999;background:radial-gradient(circle at top left,#10192b,#080d16 60%);display:flex;align-items:center;justify-content:center;transition:opacity .5s ease;}.splash-inner{transform:translateY(-6vh);}.splash-from{position:absolute;left:0;right:0;bottom:calc(26px + env(safe-area-inset-bottom,0px));text-align:center;font-size:12px;font-weight:600;letter-spacing:.08em;color:#90a0b8;opacity:.8;}#splash.hide{opacity:0;pointer-events:none;}.splash-inner{text-align:center;}
 .splash-sub{font-size:15px;font-weight:600;letter-spacing:.05em;color:var(--muted);margin-top:4px;}
-.splash-brand{font-size:18px;font-weight:800;letter-spacing:.26em;text-indent:.26em;text-transform:uppercase;color:var(--gold);margin-top:7px;}
+/* Marca del splash al estilo Binance: monograma dorado SIN caja ni sombra,
+   y la palabra en tipografía geométrica extra-negra (Montserrat 800). */
+.splash-mark{font-family:'Montserrat','Manrope',sans-serif;font-weight:800;font-size:92px;line-height:1;color:var(--gold);letter-spacing:-.12em;text-indent:-.08em;margin:0 0 6px;}
+.splash-brand{font-family:'Montserrat','Manrope',sans-serif;font-size:clamp(30px,9.5vw,42px);font-weight:800;letter-spacing:.055em;text-indent:.055em;text-transform:uppercase;color:var(--gold);margin-top:2px;line-height:1.1;}
 </style>
 </head>
 <body>
@@ -260,7 +263,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <p class="err" id="lockErr"></p>
 </div></div>
 <div id="splash"><div class="splash-inner">
-<div class="galogo-big galogo-img" aria-label="GA"></div>
+<div class="splash-mark" aria-label="GA">GA</div>
 <div class="splash-sub splash-brand">GUZMANA</div>
 </div>
 <div class="splash-from">From GA platforms</div>
