@@ -181,6 +181,23 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .confighelp summary { cursor: pointer; color: var(--gold); -webkit-tap-highlight-color: transparent; }
 .confighelp ol { margin: 8px 0 0 18px; padding: 0; }
 .confighelp li { margin: 7px 0; line-height: 1.5; }
+/* Tarjeta deslizable (Evolución / Dividendos / Aportes) */
+.sweepwrap { overflow: hidden; }
+.sweepdeck { display: flex; transition: transform .28s ease; touch-action: pan-y; }
+.sweeppanel { min-width: 100%; }
+.sweepdots { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+.sweepdots .sdot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); border: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.sweepdots .sdot.active { background: var(--gold); }
+.divtable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.divtable th { text-align: right; color: var(--muted); font-weight: 600; padding: 5px 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+.divtable th:first-child, .divtable td:first-child { text-align: left; }
+.divtable td { padding: 6.5px 4px; text-align: right; border-top: 1px solid var(--border); }
+.divtable tr.divmes.clickable { cursor: pointer; }
+.divtable tr.dimmed td { color: var(--muted); opacity: .5; }
+.divtable tr.divdetail td { background: rgba(255,255,255,.03); font-size: 12.5px; line-height: 1.7; text-align: left; }
+.apostat { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.apostat b.up { color: var(--green); }
+.apostat b.down { color: var(--red); }
 .txrow { display: flex; justify-content: space-between; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
 .txrow:last-child { border-bottom: none; }
 .txrow .txmeta { color: var(--muted); font-size: 11px; display: block; }
@@ -310,11 +327,35 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 
 <div class="grid2" style="margin-top:18px">
 <div class="card">
+<div class="sweepwrap" id="sweepWrap">
+<div class="sweepdeck" id="sweepDeck">
+<div class="sweeppanel">
 <div class="cardhead">
 <h2>Evoluci&oacute;n <span class="rangepct" id="rangePct"></span></h2>
 <div class="rangebar" id="rangeBar"></div><button class="expandbtn" id="expandBtn" title="Ampliar">&#9974;</button>
 </div>
 <div class="chartbox"><canvas id="lineChart"></canvas></div>
+</div>
+<div class="sweeppanel">
+<div class="cardhead">
+<h2>Dividendos <span class="rangepct" id="divAnio"></span></h2>
+<button class="expandbtn" id="divRefreshBtn" title="Actualizar">&#8635;</button>
+</div>
+<div id="divBody"><p class="loadingtxt">Desliz&aacute; para cargar...</p></div>
+</div>
+<div class="sweeppanel">
+<div class="cardhead">
+<h2>Aportes del a&ntilde;o <span class="rangepct" id="apoAnio"></span></h2>
+</div>
+<div id="apoBody"><p class="loadingtxt">Desliz&aacute; para cargar...</p></div>
+</div>
+</div>
+</div>
+<div class="sweepdots">
+<button class="sdot active" data-sw="0" aria-label="Evoluci&oacute;n"></button>
+<button class="sdot" data-sw="1" aria-label="Dividendos"></button>
+<button class="sdot" data-sw="2" aria-label="Aportes"></button>
+</div>
 </div>
 <div class="card">
 <h2>Principales posiciones</h2>
@@ -332,7 +373,11 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div id="view-portafolio" style="display:none">
 <p class="viewtitle">Portafolio</p>
 <div class="card">
-<h2>Distribuci&oacute;n por aplicaci&oacute;n</h2>
+<h2>Distribuci&oacute;n</h2>
+<div class="tipobar" style="margin:8px 0 12px">
+<button type="button" class="tipobtn active-compra" id="pieCuentaBtn">Por cuenta</button>
+<button type="button" class="tipobtn" id="pieTipoBtn">Por tipo</button>
+</div>
 <div class="piewrap">
 <div class="pieholder"><canvas id="pieChart"></canvas></div>
 <div class="pielegend" id="pieLegend"></div>
@@ -452,6 +497,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <li>En <b>Actividad</b> (Activity Flex Query) toc&aacute; el <b>+</b>: nombre <i>posiciones</i>, formato <b>XML</b>, per&iacute;odo <b>&Uacute;ltimo d&iacute;a h&aacute;bil</b>. En las secciones marc&aacute; <b>Open Positions</b> (opci&oacute;n Summary, seleccion&aacute; todos los campos) y <b>Cash Report</b> (todos los campos). Guard&aacute; y anot&aacute; el <b>Query ID</b> (n&uacute;mero corto que queda junto al nombre).</li>
 <li>En la misma pantalla: <b>Servicio web Flex</b> (Flex Web Service Configuration, el engranaje) &rarr; activalo y gener&aacute; el <b>token</b> (n&uacute;mero largo). Vencimiento: 1 a&ntilde;o.</li>
 <li>Peg&aacute; los dos ac&aacute; abajo. Este acceso es de solo lectura: no permite operar ni mover plata.</li>
+<li><b>Para los dividendos (opcional):</b> cre&aacute; una SEGUNDA Flex Query con el <b>+</b>: nombre <i>actividad</i>, formato XML, per&iacute;odo <b>&Uacute;ltimos 365 d&iacute;as</b>, y marc&aacute; las secciones <b>Cash Transactions</b> (transacciones de efectivo, todos los campos) y <b>Open Dividend Accruals</b> (dividendos devengados abiertos, todos los campos). Su Query ID va en el campo "actividad" de ac&aacute; abajo.</li>
 </ol>
 </details>
 <div class="tradeform" style="margin-top:10px">
@@ -459,6 +505,8 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <input id="ibkrToken" type="password" autocomplete="off" inputmode="numeric" placeholder="N&uacute;mero largo">
 <label for="ibkrQuery">Query ID de la Flex Query</label>
 <input id="ibkrQuery" autocomplete="off" inputmode="numeric" placeholder="N&uacute;mero corto (ej. 123456)">
+<label for="ibkrQueryAct">Query ID de actividad (opcional &middot; para dividendos)</label>
+<input id="ibkrQueryAct" autocomplete="off" inputmode="numeric" placeholder="Segunda Flex Query, ver pasos arriba">
 <button class="bigbtn" id="ibkrGuardar">Guardar conexi&oacute;n</button>
 <div id="ibkrKeyResultado"></div>
 </div>
@@ -691,7 +739,7 @@ function apiCall(fn, args) {
 }
 // Shim compatible con google.script.run: el resto del codigo no cambia.
 (function () {
-  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getTransacciones: 'transacciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar', estadoIA: 'ia_estado', guardarClaveIA: 'ia_config', analizarConIA: 'ia_analizar', buscarTicker: 'buscar', estadoIBKR: 'ibkr_estado', guardarConfigIBKR: 'ibkr_config', sincronizarIBKR: 'ibkr_sync', sincronizarBNB: 'bnb_sync', estadoCS: 'cs_estado', guardarConfigCS: 'cs_config', portalCS: 'cs_portal', sincronizarCS: 'cs_sync' };
+  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getTransacciones: 'transacciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar', estadoIA: 'ia_estado', guardarClaveIA: 'ia_config', analizarConIA: 'ia_analizar', buscarTicker: 'buscar', estadoIBKR: 'ibkr_estado', guardarConfigIBKR: 'ibkr_config', sincronizarIBKR: 'ibkr_sync', sincronizarBNB: 'bnb_sync', estadoCS: 'cs_estado', guardarConfigCS: 'cs_config', portalCS: 'cs_portal', sincronizarCS: 'cs_sync', getDividendos: 'dividendos', getAportes: 'aportes' };
   function mk(ok, fail) {
     var o = {
       withSuccessHandler: function (f) { return mk(f, fail); },
@@ -892,30 +940,51 @@ if (ACCOUNTS[i].nombre.toLowerCase() === n) return ACCOUNTS[i];
 }
 return null;
 }
+var pieModo = 'cuenta';
+var TIPO_LABELS = { accion: 'Acciones', etf: 'ETFs', cripto: 'Cripto', cash: 'Cash' };
+// Items de la torta según el modo: por cuenta (con click al detalle) o por
+// tipo de activo (agrupando las posiciones; el resto no posicionado va a Cash).
+function itemsPie() {
+var total = lastData.total || 0;
+if (pieModo === 'cuenta') {
+return (lastData.cuentas || []).map(function (c) {
+return { label: nombrePlataforma(c.nombre), valor: c.valor, acc: accountByName(c.nombre) };
+});
+}
+var grupos = { accion: 0, etf: 0, cripto: 0, cash: 0 };
+var sumaPos = 0;
+(lastData.posiciones || []).forEach(function (p) {
+var t = TIPO_LABELS[p.tipo] ? p.tipo : (p.cripto ? 'cripto' : 'accion');
+grupos[t] += (Number(p.valor) || 0);
+sumaPos += (Number(p.valor) || 0);
+});
+if (total - sumaPos > 1) grupos.cash += (total - sumaPos);
+return ['accion', 'etf', 'cripto', 'cash'].filter(function (t) { return grupos[t] > 0.5; })
+.map(function (t) { return { label: TIPO_LABELS[t], valor: Math.round(grupos[t] * 100) / 100, acc: null }; });
+}
 function renderPortafolio() {
 if (!lastData) return;
-var cuentas = lastData.cuentas || [];
 var total = lastData.total || 0;
+var items = itemsPie();
 // Torta
 if (pieChartInstance) pieChartInstance.destroy();
 pieChartInstance = new Chart(document.getElementById('pieChart'), {
 type: 'doughnut',
 data: {
-labels: cuentas.map(function (c) { return nombrePlataforma(c.nombre); }),
-datasets: [{ data: cuentas.map(function (c) { return c.valor; }), backgroundColor: PIE_COLORS.slice(0, cuentas.length), borderColor: temaChart().pieBorder, borderWidth: 3 }]
+labels: items.map(function (c) { return c.label; }),
+datasets: [{ data: items.map(function (c) { return c.valor; }), backgroundColor: PIE_COLORS.slice(0, items.length), borderColor: temaChart().pieBorder, borderWidth: 3 }]
 },
 options: { cutout: '62%', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
 });
 // Leyenda compacta al costado: nombre + % (el detalle en USD vive en Inicio)
 var leg = document.getElementById('pieLegend');
 leg.innerHTML = '';
-cuentas.forEach(function (c, i) {
-var acc = accountByName(c.nombre);
+items.forEach(function (c, i) {
 var row = document.createElement('div');
-row.className = 'pierow' + (acc ? ' clickable' : '');
-row.innerHTML = '<span class="lname"><span class="dot" style="background:' + PIE_COLORS[i % PIE_COLORS.length] + '"></span>' + esc(nombrePlataforma(c.nombre)) + '</span>' +
-'<span class="lpct">' + (total ? ((c.valor / total) * 100).toFixed(1) : '0') + '%' + (acc ? '<span class="chev">&rsaquo;</span>' : '') + '</span>';
-if (acc) row.onclick = function () { showAccount(acc, 'portafolio'); };
+row.className = 'pierow' + (c.acc ? ' clickable' : '');
+row.innerHTML = '<span class="lname"><span class="dot" style="background:' + PIE_COLORS[i % PIE_COLORS.length] + '"></span>' + esc(c.label) + '</span>' +
+'<span class="lpct">' + (total ? ((c.valor / total) * 100).toFixed(1) : '0') + '%' + (c.acc ? '<span class="chev">&rsaquo;</span>' : '') + '</span>';
+if (c.acc) row.onclick = function () { showAccount(c.acc, 'portafolio'); };
 leg.appendChild(row);
 });
 // Desglose completo
@@ -1493,6 +1562,9 @@ if (st.ultimaSync && st.ultimaSync.cuando) {
 html += '<br>&Uacute;ltima sincronizaci&oacute;n: ' + (st.ultimaSync.ok ? '' : '&#9888; ') + esc(fechaCortaMs(st.ultimaSync.cuando)) + ' &middot; ' + esc(st.ultimaSync.detalle || '');
 }
 if (st.triggerDiario === false) html += '<br>&#9888; La sincronizaci&oacute;n diaria autom&aacute;tica no est&aacute; activa: volv&eacute; a guardar la conexi&oacute;n.';
+html += st.actividadConfigurada
+? '<br>&#10003; Dividendos de IBKR incluidos (consulta de actividad configurada).'
+: '<br>Dividendos de IBKR: sin configurar &mdash; cre&aacute; la segunda Flex Query (paso 6 de la ayuda) y guard&aacute; su Query ID abajo.';
 t.innerHTML = html;
 wrap.style.display = '';
 } else {
@@ -1504,12 +1576,12 @@ t.innerHTML = esc(ibkrMsgErr(err));
 }).estadoIBKR();
 }
 document.getElementById('ibkrGuardar').onclick = function () {
-var btn = this, tk = document.getElementById('ibkrToken'), q = document.getElementById('ibkrQuery'), res = document.getElementById('ibkrKeyResultado');
+var btn = this, tk = document.getElementById('ibkrToken'), q = document.getElementById('ibkrQuery'), qa = document.getElementById('ibkrQueryAct'), res = document.getElementById('ibkrKeyResultado');
 btn.disabled = true;
 google.script.run.withSuccessHandler(function (r) {
 btn.disabled = false;
 if (r && r.ok) {
-tk.value = ''; q.value = '';
+tk.value = ''; q.value = ''; qa.value = '';
 res.innerHTML = '<div class="tmsg ok">&#10003; Conexi&oacute;n guardada.' + ((r.mensajes && r.mensajes.length) ? ' ' + esc(r.mensajes.join(' ')) : '') + '</div>';
 cargarEstadoIBKR();
 } else {
@@ -1518,7 +1590,7 @@ res.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).
 }).withFailureHandler(function (err) {
 btn.disabled = false;
 res.innerHTML = '<div class="tmsg err">' + esc(ibkrMsgErr(err)) + '</div>';
-}).guardarConfigIBKR({ token: tk.value, queryId: q.value });
+}).guardarConfigIBKR({ token: tk.value, queryId: q.value, queryActId: qa.value });
 };
 var ibkrSyncEnCurso = false;
 function correrSyncIBKR(dryRun) {
@@ -1860,6 +1932,138 @@ resEl.innerHTML = '<div class="tmsg err">' + esc(csMsgErr(err)) + '</div>';
 document.getElementById('csVerCambios').onclick = function () { correrSyncCS(true); };
 document.getElementById('csAplicar').onclick = function () { correrSyncCS(false); };
 document.getElementById('csBack').onclick = function () { setView('config'); };
+
+// ---------- Torta: alternar por cuenta / por tipo ----------
+document.getElementById('pieCuentaBtn').onclick = function () {
+pieModo = 'cuenta';
+this.classList.add('active-compra');
+document.getElementById('pieTipoBtn').classList.remove('active-compra');
+renderPortafolio();
+};
+document.getElementById('pieTipoBtn').onclick = function () {
+pieModo = 'tipo';
+this.classList.add('active-compra');
+document.getElementById('pieCuentaBtn').classList.remove('active-compra');
+renderPortafolio();
+};
+
+// ---------- Tarjeta deslizable: Evolución / Dividendos / Aportes ----------
+var sweepIdx = 0, divCargado = false, apoCargado = false;
+function sweepGo(i) {
+sweepIdx = Math.max(0, Math.min(2, i));
+document.getElementById('sweepDeck').style.transform = 'translateX(-' + (sweepIdx * 100) + '%)';
+document.querySelectorAll('.sweepdots .sdot').forEach(function (d, j) { d.classList.toggle('active', j === sweepIdx); });
+if (sweepIdx === 1 && !divCargado) cargarDividendos(false);
+if (sweepIdx === 2 && !apoCargado) cargarAportes();
+}
+document.querySelectorAll('.sweepdots .sdot').forEach(function (d) {
+d.addEventListener('click', function () { sweepGo(parseInt(d.getAttribute('data-sw'), 10)); });
+});
+(function () {
+var wrap = document.getElementById('sweepWrap');
+if (!wrap) return;
+var x0 = null, y0 = null;
+wrap.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+wrap.addEventListener('touchend', function (e) {
+if (x0 === null) return;
+var dx = e.changedTouches[0].clientX - x0;
+var dy = e.changedTouches[0].clientY - y0;
+x0 = null;
+if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) sweepGo(sweepIdx + (dx < 0 ? 1 : -1));
+}, { passive: true });
+})();
+
+var MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Set', 'Oct', 'Nov', 'Dic'];
+function actErrMsg(err) {
+var m = (err && err.message) || String(err);
+if (m.indexOf('unknown_fn') !== -1) m = 'Se activa con la próxima actualización del servidor. Avisale a Claude que despliegue el backend.';
+return m;
+}
+function cargarDividendos(forzar) {
+divCargado = true;
+var body = document.getElementById('divBody');
+body.innerHTML = '<p class="loadingtxt">Leyendo los dividendos de tus brokers...</p>';
+google.script.run.withSuccessHandler(renderDividendos).withFailureHandler(function (err) {
+divCargado = false;
+body.innerHTML = '<p class="newsempty">' + esc(actErrMsg(err)) + '</p>';
+}).getDividendos({ forzar: !!forzar });
+}
+function renderDividendos(r) {
+var body = document.getElementById('divBody');
+if (!r || !r.ok) {
+divCargado = false;
+body.innerHTML = '<p class="newsempty">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</p>';
+return;
+}
+document.getElementById('divAnio').textContent = r.anio;
+var mesHoy = new Date().getMonth();
+var html = '<div style="overflow-x:auto"><table class="divtable"><thead><tr><th>Mes</th><th>Cobrado</th><th>Pr&oacute;ximo</th></tr></thead><tbody>';
+for (var i = 0; i < 12; i++) {
+var mm = (r.meses && r.meses[i]) || { cobrado: 0, proximo: 0 };
+var vacio = (!mm.cobrado && !mm.proximo);
+var tiene = !vacio && r.detalle && r.detalle[i + 1];
+html += '<tr class="divmes' + (tiene ? ' clickable' : '') + (vacio ? ' dimmed' : '') + '" data-mes="' + (i + 1) + '">' +
+'<td>' + MESES_CORTOS[i] + (i === mesHoy ? ' &bull;' : '') + '</td>' +
+'<td>' + (mm.cobrado ? esc(mask('US$ ' + mm.cobrado.toFixed(2))) : '&mdash;') + '</td>' +
+'<td>' + (mm.proximo ? esc(mask('US$ ' + mm.proximo.toFixed(2))) : '&mdash;') + '</td></tr>';
+}
+html += '</tbody><tfoot><tr class="divmes"><td><b>Total</b></td><td><b>' + esc(mask('US$ ' + (r.totalCobrado || 0).toFixed(2))) + '</b></td><td><b>' + esc(mask('US$ ' + (r.totalProximo || 0).toFixed(2))) + '</b></td></tr></tfoot></table></div>';
+html += '<p class="newsempty" style="font-size:11.5px;margin-top:8px">Toc&aacute; un mes para ver el detalle por broker &middot; "~" = estimado seg&uacute;n el historial de pagos</p>';
+(r.avisos || []).forEach(function (a) { html += '<p class="newsempty" style="font-size:12px">&#9888; ' + esc(a) + '</p>'; });
+body.innerHTML = html;
+body.querySelectorAll('tr.divmes.clickable').forEach(function (tr) {
+tr.onclick = function () {
+var sig = tr.nextElementSibling;
+if (sig && sig.classList.contains('divdetail')) { sig.remove(); return; }
+body.querySelectorAll('tr.divdetail').forEach(function (x) { x.remove(); });
+var det = (r.detalle && r.detalle[tr.getAttribute('data-mes')]) || [];
+var filas = det.map(function (d) {
+var etiqueta = d.estado === 'proximo' ? (d.estimado ? ' <span class="desc">~ estimado</span>' : ' <span class="desc">a pagar</span>') : '';
+return esc(d.broker) + ' &middot; <span class="sym">' + esc(d.symbol || 'CASH') + '</span> &middot; ' + esc(mask('US$ ' + d.monto.toFixed(2))) + etiqueta;
+}).join('<br>');
+var trDet = document.createElement('tr');
+trDet.className = 'divdetail';
+trDet.innerHTML = '<td colspan="3">' + (filas || '<span class="desc">Sin detalle</span>') + '</td>';
+tr.parentNode.insertBefore(trDet, tr.nextSibling);
+};
+});
+}
+document.getElementById('divRefreshBtn').onclick = function () { cargarDividendos(true); };
+
+function cargarAportes() {
+apoCargado = true;
+var body = document.getElementById('apoBody');
+body.innerHTML = '<p class="loadingtxt">Calculando los aportes del a&ntilde;o...</p>';
+google.script.run.withSuccessHandler(renderAportes).withFailureHandler(function (err) {
+apoCargado = false;
+body.innerHTML = '<p class="newsempty">' + esc(actErrMsg(err)) + '</p>';
+}).getAportes();
+}
+function renderAportes(r) {
+var body = document.getElementById('apoBody');
+if (!r || !r.ok) {
+apoCargado = false;
+body.innerHTML = '<p class="newsempty">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</p>';
+return;
+}
+document.getElementById('apoAnio').textContent = r.anio;
+// Valor al arrancar el año, desde el histórico que ya está cargado en la app.
+var enero1 = new Date(r.anio, 0, 1).getTime();
+var inicio = null;
+(fullSerie || []).forEach(function (p) { if (p.fecha <= enero1 && (!inicio || p.fecha > inicio.fecha)) inicio = p; });
+if (!inicio && (fullSerie || []).length) inicio = fullSerie[0];
+var html = '';
+html += '<div class="apostat"><span>Aportaste</span><b>' + esc(mask('US$ ' + Math.round(r.aportes).toLocaleString('es-UY'))) + '</b></div>';
+html += '<div class="apostat"><span>Retiraste</span><b>' + esc(mask('US$ ' + Math.round(r.retiros).toLocaleString('es-UY'))) + '</b></div>';
+html += '<div class="apostat"><span>Aporte neto</span><b>' + esc(mask('US$ ' + Math.round(r.neto).toLocaleString('es-UY'))) + '</b></div>';
+if (inicio && currentTotal) {
+var rend = Math.round(currentTotal - inicio.valor - r.neto);
+html += '<div class="apostat"><span>Rendimiento del a&ntilde;o</span><b class="' + (rend >= 0 ? 'up' : 'down') + '">' + esc(mask((rend >= 0 ? '+' : '') + 'US$ ' + rend.toLocaleString('es-UY'))) + '</b></div>';
+html += '<p class="newsempty" style="font-size:11.5px;margin-top:8px">Rendimiento = valor actual &minus; valor al inicio del a&ntilde;o &minus; aporte neto (con tu hist&oacute;rico como base).</p>';
+}
+(r.avisos || []).forEach(function (a) { html += '<p class="newsempty" style="font-size:12px">&#9888; ' + esc(a) + '</p>'; });
+body.innerHTML = html;
+}
 
 // Sincronización automática: al abrir la app (y al volver a ella) lee Binance
 // en silencio y aplica solo los cambios seguros. Con >=2 posiciones "cerradas"
