@@ -505,6 +505,47 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 </div>
 </div>
 
+<!-- ============ SCHWAB (se entra desde Configuracion > Plataformas) ============ -->
+<div id="view-cs" style="display:none">
+<span class="backlink" id="csBack">&larr; Volver</span>
+<p class="viewtitle">Charles Schwab</p>
+<p class="subtotal" style="margin:-8px 0 14px">Conexi&oacute;n autom&aacute;tica de solo lectura v&iacute;a SnapTrade</p>
+<div class="card">
+<h2>Estado</h2>
+<p class="newsempty" id="csEstadoTxt">Comprobando configuraci&oacute;n...</p>
+<button class="ghostbtn" id="csConectar" style="display:none">Conectar cuenta Schwab</button>
+<div id="csConectarResultado"></div>
+</div>
+<div class="card" id="csSyncCard" style="display:none">
+<h2>Sincronizaci&oacute;n</h2>
+<button class="bigbtn" id="csVerCambios">Comparar con Schwab</button>
+<div id="csCambios"></div>
+<button class="bigbtn" id="csAplicar" style="display:none">Aplicar estos cambios</button>
+<div id="csSyncResultado"></div>
+</div>
+<div class="card">
+<h2>Conexi&oacute;n</h2>
+<details class="confighelp">
+<summary>&iquest;C&oacute;mo consigo las credenciales de SnapTrade?</summary>
+<ol>
+<li>Cre&aacute; una cuenta gratis en <b>snaptrade.com</b> (bot&oacute;n Sign up / Get started). SnapTrade es el intermediario oficial que mantiene la conexi&oacute;n con Schwab sin que haya que reloguearse cada semana.</li>
+<li>En el panel (dashboard), busc&aacute; las <b>API credentials</b>: un <b>clientId</b> y una <b>consumerKey</b>.</li>
+<li>Pegalas ac&aacute; abajo y guard&aacute;.</li>
+<li>Despu&eacute;s toc&aacute; <b>"Conectar cuenta Schwab"</b>: se abre el portal seguro de SnapTrade donde entr&aacute;s con TU usuario de Schwab, una sola vez. Tus credenciales de Schwab las ve solo Schwab, nunca esta app.</li>
+<li>La conexi&oacute;n es de <b>solo lectura</b>: nadie puede operar ni mover plata con ella.</li>
+</ol>
+</details>
+<div class="tradeform" style="margin-top:10px">
+<label for="csClientId">clientId de SnapTrade</label>
+<input id="csClientId" autocomplete="off" placeholder="clientId">
+<label for="csConsumerKey">consumerKey de SnapTrade</label>
+<input id="csConsumerKey" type="password" autocomplete="off" placeholder="consumerKey">
+<button class="bigbtn" id="csGuardar">Guardar credenciales</button>
+<div id="csKeyResultado"></div>
+</div>
+</div>
+</div>
+
 <!-- ============ TRADE ============ -->
 <div id="view-trade" style="display:none">
 <p class="viewtitle">Registrar operaci&oacute;n</p>
@@ -650,7 +691,7 @@ function apiCall(fn, args) {
 }
 // Shim compatible con google.script.run: el resto del codigo no cambia.
 (function () {
-  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getTransacciones: 'transacciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar', estadoIA: 'ia_estado', guardarClaveIA: 'ia_config', analizarConIA: 'ia_analizar', buscarTicker: 'buscar', estadoIBKR: 'ibkr_estado', guardarConfigIBKR: 'ibkr_config', sincronizarIBKR: 'ibkr_sync', sincronizarBNB: 'bnb_sync' };
+  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getTransacciones: 'transacciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar', estadoIA: 'ia_estado', guardarClaveIA: 'ia_config', analizarConIA: 'ia_analizar', buscarTicker: 'buscar', estadoIBKR: 'ibkr_estado', guardarConfigIBKR: 'ibkr_config', sincronizarIBKR: 'ibkr_sync', sincronizarBNB: 'bnb_sync', estadoCS: 'cs_estado', guardarConfigCS: 'cs_config', portalCS: 'cs_portal', sincronizarCS: 'cs_sync' };
   function mk(ok, fail) {
     var o = {
       withSuccessHandler: function (f) { return mk(f, fail); },
@@ -776,7 +817,7 @@ btn._busy = false; txt.textContent = 'Error al refrescar';
 };
 
 // ---------- Navegación (barra inferior) ----------
-var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'config', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb'];
+var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'config', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb', 'cs'];
 var currentView = 'inicio';
 function setView(name) {
 currentView = name;
@@ -792,6 +833,7 @@ if (name === 'portafolio') renderPortafolio();
 if (name === 'config') { cargarPlataformas(); cargarEstadoIA(); }
 if (name === 'ibkr') cargarEstadoIBKR();
 if (name === 'bnb') prepararBNB();
+if (name === 'cs') cargarEstadoCS();
 if (name === 'ia') prepararIA();
 if (name === 'seguridad') prepararSeguridad();
 if (name === 'noticias' && !noticiasCargadas) {
@@ -1354,14 +1396,15 @@ el.innerHTML = '';
 (lista || []).forEach(function (pl) {
 var esIB = /interactive brokers/i.test(pl.nombre);
 var esBNB = /^binance$/i.test(pl.nombre);
+var esCS = /charles schwab/i.test(pl.nombre);
 var row = document.createElement('div');
 row.className = 'platrow';
 row.innerHTML = '<span>' + esc(nombrePlataforma(pl.nombre)) +
-'<span class="platmeta">' + fmt(pl.valor) + (esIB ? ' &middot; conexi&oacute;n autom&aacute;tica' : (esBNB ? ' &middot; saldos en vivo' : (pl.gestionada ? ' &middot; con hoja de posiciones' : ' &middot; manual'))) + '</span></span>' +
+'<span class="platmeta">' + fmt(pl.valor) + ((esIB || esCS) ? ' &middot; conexi&oacute;n autom&aacute;tica' : (esBNB ? ' &middot; saldos en vivo' : (pl.gestionada ? ' &middot; con hoja de posiciones' : ' &middot; manual'))) + '</span></span>' +
 '<span class="platbtns"></span>';
 var btns = row.querySelector('.platbtns');
 // Plataformas con pantalla de conexi\u00f3n propia: la fila entera navega ah\u00ed.
-var vistaConexion = esIB ? 'ibkr' : (/^binance$/i.test(pl.nombre) ? 'bnb' : null);
+var vistaConexion = esIB ? 'ibkr' : (esBNB ? 'bnb' : (esCS ? 'cs' : null));
 if (vistaConexion) {
 var bc = document.createElement('button');
 bc.innerHTML = 'Conexi&oacute;n &rsaquo;';
@@ -1693,6 +1736,130 @@ google.script.run.withSuccessHandler(render).withFailureHandler(fallo).sincroniz
 }
 document.getElementById('bnbVerCambios').onclick = function () { correrSyncBNB(true); };
 document.getElementById('bnbAplicar').onclick = function () { correrSyncBNB(false); };
+
+// ---------- Charles Schwab: conexión automática vía SnapTrade ----------
+function csMsgErr(err) {
+var m = (err && err.message) ? err.message : String(err);
+if (m.indexOf('unknown_fn') !== -1) m = 'La conexión con Schwab se activa con la próxima actualización del servidor. Avisale a Claude que despliegue el backend.';
+return m;
+}
+function cargarEstadoCS() {
+var t = document.getElementById('csEstadoTxt');
+t.innerHTML = 'Comprobando configuraci&oacute;n...';
+document.getElementById('csConectarResultado').innerHTML = '';
+google.script.run.withSuccessHandler(function (st) {
+var sync = document.getElementById('csSyncCard');
+var btnCon = document.getElementById('csConectar');
+if (!st || !st.configurada) {
+t.innerHTML = 'Sin configurar. Cre&aacute; tu cuenta gratis en <b>snaptrade.com</b>, copi&aacute; el clientId y la consumerKey del panel (pasos ac&aacute; abajo) y guardalas: van a tu Apps Script privado, nunca a esta p&aacute;gina.';
+sync.style.display = 'none';
+btnCon.style.display = 'none';
+return;
+}
+if (!st.conectada) {
+t.innerHTML = 'Credenciales guardadas &#10003;. Falta el &uacute;ltimo paso: conectar tu cuenta de Schwab (una sola vez).' + (st.errorCuentas ? '<br>&#9888; ' + esc(st.errorCuentas) : '');
+sync.style.display = 'none';
+btnCon.style.display = '';
+return;
+}
+var html = '&#10003; Conectado a Schwab v&iacute;a SnapTrade (' + esc((st.cuentas || []).join(', ') || 'cuenta conectada') + '). La hoja CS se actualiza sola una vez por d&iacute;a (~8:00).';
+if (st.ultimaSync && st.ultimaSync.cuando) {
+html += '<br>&Uacute;ltima sincronizaci&oacute;n: ' + (st.ultimaSync.ok ? '' : '&#9888; ') + esc(fechaCortaMs(st.ultimaSync.cuando)) + ' &middot; ' + esc(st.ultimaSync.detalle || '');
+}
+t.innerHTML = html;
+sync.style.display = '';
+btnCon.style.display = 'none';
+}).withFailureHandler(function (err) {
+t.innerHTML = esc(csMsgErr(err));
+}).estadoCS();
+}
+document.getElementById('csGuardar').onclick = function () {
+var btn = this, ci = document.getElementById('csClientId'), ck = document.getElementById('csConsumerKey'), res = document.getElementById('csKeyResultado');
+btn.disabled = true;
+google.script.run.withSuccessHandler(function (r) {
+btn.disabled = false;
+if (r && r.ok) {
+ci.value = ''; ck.value = '';
+res.innerHTML = '<div class="tmsg ok">&#10003; Credenciales guardadas. Ahora toc&aacute; "Conectar cuenta Schwab".</div>';
+cargarEstadoCS();
+} else {
+res.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</div>';
+}
+}).withFailureHandler(function (err) {
+btn.disabled = false;
+res.innerHTML = '<div class="tmsg err">' + esc(csMsgErr(err)) + '</div>';
+}).guardarConfigCS({ clientId: ci.value, consumerKey: ck.value });
+};
+document.getElementById('csConectar').onclick = function () {
+var btn = this, res = document.getElementById('csConectarResultado');
+btn.disabled = true;
+res.innerHTML = '<p class="loadingtxt">Generando el link seguro de conexi&oacute;n...</p>';
+google.script.run.withSuccessHandler(function (r) {
+btn.disabled = false;
+if (r && r.ok && r.url) {
+res.innerHTML = '<div class="tmsg ok">Se abri&oacute; el portal de SnapTrade en otra pesta&ntilde;a: entr&aacute; con tu usuario de Schwab y autoriz&aacute; la lectura. Cuando termines, volv&eacute; ac&aacute; y reabr&iacute; esta pantalla.</div>';
+try { window.open(safeUrl(r.url), '_blank'); } catch (e) {
+res.innerHTML = '<div class="tmsg err">No pude abrir la pesta&ntilde;a. Copi&aacute; el link a mano: ' + esc(r.url) + '</div>';
+}
+} else {
+res.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</div>';
+}
+}).withFailureHandler(function (err) {
+btn.disabled = false;
+res.innerHTML = '<div class="tmsg err">' + esc(csMsgErr(err)) + '</div>';
+}).portalCS();
+};
+var csEnCurso = false;
+function correrSyncCS(dryRun) {
+if (csEnCurso) return;
+csEnCurso = true;
+var out = document.getElementById('csCambios');
+var btnAplicar = document.getElementById('csAplicar');
+var resEl = document.getElementById('csSyncResultado');
+resEl.innerHTML = '';
+if (dryRun) btnAplicar.style.display = 'none';
+out.innerHTML = '<p class="loadingtxt">' + (dryRun ? 'Consultando tus posiciones de Schwab...' : 'Aplicando cambios en la hoja CS...') + '</p>';
+google.script.run.withSuccessHandler(function (r) {
+csEnCurso = false;
+if (!r || !r.ok) {
+out.innerHTML = '';
+resEl.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</div>';
+return;
+}
+var html = '';
+if (!r.cambios.length) {
+html = '<p class="newsempty" style="margin-top:10px">&#10003; La hoja CS ya coincide con Schwab (' + esc(r.posicionesIBKR) + ' posiciones). Nada para cambiar.</p>';
+} else {
+html = '<p class="subtotal" style="margin:12px 0 6px">' + (dryRun ? 'Cambios detectados (todav&iacute;a no se aplic&oacute; nada):' : 'Cambios aplicados:') + '</p>';
+r.cambios.forEach(function (c) {
+var txt;
+if (c.tipo === 'qty') txt = '<span class="sym">' + esc(c.symbol) + '</span> cantidad ' + esc(c.antes) + ' &rarr; ' + esc(c.despues);
+else if (c.tipo === 'cerrada') txt = '<span class="sym">' + esc(c.symbol) + '</span> cerrada en Schwab &rarr; queda en 0';
+else if (c.tipo === 'nueva') txt = '<span class="sym">' + esc(c.symbol) + '</span> nueva &middot; ' + esc(c.despues) + (c.descripcion ? ' &middot; ' + esc(c.descripcion) : '');
+else if (c.tipo === 'cash') txt = '<span class="sym">CASH</span> ' + esc(c.antes) + ' &rarr; ' + esc(c.despues);
+else txt = esc(c.tipo + ' ' + (c.symbol || ''));
+html += '<div class="row"><span>' + txt + '</span></div>';
+});
+}
+(r.mensajes || []).forEach(function (m) { html += '<p class="newsempty">&#9888; ' + esc(m) + '</p>'; });
+out.innerHTML = html;
+if (dryRun) {
+btnAplicar.style.display = r.cambios.length ? '' : 'none';
+} else {
+btnAplicar.style.display = 'none';
+if (r.cambios.length) resEl.innerHTML = '<div class="tmsg ok">&#10003; Listo. La hoja CS qued&oacute; igual que tu cuenta de Schwab.</div>';
+cargarEstadoCS();
+loadData();
+}
+}).withFailureHandler(function (err) {
+csEnCurso = false;
+out.innerHTML = '';
+resEl.innerHTML = '<div class="tmsg err">' + esc(csMsgErr(err)) + '</div>';
+}).sincronizarCS({ dryRun: !!dryRun });
+}
+document.getElementById('csVerCambios').onclick = function () { correrSyncCS(true); };
+document.getElementById('csAplicar').onclick = function () { correrSyncCS(false); };
+document.getElementById('csBack').onclick = function () { setView('config'); };
 
 // Sincronización automática: al abrir la app (y al volver a ella) lee Binance
 // en silencio y aplica solo los cambios seguros. Con >=2 posiciones "cerradas"
