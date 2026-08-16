@@ -116,8 +116,25 @@ el.style.display = 'flex';
 // cargar datos: sin red la app quedaba congelada en el logo. Ahora el lock
 // aparece siempre, pase lo que pase con la API.
 setTimeout(hideSplash, 700);
-if (s.bio) document.getElementById('secBioGo').style.display = '';
-if (s.pin) document.getElementById('secPinWrap').style.display = '';
+// UN solo camino visible por vez. Con biometria Y clave configuradas se
+// mostraban dos botones apilados (Desbloquear + Entrar): al pedo. Ahora manda
+// la biometria y la clave queda detras del link "Usar la clave".
+var elBio = document.getElementById('secBioGo');
+var elPin = document.getElementById('secPinWrap');
+var elModo = document.getElementById('secModo');
+var modoBio = !!s.bio; // el modo activo, tambien frena el tap-para-Face-ID
+function pintarModo() {
+elBio.style.display = modoBio ? '' : 'none';
+elPin.style.display = modoBio ? 'none' : '';
+elModo.textContent = modoBio ? 'Usar la clave' : 'Usar Face ID';
+document.getElementById('secErr').textContent = '';
+if (!modoBio) { try { document.getElementById('secPinInput').focus(); } catch (e) {} }
+}
+if (s.bio && s.pin) {
+elModo.style.display = '';
+elModo.onclick = function () { modoBio = !modoBio; pintarModo(); };
+}
+pintarModo();
 // La salida de emergencia se muestra SIEMPRE que haya bloqueo: con solo
 // biometria y el sensor fallando, antes no quedaba forma de entrar.
 var olv = document.getElementById('secOlvide');
@@ -147,21 +164,26 @@ if (!auto) err.textContent = bioErrTxt(e, !!s.pin);
 }
 if (s.bio) bioDisponible().then(function (dispo) {
 if (!dispo) {
-document.getElementById('secErr').textContent = 'La biometr\u00eda no est\u00e1 disponible en este navegador.' + (s.pin ? ' Us\u00e1 la clave.' : ' Toc\u00e1 "No puedo entrar".');
+// Sin sensor en este navegador: si hay clave, cambiar de modo SOLO (no
+// tiene sentido mostrar un boton de Face ID que no puede funcionar).
+if (s.pin) { modoBio = false; pintarModo(); return; }
+document.getElementById('secErr').textContent = 'La biometr\u00eda no est\u00e1 disponible en este navegador. Toc\u00e1 "No puedo entrar".';
 return;
 }
 // Arranque directo con la biometria, sin tocar el boton. Un solo intento
 // automatico por apertura (si no, cancelar la hoja del sistema la vuelve
 // a abrir en loop).
-setTimeout(function () { if (el.style.display !== 'none') intentarBio(true); }, 350);
+setTimeout(function () { if (el.style.display !== 'none' && modoBio) intentarBio(true); }, 350);
 });
 document.getElementById('secBioGo').onclick = function () { intentarBio(false); };
 // Si iOS rechaza el intento automatico por falta de gesto, cualquier toque en
 // la pantalla de bloqueo sirve: no hay que apuntarle al boton.
 el.addEventListener('click', function (ev) {
-if (!s.bio) return;
+// Solo en modo biometria: si el usuario eligio "Usar la clave", un toque
+// perdido no tiene que abrirle la hoja de Face ID encima del teclado.
+if (!s.bio || !modoBio) return;
 var id = (ev.target && ev.target.id) || '';
-if (id === 'secBioGo' || id === 'secOlvide' || id === 'secPinInput' || id === 'secPinGo') return;
+if (id === 'secBioGo' || id === 'secOlvide' || id === 'secPinInput' || id === 'secPinGo' || id === 'secModo') return;
 intentarBio(false);
 });
 document.getElementById('secPinGo').onclick = function () {
