@@ -202,8 +202,8 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .confighelp ol { margin: 8px 0 0 18px; padding: 0; }
 .confighelp li { margin: 7px 0; line-height: 1.5; }
 /* Tarjeta deslizable (Evolución / Dividendos / Aportes) */
-.sweepwrap { overflow: hidden; }
-.sweepdeck { display: flex; transition: transform .28s ease; touch-action: pan-y; }
+.sweepwrap { overflow: hidden; transition: height .25s ease; }
+.sweepdeck { display: flex; align-items: flex-start; transition: transform .28s ease; touch-action: pan-y; }
 .sweeppanel { min-width: 100%; }
 .sweepdots { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
 .sweepdots .sdot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); border: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }

@@ -15,12 +15,27 @@ renderPortafolio();
 
 // ---------- Tarjeta deslizable: Evolución / Dividendos / Aportes ----------
 var sweepIdx = 0, divCargado = false, apoCargado = false;
+// La tarjeta mide lo que mide EL PANEL ACTIVO, no el mas alto de los tres.
+// Los paneles van lado a lado (flex), asi que sin esto la tarjeta tomaba la
+// altura del mas alto: apenas Dividendos se llenaba, la Evolucion quedaba con
+// un vacio gigante abajo para siempre.
+function ajustarAlturaDeck() {
+var wrap = document.getElementById('sweepWrap');
+var paneles = document.querySelectorAll('#sweepDeck .sweeppanel');
+if (!wrap || !paneles.length || !paneles[sweepIdx]) return;
+var alto = paneles[sweepIdx].offsetHeight;
+if (alto > 0) wrap.style.height = alto + 'px';
+}
 function sweepGo(i) {
 sweepIdx = Math.max(0, Math.min(2, i));
 document.getElementById('sweepDeck').style.transform = 'translateX(-' + (sweepIdx * 100) + '%)';
 document.querySelectorAll('.sweepdots .sdot').forEach(function (d, j) { d.classList.toggle('active', j === sweepIdx); });
 if (sweepIdx === 1 && !divCargado) cargarDividendos(false);
 if (sweepIdx === 2 && !apoCargado) cargarAportes();
+ajustarAlturaDeck();
+// El panel puede seguir creciendo mientras carga (spinner -> datos): se
+// reajusta un toque despues por las dudas.
+setTimeout(ajustarAlturaDeck, 350);
 }
 document.querySelectorAll('.sweepdots .sdot').forEach(function (d) {
 d.addEventListener('click', function () { sweepGo(parseInt(d.getAttribute('data-sw'), 10)); });
@@ -77,10 +92,13 @@ marcaActualizando(cfg.avisoId, cache.t);
 if (cfg.limpiar) cfg.limpiar();
 document.getElementById(cfg.bodyId).innerHTML = '<p class="loadingtxt">' + cfg.cargando + '</p>';
 }
+ajustarAlturaDeck();
 cfg.pedir(function (r) {
 limpiarMarca(cfg.avisoId);
 if (r && r.ok) cacheGuardar(cfg.clave, r);
 cfg.render(r);
+// El panel cambio de altura (spinner -> tabla): la tarjeta lo sigue.
+ajustarAlturaDeck();
 }, function (err) {
 limpiarMarca(cfg.avisoId);
 // Con datos ya pintados, un fallo de red no borra la pantalla.
@@ -88,6 +106,7 @@ if (cache) { marcaActualizando(cfg.avisoId, cache.t, 'no se pudo actualizar'); r
 if (cfg.alFallar) cfg.alFallar();
 document.getElementById(cfg.bodyId).innerHTML =
 '<p class="newsempty">' + esc(msgErr(err, 'Esta pantalla')) + '</p>';
+ajustarAlturaDeck();
 });
 }
 
@@ -177,6 +196,7 @@ var etiqueta = d.estado === 'proximo' ? (d.estimado ? ' <span class="desc">~ est
 return esc(d.broker) + ' &middot; <span class="sym">' + esc(d.symbol || 'CASH') + '</span> &middot; ' + esc(mask('US$ ' + d.monto.toFixed(2))) + etiqueta;
 }).join('<br>');
 box.innerHTML = '<div class="divdetbox"><b>' + MESES_CORTOS[mes - 1] + ' ' + esc((divDatos && divDatos.anio) || '') + '</b><br>' + (filas || '<span class="desc">Sin movimientos ese mes</span>') + '</div>';
+ajustarAlturaDeck();
 }
 document.getElementById('divRefreshBtn').onclick = function () { cargarDividendos(true); };
 

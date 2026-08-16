@@ -78,6 +78,7 @@ var cb = document.querySelector('.chartbox');
 if (cb) cb.innerHTML = '<p class="newsempty">No se pudo dibujar el gr&aacute;fico.</p>';
 }
 renderHoldings(data.topHoldings);
+if (typeof ajustarAlturaDeck === 'function') ajustarAlturaDeck();
 actualizarSymbols();
 if (document.getElementById('view-portafolio').style.display !== 'none') renderPortafolio();
 bnbAutoSync();
