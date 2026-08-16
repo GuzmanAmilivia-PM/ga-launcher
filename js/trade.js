@@ -149,6 +149,9 @@ if (lastOps) renderOperaciones(lastOps);
 }
 opsBotones('opsRango', 'data-r', function (v) { opsRango = v; });
 opsBotones('opsTipo', 'data-t', function (v) { opsTipo = v; });
+// La actividad de los brokers se guarda 6 h en el backend: sin esto, un cambio
+// recien hecho en el broker no se puede ver hasta que venza el cache.
+document.getElementById('opsRefreshBtn').onclick = function () { cargarOperaciones(true); };
 
 function cargarOperaciones(forzar) {
 opsCargadas = true;
