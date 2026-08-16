@@ -48,7 +48,10 @@ function apiCall(fn, args) {
     })
     .then(function (j) {
       if (j && j.error === 'auth') {
-        mostrarLock('Clave incorrecta o vencida.');
+        // Este mensaje aparece cuando la clave GUARDADA dejo de servir (se
+        // roto). Decirlo con todas las letras: se confundia con el bloqueo del
+        // telefono y parecia que la biometria no habia funcionado.
+        mostrarLock('La clave guardada ya no sirve: el servidor la rechaza. Ingres\u00e1 la nueva.');
         var eAuth = new Error('La clave de la app vencio: volve a ingresarla.');
         eAuth.auth = true;
         throw eAuth;
@@ -110,9 +113,9 @@ document.getElementById('lockInput').addEventListener('keydown', function (e) { 
 // DOS aperturas en verse (el SW sirve el shell viejo mientras baja el nuevo y
 // recien la proxima apertura lo usa). Ahora: cuando el SW nuevo toma control
 // (controllerchange: el skipWaiting del sw.js es automatico), aparece un
-// boton "Actualizar" — un toque y la app recarga ya con la version nueva.
+// boton "Actualizar" \u2014 un toque y la app recarga ya con la version nueva.
 // Todo el bloque va en try/catch: si algo aca lanza (un navegador raro), no
-// puede llevarse puesto el resto de nucleo.js — abajo se define el shim de la
+// puede llevarse puesto el resto de nucleo.js \u2014 abajo se define el shim de la
 // API y sin el la app entera muere. Sin SW no hay offline, pero la app sigue.
 try {
 if ('serviceWorker' in navigator) {
@@ -219,15 +222,15 @@ el.textContent = fmt(_ultimoTotalPintado);
 }
 function fmt(n) {
 if (montosOcultos) return '****';
-if (n === null || n === undefined || isNaN(n)) return '—';
+if (n === null || n === undefined || isNaN(n)) return '\u2014';
 return 'USD ' + Math.round(n).toLocaleString('es-UY');
 }
 function fmtNum(n) {
-if (n === null || n === undefined || n === '') return '—';
+if (n === null || n === undefined || n === '') return '\u2014';
 return (typeof n === 'number') ? (Math.round(n * 100) / 100) : n;
 }
 function fmtPctRaw(n) {
-if (n === null || n === undefined || n === '') return '—';
+if (n === null || n === undefined || n === '') return '\u2014';
 if (typeof n === 'number') return (n * 100).toFixed(2) + '%';
 return n;
 }
@@ -236,7 +239,7 @@ if (n === null || n === undefined) return '';
 return n >= 0 ? 'up' : 'down';
 }
 // Etiqueta visual de una plataforma. La Sheet y el backend conservan el
-// nombre real ("Interactive Brokers", anclado a su hoja); acá solo se
+// nombre real ("Interactive Brokers", anclado a su hoja); ac\u00e1 solo se
 // muestra la marca oficial corta.
 function nombrePlataforma(n) {
 return /interactive brokers/i.test(String(n || '')) ? 'IBKR' : String(n || '');
