@@ -29,7 +29,7 @@
 <base target="_top">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@500&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#0d1420">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -279,13 +279,13 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 #splashLock,#splashToken{width:min(320px,78vw);margin:0 auto;}
 #splash input{width:100%;padding:14px;border-radius:13px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-size:16px;font-family:inherit;text-align:center;outline:none;margin:18px 0 10px;}
 #splash input:focus{border-color:var(--gold);}
-#splash .err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px;}.splash-from{position:absolute;left:0;right:0;bottom:calc(26px + env(safe-area-inset-bottom,0px));text-align:center;font-size:12px;font-weight:600;letter-spacing:.08em;color:#90a0b8;opacity:.8;}#splash.hide{opacity:0;pointer-events:none;}.splash-inner{text-align:center;}
+#splash .err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px;}#splash.hide{opacity:0;pointer-events:none;}.splash-inner{text-align:center;}
 .splash-sub{font-size:15px;font-weight:600;letter-spacing:.05em;color:var(--muted);margin-top:4px;}
 /* Marca del splash: el monograma GA de la marca (el mismo del menu y del icono
    del telefono), NO las letras planas — la imagen la pone .galogo-img. La
    palabra, en tipografía geométrica extra-negra (Montserrat 800). */
-.splash-mark{width:112px;height:112px;margin:0 auto 14px;border-radius:26px;box-shadow:0 10px 40px rgba(212,175,55,.35);}
-.splash-brand{font-family:'Montserrat','Manrope',sans-serif;font-size:clamp(30px,9.5vw,42px);font-weight:800;letter-spacing:.055em;text-indent:.055em;text-transform:uppercase;color:var(--gold);margin-top:2px;line-height:1.1;}
+.splash-mark{width:124px;height:124px;margin:0 auto 6px;background:url("data:image/png;base64,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") center/contain no-repeat;}
+.splash-brand{font-family:'Montserrat','Manrope',sans-serif;font-size:clamp(26px,7.6vw,34px);font-weight:500;letter-spacing:.16em;text-indent:.16em;text-transform:uppercase;color:var(--gold);margin-top:0;line-height:1.1;}
 </style>
 </head>
 <body>
@@ -294,7 +294,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
      todo dos veces. Ahora el desbloqueo y la clave de acceso viven DENTRO del
      splash, que no se va hasta que se entra. -->
 <div id="splash"><div class="splash-inner">
-<div class="splash-mark galogo-img" role="img" aria-label="GA"></div>
+<div class="splash-mark" role="img" aria-label="GA"></div>
 <div class="splash-sub splash-brand">GUZMANA</div>
 <div id="splashLock" style="display:none">
 <button class="bigbtn" id="secBioGo" style="display:none;margin-top:22px">Desbloquear</button>
@@ -314,7 +314,6 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <p class="err" id="lockErr"></p>
 </div>
 </div>
-<div class="splash-from">From GA platforms</div>
 </div>
 
 <div class="menupanel" id="menuPanel">
