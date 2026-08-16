@@ -2,6 +2,11 @@
 // ===== API (Apps Script como backend, autenticado por clave) =====
 var API_URL = 'https://script.google.com/macros/s/AKfycbyrMsdxH2PM0s1I5X2p48ottTNltbayYoKBfTE8npOLUk_hapjFcSMIWJ0hvkbF2XBV/exec';
 function getApiToken() { try { return localStorage.getItem('ga_token') || ''; } catch (e) { return ''; } }
+// hideSplash vive ACA (el primer archivo) y no en arranque.js: seguridad.js
+// la referencia al CARGAR (setTimeout(hideSplash, 700) evalua el nombre en
+// el momento) y con los archivos partidos eso era un ReferenceError que
+// mataba el resto del bloqueo: quedaba "App bloqueada" sin botones ni clave.
+function hideSplash(){ var s=document.getElementById('splash'); if(s && !s.classList.contains('hide')){ s.classList.add('hide'); setTimeout(function(){ if(s&&s.parentNode){ s.style.display='none'; } },600); } }
 function mostrarLock(msg) {
   hideSplash();
   document.getElementById('lock').style.display = 'flex';

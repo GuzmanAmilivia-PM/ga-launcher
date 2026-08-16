@@ -98,6 +98,5 @@ bnbAutoSync();
       render(data);
     }).getPortfolioData();
   }
-function hideSplash(){ var s=document.getElementById('splash'); if(s && !s.classList.contains('hide')){ s.classList.add('hide'); setTimeout(function(){ if(s&&s.parentNode){ s.style.display='none'; } },600); } }
 setInterval(function(){ if(document.visibilityState==='visible'){ loadData(); } }, 60000);
 document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ loadData(); } });
