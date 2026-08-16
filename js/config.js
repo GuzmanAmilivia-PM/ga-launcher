@@ -56,7 +56,6 @@ var r = res.resumen;
 resEl.innerHTML = '<div class="tmsg ok">&#10003; ' + (r.tipo === 'deposito' ? 'Dep&oacute;sito' : 'Retiro') + ' de ' + esc(mask('USD ' + r.monto)) + ' en ' + esc(r.cuenta) + ' registrado.</div>';
 document.getElementById('cashMonto').value = '';
 loadData();
-google.script.run.withSuccessHandler(renderTransacciones).getTransacciones();
 } else {
 resEl.innerHTML = '<div class="tmsg err">' + esc((res && res.mensajes || ['Error desconocido.']).join(' ')) + '</div>';
 }

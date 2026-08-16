@@ -1,4 +1,4 @@
-// Trade, transacciones y noticias
+// Trade, operaciones y noticias
 // ---------- Trade ----------
 var tradeTipo = 'compra';
 function setTipo(t) {
@@ -101,8 +101,9 @@ document.getElementById('tSymbol').value = '';
 document.getElementById('tQty').value = '';
 document.getElementById('tPrecio').value = '';
 actualizarMonto();
+document.getElementById('tManual').open = false;
 loadData();
-google.script.run.withSuccessHandler(renderTransacciones).getTransacciones();
+cargarOperaciones(true);
 } else {
 mostrarResultado(esc((res && res.mensajes || ['Error desconocido.']).join(' ')), false);
 }
@@ -112,19 +113,117 @@ cerrarConfirm();
 mostrarResultado('Error: ' + esc(err.message), false);
 }).registrarOperacion(f);
 };
-function renderTransacciones(lista) {
-lastTx = lista;
-var el = document.getElementById('txList');
-if (!lista || !lista.length) { el.innerHTML = '<p class="newsempty">Sin operaciones registradas todav&iacute;a.</p>'; return; }
-el.innerHTML = '';
-lista.forEach(function (t) {
+// ---------- Operaciones (compras y ventas) ----------
+// La lista viaja entera desde el backend (brokers + lo cargado a mano) y los
+// filtros se aplican ACA: cambiar de rango o de tipo es instantaneo, sin pagar
+// el viaje de ~1,5 s que cuesta cada llamada a Apps Script.
+var opsRango = 'ytd', opsTipo = 'todas', lastOps = null;
+
+function opsIso(d) {
+return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+}
+// Primer dia incluido segun el filtro de fecha ('' = desde el inicio).
+function opsDesde() {
+var hoy = new Date();
+if (opsRango === 'ytd') return hoy.getFullYear() + '-01-01';
+if (opsRango === '3m') return opsIso(new Date(hoy.getFullYear(), hoy.getMonth() - 3, hoy.getDate()));
+return '';
+}
+function opsFechaTxt(iso) {
+var p = String(iso || '').split('-');
+return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : String(iso || '');
+}
+function opsMonto(n) {
+return mask('USD ' + (Math.round(Number(n) || 0)).toLocaleString('es-UY'));
+}
+function opsBotones(id, attr, alElegir) {
+var botones = document.querySelectorAll('#' + id + ' .rangebtn');
+botones.forEach(function (b) {
+b.addEventListener('click', function () {
+botones.forEach(function (o) { o.classList.remove('active'); });
+b.classList.add('active');
+alElegir(b.getAttribute(attr));
+if (lastOps) renderOperaciones(lastOps);
+});
+});
+}
+opsBotones('opsRango', 'data-r', function (v) { opsRango = v; });
+opsBotones('opsTipo', 'data-t', function (v) { opsTipo = v; });
+
+function cargarOperaciones(forzar) {
+opsCargadas = true;
+cargarConCache({
+clave: 'ga_cache_ops',
+avisoId: 'opsCacheAviso',
+bodyId: 'opsBody',
+cargando: 'Leyendo tus compras y ventas...',
+forzar: !!forzar,
+limpiar: function () {
+document.getElementById('opsResumen').innerHTML = '';
+document.getElementById('opsAvisos').innerHTML = '';
+},
+render: renderOperaciones,
+alFallar: function () { opsCargadas = false; },
+pedir: function (ok, fail) {
+google.script.run.withSuccessHandler(ok).withFailureHandler(fail).getOperaciones({ forzar: !!forzar });
+}
+});
+}
+
+function renderOperaciones(r) {
+lastOps = r;
+var body = document.getElementById('opsBody');
+var resumenEl = document.getElementById('opsResumen');
+var avisosEl = document.getElementById('opsAvisos');
+resumenEl.innerHTML = '';
+avisosEl.innerHTML = '';
+if (!r || !r.ok) {
+body.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>';
+return;
+}
+var todas = r.operaciones || [];
+var desde = opsDesde();
+var lista = todas.filter(function (o) {
+if (desde && String(o.fecha) < desde) return false;
+if (opsTipo !== 'todas' && o.tipo !== opsTipo) return false;
+return true;
+});
+
+var compras = 0, ventas = 0;
+lista.forEach(function (o) {
+if (o.tipo === 'compra') compras += Number(o.monto) || 0; else ventas += Number(o.monto) || 0;
+});
+resumenEl.className = 'opsresumen';
+resumenEl.innerHTML =
+'<div><span>Operaciones</span><b>' + lista.length + '</b></div>' +
+'<div><span>Compras</span><b class="up">' + esc(opsMonto(compras)) + '</b></div>' +
+'<div><span>Ventas</span><b class="down">' + esc(opsMonto(ventas)) + '</b></div>';
+
+if (!lista.length) {
+body.innerHTML = todas.length
+? '<div class="vacio"><span class="vic">&#128269;</span><b>Nada en este filtro</b>Prob&aacute; con otro per&iacute;odo o con "Todas".</div>'
+: '<div class="vacio"><span class="vic">&#128200;</span><b>Sin operaciones todav&iacute;a</b>Tus compras y ventas van a aparecer ac&aacute;.</div>';
+} else {
+body.innerHTML = '';
+lista.forEach(function (o) {
+var esCompra = o.tipo === 'compra';
 var d = document.createElement('div');
 d.className = 'txrow';
-d.innerHTML = '<span><b class="' + (String(t.tipo).toLowerCase() === 'compra' ? 'up' : 'down') + '">' + esc(t.tipo) + '</b> ' + esc(t.qty) + ' &times; <b>' + esc(t.symbol) + '</b>' +
-'<span class="txmeta">' + esc(t.cuenta) + ' &middot; ' + esc(t.fecha) + '</span></span>' +
-'<span>' + esc(mask('USD ' + t.monto)) + '<span class="txmeta">a ' + esc(t.precio) + '</span></span>';
-el.appendChild(d);
+d.innerHTML = '<span><b class="' + (esCompra ? 'up' : 'down') + '">' + (esCompra ? 'COMPRA' : 'VENTA') + '</b> ' + esc(o.qty) + ' &times; <b>' + esc(o.symbol) + '</b>' +
+'<span class="txmeta">' + esc(nombrePlataforma(o.cuenta)) + ' &middot; ' + esc(opsFechaTxt(o.fecha)) +
+(o.origen === 'manual' ? '<span class="opstag">a mano</span>' : '') + '</span></span>' +
+'<span>' + esc(opsMonto(o.monto)) + '<span class="txmeta">a ' + esc(o.precio) + '</span></span>';
+body.appendChild(d);
 });
+}
+
+var avisos = (r.avisos || []).slice();
+if (r.recortadas) avisos.push('Se muestran las 500 operaciones mas recientes.');
+if (avisos.length) {
+avisosEl.innerHTML = avisos.map(function (a) {
+return '<p class="newsempty">&#9888; ' + esc(a) + '</p>';
+}).join('');
+}
 }
 
 // ---------- Noticias ----------

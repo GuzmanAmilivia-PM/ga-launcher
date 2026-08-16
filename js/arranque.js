@@ -6,7 +6,7 @@ try { localStorage.setItem('ga_montos_ocultos', montosOcultos ? '1' : '0'); } ca
 pintarOjo();
 if (lastData) render(lastData);
 if (lastAcc && lastAccData) renderAccount(lastAcc, lastAccData);
-if (lastTx) renderTransacciones(lastTx);
+if (lastOps) renderOperaciones(lastOps);
 };
 pintarOjo();
 

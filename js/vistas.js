@@ -76,10 +76,7 @@ if (name === 'noticias' && !noticiasCargadas) {
 google.script.run.withSuccessHandler(function (d) { noticiasCargadas = true; renderNoticias(d); })
 .withFailureHandler(function (err) { errorEnVista('noticiasBody', err, 'las noticias'); }).getNoticias();
 }
-if (name === 'trade' && !txCargadas) {
-google.script.run.withSuccessHandler(function (d) { txCargadas = true; renderTransacciones(d); })
-.withFailureHandler(function (err) { errorEnVista('txList', err, 'las transacciones'); }).getTransacciones();
-}
+if (name === 'trade' && !opsCargadas) cargarOperaciones(false);
 window.scrollTo(0, 0);
 }
 document.querySelectorAll('.navtab').forEach(function (b) {
@@ -87,7 +84,7 @@ b.addEventListener('click', function () { setView(b.getAttribute('data-view')); 
 });
 
 // ---------- Detalle de cuenta ----------
-var lastAcc = null, lastAccData = null, lastTx = null;
+var lastAcc = null, lastAccData = null;
 function showAccount(acc, fromView) {
 accountReturnView = fromView || 'portafolio';
 setView('account');
