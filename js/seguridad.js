@@ -203,7 +203,11 @@ l.textContent = 'Se borra el bloqueo y vas a tener que poner de nuevo la clave d
 setTimeout(function () { l._confirm = false; l.textContent = olvTxt; }, 6000);
 return;
 }
-try { localStorage.removeItem('ga_sec'); localStorage.removeItem('ga_token'); } catch (e) {}
+// Fallar CERRADO del todo: tambien la clave de Binance y los caches con el
+// portafolio. Re-pegar la clave cuesta un minuto; dejarla, un riesgo.
+try {
+['ga_sec', 'ga_token', 'ga_bnb', 'ga_bnb_ultima', 'ga_cache_data', 'ga_cache_div', 'ga_cache_apo'].forEach(function (k) { localStorage.removeItem(k); });
+} catch (e) {}
 try { location.reload(); } catch (e) {}
 };
 })();

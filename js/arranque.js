@@ -82,7 +82,11 @@ if (typeof ajustarAlturaDeck === 'function') ajustarAlturaDeck();
 actualizarSymbols();
 if (document.getElementById('view-portafolio').style.display !== 'none') renderPortafolio();
 bnbAutoSync();
-  } catch(e) { document.getElementById('total').textContent = 'ERR2: ' + String(e); } }
+  } catch(e) {
+    document.getElementById('total').textContent = '—';
+    avisoInicio('&#9888; No se pudo pintar la pantalla. Cerrá y abrí la app; si sigue, mandá captura del Diagnóstico.');
+    try { console.error('render:', e); } catch (e2) {}
+  } }
   // El poll de 60 s pide el payload SIN la serie histórica ({lite:true}): la
   // serie es un punto por día desde el inicio y era ~80% de lo que viajaba,
   // para un gráfico que no cambia en un minuto. La carga completa corre al

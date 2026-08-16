@@ -113,6 +113,7 @@ if ('serviceWorker' in navigator) {
 }
 } catch (eSw) { }
 function aplicarActualizacion() { try { location.reload(); } catch (e) {} }
+try { document.getElementById('updateBtn').onclick = aplicarActualizacion; } catch (e) {}
 var ACCOUNTS = [
 { key: 'CS', nombre: 'Charles Schwab' },
 { key: 'IB', nombre: 'Interactive Brokers' },

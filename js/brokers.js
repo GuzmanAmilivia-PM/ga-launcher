@@ -358,7 +358,7 @@ sujeto: 'La conexión con Schwab',
 cargandoDry: 'Consultando tus posiciones de Schwab...',
 cargandoApply: 'Aplicando cambios en la hoja CS...',
 cerradaTxt: 'cerrada en Schwab',
-total: function (r) { return r.posicionesIBKR; },
+total: function (r) { return r.posicionesBroker !== undefined ? r.posicionesBroker : r.posicionesIBKR; },
 lock: function (v) { csEnCurso = v; },
 alAplicar: function () { cargarEstadoCS(); },
 ejecutar: function (dryRun, forzar, ok, fail) {

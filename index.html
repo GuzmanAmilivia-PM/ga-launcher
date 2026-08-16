@@ -7,12 +7,13 @@
      ni el token de la API. Los unicos destinos permitidos son el backend de
      Apps Script (que redirige a googleusercontent, por eso van los dos) y el
      WebSocket de Binance, que la PWA consulta desde el telefono.
-     script-src no lleva ningun host externo: Chart.js es local y TradingView
-     quedo aislado en un iframe. 'unsafe-inline' es inevitable: toda la app son
-     bloques de codigo inline en este mismo archivo. -->
+     script-src SIN 'unsafe-inline' (desde v39): todo el codigo vive en js/*.js
+     y el unico inline es el snippet del tema, permitido por su hash sha256.
+     OJO: si se EDITA ese snippet hay que recalcular el hash o el tema deja de
+     aplicarse antes del primer pintado. test-html.js verifica que coincidan. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
-  script-src 'self' 'unsafe-inline';
+  script-src 'self' 'sha256-eCEv2Xtk/d4etq+pER4EYyojYMTusYCys+IfxZyAxE0=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src 'self' https://fonts.gstatic.com data:;
   img-src 'self' data: https:;
@@ -339,7 +340,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 
 <!-- ============ INICIO ============ -->
 <div id="view-inicio">
-<div id="updateAviso" style="display:none"><div class="tmsg ok" style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span>Hay una versi&oacute;n nueva de la app.</span><button class="ghostbtn" style="width:auto;margin:0;padding:6px 14px" onclick="aplicarActualizacion()">Actualizar</button></div></div>
+<div id="updateAviso" style="display:none"><div class="tmsg ok" style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span>Hay una versi&oacute;n nueva de la app.</span><button class="ghostbtn" id="updateBtn" style="width:auto;margin:0;padding:6px 14px">Actualizar</button></div></div>
 <div id="syncAviso" style="display:none"></div>
 <div id="autoAviso" style="display:none"></div>
 <div class="topstats">
