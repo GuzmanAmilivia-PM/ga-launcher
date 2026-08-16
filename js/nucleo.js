@@ -6,11 +6,30 @@ function getApiToken() { try { return localStorage.getItem('ga_token') || ''; } 
 // la referencia al CARGAR (setTimeout(hideSplash, 700) evalua el nombre en
 // el momento) y con los archivos partidos eso era un ReferenceError que
 // mataba el resto del bloqueo: quedaba "App bloqueada" sin botones ni clave.
-function hideSplash(){ var s=document.getElementById('splash'); if(s && !s.classList.contains('hide')){ s.classList.add('hide'); setTimeout(function(){ if(s&&s.parentNode){ s.style.display='none'; } },600); } }
+// El splash es AHORA la unica pantalla de arranque: adentro viven el desbloqueo
+// (biometria/clave local) y la clave de acceso a la API. Mientras algo de eso
+// este pidiendo entrar, el splash NO se puede ir: appBloqueada frena a
+// hideSplash, que se llama desde render() y desde el fallo de carga.
+var appBloqueada = false;
+var lockPendiente = null;
+function hideSplash(){ if(appBloqueada) return; var s=document.getElementById('splash'); if(s && !s.classList.contains('hide')){ s.classList.add('hide'); setTimeout(function(){ if(s&&s.parentNode&&s.classList.contains('hide')){ s.style.display='none'; } },600); } }
+function mostrarSplash(){ var s=document.getElementById('splash'); if(!s) return; s.classList.remove('hide'); s.style.display='flex'; }
 function mostrarLock(msg) {
-  hideSplash();
-  document.getElementById('lock').style.display = 'flex';
+  // Con el bloqueo local en pantalla, la clave de la API espera su turno: si
+  // no, aparecia ENCIMA del Face ID y parecian dos pantallas distintas.
+  if (appBloqueada) { lockPendiente = msg || ''; return; }
+  mostrarSplash();
+  var caja = document.getElementById('splashLock');
+  if (caja) caja.style.display = 'none';
+  document.getElementById('splashToken').style.display = '';
   document.getElementById('lockErr').textContent = msg || '';
+}
+// La devuelve true si habia una pantalla de clave esperando (la muestra).
+function mostrarLockPendiente() {
+  if (lockPendiente === null) return false;
+  var m = lockPendiente; lockPendiente = null;
+  mostrarLock(m);
+  return true;
 }
 function apiCall(fn, args) {
   return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: getApiToken(), fn: fn, args: args || null }) })
@@ -80,8 +99,9 @@ document.getElementById('lockBtn').onclick = function () {
   var v = document.getElementById('lockInput').value.trim();
   if (!v) return;
   try { localStorage.setItem('ga_token', v); } catch (e) {}
-  document.getElementById('lock').style.display = 'none';
+  document.getElementById('splashToken').style.display = 'none';
   document.getElementById('lockErr').textContent = '';
+  hideSplash();
   loadData();
 };
 document.getElementById('lockInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('lockBtn').click(); });

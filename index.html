@@ -258,8 +258,8 @@ html.light .rangebtn, html.light .morebtn, html.light .tipobtn { background: rgb
 html.light .rangebtn.active { background: var(--gold); color: #fff; border-color: var(--gold); }
 html.light .tradeform input, html.light .tradeform select { background: #fff; border-color: rgba(20,40,80,.18); }
 html.light .detrow td { background: rgba(20,40,80,.035); }
-html.light #splash, html.light #lock, html.light #seclock { background: linear-gradient(180deg,#f7f9fd,#e9edf5); }
-html.light #lock input, html.light #seclock input { background: #fff; }
+html.light #splash { background: linear-gradient(180deg,#f7f9fd,#e9edf5); }
+html.light #splash input { background: #fff; }
 html.light .chartmodal { background: rgba(235,240,248,.92); }
 html.light .mtile-ic { background: #fff; }
 html.light .mbadge { background: rgba(20,40,80,.07); }
@@ -270,10 +270,16 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 .platmeta { color: var(--muted); font-size: 11.5px; display: block; font-weight: 400; margin-top: 2px; }
 .platbtns { white-space: nowrap; }
 .platbtns button { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; margin-left: 6px; font-family: inherit; font-weight: 700; }
-#lock{position:fixed;inset:0;z-index:9998;background:radial-gradient(circle at top left,#10192b,#080d16 60%);display:none;align-items:flex-start;justify-content:center;padding:calc(14vh + env(safe-area-inset-top,0px)) 24px 24px;overflow-y:auto;}#lock .inner{max-width:320px;width:100%;text-align:center;}#lock input{width:100%;padding:14px;border-radius:13px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-size:16px;font-family:inherit;text-align:center;outline:none;margin:18px 0 10px;}#lock input:focus{border-color:var(--gold);}#lock .err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px;}
-#seclock{position:fixed;inset:0;z-index:9997;background:radial-gradient(circle at top left,#10192b,#080d16 60%);display:none;align-items:flex-start;justify-content:center;padding:calc(14vh + env(safe-area-inset-top,0px)) 24px 24px;overflow-y:auto;}#seclock .inner{max-width:320px;width:100%;text-align:center;}#seclock input{width:100%;padding:14px;border-radius:13px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-size:16px;font-family:inherit;text-align:center;outline:none;margin:18px 0 10px;}#seclock input:focus{border-color:var(--gold);}#seclock .err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px;}
 .seclink{color:var(--muted);font-size:12.5px;text-decoration:underline;cursor:pointer;margin-top:18px;}
-#splash{position:fixed;inset:0;z-index:9999;background:radial-gradient(circle at top left,#10192b,#080d16 60%);display:flex;align-items:center;justify-content:center;transition:opacity .5s ease;}.splash-inner{transform:translateY(-6vh);}.splash-from{position:absolute;left:0;right:0;bottom:calc(26px + env(safe-area-inset-bottom,0px));text-align:center;font-size:12px;font-weight:600;letter-spacing:.08em;color:#90a0b8;opacity:.8;}#splash.hide{opacity:0;pointer-events:none;}.splash-inner{text-align:center;}
+/* El splash ES la pantalla de bloqueo: por eso ahora scrollea y aguanta el
+   teclado abierto (antes solo tenia que mostrar un logo). */
+#splash{position:fixed;inset:0;z-index:9999;background:radial-gradient(circle at top left,#10192b,#080d16 60%);display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto;transition:opacity .5s ease;}.splash-inner{transform:translateY(-6vh);}
+/* Ancho propio: el contenedor del splash se encoge al texto de la marca y sin
+   esto el boton salia angosto y descentrado respecto del logo. */
+#splashLock,#splashToken{width:min(320px,78vw);margin:0 auto;}
+#splash input{width:100%;padding:14px;border-radius:13px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);font-size:16px;font-family:inherit;text-align:center;outline:none;margin:18px 0 10px;}
+#splash input:focus{border-color:var(--gold);}
+#splash .err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px;}.splash-from{position:absolute;left:0;right:0;bottom:calc(26px + env(safe-area-inset-bottom,0px));text-align:center;font-size:12px;font-weight:600;letter-spacing:.08em;color:#90a0b8;opacity:.8;}#splash.hide{opacity:0;pointer-events:none;}.splash-inner{text-align:center;}
 .splash-sub{font-size:15px;font-weight:600;letter-spacing:.05em;color:var(--muted);margin-top:4px;}
 /* Marca del splash al estilo Binance: monograma dorado SIN caja ni sombra,
    y la palabra en tipografía geométrica extra-negra (Montserrat 800). */
@@ -282,26 +288,15 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 </style>
 </head>
 <body>
-<div id="lock"><div class="inner">
-<div class="galogo-big galogo-img" aria-label="GA"></div>
-<p class="viewtitle" style="margin:0">GA Portfolio</p>
-<p class="subtotal">Ingres&aacute; tu clave de acceso</p>
-<input id="lockInput" type="password" autocomplete="current-password" placeholder="Clave">
-<button class="bigbtn" id="lockBtn">Entrar</button>
-<p class="err" id="lockErr"></p>
-</div></div>
+<!-- UNA sola pantalla de arranque. Antes eran tres casi iguales encadenadas
+     (logo -> "App bloqueada" -> "Ingresa tu clave"): parecia que la app pedia
+     todo dos veces. Ahora el desbloqueo y la clave de acceso viven DENTRO del
+     splash, que no se va hasta que se entra. -->
 <div id="splash"><div class="splash-inner">
 <div class="splash-mark" role="img" aria-label="GA"></div>
 <div class="splash-sub splash-brand">GUZMANA</div>
-</div>
-<div class="splash-from">From GA platforms</div>
-</div>
-
-<div id="seclock"><div class="inner">
-<div class="galogo-big galogo-img" aria-label="GA"></div>
-<p class="viewtitle" style="margin:0">GA Portfolio</p>
-<p class="subtotal">App bloqueada</p>
-<button class="bigbtn" id="secBioGo" style="display:none;margin-top:20px">Desbloquear</button>
+<div id="splashLock" style="display:none">
+<button class="bigbtn" id="secBioGo" style="display:none;margin-top:22px">Desbloquear</button>
 <div id="secPinWrap" style="display:none">
 <input id="secPinInput" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="Clave">
 <button class="bigbtn" id="secPinGo">Entrar</button>
@@ -309,7 +304,16 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <p class="seclink" id="secModo" style="display:none">Usar la clave</p>
 <p class="err" id="secErr"></p>
 <p class="seclink" id="secOlvide" style="display:none">Olvid&eacute; mi clave</p>
-</div></div>
+</div>
+<div id="splashToken" style="display:none">
+<p class="subtotal" style="margin-top:22px">Ingres&aacute; tu clave de acceso</p>
+<input id="lockInput" type="password" autocomplete="current-password" placeholder="Clave">
+<button class="bigbtn" id="lockBtn">Entrar</button>
+<p class="err" id="lockErr"></p>
+</div>
+</div>
+<div class="splash-from">From GA platforms</div>
+</div>
 
 <div class="menupanel" id="menuPanel">
 <div class="menu-top"><button class="menu-back" id="menuBack" aria-label="Cerrar men&uacute;">&larr;</button></div>

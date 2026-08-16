@@ -1,6 +1,6 @@
 // Bloqueo local: biometria y clave
-// ---------- Seguridad (bloqueo local: biometría y/o clave) ----------
-// La clave se guarda como hash SHA-256 y la biometría como credencial WebAuthn
+// ---------- Seguridad (bloqueo local: biometr\u00eda y/o clave) ----------
+// La clave se guarda como hash SHA-256 y la biometr\u00eda como credencial WebAuthn
 // del dispositivo (Face ID / huella). Es un bloqueo de acceso local en este
 // dispositivo; los datos siguen protegidos por la clave de la API.
 function secLeer() { try { return JSON.parse(localStorage.getItem('ga_sec') || '{}'); } catch (e) { return {}; } }
@@ -110,15 +110,18 @@ segMsg('segPinMsg', '&#10003; Clave quitada.', true);
 (function () {
 var s = secLeer();
 if (!(s.pin || s.bio) || !getApiToken()) return;
-var el = document.getElementById('seclock');
-el.style.display = 'flex';
-// El splash (z 9999) tapa este lock (z 9997) y solo se iba al terminar de
-// cargar datos: sin red la app quedaba congelada en el logo. Ahora el lock
-// aparece siempre, pase lo que pase con la API.
-setTimeout(hideSplash, 700);
-// UN solo camino visible por vez. Con biometria Y clave configuradas se
-// mostraban dos botones apilados (Desbloquear + Entrar): al pedo. Ahora manda
-// la biometria y la clave queda detras del link "Usar la clave".
+// El bloqueo vive DENTRO del splash: una sola pantalla de arranque. Mientras
+// appBloqueada este en true, hideSplash() no hace nada (nucleo.js), asi que el
+// logo no se va hasta que se entra.
+appBloqueada = true;
+var el = document.getElementById('splash');
+var caja = document.getElementById('splashLock');
+caja.style.display = '';
+// UN solo camino a la vista: manda la biometria. La clave NO se ofrece de
+// entrada; aparece cuando el Face ID falla (link al primer fallo, y sola
+// despues de FALLOS_PARA_CLAVE).
+var FALLOS_PARA_CLAVE = 3;
+var fallos = 0;
 var elBio = document.getElementById('secBioGo');
 var elPin = document.getElementById('secPinWrap');
 var elModo = document.getElementById('secModo');
@@ -127,13 +130,11 @@ function pintarModo() {
 elBio.style.display = modoBio ? '' : 'none';
 elPin.style.display = modoBio ? 'none' : '';
 elModo.textContent = modoBio ? 'Usar la clave' : 'Usar Face ID';
+elModo.style.display = (s.bio && s.pin && (fallos > 0 || !modoBio)) ? '' : 'none';
 document.getElementById('secErr').textContent = '';
 if (!modoBio) { try { document.getElementById('secPinInput').focus(); } catch (e) {} }
 }
-if (s.bio && s.pin) {
-elModo.style.display = '';
-elModo.onclick = function () { modoBio = !modoBio; pintarModo(); };
-}
+if (s.bio && s.pin) elModo.onclick = function () { modoBio = !modoBio; pintarModo(); };
 pintarModo();
 // La salida de emergencia se muestra SIEMPRE que haya bloqueo: con solo
 // biometria y el sensor fallando, antes no quedaba forma de entrar.
@@ -141,7 +142,14 @@ var olv = document.getElementById('secOlvide');
 var olvTxt = s.pin ? 'Olvid\u00e9 mi clave' : 'No puedo entrar';
 olv.textContent = olvTxt;
 olv.style.display = '';
-function abrir() { el.style.display = 'none'; document.getElementById('secErr').textContent = ''; hideSplash(); }
+function abrir() {
+caja.style.display = 'none';
+document.getElementById('secErr').textContent = '';
+appBloqueada = false;
+// Si mientras estaba bloqueada la API contesto "clave vencida", esa pantalla
+// quedo esperando: se muestra ACA, en la misma pantalla, no encima del logo.
+if (!mostrarLockPendiente()) hideSplash();
+}
 // Intento de biometria. `auto` = disparado solo al abrir la app, sin toque:
 // Safari exige un gesto del usuario para WebAuthn, asi que si ese intento se
 // rechaza no se muestra error, queda el boton para reintentar a mano.
@@ -157,9 +165,21 @@ btn.textContent = 'Desbloquear';
 abrir();
 }).catch(function (e) {
 // Si el intento automatico se rechaza es, casi siempre, porque iOS pide un
-// gesto: se invita a tocar en vez de mostrar un error.
+// gesto: se invita a tocar en vez de mostrar un error, y NO cuenta como
+// fallo (el sensor ni llego a mirarlo).
 btn.textContent = auto ? 'Toc\u00e1 para desbloquear' : 'Reintentar';
-if (!auto) err.textContent = bioErrTxt(e, !!s.pin);
+if (auto) return;
+fallos++;
+// Que no te reconozca no puede dejarte afuera: al primer fallo aparece el
+// link a la clave, y despues de varios se pasa solo.
+if (s.pin && fallos >= FALLOS_PARA_CLAVE) {
+modoBio = false;
+pintarModo();
+err.textContent = 'No te reconoci\u00f3 ' + fallos + ' veces. Entr\u00e1 con tu clave.';
+return;
+}
+pintarModo();
+err.textContent = bioErrTxt(e, !!s.pin);
 });
 }
 if (s.bio) bioDisponible().then(function (dispo) {
@@ -173,15 +193,16 @@ return;
 // Arranque directo con la biometria, sin tocar el boton. Un solo intento
 // automatico por apertura (si no, cancelar la hoja del sistema la vuelve
 // a abrir en loop).
-setTimeout(function () { if (el.style.display !== 'none' && modoBio) intentarBio(true); }, 350);
+setTimeout(function () { if (appBloqueada && modoBio) intentarBio(true); }, 350);
 });
 document.getElementById('secBioGo').onclick = function () { intentarBio(false); };
 // Si iOS rechaza el intento automatico por falta de gesto, cualquier toque en
 // la pantalla de bloqueo sirve: no hay que apuntarle al boton.
 el.addEventListener('click', function (ev) {
-// Solo en modo biometria: si el usuario eligio "Usar la clave", un toque
-// perdido no tiene que abrirle la hoja de Face ID encima del teclado.
-if (!s.bio || !modoBio) return;
+// Solo mientras el bloqueo pide entrar y en modo biometria: si el usuario
+// eligio "Usar la clave" (o ya esta en la pantalla de la clave de acceso),
+// un toque perdido no tiene que abrirle la hoja de Face ID encima.
+if (!s.bio || !modoBio || !appBloqueada) return;
 var id = (ev.target && ev.target.id) || '';
 if (id === 'secBioGo' || id === 'secOlvide' || id === 'secPinInput' || id === 'secPinGo' || id === 'secModo') return;
 intentarBio(false);
