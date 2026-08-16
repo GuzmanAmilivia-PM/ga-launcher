@@ -15,8 +15,8 @@ try { return PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
 function bioRegistrar() {
 return navigator.credentials.create({ publicKey: {
 challenge: crypto.getRandomValues(new Uint8Array(32)),
-rp: { name: 'GA Portfolio', id: location.hostname },
-user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'GA', displayName: 'GA Portfolio' },
+rp: { name: 'Guzmana', id: location.hostname },
+user: { id: crypto.getRandomValues(new Uint8Array(16)), name: 'GA', displayName: 'Guzmana' },
 pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
 authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
 timeout: 60000
