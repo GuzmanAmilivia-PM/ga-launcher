@@ -314,6 +314,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 
 <!-- ============ INICIO ============ -->
 <div id="view-inicio">
+<div id="syncAviso" style="display:none"></div>
 <div id="autoAviso" style="display:none"></div>
 <div class="topstats">
 <div>
@@ -467,6 +468,12 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <button class="ghostbtn" id="platCancelar">Cancelar</button>
 </div>
 <div id="platResultado"></div>
+</div>
+<div class="card">
+<h2>Deshacer</h2>
+<p class="newsempty">Antes de cada sincronizaci&oacute;n autom&aacute;tica y de cada operaci&oacute;n, se guarda una copia de la hoja. Ac&aacute; pod&eacute;s volver atr&aacute;s si algo qued&oacute; mal.</p>
+<div id="bakList"><p class="loadingtxt">Cargando...</p></div>
+<div id="bakResultado"></div>
 </div>
 <div class="card">
 <h2>IA Insights</h2>
@@ -779,7 +786,7 @@ function apiCall(fn, args) {
 }
 // Shim compatible con google.script.run: el resto del codigo no cambia.
 (function () {
-  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getTransacciones: 'transacciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar', estadoIA: 'ia_estado', guardarClaveIA: 'ia_config', analizarConIA: 'ia_analizar', buscarTicker: 'buscar', estadoIBKR: 'ibkr_estado', guardarConfigIBKR: 'ibkr_config', sincronizarIBKR: 'ibkr_sync', sincronizarBNB: 'bnb_sync', estadoCS: 'cs_estado', guardarConfigCS: 'cs_config', portalCS: 'cs_portal', sincronizarCS: 'cs_sync', getDividendos: 'dividendos', getAportes: 'aportes' };
+  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getTransacciones: 'transacciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar', estadoIA: 'ia_estado', guardarClaveIA: 'ia_config', analizarConIA: 'ia_analizar', buscarTicker: 'buscar', estadoIBKR: 'ibkr_estado', guardarConfigIBKR: 'ibkr_config', sincronizarIBKR: 'ibkr_sync', sincronizarBNB: 'bnb_sync', estadoCS: 'cs_estado', guardarConfigCS: 'cs_config', portalCS: 'cs_portal', sincronizarCS: 'cs_sync', getDividendos: 'dividendos', getAportes: 'aportes', listarBackups: 'backups', restaurarBackup: 'restaurar' };
   function mk(ok, fail) {
     var o = {
       withSuccessHandler: function (f) { return mk(f, fail); },
@@ -911,7 +918,7 @@ document.querySelectorAll('.navtab').forEach(function (b) {
 b.classList.toggle('active', b.getAttribute('data-view') === navName);
 });
 if (name === 'portafolio') renderPortafolio();
-if (name === 'config') { cargarPlataformas(); cargarEstadoIA(); }
+if (name === 'config') { cargarPlataformas(); cargarEstadoIA(); cargarBackups(); }
 if (name === 'ibkr') cargarEstadoIBKR();
 if (name === 'bnb') prepararBNB();
 if (name === 'cs') cargarEstadoCS();
@@ -2345,6 +2352,58 @@ schwab();
 }).sincronizarIBKR({ dryRun: false });
 }
 
+// ---------- Deshacer: respaldos de las hojas ----------
+// El backend guarda una foto de la hoja antes de cada escritura automatica.
+// Aca se listan y se puede volver atras. Restaurar tambien deja respaldo, asi
+// que tocarlo por error se deshace tocandolo de nuevo.
+function fechaBackup(iso) {
+var d = new Date(iso);
+if (isNaN(d.getTime())) return String(iso || '');
+var dd = ('0' + d.getDate()).slice(-2), mm = ('0' + (d.getMonth() + 1)).slice(-2);
+var hh = ('0' + d.getHours()).slice(-2), mi = ('0' + d.getMinutes()).slice(-2);
+return dd + '/' + mm + ' ' + hh + ':' + mi;
+}
+var bakEnCurso = false;
+function cargarBackups() {
+var cont = document.getElementById('bakList');
+if (!cont) return;
+cont.innerHTML = '<p class="loadingtxt">Cargando...</p>';
+google.script.run.withSuccessHandler(function (r) {
+if (!r || !r.ok) { cont.innerHTML = '<p class="newsempty">No se pudo leer la lista de copias.</p>'; return; }
+if (!r.backups.length) { cont.innerHTML = '<p class="newsempty">Todav&iacute;a no hay ninguna copia guardada.</p>'; return; }
+cont.innerHTML = r.backups.map(function (b) {
+return '<div class="row"><span>' + esc(nombrePlataforma(b.hoja)) +
+'<br><span class="newsempty">' + esc(fechaBackup(b.cuando)) + (b.motivo ? ' &middot; ' + esc(b.motivo) : '') + '</span></span>' +
+'<button class="ghostbtn bakBtn" data-hoja="' + esc(b.hoja) + '" style="width:auto;padding:6px 12px;margin:0">Volver a esto</button></div>';
+}).join('');
+Array.prototype.forEach.call(cont.querySelectorAll('.bakBtn'), function (btn) {
+btn.onclick = function () { restaurarHoja(btn.getAttribute('data-hoja')); };
+});
+}).withFailureHandler(function (err) {
+cont.innerHTML = '<p class="newsempty">' + esc(err && err.message ? err.message : 'No se pudo leer la lista de copias.') + '</p>';
+}).listarBackups();
+}
+function restaurarHoja(hoja) {
+if (bakEnCurso) return;
+if (!window.confirm('La hoja ' + hoja + ' va a volver a como estaba en esa copia.\n\nLo que haya ahora se guarda igual, asi que esto tambien se puede deshacer.\n\n¿Seguimos?')) return;
+bakEnCurso = true;
+var res = document.getElementById('bakResultado');
+res.innerHTML = '<p class="loadingtxt">Restaurando ' + esc(hoja) + '...</p>';
+google.script.run.withSuccessHandler(function (r) {
+bakEnCurso = false;
+if (!r || !r.ok) {
+res.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['No se pudo restaurar.']).join(' ')) + '</div>';
+return;
+}
+res.innerHTML = '<div class="tmsg ok">&#10003; ' + esc((r.mensajes || ['Listo.']).join(' ')) + '</div>';
+cargarBackups();
+loadData();
+}).withFailureHandler(function (err) {
+bakEnCurso = false;
+res.innerHTML = '<div class="tmsg err">' + esc(err && err.message ? err.message : 'No se pudo restaurar.') + '</div>';
+}).restaurarBackup({ hoja: hoja });
+}
+
 // ---------- IA Insights ----------
 var iaConfigurada = null, iaCargando = false;
 function cargarEstadoIA() {
@@ -2743,6 +2802,20 @@ row.className = 'row';
 row.innerHTML = '<span>' + esc(nombrePlataforma(c.nombre)) + '</span><span>' + fmt(c.liquido) + '</span>';
 cashListEl.appendChild(row);
 });
+// Avisos de la sincronizacion automatica de las 8:00: como corre sola y se
+// traga los errores, sin esto un broker podia quedar dias sin sincronizar
+// y los datos se veian normales.
+var sa = document.getElementById('syncAviso');
+if (sa) {
+var avs = data.avisosSync || [];
+if (avs.length) {
+sa.innerHTML = avs.map(function (m) { return '<div class="tmsg err">&#9888; ' + esc(m) + '</div>'; }).join('');
+sa.style.display = '';
+} else {
+sa.style.display = 'none';
+sa.innerHTML = '';
+}
+}
 fullSerie = data.serie;
 currentTotal = data.total;
 // El grafico va aparte: si Chart.js no cargo (o falla), antes se llevaba
