@@ -291,7 +291,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <span class="menu-avatar galogo-img"></span>
 <div>
 <p class="menu-name">GA Portfolio</p>
-<div class="menu-badges"><span class="mbadge gold">v60</span><span class="mbadge green">&#10003; Sincronizado</span></div>
+<div class="menu-badges"><span class="mbadge gold" id="mbVersion">&mdash;</span><span class="mbadge green" id="mbEstado">&hellip;</span></div>
 </div>
 </div>
 <div class="menu-grid">
@@ -353,12 +353,14 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div class="chartbox" id="divChartBox" style="display:none"><canvas id="divChart"></canvas></div>
 <p class="newsempty" id="divHint" style="display:none;font-size:11.5px;margin:8px 0 0">Toc&aacute; una barra para ver el detalle del mes &middot; barras grises = a cobrar (estimado)</p>
 <div id="divDetalle"></div>
+<div id="divCacheAviso" style="display:none"></div>
 <div id="divBody"><p class="loadingtxt">Desliz&aacute; para cargar...</p></div>
 </div>
 <div class="sweeppanel">
 <div class="cardhead">
 <h2>Aportes del a&ntilde;o <span class="rangepct" id="apoAnio"></span></h2>
 </div>
+<div id="apoCacheAviso" style="display:none"></div>
 <div id="apoBody"><p class="loadingtxt">Desliz&aacute; para cargar...</p></div>
 </div>
 </div>
@@ -414,6 +416,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <tbody id="accBody"></tbody>
 </table>
 </div>
+<div id="accError"></div>
 </div>
 </div>
 
@@ -842,6 +845,14 @@ var lineChartInstance = null;
 var currentRangeDias = 'ytd';
 var currentTotal = 0;
 var lastData = null;
+// Toda vista que carga datos necesita salida por error: si no, un corte de
+// red la deja en "Cargando..." para siempre y no hay forma de reintentar.
+function errorEnVista(idContenedor, err, que) {
+var el = document.getElementById(idContenedor);
+if (!el) return;
+var msg = (err && err.message) ? err.message : ('No se pudieron cargar ' + que + '.');
+el.innerHTML = '<p class="newsempty">' + esc(msg) + '<br>Volv&eacute; a entrar para reintentar.</p>';
+}
 var noticiasCargadas = false;
 var txCargadas = false;
 var accountReturnView = 'portafolio';
@@ -893,6 +904,26 @@ return /interactive brokers/i.test(String(n || '')) ? 'IBKR' : String(n || '');
 }
 
 // ---------- Panel de menú (se abre con el logo) ----------
+// Los dos badges estaban escritos a mano en el HTML: decian "v60" y
+// "Sincronizado" siempre, aun cuando la ultima carga habia fallado. Ahora
+// dicen la verdad, que es lo unico que sirve cuando algo anda mal.
+var APP_VERSION = 'v27';
+function pintarBadges(estado) {
+var v = document.getElementById('mbVersion');
+if (v) v.textContent = APP_VERSION;
+var e = document.getElementById('mbEstado');
+if (!e) return;
+if (estado === 'ok') {
+e.className = 'mbadge green';
+e.innerHTML = '&#10003; Sincronizado';
+} else if (estado === 'cache') {
+e.className = 'mbadge gold';
+e.innerHTML = 'Datos guardados';
+} else {
+e.className = 'mbadge gold';
+e.innerHTML = '&#9888; Sin conexi&oacute;n';
+}
+}
 function toggleMenu(open) {
 document.getElementById('menuPanel').classList.toggle('open', open);
 }
@@ -925,12 +956,12 @@ if (name === 'cs') cargarEstadoCS();
 if (name === 'ia') prepararIA();
 if (name === 'seguridad') prepararSeguridad();
 if (name === 'noticias' && !noticiasCargadas) {
-noticiasCargadas = true;
-google.script.run.withSuccessHandler(renderNoticias).getNoticias();
+google.script.run.withSuccessHandler(function (d) { noticiasCargadas = true; renderNoticias(d); })
+.withFailureHandler(function (err) { errorEnVista('noticiasBody', err, 'las noticias'); }).getNoticias();
 }
 if (name === 'trade' && !txCargadas) {
-txCargadas = true;
-google.script.run.withSuccessHandler(renderTransacciones).getTransacciones();
+google.script.run.withSuccessHandler(function (d) { txCargadas = true; renderTransacciones(d); })
+.withFailureHandler(function (err) { errorEnVista('txList', err, 'las transacciones'); }).getTransacciones();
 }
 window.scrollTo(0, 0);
 }
@@ -947,7 +978,12 @@ document.getElementById('accTitle').textContent = nombrePlataforma(acc.nombre);
 document.getElementById('accTotal').textContent = 'Cargando...';
 document.getElementById('accLiq').textContent = '';
 document.getElementById('accBody').innerHTML = '';
-google.script.run.withSuccessHandler(function (data) { renderAccount(acc, data); }).getAccountData(acc.key);
+var accErr = document.getElementById('accError'); if (accErr) accErr.innerHTML = '';
+google.script.run.withSuccessHandler(function (data) { renderAccount(acc, data); })
+.withFailureHandler(function (err) {
+document.getElementById('accTotal').textContent = '--';
+errorEnVista('accError', err, 'el detalle de la cuenta');
+}).getAccountData(acc.key);
 }
 document.getElementById('accBack').onclick = function () { setView(accountReturnView); };
 function renderAccount(acc, data) {
@@ -1497,7 +1533,8 @@ function platsMsg(html, esOk) {
 document.getElementById('platResultado').innerHTML = html ? '<div class="tmsg ' + (esOk ? 'ok' : 'err') + '">' + html + '</div>' : '';
 }
 function cargarPlataformas() {
-google.script.run.withSuccessHandler(renderPlataformas).getPlataformas();
+google.script.run.withSuccessHandler(renderPlataformas)
+.withFailureHandler(function (err) { errorEnVista('platList', err, 'las plataformas'); }).getPlataformas();
 }
 function renderPlataformas(lista) {
 var el = document.getElementById('platList');
@@ -2030,15 +2067,56 @@ var m = (err && err.message) || String(err);
 if (m.indexOf('unknown_fn') !== -1) m = 'Se activa con la próxima actualización del servidor. Avisale a Claude que despliegue el backend.';
 return m;
 }
+// Cache local de los paneles lentos (dividendos y aportes): consultar los
+// brokers tarda varios segundos, asi que se pinta al instante lo ultimo visto
+// y se refresca por atras. Mismo criterio que pintarCache() en el arranque.
+function cacheLeer(clave) {
+try {
+var j = JSON.parse(localStorage.getItem(clave) || 'null');
+return (j && j.data) ? j : null;
+} catch (e) { return null; }
+}
+function cacheGuardar(clave, data) {
+try { localStorage.setItem(clave, JSON.stringify({ t: Date.now(), data: data })); } catch (e) {}
+}
+function marcaActualizando(id, cuando, cola) {
+var el = document.getElementById(id);
+if (!el) return;
+var d = new Date(cuando);
+var hh = ('0' + d.getHours()).slice(-2), mi = ('0' + d.getMinutes()).slice(-2);
+el.innerHTML = '<p class="newsempty">Datos del ' +
+('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + ' ' + hh + ':' + mi +
+' &middot; ' + (cola || 'actualizando...') + '</p>';
+el.style.display = '';
+}
+function limpiarMarca(id) {
+var el = document.getElementById(id);
+if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+}
+
 var divChartInstance = null, divDatos = null;
 function cargarDividendos(forzar) {
 divCargado = true;
+var body = document.getElementById('divBody');
+// Si hay algo guardado, se pinta YA y el spinner no aparece nunca.
+var cache = forzar ? null : cacheLeer('ga_cache_div');
+if (cache) {
+renderDividendos(cache.data, true);
+marcaActualizando('divCacheAviso', cache.t);
+} else {
 ['divStats', 'divChartBox', 'divHint'].forEach(function (id) { document.getElementById(id).style.display = 'none'; });
 document.getElementById('divDetalle').innerHTML = '';
 document.getElementById('divDetalle').removeAttribute('data-mes');
-var body = document.getElementById('divBody');
 body.innerHTML = '<p class="loadingtxt">Leyendo los dividendos de tus brokers...</p>';
-google.script.run.withSuccessHandler(renderDividendos).withFailureHandler(function (err) {
+}
+google.script.run.withSuccessHandler(function (r) {
+limpiarMarca('divCacheAviso');
+if (r && r.ok) cacheGuardar('ga_cache_div', r);
+renderDividendos(r);
+}).withFailureHandler(function (err) {
+limpiarMarca('divCacheAviso');
+// Con datos ya pintados del cache, un fallo de red no borra la pantalla.
+if (cache) { marcaActualizando('divCacheAviso', cache.t, 'no se pudo actualizar'); return; }
 divCargado = false;
 body.innerHTML = '<p class="newsempty">' + esc(actErrMsg(err)) + '</p>';
 }).getDividendos({ forzar: !!forzar });
@@ -2188,8 +2266,20 @@ document.getElementById('divModalClose').onclick = cerrarDivModal;
 function cargarAportes() {
 apoCargado = true;
 var body = document.getElementById('apoBody');
+var cache = cacheLeer('ga_cache_apo');
+if (cache) {
+renderAportes(cache.data);
+marcaActualizando('apoCacheAviso', cache.t);
+} else {
 body.innerHTML = '<p class="loadingtxt">Calculando los aportes del a&ntilde;o...</p>';
-google.script.run.withSuccessHandler(renderAportes).withFailureHandler(function (err) {
+}
+google.script.run.withSuccessHandler(function (r) {
+limpiarMarca('apoCacheAviso');
+if (r && r.ok) cacheGuardar('ga_cache_apo', r);
+renderAportes(r);
+}).withFailureHandler(function (err) {
+limpiarMarca('apoCacheAviso');
+if (cache) { marcaActualizando('apoCacheAviso', cache.t, 'no se pudo actualizar'); return; }
 apoCargado = false;
 body.innerHTML = '<p class="newsempty">' + esc(actErrMsg(err)) + '</p>';
 }).getAportes();
@@ -2772,6 +2862,7 @@ function pintarCache() {
     var c = JSON.parse(localStorage.getItem('ga_cache_data') || 'null');
     if (!c || !c.data || !c.data.cuentas) return false;
     render(c.data);
+    pintarBadges('cache');
     return true;
   } catch (e) { return false; }
 }
@@ -2838,12 +2929,14 @@ bnbAutoSync();
       hideSplash();
       // Con datos ya pintados (del caché), un fallo de red no rompe la vista:
       // se avisa y quedan los últimos datos guardados.
+      pintarBadges('error');
       if (lastData) { avisoInicio('&#9888; Sin conexi&oacute;n con el servidor: mostrando los &uacute;ltimos datos guardados.'); return; }
       var t=document.getElementById('total'); if(t){ t.textContent='ERR: '+err.message; }
     }).withSuccessHandler(function(data){
       try { localStorage.setItem('ga_cache_data', JSON.stringify({ t: Date.now(), data: data })); } catch(e) {}
       var av = document.getElementById('autoAviso');
       if (av && av.innerHTML.indexOf('Sin conexi') !== -1) { av.style.display='none'; av.innerHTML=''; }
+      pintarBadges('ok');
       render(data);
     }).getPortfolioData();
   }
