@@ -117,7 +117,19 @@ mostrarResultado('Error: ' + esc(err.message), false);
 // La lista viaja entera desde el backend (brokers + lo cargado a mano) y los
 // filtros se aplican ACA: cambiar de rango o de tipo es instantaneo, sin pagar
 // el viaje de ~1,5 s que cuesta cada llamada a Apps Script.
-var opsRango = 'ytd', opsTipo = 'todas', lastOps = null;
+var opsRango = 'ytd', opsTipo = 'todas', opsTicker = 'todos', lastOps = null;
+// t = lo que dice la pantallita de opciones; c = lo que entra en el boton
+// (en un telefono de 375 px el boton mide ~87: "Desde el inicio" se cortaba).
+var OPS_RANGOS = [
+{ v: 'ytd', t: 'Este año', c: 'Este año' },
+{ v: '3m', t: 'Últimos 3 meses', c: '3 meses' },
+{ v: 'todo', t: 'Desde el inicio', c: 'Todo' }
+];
+var OPS_TIPOS = [
+{ v: 'todas', t: 'Todos' },
+{ v: 'compra', t: 'Compras' },
+{ v: 'venta', t: 'Ventas' }
+];
 
 function opsIso(d) {
 return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
@@ -136,19 +148,57 @@ return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : String(iso || '');
 function opsMonto(n) {
 return mask('USD ' + (Math.round(Number(n) || 0)).toLocaleString('es-UY'));
 }
-function opsBotones(id, attr, alElegir) {
-var botones = document.querySelectorAll('#' + id + ' .rangebtn');
-botones.forEach(function (b) {
-b.addEventListener('click', function () {
-botones.forEach(function (o) { o.classList.remove('active'); });
-b.classList.add('active');
-alElegir(b.getAttribute(attr));
-if (lastOps) renderOperaciones(lastOps);
+// Los tickers que hay para elegir salen de lo que esta cargado, no de una
+// lista fija: si nunca operaste algo, no tiene sentido ofrecerlo.
+function opsTickers() {
+var vistos = {}, symbols = [];
+((lastOps && lastOps.operaciones) || []).forEach(function (o) {
+if (o.symbol && !vistos[o.symbol]) { vistos[o.symbol] = true; symbols.push(o.symbol); }
 });
-});
+symbols.sort();
+return [{ v: 'todos', t: 'Todos' }].concat(symbols.map(function (s) { return { v: s, t: s }; }));
 }
-opsBotones('opsRango', 'data-r', function (v) { opsRango = v; });
-opsBotones('opsTipo', 'data-t', function (v) { opsTipo = v; });
+function opsTexto(opciones, valor) {
+var o = opciones.filter(function (x) { return x.v === valor; })[0];
+return o ? (o.c || o.t) : valor;
+}
+// Cada boton muestra lo elegido; el detalle esta en la pantallita que abre.
+function pintarFiltros() {
+document.querySelector('#opsFiltroRango b').textContent = opsTexto(OPS_RANGOS, opsRango);
+document.querySelector('#opsFiltroTipo b').textContent = opsTexto(OPS_TIPOS, opsTipo);
+document.querySelector('#opsFiltroTicker b').textContent = opsTexto(opsTickers(), opsTicker);
+}
+function cerrarPicker() { document.getElementById('opsPicker').style.display = 'none'; }
+function abrirPicker(titulo, opciones, actual, alElegir) {
+document.getElementById('opsPickerTit').textContent = titulo;
+var cont = document.getElementById('opsPickerOpts');
+cont.innerHTML = '';
+opciones.forEach(function (o) {
+var b = document.createElement('button');
+b.type = 'button';
+b.className = 'opspick' + (o.v === actual ? ' sel' : '');
+b.textContent = o.t;
+b.onclick = function () {
+cerrarPicker();
+alElegir(o.v);
+pintarFiltros();
+if (lastOps) renderOperaciones(lastOps);
+};
+cont.appendChild(b);
+});
+document.getElementById('opsPicker').style.display = 'flex';
+}
+document.getElementById('opsPickerClose').onclick = cerrarPicker;
+document.getElementById('opsPicker').onclick = function (e) { if (e.target === this) cerrarPicker(); };
+document.getElementById('opsFiltroRango').onclick = function () {
+abrirPicker('Período', OPS_RANGOS, opsRango, function (v) { opsRango = v; });
+};
+document.getElementById('opsFiltroTipo').onclick = function () {
+abrirPicker('Tipo', OPS_TIPOS, opsTipo, function (v) { opsTipo = v; });
+};
+document.getElementById('opsFiltroTicker').onclick = function () {
+abrirPicker('Ticker', opsTickers(), opsTicker, function (v) { opsTicker = v; });
+};
 // La actividad de los brokers se guarda 6 h en el backend: sin esto, un cambio
 // recien hecho en el broker no se puede ver hasta que venza el cache.
 document.getElementById('opsRefreshBtn').onclick = function () { cargarOperaciones(true); };
@@ -185,10 +235,15 @@ body.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>';
 return;
 }
 var todas = r.operaciones || [];
+// El ticker elegido puede no existir en los datos nuevos (otro refresco, otra
+// ventana del broker): sin esto la pantalla quedaria vacia sin explicacion.
+if (opsTicker !== 'todos' && !todas.some(function (o) { return o.symbol === opsTicker; })) opsTicker = 'todos';
+pintarFiltros();
 var desde = opsDesde();
 var lista = todas.filter(function (o) {
 if (desde && String(o.fecha) < desde) return false;
 if (opsTipo !== 'todas' && o.tipo !== opsTipo) return false;
+if (opsTicker !== 'todos' && o.symbol !== opsTicker) return false;
 return true;
 });
 
@@ -198,14 +253,14 @@ if (o.tipo === 'compra') compras += Number(o.monto) || 0; else ventas += Number(
 });
 resumenEl.className = 'opsresumen';
 resumenEl.innerHTML =
-'<div><span>Operaciones</span><b>' + lista.length + '</b></div>' +
+'<div><span>Trades</span><b>' + lista.length + '</b></div>' +
 '<div><span>Compras</span><b class="up">' + esc(opsMonto(compras)) + '</b></div>' +
 '<div><span>Ventas</span><b class="down">' + esc(opsMonto(ventas)) + '</b></div>';
 
 if (!lista.length) {
 body.innerHTML = todas.length
-? '<div class="vacio"><span class="vic">&#128269;</span><b>Nada en este filtro</b>Prob&aacute; con otro per&iacute;odo o con "Todas".</div>'
-: '<div class="vacio"><span class="vic">&#128200;</span><b>Sin operaciones todav&iacute;a</b>Tus compras y ventas van a aparecer ac&aacute;.</div>';
+? '<div class="vacio"><span class="vic">&#128269;</span><b>Nada con estos filtros</b>Prob&aacute; con otro per&iacute;odo, otro tipo u otro ticker.</div>'
+: '<div class="vacio"><span class="vic">&#128200;</span><b>Sin trades todav&iacute;a</b>Tus compras y ventas van a aparecer ac&aacute;.</div>';
 } else {
 body.innerHTML = '';
 lista.forEach(function (o) {
@@ -221,7 +276,7 @@ body.appendChild(d);
 }
 
 var avisos = (r.avisos || []).slice();
-if (r.recortadas) avisos.push('Se muestran las 500 operaciones mas recientes.');
+if (r.recortadas) avisos.push('Se muestran los 500 trades mas recientes.');
 if (avisos.length) {
 avisosEl.innerHTML = avisos.map(function (a) {
 return '<p class="newsempty">&#9888; ' + esc(a) + '</p>';
