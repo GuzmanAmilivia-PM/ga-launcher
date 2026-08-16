@@ -161,3 +161,70 @@ if (esNueva) runner.agregarPlataforma(payload); else runner.editarPlataforma(pay
 };
 document.getElementById('cfgBack').onclick = function () { setView('inicio'); };
 
+
+// ---------- Diagnostico ----------
+// Lado APP al entrar (todo local, instantaneo); lado SERVIDOR a pedido, que
+// cuesta el viaje de ~1,5 s a Apps Script y lecturas de la Sheet.
+function filaSalud(etiqueta, valor, esOk) {
+var color = esOk === undefined ? '' : (esOk ? ' style="color:var(--green)"' : ' style="color:var(--red)"');
+return '<div class="row"><span>' + etiqueta + '</span><span' + color + '>' + valor + '</span></div>';
+}
+function edadCache(clave) {
+var c = cacheLeer(clave);
+if (!c || !c.t) return 'sin datos';
+var min = Math.round((Date.now() - c.t) / 60000);
+return min < 1 ? 'hace <1 min' : min < 60 ? 'hace ' + min + ' min' : 'hace ' + Math.round(min / 60) + ' h';
+}
+function pintarSaludApp() {
+var el = document.getElementById('saludApp');
+if (!el) return;
+var html = '';
+var sw = navigator.serviceWorker && navigator.serviceWorker.controller;
+html += filaSalud('Modo offline', sw ? 'activo' : 'inactivo', !!sw);
+html += filaSalud('Datos del portafolio', edadCache('ga_cache_data'));
+html += filaSalud('Dividendos guardados', edadCache('ga_cache_div'));
+html += filaSalud('Binance en este tel&eacute;fono', bnbConfig() ? 'configurado' : 'sin configurar');
+html += filaSalud('Bloqueo de seguridad', (function () { try { var s = JSON.parse(localStorage.getItem('ga_sec') || '{}'); return (s.pin || s.bio) ? 'activado' : 'desactivado'; } catch (e) { return '?'; } })());
+el.innerHTML = html;
+if (window.caches && caches.keys) {
+caches.keys().then(function (ks) {
+var v = ks.filter(function (k) { return k.indexOf('ga-pwa-') === 0; })[0];
+el.innerHTML = filaSalud('Versi&oacute;n de la app', v ? v.replace('ga-pwa-', '') : '?') + el.innerHTML;
+}).catch(function () {});
+}
+}
+function fechaSalud(iso) {
+var d = new Date(iso);
+return isNaN(d.getTime()) ? String(iso || '—') : fechaCortaMs(d.getTime());
+}
+document.getElementById('saludBtn').onclick = function () {
+var btn = this, out = document.getElementById('saludServidor');
+if (btn._busy) return;
+btn._busy = true;
+out.innerHTML = '<p class="loadingtxt">Consultando el servidor...</p>';
+google.script.run.withSuccessHandler(function (s) {
+btn._busy = false;
+if (!s || !s.ok) { out.innerHTML = '<p class="newsempty">El servidor no respondi&oacute; bien.</p>'; return; }
+var html = '';
+html += filaSalud('Hora del servidor', esc(fechaSalud(s.ahora)));
+html += filaSalud('Sincronizaci&oacute;n autom&aacute;tica (8:00)', s.triggerDiario === null ? 'sin dato' : (s.triggerDiario ? 'programada' : 'NO existe'), s.triggerDiario !== false);
+function broker(nombre, b) {
+if (!b.configurada) return filaSalud(nombre, 'sin conectar');
+if (!b.ultimaSync) return filaSalud(nombre, 'conectado, nunca sincroniz&oacute;');
+return filaSalud(nombre, (b.ultimaSync.ok ? '&#10003; ' : '&#9888; ') + esc(fechaSalud(b.ultimaSync.cuando)), b.ultimaSync.ok);
+}
+html += broker('IBKR', s.brokers.ibkr);
+html += broker('Schwab', s.brokers.schwab);
+html += filaSalud('Dividendos de IBKR', s.brokers.ibkr.actividad ? 'configurados' : 'sin configurar');
+html += filaSalud('IA Insights', s.iaConfigurada ? 'configurada' : 'sin configurar');
+if (s.historico && !s.historico.error) {
+html += filaSalud('Hist&oacute;rico', s.historico.filas + ' d&iacute;as, &uacute;ltimo: ' + esc(s.historico.ultimaFecha));
+} else {
+html += filaSalud('Hist&oacute;rico', esc((s.historico && s.historico.error) || '?'), false);
+}
+out.innerHTML = html;
+}).withFailureHandler(function (err) {
+btn._busy = false;
+out.innerHTML = '<p class="newsempty">' + esc(msgErr(err, 'El diagn&oacute;stico')) + '</p>';
+}).getSalud();
+};

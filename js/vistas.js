@@ -57,7 +57,7 @@ document.querySelectorAll('.navtab').forEach(function (b) {
 b.classList.toggle('active', b.getAttribute('data-view') === navName);
 });
 if (name === 'portafolio') renderPortafolio();
-if (name === 'config') { cargarPlataformas(); cargarEstadoIA(); cargarBackups(); }
+if (name === 'config') { cargarPlataformas(); cargarEstadoIA(); cargarBackups(); pintarSaludApp(); }
 if (name === 'ibkr') cargarEstadoIBKR();
 if (name === 'bnb') prepararBNB();
 if (name === 'cs') cargarEstadoCS();
