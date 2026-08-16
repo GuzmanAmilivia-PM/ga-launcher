@@ -804,10 +804,23 @@ function apiCall(fn, args) {
         // parecia rota hasta reiniciarla. La pantalla de clave ya la mostro
         // apiCall; aca solo hay que soltar lo que quedo en curso.
         apiCall(MAP[name], args).then(function (data) { if (ok) ok(data); })
-          .catch(function (err) { if (fail) fail(err); });
+          .catch(function (err) { (fail || fallaPorDefecto)(err, name); });
       };
     });
     return o;
+  }
+  // Sin handler de fallo, el error se tragaba en silencio y la pantalla quedaba
+  // "Cargando..." para siempre. Que avisar sea lo que pasa por omision: cada
+  // vista nueva nace cubierta, y withFailureHandler sigue pisando esto cuando
+  // hace falta algo especifico.
+  function fallaPorDefecto(err, name) {
+    try {
+      if (err && err.auth) return; // la pantalla de clave ya se mostro
+      if (window.console && console.warn) console.warn('Fallo ' + name + ':', err);
+      if (typeof avisoInicio === 'function' && typeof msgErr === 'function') {
+        avisoInicio('&#9888; ' + esc(msgErr(err, 'Algo')));
+      }
+    } catch (e) {}
   }
   window.google = { script: { run: mk(null, null) } };
 })();
@@ -850,7 +863,9 @@ var lastData = null;
 function errorEnVista(idContenedor, err, que) {
 var el = document.getElementById(idContenedor);
 if (!el) return;
-var msg = (err && err.message) ? err.message : ('No se pudieron cargar ' + que + '.');
+// Pasa por msgErr para traducir el backend sin desplegar; sin eso, estas
+// cuatro vistas mostraban el cruptico "unknown_fn".
+var msg = err ? msgErr(err, 'Esta pantalla') : ('No se pudieron cargar ' + que + '.');
 el.innerHTML = '<p class="newsempty">' + esc(msg) + '<br>Volv&eacute; a entrar para reintentar.</p>';
 }
 var noticiasCargadas = false;
@@ -907,10 +922,22 @@ return /interactive brokers/i.test(String(n || '')) ? 'IBKR' : String(n || '');
 // Los dos badges estaban escritos a mano en el HTML: decian "v60" y
 // "Sincronizado" siempre, aun cuando la ultima carga habia fallado. Ahora
 // dicen la verdad, que es lo unico que sirve cuando algo anda mal.
-var APP_VERSION = 'v27';
-function pintarBadges(estado) {
+// La version NO se escribe aca: se lee del nombre del cache que el service
+// worker esta sirviendo de verdad. Tenerla escrita a mano en index.html Y en
+// sw.js era una fuente doble de verdad, y la que manda es la del sw (si subis
+// solo la del index, el sw sigue sirviendo el index viejo y no se publica
+// nada). Asi el badge no puede mentir: muestra el shell que estas corriendo.
+function pintarVersion() {
 var v = document.getElementById('mbVersion');
-if (v) v.textContent = APP_VERSION;
+if (!v) return;
+if (!window.caches || !caches.keys) { v.textContent = '&mdash;'; return; }
+caches.keys().then(function (claves) {
+var c = claves.filter(function (k) { return k.indexOf('ga-pwa-') === 0; })[0];
+v.textContent = c ? c.replace('ga-pwa-', '') : '—';
+}).catch(function () {});
+}
+function pintarBadges(estado) {
+pintarVersion();
 var e = document.getElementById('mbEstado');
 if (!e) return;
 if (estado === 'ok') {
@@ -1616,10 +1643,23 @@ if (esNueva) runner.agregarPlataforma(payload); else runner.editarPlataforma(pay
 document.getElementById('cfgBack').onclick = function () { setView('inicio'); };
 
 // ---------- Configuración: conexión IBKR ----------
-function ibkrMsgErr(err) {
+// ---------- Helpers compartidos de sincronizacion ----------
+// Habia CUATRO traductores de error identicos (ibkrMsgErr, bnbMsgErr, csMsgErr,
+// actErrMsg) que solo cambiaban el sujeto de la frase, y cada funcion nueva del
+// backend pedia el suyo. Ahora es uno solo.
+function msgErr(err, sujeto) {
 var m = (err && err.message) ? err.message : String(err);
-if (m.indexOf('unknown_fn') !== -1) m = 'La conexión IBKR se activa con la próxima actualización del servidor. Avisale a Claude que despliegue el backend.';
-return m;
+if (m.indexOf('unknown_fn') === -1) return m;
+return (sujeto ? sujeto + ' se activa' : 'Se activa') +
+' con la pr&oacute;xima actualizaci&oacute;n del servidor. Avisale a Claude que despliegue el backend.';
+}
+// El mismo mensaje, pero para una respuesta {ok:false, mensajes:[...]}.
+function msgBackend(r) {
+return ((r && r.mensajes) || ['no se pudo sincronizar']).join(' ');
+}
+// Cualquier sincronizacion en curso bloquea a las demas.
+function syncEnCurso() {
+return syncTodoEnCurso || ibkrSyncEnCurso || csEnCurso || bnbEnCurso;
 }
 function fechaCortaMs(ms) {
 var d = new Date(ms);
@@ -1649,7 +1689,7 @@ t.innerHTML = 'Sin configurar. Gener&aacute; el token en el portal de IBKR (paso
 wrap.style.display = 'none';
 }
 }).withFailureHandler(function (err) {
-t.innerHTML = esc(ibkrMsgErr(err));
+t.innerHTML = esc(msgErr(err, 'La conexión IBKR'));
 }).estadoIBKR();
 }
 document.getElementById('ibkrGuardar').onclick = function () {
@@ -1666,7 +1706,7 @@ res.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).
 }
 }).withFailureHandler(function (err) {
 btn.disabled = false;
-res.innerHTML = '<div class="tmsg err">' + esc(ibkrMsgErr(err)) + '</div>';
+res.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, 'La conexión IBKR')) + '</div>';
 }).guardarConfigIBKR({ token: tk.value, queryId: q.value, queryActId: qa.value });
 };
 // El backend frena solo las sincronizaciones que dejarian demasiadas
@@ -1678,7 +1718,7 @@ return window.confirm('Varias posiciones quedarían en CERO.\n\nSi vendiste todo
 }
 var ibkrSyncEnCurso = false, ibkrParcial = false;
 function correrSyncIBKR(dryRun, forzar) {
-if (ibkrSyncEnCurso) return;
+if (syncEnCurso()) return;
 ibkrSyncEnCurso = true;
 var out = document.getElementById('ibkrCambios');
 var btnAplicar = document.getElementById('ibkrAplicar');
@@ -1723,7 +1763,7 @@ loadData();
 }).withFailureHandler(function (err) {
 ibkrSyncEnCurso = false;
 out.innerHTML = '';
-resEl.innerHTML = '<div class="tmsg err">' + esc(ibkrMsgErr(err)) + '</div>';
+resEl.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, 'La conexión IBKR')) + '</div>';
 }).sincronizarIBKR({ dryRun: !!dryRun, forzar: !!forzar });
 }
 document.getElementById('ibkrVerCambios').onclick = function () { correrSyncIBKR(true); };
@@ -1738,11 +1778,6 @@ document.getElementById('ibkrBack').onclick = function () { setView('config'); }
 function bnbConfig() {
 try { var j = JSON.parse(localStorage.getItem('ga_bnb') || 'null'); if (j && j.key && j.secret) return j; } catch (e) {}
 return null;
-}
-function bnbMsgErr(err) {
-var m = (err && err.message) ? err.message : String(err);
-if (m.indexOf('unknown_fn') !== -1) m = 'La sincronización con Binance se activa con la próxima actualización del servidor. Avisale a Claude que despliegue el backend.';
-return m;
 }
 function prepararBNB() {
 var cfg = bnbConfig();
@@ -1832,7 +1867,7 @@ terminar(new Error(msg));
 }
 var bnbEnCurso = false, bnbSaldos = null;
 function correrSyncBNB(dryRun) {
-if (bnbEnCurso) return;
+if (syncEnCurso()) return;
 bnbEnCurso = true;
 var out = document.getElementById('bnbCambios');
 var btnAplicar = document.getElementById('bnbAplicar');
@@ -1843,7 +1878,7 @@ out.innerHTML = '<p class="loadingtxt">' + (dryRun ? 'Leyendo tus saldos reales 
 function fallo(err) {
 bnbEnCurso = false;
 out.innerHTML = '';
-resEl.innerHTML = '<div class="tmsg err">' + esc(bnbMsgErr(err)) + '</div>';
+resEl.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, 'La sincronización con Binance')) + '</div>';
 }
 function render(r) {
 bnbEnCurso = false;
@@ -1896,11 +1931,6 @@ document.getElementById('bnbVerCambios').onclick = function () { correrSyncBNB(t
 document.getElementById('bnbAplicar').onclick = function () { correrSyncBNB(false); };
 
 // ---------- Charles Schwab: conexión automática vía SnapTrade ----------
-function csMsgErr(err) {
-var m = (err && err.message) ? err.message : String(err);
-if (m.indexOf('unknown_fn') !== -1) m = 'La conexión con Schwab se activa con la próxima actualización del servidor. Avisale a Claude que despliegue el backend.';
-return m;
-}
 function cargarEstadoCS() {
 var t = document.getElementById('csEstadoTxt');
 t.innerHTML = 'Comprobando configuraci&oacute;n...';
@@ -1928,7 +1958,7 @@ t.innerHTML = html;
 sync.style.display = '';
 btnCon.style.display = 'none';
 }).withFailureHandler(function (err) {
-t.innerHTML = esc(csMsgErr(err));
+t.innerHTML = esc(msgErr(err, 'La conexión con Schwab'));
 }).estadoCS();
 }
 document.getElementById('csGuardar').onclick = function () {
@@ -1945,7 +1975,7 @@ res.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).
 }
 }).withFailureHandler(function (err) {
 btn.disabled = false;
-res.innerHTML = '<div class="tmsg err">' + esc(csMsgErr(err)) + '</div>';
+res.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, 'La conexión con Schwab')) + '</div>';
 }).guardarConfigCS({ clientId: ci.value, consumerKey: ck.value });
 };
 document.getElementById('csConectar').onclick = function () {
@@ -1964,12 +1994,12 @@ res.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).
 }
 }).withFailureHandler(function (err) {
 btn.disabled = false;
-res.innerHTML = '<div class="tmsg err">' + esc(csMsgErr(err)) + '</div>';
+res.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, 'La conexión con Schwab')) + '</div>';
 }).portalCS();
 };
 var csEnCurso = false, csParcial = false;
 function correrSyncCS(dryRun, forzar) {
-if (csEnCurso) return;
+if (syncEnCurso()) return;
 csEnCurso = true;
 var out = document.getElementById('csCambios');
 var btnAplicar = document.getElementById('csAplicar');
@@ -2014,7 +2044,7 @@ loadData();
 }).withFailureHandler(function (err) {
 csEnCurso = false;
 out.innerHTML = '';
-resEl.innerHTML = '<div class="tmsg err">' + esc(csMsgErr(err)) + '</div>';
+resEl.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, 'La conexión con Schwab')) + '</div>';
 }).sincronizarCS({ dryRun: !!dryRun, forzar: !!forzar });
 }
 document.getElementById('csVerCambios').onclick = function () { correrSyncCS(true); };
@@ -2062,11 +2092,6 @@ if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) sweepGo(sweepIdx + (
 })();
 
 var MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Set', 'Oct', 'Nov', 'Dic'];
-function actErrMsg(err) {
-var m = (err && err.message) || String(err);
-if (m.indexOf('unknown_fn') !== -1) m = 'Se activa con la próxima actualización del servidor. Avisale a Claude que despliegue el backend.';
-return m;
-}
 // Cache local de los paneles lentos (dividendos y aportes): consultar los
 // brokers tarda varios segundos, asi que se pinta al instante lo ultimo visto
 // y se refresca por atras. Mismo criterio que pintarCache() en el arranque.
@@ -2082,10 +2107,7 @@ try { localStorage.setItem(clave, JSON.stringify({ t: Date.now(), data: data }))
 function marcaActualizando(id, cuando, cola) {
 var el = document.getElementById(id);
 if (!el) return;
-var d = new Date(cuando);
-var hh = ('0' + d.getHours()).slice(-2), mi = ('0' + d.getMinutes()).slice(-2);
-el.innerHTML = '<p class="newsempty">Datos del ' +
-('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + ' ' + hh + ':' + mi +
+el.innerHTML = '<p class="newsempty">Datos del ' + fechaCortaMs(cuando) +
 ' &middot; ' + (cola || 'actualizando...') + '</p>';
 el.style.display = '';
 }
@@ -2093,33 +2115,54 @@ function limpiarMarca(id) {
 var el = document.getElementById(id);
 if (el) { el.style.display = 'none'; el.innerHTML = ''; }
 }
+/**
+ * Panel que se pinta desde el cache local y se refresca por atras.
+ * Dividendos y aportes eran la misma funcion copiada, y ya habian divergido
+ * (dividendos respetaba el boton de refrescar y aportes no).
+ */
+function cargarConCache(cfg) {
+var cache = cfg.forzar ? null : cacheLeer(cfg.clave);
+if (cache) {
+cfg.render(cache.data);
+marcaActualizando(cfg.avisoId, cache.t);
+} else {
+if (cfg.limpiar) cfg.limpiar();
+document.getElementById(cfg.bodyId).innerHTML = '<p class="loadingtxt">' + cfg.cargando + '</p>';
+}
+cfg.pedir(function (r) {
+limpiarMarca(cfg.avisoId);
+if (r && r.ok) cacheGuardar(cfg.clave, r);
+cfg.render(r);
+}, function (err) {
+limpiarMarca(cfg.avisoId);
+// Con datos ya pintados, un fallo de red no borra la pantalla.
+if (cache) { marcaActualizando(cfg.avisoId, cache.t, 'no se pudo actualizar'); return; }
+if (cfg.alFallar) cfg.alFallar();
+document.getElementById(cfg.bodyId).innerHTML =
+'<p class="newsempty">' + esc(msgErr(err, 'Esta pantalla')) + '</p>';
+});
+}
 
 var divChartInstance = null, divDatos = null;
 function cargarDividendos(forzar) {
 divCargado = true;
-var body = document.getElementById('divBody');
-// Si hay algo guardado, se pinta YA y el spinner no aparece nunca.
-var cache = forzar ? null : cacheLeer('ga_cache_div');
-if (cache) {
-renderDividendos(cache.data, true);
-marcaActualizando('divCacheAviso', cache.t);
-} else {
+cargarConCache({
+clave: 'ga_cache_div',
+avisoId: 'divCacheAviso',
+bodyId: 'divBody',
+cargando: 'Leyendo los dividendos de tus brokers...',
+forzar: !!forzar,
+limpiar: function () {
 ['divStats', 'divChartBox', 'divHint'].forEach(function (id) { document.getElementById(id).style.display = 'none'; });
 document.getElementById('divDetalle').innerHTML = '';
 document.getElementById('divDetalle').removeAttribute('data-mes');
-body.innerHTML = '<p class="loadingtxt">Leyendo los dividendos de tus brokers...</p>';
+},
+render: renderDividendos,
+alFallar: function () { divCargado = false; },
+pedir: function (ok, fail) {
+google.script.run.withSuccessHandler(ok).withFailureHandler(fail).getDividendos({ forzar: !!forzar });
 }
-google.script.run.withSuccessHandler(function (r) {
-limpiarMarca('divCacheAviso');
-if (r && r.ok) cacheGuardar('ga_cache_div', r);
-renderDividendos(r);
-}).withFailureHandler(function (err) {
-limpiarMarca('divCacheAviso');
-// Con datos ya pintados del cache, un fallo de red no borra la pantalla.
-if (cache) { marcaActualizando('divCacheAviso', cache.t, 'no se pudo actualizar'); return; }
-divCargado = false;
-body.innerHTML = '<p class="newsempty">' + esc(actErrMsg(err)) + '</p>';
-}).getDividendos({ forzar: !!forzar });
+});
 }
 // Vista estilo resumen de ingresos del broker: estimado anual grande,
 // promedio mensual con su línea, y barras por mes (lleno = cobrado,
@@ -2263,26 +2306,20 @@ box.innerHTML = '<div class="divdetbox"><b>' + MESES_CORTOS[mes - 1] + ' ' + esc
 document.getElementById('divExpandBtn').onclick = abrirDivModal;
 document.getElementById('divModalClose').onclick = cerrarDivModal;
 
-function cargarAportes() {
+function cargarAportes(forzar) {
 apoCargado = true;
-var body = document.getElementById('apoBody');
-var cache = cacheLeer('ga_cache_apo');
-if (cache) {
-renderAportes(cache.data);
-marcaActualizando('apoCacheAviso', cache.t);
-} else {
-body.innerHTML = '<p class="loadingtxt">Calculando los aportes del a&ntilde;o...</p>';
+cargarConCache({
+clave: 'ga_cache_apo',
+avisoId: 'apoCacheAviso',
+bodyId: 'apoBody',
+cargando: 'Calculando los aportes del a&ntilde;o...',
+forzar: !!forzar,
+render: renderAportes,
+alFallar: function () { apoCargado = false; },
+pedir: function (ok, fail) {
+google.script.run.withSuccessHandler(ok).withFailureHandler(fail).getAportes();
 }
-google.script.run.withSuccessHandler(function (r) {
-limpiarMarca('apoCacheAviso');
-if (r && r.ok) cacheGuardar('ga_cache_apo', r);
-renderAportes(r);
-}).withFailureHandler(function (err) {
-limpiarMarca('apoCacheAviso');
-if (cache) { marcaActualizando('apoCacheAviso', cache.t, 'no se pudo actualizar'); return; }
-apoCargado = false;
-body.innerHTML = '<p class="newsempty">' + esc(actErrMsg(err)) + '</p>';
-}).getAportes();
+});
 }
 function renderAportes(r) {
 var body = document.getElementById('apoBody');
@@ -2322,36 +2359,52 @@ el.innerHTML = '<div class="tmsg ' + (esOk ? 'ok' : 'err') + '">' + msg + '</div
 el.style.display = '';
 if (esOk) setTimeout(function () { el.style.display = 'none'; el.innerHTML = ''; }, 8000);
 }
+// El protocolo completo de Binance en UN solo lugar: leer los saldos en el
+// telefono, comparar, frenar si parece que los fondos estan en Earn, aplicar y
+// dejar la marca de "ultima". Antes estaba escrito dos veces (auto y menu) y el
+// umbral de posiciones en cero tenia dos redacciones distintas.
+var BNB_CERRADAS_FRENO = 2;
+var BNB_AVISO_EARN = 'Binance: varias posiciones aparecen sin saldo (&iquest;fondos en Earn?). ' +
+'No se aplic&oacute; nada &mdash; revisalo en Configuraci&oacute;n &rarr; Plataformas &rarr; Binance.';
+function bnbSincronizar(cb) {
+var alOk = cb.alOk || function () {};
+var alError = cb.alError || function () {};
+function fin() { bnbEnCurso = false; }
+bnbEnCurso = true;
+bnbLeerSaldos(function (saldos) {
+google.script.run.withSuccessHandler(function (r) {
+if (!r || !r.ok) { fin(); alError(msgBackend(r)); return; }
+if (!r.cambios || !r.cambios.length) { fin(); alOk(r); return; }
+var cerradas = r.cambios.filter(function (c) { return c.tipo === 'cerrada'; }).length;
+if (cerradas >= BNB_CERRADAS_FRENO) { fin(); alError(BNB_AVISO_EARN); return; }
+google.script.run.withSuccessHandler(function (r2) {
+fin();
+if (!r2 || !r2.ok) { alError(msgBackend(r2)); return; }
+try { localStorage.setItem('ga_bnb_ultima', fechaCortaMs(Date.now())); } catch (e) {}
+alOk(r2);
+}).withFailureHandler(function (err) { fin(); alError(msgErr(err, 'La sincronizaci&oacute;n con Binance')); })
+.sincronizarBNB({ balances: saldos, dryRun: false });
+}).withFailureHandler(function (err) { fin(); alError(msgErr(err, 'La sincronizaci&oacute;n con Binance')); })
+.sincronizarBNB({ balances: saldos, dryRun: true });
+}, function () { fin(); alError('no se pudieron leer los saldos desde el tel&eacute;fono.'); });
+}
 function bnbAutoSync() {
-if (!bnbConfig() || !getApiToken() || bnbEnCurso) return;
+if (!bnbConfig() || !getApiToken() || syncEnCurso()) return;
 var ts = 0;
 try { ts = parseInt(localStorage.getItem('ga_bnb_auto_ts') || '0', 10) || 0; } catch (e) {}
 if (Date.now() - ts < BNB_AUTO_MIN_MS) return;
 try { localStorage.setItem('ga_bnb_auto_ts', String(Date.now())); } catch (e) {}
-bnbEnCurso = true;
-function fin() { bnbEnCurso = false; }
-function sincronizado() {
-fin();
-try { localStorage.setItem('ga_bnb_ultima', fechaCortaMs(Date.now())); } catch (e) {}
-}
-bnbLeerSaldos(function (saldos) {
-google.script.run.withSuccessHandler(function (r) {
-if (!r || !r.ok) { fin(); return; }
-if (!r.cambios || !r.cambios.length) { sincronizado(); return; }
-var cerradas = r.cambios.filter(function (c) { return c.tipo === 'cerrada'; }).length;
-if (cerradas >= 2) {
-fin();
-avisoInicio('&#9888; Binance: varias posiciones aparecen sin saldo (&iquest;fondos en Earn?). No se aplic&oacute; nada solo: revisalo en Configuraci&oacute;n &rarr; Plataformas &rarr; Binance.');
-return;
-}
-google.script.run.withSuccessHandler(function (r2) {
-if (!r2 || !r2.ok) { fin(); return; }
-sincronizado();
+bnbSincronizar({
+alOk: function (r) {
+var n = (r.cambios || []).length;
+if (!n) return; // sin cambios: no vale la pena molestar
 loadData();
-avisoInicio('&#10003; Binance sincronizado: ' + r2.cambios.length + ' cambio' + (r2.cambios.length === 1 ? '' : 's') + ' aplicado' + (r2.cambios.length === 1 ? '' : 's') + '.', true);
-}).withFailureHandler(fin).sincronizarBNB({ balances: saldos, dryRun: false });
-}).withFailureHandler(fin).sincronizarBNB({ balances: saldos, dryRun: true });
-}, fin);
+avisoInicio('&#10003; Binance sincronizado: ' + n + ' cambio' + (n === 1 ? '' : 's') + ' aplicado' + (n === 1 ? '' : 's') + '.', true);
+},
+// La sync automatica es silenciosa salvo el caso de Earn, que es el unico
+// que pide una decision del usuario.
+alError: function (msg) { if (msg === BNB_AVISO_EARN) avisoInicio('&#9888; ' + msg); }
+});
 }
 
 // ---------- Sincronizar todo (menu) ----------
@@ -2359,21 +2412,24 @@ avisoInicio('&#10003; Binance sincronizado: ' + r2.cambios.length + ' cambio' + 
 // que no este configurado se saltea en silencio (sinConfig del backend, o
 // bnbConfig() vacio en el caso de Binance, que se lee desde el telefono).
 // Nunca corre en paralelo con las sincronizaciones manuales de cada plataforma.
+// syncTodoEnCurso es el UNICO candado de la cadena: las sincronizaciones
+// manuales ya lo miran en su guarda de entrada. Antes esta funcion ponia y
+// sacaba a mano los tres candados ajenos en 11 puntos, y cada rama de error
+// nueva era una chance de dejar uno trabado para siempre.
 var syncTodoEnCurso = false;
 function sincronizarTodo() {
-if (syncTodoEnCurso || ibkrSyncEnCurso || csEnCurso || bnbEnCurso) return;
+if (syncEnCurso()) return;
 syncTodoEnCurso = true;
 var txt = document.getElementById('mRefrescarTxt');
 var lineas = [], huboError = false;
 function paso(n) { txt.textContent = n; }
-function nota(msg) { lineas.push(msg); }
 function ok(nombre, r) {
-var n = (r.cambios || []).length;
-nota('&#10003; ' + nombre + ': ' + (n ? n + ' cambio' + (n === 1 ? '' : 's') : 'sin cambios'));
+var n = ((r && r.cambios) || []).length;
+lineas.push('&#10003; ' + nombre + ': ' + (n ? n + ' cambio' + (n === 1 ? '' : 's') : 'sin cambios'));
 }
-function error(nombre, r) {
+function error(nombre, msg) {
 huboError = true;
-nota('&#9888; ' + nombre + ': ' + esc(((r && r.mensajes) || ['no se pudo sincronizar']).join(' ')));
+lineas.push('&#9888; ' + nombre + ': ' + esc(msg));
 }
 function terminar() {
 syncTodoEnCurso = false;
@@ -2382,65 +2438,45 @@ toggleMenu(false);
 loadData();
 if (lineas.length) avisoInicio(lineas.join('<br>'), !huboError);
 }
+// Un paso de broker: saltea si no esta configurado, anota el resultado y
+// sigue con el siguiente pase lo que pase.
+function paso1Broker(cfg, sig) {
+paso('Sincronizando ' + cfg.nombre + '...');
+google.script.run.withSuccessHandler(function (r) {
+if (r && r.sinConfig) { sig(); return; }
+if (!r || !r.ok) error(cfg.nombre, msgBackend(r));
+else { ok(cfg.nombre, r); if (cfg.alOk) cfg.alOk(); }
+sig();
+}).withFailureHandler(function (err) {
+error(cfg.nombre, msgErr(err, cfg.nombre));
+sig();
+})[cfg.fn]({ dryRun: false });
+}
 function precios() {
 paso('Refrescando precios...');
 google.script.run.withSuccessHandler(terminar).withFailureHandler(function () {
-nota('&#9888; No se pudieron refrescar los precios.');
-huboError = true;
+error('Precios', 'no se pudieron refrescar.');
 terminar();
 }).refrescarPrecios();
 }
 function binance() {
 if (!bnbConfig()) { precios(); return; }
 paso('Sincronizando Binance...');
-bnbEnCurso = true;
-function salir(msg) { bnbEnCurso = false; if (msg) { nota(msg); huboError = true; } precios(); }
-bnbLeerSaldos(function (saldos) {
-google.script.run.withSuccessHandler(function (r) {
-if (!r || !r.ok) { bnbEnCurso = false; error('Binance', r); precios(); return; }
-var cerradas = (r.cambios || []).filter(function (c) { return c.tipo === 'cerrada'; }).length;
-if (cerradas >= 2) {
-salir('&#9888; Binance: varias posiciones aparecen sin saldo (&iquest;fondos en Earn?). No se aplic&oacute; nada &mdash; revisalo en Plataformas.');
-return;
-}
-if (!r.cambios.length) { bnbEnCurso = false; ok('Binance', r); precios(); return; }
-google.script.run.withSuccessHandler(function (r2) {
-bnbEnCurso = false;
-if (!r2 || !r2.ok) { error('Binance', r2); } else { ok('Binance', r2); try { localStorage.setItem('ga_bnb_ultima', fechaCortaMs(Date.now())); } catch (e) {} }
-precios();
-}).withFailureHandler(function () { salir('&#9888; Binance: fall&oacute; al aplicar los cambios.'); })
-.sincronizarBNB({ balances: saldos, dryRun: false });
-}).withFailureHandler(function () { salir('&#9888; Binance: no respondi&oacute; el servidor.'); })
-.sincronizarBNB({ balances: saldos, dryRun: true });
-}, function () { salir('&#9888; Binance: no se pudieron leer los saldos desde el tel&eacute;fono.'); });
+bnbSincronizar({
+alOk: function (r) { ok('Binance', r); precios(); },
+alError: function (msg) { error('Binance', msg); precios(); }
+});
 }
 function schwab() {
-paso('Sincronizando Schwab...');
-csEnCurso = true;
-google.script.run.withSuccessHandler(function (r) {
-csEnCurso = false;
-if (r && r.sinConfig) { binance(); return; }
-if (!r || !r.ok) error('Schwab', r); else { ok('Schwab', r); cargarEstadoCS(); }
-binance();
-}).withFailureHandler(function (err) {
-csEnCurso = false;
-error('Schwab', { mensajes: [csMsgErr(err)] });
-binance();
-}).sincronizarCS({ dryRun: false });
+paso1Broker({ nombre: 'Schwab', fn: 'sincronizarCS', alOk: refrescarVistaCS }, binance);
 }
-paso('Sincronizando IBKR...');
-ibkrSyncEnCurso = true;
-google.script.run.withSuccessHandler(function (r) {
-ibkrSyncEnCurso = false;
-if (r && r.sinConfig) { schwab(); return; }
-if (!r || !r.ok) error('IBKR', r); else { ok('IBKR', r); cargarEstadoIBKR(); }
-schwab();
-}).withFailureHandler(function (err) {
-ibkrSyncEnCurso = false;
-error('IBKR', { mensajes: [ibkrMsgErr(err)] });
-schwab();
-}).sincronizarIBKR({ dryRun: false });
+paso1Broker({ nombre: 'IBKR', fn: 'sincronizarIBKR', alOk: refrescarVistaIBKR }, schwab);
 }
+// Las pantallas de estado de cada broker solo se refrescan si estan a la
+// vista: si no, es un viaje al backend (y en Schwab una llamada externa a
+// SnapTrade) para pintar algo que nadie mira.
+function refrescarVistaCS() { if (currentView === 'cs') cargarEstadoCS(); }
+function refrescarVistaIBKR() { if (currentView === 'ibkr') cargarEstadoIBKR(); }
 
 // ---------- Deshacer: respaldos de las hojas ----------
 // El backend guarda una foto de la hoja antes de cada escritura automatica.
@@ -2448,10 +2484,7 @@ schwab();
 // que tocarlo por error se deshace tocandolo de nuevo.
 function fechaBackup(iso) {
 var d = new Date(iso);
-if (isNaN(d.getTime())) return String(iso || '');
-var dd = ('0' + d.getDate()).slice(-2), mm = ('0' + (d.getMonth() + 1)).slice(-2);
-var hh = ('0' + d.getHours()).slice(-2), mi = ('0' + d.getMinutes()).slice(-2);
-return dd + '/' + mm + ' ' + hh + ':' + mi;
+return isNaN(d.getTime()) ? String(iso || '') : fechaCortaMs(d.getTime());
 }
 var bakEnCurso = false;
 function cargarBackups() {
@@ -2459,21 +2492,21 @@ var cont = document.getElementById('bakList');
 if (!cont) return;
 cont.innerHTML = '<p class="loadingtxt">Cargando...</p>';
 google.script.run.withSuccessHandler(function (r) {
-if (!r || !r.ok) { cont.innerHTML = '<p class="newsempty">No se pudo leer la lista de copias.</p>'; return; }
+if (!r || !r.ok) { errorEnVista('bakList', null, 'las copias'); return; }
 if (!r.backups.length) { cont.innerHTML = '<p class="newsempty">Todav&iacute;a no hay ninguna copia guardada.</p>'; return; }
 cont.innerHTML = r.backups.map(function (b) {
 return '<div class="row"><span>' + esc(nombrePlataforma(b.hoja)) +
 '<br><span class="newsempty">' + esc(fechaBackup(b.cuando)) + (b.motivo ? ' &middot; ' + esc(b.motivo) : '') + '</span></span>' +
-'<button class="ghostbtn bakBtn" data-hoja="' + esc(b.hoja) + '" style="width:auto;padding:6px 12px;margin:0">Volver a esto</button></div>';
+'<button class="ghostbtn bakBtn" data-hoja="' + esc(b.hoja) + '" data-cuando="' + esc(b.cuando) + '" style="width:auto;padding:6px 12px;margin:0">Volver a esto</button></div>';
 }).join('');
 Array.prototype.forEach.call(cont.querySelectorAll('.bakBtn'), function (btn) {
-btn.onclick = function () { restaurarHoja(btn.getAttribute('data-hoja')); };
+btn.onclick = function () { restaurarHoja(btn.getAttribute('data-hoja'), btn.getAttribute('data-cuando')); };
 });
 }).withFailureHandler(function (err) {
-cont.innerHTML = '<p class="newsempty">' + esc(err && err.message ? err.message : 'No se pudo leer la lista de copias.') + '</p>';
+errorEnVista('bakList', err, 'las copias');
 }).listarBackups();
 }
-function restaurarHoja(hoja) {
+function restaurarHoja(hoja, cuando) {
 if (bakEnCurso) return;
 if (!window.confirm('La hoja ' + hoja + ' va a volver a como estaba en esa copia.\n\nLo que haya ahora se guarda igual, asi que esto tambien se puede deshacer.\n\n¿Seguimos?')) return;
 bakEnCurso = true;
@@ -2491,7 +2524,7 @@ loadData();
 }).withFailureHandler(function (err) {
 bakEnCurso = false;
 res.innerHTML = '<div class="tmsg err">' + esc(err && err.message ? err.message : 'No se pudo restaurar.') + '</div>';
-}).restaurarBackup({ hoja: hoja });
+}).restaurarBackup({ hoja: hoja, cuando: cuando || '' });
 }
 
 // ---------- IA Insights ----------
@@ -2858,13 +2891,11 @@ buildCashForm();
 // Pintado instantáneo: al abrir se muestran los últimos datos vistos
 // (guardados en este dispositivo) y el refresco real corre por atrás.
 function pintarCache() {
-  try {
-    var c = JSON.parse(localStorage.getItem('ga_cache_data') || 'null');
-    if (!c || !c.data || !c.data.cuentas) return false;
-    render(c.data);
-    pintarBadges('cache');
-    return true;
-  } catch (e) { return false; }
+  var c = cacheLeer('ga_cache_data');
+  if (!c || !c.data.cuentas) return false;
+  render(c.data);
+  pintarBadges('cache');
+  return true;
 }
 if (getApiToken()) { pintarCache(); loadData(); } else { mostrarLock(); }
 function render(data) {
@@ -2916,7 +2947,7 @@ try {
 drawLineChart(filterSerie(currentRangeDias));
 updateRangePct();
 } catch (eChart) {
-var cb = document.getElementById('chartbox') || document.querySelector('.chartbox');
+var cb = document.querySelector('.chartbox');
 if (cb) cb.innerHTML = '<p class="newsempty">No se pudo dibujar el gr&aacute;fico.</p>';
 }
 renderHoldings(data.topHoldings);
@@ -2933,7 +2964,7 @@ bnbAutoSync();
       if (lastData) { avisoInicio('&#9888; Sin conexi&oacute;n con el servidor: mostrando los &uacute;ltimos datos guardados.'); return; }
       var t=document.getElementById('total'); if(t){ t.textContent='ERR: '+err.message; }
     }).withSuccessHandler(function(data){
-      try { localStorage.setItem('ga_cache_data', JSON.stringify({ t: Date.now(), data: data })); } catch(e) {}
+      cacheGuardar('ga_cache_data', data);
       var av = document.getElementById('autoAviso');
       if (av && av.innerHTML.indexOf('Sin conexi') !== -1) { av.style.display='none'; av.innerHTML=''; }
       pintarBadges('ok');
