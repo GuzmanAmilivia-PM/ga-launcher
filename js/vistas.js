@@ -50,7 +50,16 @@ function setView(name) {
 currentView = name;
 VIEWS.forEach(function (v) {
 var el = document.getElementById('view-' + v);
-if (el) el.style.display = (v === name) ? '' : 'none';
+if (!el) return;
+if (v === name) {
+el.style.display = '';
+// Reiniciar la animacion: sacar la clase, forzar reflow, ponerla.
+el.classList.remove('view-entra');
+void el.offsetWidth;
+el.classList.add('view-entra');
+} else {
+el.style.display = 'none';
+}
 });
 var navName = (name === 'account') ? accountReturnView : name;
 document.querySelectorAll('.navtab').forEach(function (b) {

@@ -233,6 +233,13 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .newsmove { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 9px 0 2px; font-size: 13.5px; }
 .newsmove + .newsitem { border-top: none; }
 .newsempty { color: var(--muted); font-size: 12px; }
+/* Transicion al cambiar de vista: en seco se sentia "de programador". */
+.vacio { text-align: center; padding: 22px 12px; color: var(--muted); }
+.vacio .vic { font-size: 30px; display: block; margin-bottom: 8px; opacity: .8; }
+.vacio b { color: var(--text); font-weight: 600; display: block; margin-bottom: 3px; }
+.view-entra { animation: vistaFade .18s ease-out; }
+@keyframes vistaFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .view-entra { animation: none; } }
 .loadingtxt { color: var(--muted); font-size: 13px; padding: 12px 0; }
 
 /* --- Barra de navegación inferior (estilo Binance) --- */
@@ -335,6 +342,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 
 <!-- ============ INICIO ============ -->
 <div id="view-inicio">
+<div id="updateAviso" style="display:none"><div class="tmsg ok" style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span>Hay una versi&oacute;n nueva de la app.</span><button class="ghostbtn" style="width:auto;margin:0;padding:6px 14px" onclick="aplicarActualizacion()">Actualizar</button></div></div>
 <div id="syncAviso" style="display:none"></div>
 <div id="autoAviso" style="display:none"></div>
 <div class="topstats">
@@ -671,7 +679,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 </div>
 <div class="card">
 <h2>&Uacute;ltimas operaciones</h2>
-<div id="txList"><p class="newsempty">Sin operaciones registradas todav&iacute;a.</p></div>
+<div id="txList"><div class="vacio"><span class="vic">&#128200;</span><b>Sin operaciones todav&iacute;a</b>Tu primera compra o venta va a aparecer ac&aacute;.</div></div>
 </div>
 </div>
 

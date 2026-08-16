@@ -86,7 +86,33 @@ document.getElementById('lockBtn').onclick = function () {
 };
 document.getElementById('lockInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('lockBtn').click(); });
 // Service worker (carga instantanea / shell offline)
-if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(function () {}); }
+// Registro del SW + aviso de version nueva. Antes cada publicacion tardaba
+// DOS aperturas en verse (el SW sirve el shell viejo mientras baja el nuevo y
+// recien la proxima apertura lo usa). Ahora: cuando el SW nuevo toma control
+// (controllerchange: el skipWaiting del sw.js es automatico), aparece un
+// boton "Actualizar" — un toque y la app recarga ya con la version nueva.
+// Todo el bloque va en try/catch: si algo aca lanza (un navegador raro), no
+// puede llevarse puesto el resto de nucleo.js — abajo se define el shim de la
+// API y sin el la app entera muere. Sin SW no hay offline, pero la app sigue.
+try {
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(function (reg) {
+    // Buscar actualizaciones tambien al volver a la app, no solo al abrirla:
+    // las PWA de iOS quedan vivas dias enteros sin "abrirse" de verdad.
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') { try { reg.update(); } catch (e) {} }
+    });
+  }).catch(function () {});
+  var swInicial = navigator.serviceWorker.controller; // null en la primera visita
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
+    // Sin controller previo es la PRIMERA instalacion, no una actualizacion.
+    if (!swInicial) { swInicial = navigator.serviceWorker.controller; return; }
+    var el = document.getElementById('updateAviso');
+    if (el) el.style.display = '';
+  });
+}
+} catch (eSw) { }
+function aplicarActualizacion() { try { location.reload(); } catch (e) {} }
 var ACCOUNTS = [
 { key: 'CS', nombre: 'Charles Schwab' },
 { key: 'IB', nombre: 'Interactive Brokers' },
@@ -144,6 +170,32 @@ var b = document.getElementById('eyeBtn');
 if (b) b.innerHTML = montosOcultos ? EYE_OFF : EYE_ON;
 }
 function mask(s) { return montosOcultos ? '****' : s; }
+var _animTotalRaf = null, _ultimoTotalPintado = null;
+function animarTotal(el, hasta) {
+if (_animTotalRaf) { cancelAnimationFrame(_animTotalRaf); _animTotalRaf = null; }
+var desde = _ultimoTotalPintado;
+_ultimoTotalPintado = hasta;
+var sinAnimar = montosOcultos || desde === null || !isFinite(hasta) ||
+  (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) ||
+  Math.abs(hasta - desde) > Math.abs(desde) * 0.5; // salto enorme: pintar directo
+if (sinAnimar) { el.textContent = fmt(hasta); return; }
+var t0 = null, DURACION = 350;
+function paso(t) {
+if (!t0) t0 = t;
+var k = Math.min(1, (t - t0) / DURACION);
+k = 1 - (1 - k) * (1 - k); // arranca rapido, frena al final
+el.textContent = fmt(desde + (hasta - desde) * k);
+if (k < 1) _animTotalRaf = requestAnimationFrame(paso);
+else _animTotalRaf = null;
+}
+_animTotalRaf = requestAnimationFrame(paso);
+// Garantia: si los frames no corren (iOS pausa requestAnimationFrame cuando
+// la pantalla no compone), el valor FINAL queda puesto igual.
+setTimeout(function () {
+if (_animTotalRaf) { cancelAnimationFrame(_animTotalRaf); _animTotalRaf = null; }
+el.textContent = fmt(_ultimoTotalPintado);
+}, DURACION + 150);
+}
 function fmt(n) {
 if (montosOcultos) return '****';
 if (n === null || n === undefined || isNaN(n)) return '—';

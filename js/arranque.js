@@ -29,7 +29,7 @@ function render(data) {
 hideSplash();
   try {
 lastData = data;
-document.getElementById('total').textContent = fmt(data.total);
+animarTotal(document.getElementById('total'), data.total);
 document.getElementById('liquidezVal').textContent = fmt(data.liquidez);
 document.getElementById('liquidezPct').textContent = (data.liquidezPct ? (data.liquidezPct * 100).toFixed(2) : '0') + '%';
 var listEl = document.getElementById('cuentasList');
@@ -134,5 +134,26 @@ bnbAutoSync();
       render(data);
     }).getPortfolioData(completa ? null : { lite: true });
   }
-setInterval(function(){ if(document.visibilityState==='visible'){ loadData(); } }, 60000);
-document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ loadData(); } });
+// Poll adaptativo: cada 60 s con la bolsa de EE.UU. abierta, cada 5 min
+// cerrada. De noche pedia datos cada minuto igual que a las 15:00 de un dia de
+// rueda — puro gasto de bateria y de cuota para precios congelados (la cripto
+// se mueve 24/7, por eso cerrado no es "nunca": es 5 min). La franja se evalua
+// en UTC, 13:00-21:30 de lunes a viernes: cubre la rueda de NY completa en
+// horario de verano y de invierno sin meterse con zonas horarias.
+var POLL_ABIERTO_MS = 60000, POLL_CERRADO_MS = 5 * 60000;
+function mercadoAbierto(ahora) {
+  var d = new Date(ahora);
+  var dia = d.getUTCDay();
+  if (dia === 0 || dia === 6) return false;
+  var min = d.getUTCHours() * 60 + d.getUTCMinutes();
+  return min >= 13 * 60 && min <= 21 * 60 + 30;
+}
+var ultimoPoll = Date.now();
+setInterval(function () {
+  if (document.visibilityState !== 'visible') return;
+  var intervalo = mercadoAbierto(Date.now()) ? POLL_ABIERTO_MS : POLL_CERRADO_MS;
+  if (Date.now() - ultimoPoll < intervalo - 500) return;
+  ultimoPoll = Date.now();
+  loadData();
+}, 60000);
+document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ ultimoPoll = Date.now(); loadData(); } });

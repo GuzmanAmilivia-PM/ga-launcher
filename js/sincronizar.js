@@ -133,7 +133,7 @@ if (!cont) return;
 cont.innerHTML = '<p class="loadingtxt">Cargando...</p>';
 google.script.run.withSuccessHandler(function (r) {
 if (!r || !r.ok) { errorEnVista('bakList', null, 'las copias'); return; }
-if (!r.backups.length) { cont.innerHTML = '<p class="newsempty">Todav&iacute;a no hay ninguna copia guardada.</p>'; return; }
+if (!r.backups.length) { cont.innerHTML = '<div class="vacio"><span class="vic">&#128190;</span><b>Sin copias todav&iacute;a</b>Se guardan solas antes de cada sincronizaci&oacute;n u operaci&oacute;n.</div>'; return; }
 cont.innerHTML = r.backups.map(function (b) {
 return '<div class="row"><span>' + esc(nombrePlataforma(b.hoja)) +
 '<br><span class="newsempty">' + esc(fechaBackup(b.cuando)) + (b.motivo ? ' &middot; ' + esc(b.motivo) : '') + '</span></span>' +

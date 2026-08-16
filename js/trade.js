@@ -149,7 +149,7 @@ function renderNoticias(data) {
 var body = document.getElementById('noticiasBody');
 body.innerHTML = '';
 if (!data || (Array.isArray(data) && !data.length)) {
-body.innerHTML = '<p class="newsempty">No se encontraron noticias por ahora.</p>';
+body.innerHTML = '<div class="vacio"><span class="vic">&#128240;</span><b>Sin novedades por ahora</b>Cuando haya titulares sobre tus posiciones, van a aparecer ac&aacute;.</div>';
 return;
 }
 // Compatibilidad: el backend viejo devuelve un array plano por empresa.
