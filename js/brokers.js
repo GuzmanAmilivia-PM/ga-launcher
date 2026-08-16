@@ -73,58 +73,83 @@ function confirmarParcial(parcial, quien) {
 if (!parcial) return false;
 return window.confirm('Varias posiciones quedarían en CERO.\n\nSi vendiste todo eso, está bien. Si no, el reporte de ' + quien + ' vino incompleto y conviene no aplicar.\n\n¿Aplicar igual?');
 }
-var ibkrSyncEnCurso = false, ibkrParcial = false;
-function correrSyncIBKR(dryRun, forzar) {
+// Las tres pantallas de sincronizacion (IBKR, Binance, Schwab) eran tres
+// copias del mismo flujo: candado, spinner, lista de cambios, aviso parcial,
+// boton Aplicar con confirmacion. Ahora es UN conductor y cada broker es una
+// configuracion. Los candados siguen siendo globales porque syncEnCurso() y
+// el boton Sincronizar del menu los miran.
+function pantallaSync(cfg) {
+var parcial = false;
+function correr(dryRun, forzar) {
 if (syncEnCurso()) return;
-ibkrSyncEnCurso = true;
-var out = document.getElementById('ibkrCambios');
-var btnAplicar = document.getElementById('ibkrAplicar');
-var resEl = document.getElementById('ibkrSyncResultado');
+cfg.lock(true);
+var out = document.getElementById(cfg.pref + 'Cambios');
+var btnAplicar = document.getElementById(cfg.pref + 'Aplicar');
+var resEl = document.getElementById(cfg.pref + 'SyncResultado');
 resEl.innerHTML = '';
-if (dryRun) btnAplicar.style.display = 'none';
-out.innerHTML = '<p class="loadingtxt">' + (dryRun ? 'Consultando IBKR... puede tardar medio minuto (el reporte se genera al momento).' : 'Aplicando cambios en la hoja IB...') + '</p>';
-google.script.run.withSuccessHandler(function (r) {
-ibkrSyncEnCurso = false;
+if (dryRun) { btnAplicar.style.display = 'none'; if (cfg.alEmpezarDry) cfg.alEmpezarDry(); }
+out.innerHTML = '<p class="loadingtxt">' + (dryRun ? cfg.cargandoDry : cfg.cargandoApply) + '</p>';
+function fallo(err) {
+cfg.lock(false);
+out.innerHTML = '';
+resEl.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, cfg.sujeto)) + '</div>';
+}
+function pintar(r) {
+cfg.lock(false);
 if (!r || !r.ok) {
 out.innerHTML = '';
-resEl.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</div>';
+resEl.innerHTML = '<div class="tmsg err">' + esc(msgBackend(r)) + '</div>';
 return;
 }
 var html = '';
 if (!r.cambios.length) {
-html = '<p class="newsempty" style="margin-top:10px">&#10003; La hoja IB ya coincide con IBKR (' + esc(r.posicionesIBKR) + ' posiciones). Nada para cambiar.</p>';
+html = '<p class="newsempty" style="margin-top:10px">&#10003; La hoja ' + cfg.hoja + ' ya coincide con ' + cfg.broker + ' (' + esc(cfg.total(r)) + ' ' + cfg.unidad + '). Nada para cambiar.</p>';
 } else {
 html = '<p class="subtotal" style="margin:12px 0 6px">' + (dryRun ? 'Cambios detectados (todav&iacute;a no se aplic&oacute; nada):' : 'Cambios aplicados:') + '</p>';
 r.cambios.forEach(function (c) {
 var txt;
 if (c.tipo === 'qty') txt = '<span class="sym">' + esc(c.symbol) + '</span> cantidad ' + esc(c.antes) + ' &rarr; ' + esc(c.despues);
-else if (c.tipo === 'cerrada') txt = '<span class="sym">' + esc(c.symbol) + '</span> cerrada en IBKR &rarr; queda en 0';
+else if (c.tipo === 'cerrada') txt = '<span class="sym">' + esc(c.symbol) + '</span> ' + cfg.cerradaTxt + ' &rarr; queda en 0';
 else if (c.tipo === 'nueva') txt = '<span class="sym">' + esc(c.symbol) + '</span> nueva &middot; ' + esc(c.despues) + (c.descripcion ? ' &middot; ' + esc(c.descripcion) : '');
 else if (c.tipo === 'cash') txt = '<span class="sym">CASH</span> ' + esc(c.antes) + ' &rarr; ' + esc(c.despues);
 else txt = esc(c.tipo + ' ' + (c.symbol || ''));
 html += '<div class="row"><span>' + txt + '</span></div>';
 });
+if (dryRun && cfg.hintDry) { var h = cfg.hintDry(r); if (h) html += h; }
 }
 (r.mensajes || []).forEach(function (m) { html += '<p class="newsempty">&#9888; ' + esc(m) + '</p>'; });
 out.innerHTML = html;
 if (dryRun) {
-ibkrParcial = !!r.parcial;
+parcial = !!r.parcial;
 btnAplicar.style.display = r.cambios.length ? '' : 'none';
 } else {
-ibkrParcial = false;
+parcial = false;
 btnAplicar.style.display = 'none';
-if (r.cambios.length) resEl.innerHTML = '<div class="tmsg ok">&#10003; Listo. La hoja IB qued&oacute; igual que tu cuenta de IBKR.</div>';
-cargarEstadoIBKR();
+if (r.cambios.length) resEl.innerHTML = '<div class="tmsg ok">&#10003; Listo. La hoja ' + cfg.hoja + ' qued&oacute; igual que tu cuenta de ' + cfg.broker + '.</div>';
+cfg.alAplicar();
 loadData();
 }
-}).withFailureHandler(function (err) {
-ibkrSyncEnCurso = false;
-out.innerHTML = '';
-resEl.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, 'La conexión IBKR')) + '</div>';
-}).sincronizarIBKR({ dryRun: !!dryRun, forzar: !!forzar });
 }
-document.getElementById('ibkrVerCambios').onclick = function () { correrSyncIBKR(true); };
-document.getElementById('ibkrAplicar').onclick = function () { correrSyncIBKR(false, confirmarParcial(ibkrParcial, 'IBKR')); };
+cfg.ejecutar(dryRun, !!forzar, pintar, fallo);
+}
+document.getElementById(cfg.pref + 'VerCambios').onclick = function () { correr(true); };
+document.getElementById(cfg.pref + 'Aplicar').onclick = function () { correr(false, confirmarParcial(parcial, cfg.broker)); };
+return correr;
+}
+var ibkrSyncEnCurso = false;
+pantallaSync({
+pref: 'ibkr', hoja: 'IB', broker: 'IBKR', unidad: 'posiciones',
+sujeto: 'La conexión IBKR',
+cargandoDry: 'Consultando IBKR... puede tardar medio minuto (el reporte se genera al momento).',
+cargandoApply: 'Aplicando cambios en la hoja IB...',
+cerradaTxt: 'cerrada en IBKR',
+total: function (r) { return r.posicionesIBKR; },
+lock: function (v) { ibkrSyncEnCurso = v; },
+alAplicar: function () { cargarEstadoIBKR(); },
+ejecutar: function (dryRun, forzar, ok, fail) {
+google.script.run.withSuccessHandler(ok).withFailureHandler(fail).sincronizarIBKR({ dryRun: dryRun, forzar: forzar });
+}
+});
 document.getElementById('ibkrBack').onclick = function () { setView('config'); };
 
 // ---------- Binance: saldos en vivo (WebSocket + clave de solo lectura) ----------
@@ -222,70 +247,42 @@ if (code === -1021) msg = 'La hora del teléfono difiere de la de Binance: activ
 terminar(new Error(msg));
 };
 }
-var bnbEnCurso = false, bnbSaldos = null;
-function correrSyncBNB(dryRun) {
-if (syncEnCurso()) return;
-bnbEnCurso = true;
-var out = document.getElementById('bnbCambios');
-var btnAplicar = document.getElementById('bnbAplicar');
-var resEl = document.getElementById('bnbSyncResultado');
-resEl.innerHTML = '';
-if (dryRun) { btnAplicar.style.display = 'none'; bnbSaldos = null; }
-out.innerHTML = '<p class="loadingtxt">' + (dryRun ? 'Leyendo tus saldos reales de Binance...' : 'Aplicando en la hoja BNB...') + '</p>';
-function fallo(err) {
-bnbEnCurso = false;
-out.innerHTML = '';
-resEl.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, 'La sincronización con Binance')) + '</div>';
-}
-function render(r) {
-bnbEnCurso = false;
-if (!r || !r.ok) {
-out.innerHTML = '';
-resEl.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</div>';
-return;
-}
-var html = '';
-if (!r.cambios.length) {
-html = '<p class="newsempty" style="margin-top:10px">&#10003; La hoja BNB ya coincide con Binance (' + esc(r.saldosBinance) + ' saldos). Nada para cambiar.</p>';
-} else {
-html = '<p class="subtotal" style="margin:12px 0 6px">' + (dryRun ? 'Cambios detectados (todav&iacute;a no se aplic&oacute; nada):' : 'Cambios aplicados:') + '</p>';
-r.cambios.forEach(function (c) {
-var txt;
-if (c.tipo === 'qty') txt = '<span class="sym">' + esc(c.symbol) + '</span> cantidad ' + esc(c.antes) + ' &rarr; ' + esc(c.despues);
-else if (c.tipo === 'cerrada') txt = '<span class="sym">' + esc(c.symbol) + '</span> sin saldo en Binance &rarr; queda en 0';
-else if (c.tipo === 'nueva') txt = '<span class="sym">' + esc(c.symbol) + '</span> nueva &middot; ' + esc(c.despues);
-else txt = esc(c.tipo + ' ' + (c.symbol || ''));
-html += '<div class="row"><span>' + txt + '</span></div>';
-});
-var cerradas = r.cambios.filter(function (c) { return c.tipo === 'cerrada'; }).length;
-if (dryRun && cerradas >= 2) {
-html += '<p class="newsempty">&#9888; Varias posiciones aparecen sin saldo. Ojo: la clave solo ve la billetera <b>spot</b>; si ten&eacute;s fondos en Binance Earn u otra billetera, NO apliques y avisale a Claude.</p>';
-}
-}
-(r.mensajes || []).forEach(function (m) { html += '<p class="newsempty">&#9888; ' + esc(m) + '</p>'; });
-out.innerHTML = html;
-if (dryRun) {
-btnAplicar.style.display = r.cambios.length ? '' : 'none';
-} else {
-btnAplicar.style.display = 'none';
-if (r.cambios.length) resEl.innerHTML = '<div class="tmsg ok">&#10003; Listo. La hoja BNB qued&oacute; igual que tu cuenta de Binance.</div>';
+var bnbEnCurso = false;
+// Binance difiere en el origen de los datos: los saldos se leen EN EL
+// TELEFONO (dry run) y se reusan al aplicar. El resto del flujo es el
+// conductor comun — incluida la confirmacion de reporte parcial, que a esta
+// pantalla ANTES le faltaba: solo avisaba y dejaba aplicar igual.
+var bnbSaldosLeidos = null;
+pantallaSync({
+pref: 'bnb', hoja: 'BNB', broker: 'Binance', unidad: 'saldos',
+sujeto: 'La sincronización con Binance',
+cargandoDry: 'Leyendo tus saldos reales de Binance...',
+cargandoApply: 'Aplicando en la hoja BNB...',
+cerradaTxt: 'sin saldo en Binance',
+total: function (r) { return r.saldosBinance; },
+lock: function (v) { bnbEnCurso = v; },
+alEmpezarDry: function () { bnbSaldosLeidos = null; },
+alAplicar: function () {
 try { localStorage.setItem('ga_bnb_ultima', fechaCortaMs(Date.now())); } catch (e) {}
 prepararBNB();
-loadData();
-}
-}
+},
+hintDry: function (r) {
+var cerradas = r.cambios.filter(function (c) { return c.tipo === 'cerrada'; }).length;
+if (cerradas < 2) return '';
+return '<p class="newsempty">&#9888; Varias posiciones aparecen sin saldo. Ojo: la clave solo ve la billetera <b>spot</b>; si ten&eacute;s fondos en Binance Earn u otra billetera, NO apliques y avisale a Claude.</p>';
+},
+ejecutar: function (dryRun, forzar, ok, fail) {
 if (dryRun) {
 bnbLeerSaldos(function (saldos) {
-bnbSaldos = saldos;
-google.script.run.withSuccessHandler(render).withFailureHandler(fallo).sincronizarBNB({ balances: saldos, dryRun: true });
-}, fallo);
+bnbSaldosLeidos = saldos;
+google.script.run.withSuccessHandler(ok).withFailureHandler(fail).sincronizarBNB({ balances: saldos, dryRun: true });
+}, fail);
 } else {
-if (!bnbSaldos) { bnbEnCurso = false; return; }
-google.script.run.withSuccessHandler(render).withFailureHandler(fallo).sincronizarBNB({ balances: bnbSaldos, dryRun: false });
+if (!bnbSaldosLeidos) { bnbEnCurso = false; return; }
+google.script.run.withSuccessHandler(ok).withFailureHandler(fail).sincronizarBNB({ balances: bnbSaldosLeidos, dryRun: false, forzar: forzar });
 }
 }
-document.getElementById('bnbVerCambios').onclick = function () { correrSyncBNB(true); };
-document.getElementById('bnbAplicar').onclick = function () { correrSyncBNB(false); };
+});
 
 // ---------- Charles Schwab: conexión automática vía SnapTrade ----------
 function cargarEstadoCS() {
@@ -354,57 +351,19 @@ btn.disabled = false;
 res.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, 'La conexión con Schwab')) + '</div>';
 }).portalCS();
 };
-var csEnCurso = false, csParcial = false;
-function correrSyncCS(dryRun, forzar) {
-if (syncEnCurso()) return;
-csEnCurso = true;
-var out = document.getElementById('csCambios');
-var btnAplicar = document.getElementById('csAplicar');
-var resEl = document.getElementById('csSyncResultado');
-resEl.innerHTML = '';
-if (dryRun) btnAplicar.style.display = 'none';
-out.innerHTML = '<p class="loadingtxt">' + (dryRun ? 'Consultando tus posiciones de Schwab...' : 'Aplicando cambios en la hoja CS...') + '</p>';
-google.script.run.withSuccessHandler(function (r) {
-csEnCurso = false;
-if (!r || !r.ok) {
-out.innerHTML = '';
-resEl.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</div>';
-return;
+var csEnCurso = false;
+pantallaSync({
+pref: 'cs', hoja: 'CS', broker: 'Schwab', unidad: 'posiciones',
+sujeto: 'La conexión con Schwab',
+cargandoDry: 'Consultando tus posiciones de Schwab...',
+cargandoApply: 'Aplicando cambios en la hoja CS...',
+cerradaTxt: 'cerrada en Schwab',
+total: function (r) { return r.posicionesIBKR; },
+lock: function (v) { csEnCurso = v; },
+alAplicar: function () { cargarEstadoCS(); },
+ejecutar: function (dryRun, forzar, ok, fail) {
+google.script.run.withSuccessHandler(ok).withFailureHandler(fail).sincronizarCS({ dryRun: dryRun, forzar: forzar });
 }
-var html = '';
-if (!r.cambios.length) {
-html = '<p class="newsempty" style="margin-top:10px">&#10003; La hoja CS ya coincide con Schwab (' + esc(r.posicionesIBKR) + ' posiciones). Nada para cambiar.</p>';
-} else {
-html = '<p class="subtotal" style="margin:12px 0 6px">' + (dryRun ? 'Cambios detectados (todav&iacute;a no se aplic&oacute; nada):' : 'Cambios aplicados:') + '</p>';
-r.cambios.forEach(function (c) {
-var txt;
-if (c.tipo === 'qty') txt = '<span class="sym">' + esc(c.symbol) + '</span> cantidad ' + esc(c.antes) + ' &rarr; ' + esc(c.despues);
-else if (c.tipo === 'cerrada') txt = '<span class="sym">' + esc(c.symbol) + '</span> cerrada en Schwab &rarr; queda en 0';
-else if (c.tipo === 'nueva') txt = '<span class="sym">' + esc(c.symbol) + '</span> nueva &middot; ' + esc(c.despues) + (c.descripcion ? ' &middot; ' + esc(c.descripcion) : '');
-else if (c.tipo === 'cash') txt = '<span class="sym">CASH</span> ' + esc(c.antes) + ' &rarr; ' + esc(c.despues);
-else txt = esc(c.tipo + ' ' + (c.symbol || ''));
-html += '<div class="row"><span>' + txt + '</span></div>';
 });
-}
-(r.mensajes || []).forEach(function (m) { html += '<p class="newsempty">&#9888; ' + esc(m) + '</p>'; });
-out.innerHTML = html;
-if (dryRun) {
-csParcial = !!r.parcial;
-btnAplicar.style.display = r.cambios.length ? '' : 'none';
-} else {
-csParcial = false;
-btnAplicar.style.display = 'none';
-if (r.cambios.length) resEl.innerHTML = '<div class="tmsg ok">&#10003; Listo. La hoja CS qued&oacute; igual que tu cuenta de Schwab.</div>';
-cargarEstadoCS();
-loadData();
-}
-}).withFailureHandler(function (err) {
-csEnCurso = false;
-out.innerHTML = '';
-resEl.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, 'La conexión con Schwab')) + '</div>';
-}).sincronizarCS({ dryRun: !!dryRun, forzar: !!forzar });
-}
-document.getElementById('csVerCambios').onclick = function () { correrSyncCS(true); };
-document.getElementById('csAplicar').onclick = function () { correrSyncCS(false, confirmarParcial(csParcial, 'Schwab')); };
 document.getElementById('csBack').onclick = function () { setView('config'); };
 
