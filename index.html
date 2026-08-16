@@ -29,10 +29,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@800&display=swap" rel="stylesheet">
-<!-- Chart.js 4.4.0 servido desde el repo: desde el CDN no se podia cachear, y
-     sin internet la app reventaba en el grafico y no llegaba a pintar las
-     posiciones (justo el caso que el pintado instantaneo tenia que cubrir). -->
-<script src="./chart.umd.min.js"></script>
 <meta name="theme-color" content="#0d1420">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -793,6 +789,7 @@ News</button>
      que corren al cargar: botones que se conectan, el arranque). Reordenarlos
      o volverlos async/defer/module ROMPE la app. -->
 <script src="./js/nucleo.js"></script>
+<script src="./js/gagraf.js"></script>
 <script src="./js/vistas.js"></script>
 <script src="./js/trade.js"></script>
 <script src="./js/graficos.js"></script>
