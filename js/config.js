@@ -15,14 +15,30 @@ document.getElementById('cashCancelar').onclick = function () {
 document.getElementById('cashPanel').style.display = 'none';
 document.getElementById('cashMonto').value = '';
 };
-function buildCashForm() {
+// El selector lleva las cuentas con hoja propia (por su key) y ademas las
+// plataformas que existen SOLO como fila del resumen (BTG y las agregadas a
+// mano), que viajan por NOMBRE: el backend las resuelve contra esa fila. Sin
+// esto no habia forma de depositar/retirar en ellas desde la app.
+function buildCashForm(cuentas) {
 var sel = document.getElementById('cashCuenta');
+var elegida = sel.value;
 sel.innerHTML = '';
-ACCOUNTS.forEach(function (a) {
+function opcion(valor, texto) {
 var o = document.createElement('option');
-o.value = a.key; o.textContent = nombrePlataforma(a.nombre);
+o.value = valor; o.textContent = texto;
 sel.appendChild(o);
+}
+ACCOUNTS.forEach(function (a) { opcion(a.key, nombrePlataforma(a.nombre)); });
+(cuentas || []).forEach(function (c) {
+if (!accountByName(c.nombre)) opcion(c.nombre, nombrePlataforma(c.nombre));
 });
+// Solo si la opcion sigue existiendo: asignar un value inexistente deja el
+// select en blanco y el proximo Confirmar mandaria cuenta vacia.
+if (elegida) {
+for (var i = 0; i < sel.options.length; i++) {
+if (sel.options[i].value === elegida) { sel.value = elegida; break; }
+}
+}
 }
 document.getElementById('cashConfirmar').onclick = function () {
 var monto = parseFloat(document.getElementById('cashMonto').value);

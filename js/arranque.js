@@ -51,6 +51,7 @@ row.className = 'row';
 row.innerHTML = '<span>' + esc(nombrePlataforma(c.nombre)) + '</span><span>' + fmt(c.liquido) + '</span>';
 cashListEl.appendChild(row);
 });
+buildCashForm(data.cuentas);
 // Avisos de la sincronizacion automatica de las 8:00: como corre sola y se
 // traga los errores, sin esto un broker podia quedar dias sin sincronizar
 // y los datos se veian normales.
