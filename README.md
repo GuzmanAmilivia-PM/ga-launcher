@@ -5,6 +5,10 @@ en cada push a `main` (~30-60 s). El backend vive en otro repo (privado):
 `portfolio-tracker`, que es también donde están los tests de ESTA app
 (`npm run test:ui` desde allá).
 
+**Los pendientes de esta app NO están acá.** Viven en el `MEJORAS.md` del repo
+del backend, junto con los del backend, porque casi toda mejora toca las dos
+mitades. Leerlo antes de proponer trabajo sobre esta app.
+
 ## Las dos reglas que rompen la app si se ignoran
 
 1. **El orden de los `<script src>` del index.html es semántica, no estética.**
