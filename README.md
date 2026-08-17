@@ -25,7 +25,7 @@ mitades. Leerlo antes de proponer trabajo sobre esta app.
 - `index.html` — solo estructura visual + CSP. El código vive en `js/`.
 - `js/nucleo.js` — shim de la API, helpers. Se carga primero.
 - `js/gagraf.js` — gráficos propios (reemplazo de Chart.js, misma interfaz).
-- `js/vistas|trade|graficos|config|brokers|paneles|sincronizar|ia|seguridad|buscador.js`
+- `js/vistas|trade|graficos|config|brokers|paneles|analisis|sincronizar|ia|seguridad|buscador.js`
 - `js/arranque.js` — pintado instantáneo, carga, poll. Se carga último.
 - `sw.js` — service worker (shell offline). `servidor-local.js` — solo para
   probar en local (`node servidor-local.js` → http://localhost:8788).
