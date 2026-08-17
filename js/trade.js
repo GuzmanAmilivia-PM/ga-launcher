@@ -150,13 +150,19 @@ return mask('USD ' + (Math.round(Number(n) || 0)).toLocaleString('es-UY'));
 }
 // Los tickers que hay para elegir salen de lo que esta cargado, no de una
 // lista fija: si nunca operaste algo, no tiene sentido ofrecerlo.
+// Memoizado por referencia: la lista solo cambia cuando llega otra respuesta
+// (renderOperaciones pisa lastOps), no en cada pintada de filtros.
+var _opsTickersDe = null, _opsTickersCache = null;
 function opsTickers() {
+if (lastOps === _opsTickersDe && _opsTickersCache) return _opsTickersCache;
 var vistos = {}, symbols = [];
 ((lastOps && lastOps.operaciones) || []).forEach(function (o) {
 if (o.symbol && !vistos[o.symbol]) { vistos[o.symbol] = true; symbols.push(o.symbol); }
 });
 symbols.sort();
-return [{ v: 'todos', t: 'Todos' }].concat(symbols.map(function (s) { return { v: s, t: s }; }));
+_opsTickersDe = lastOps;
+_opsTickersCache = [{ v: 'todos', t: 'Todos' }].concat(symbols.map(function (s) { return { v: s, t: s }; }));
+return _opsTickersCache;
 }
 function opsTexto(opciones, valor) {
 var o = opciones.filter(function (x) { return x.v === valor; })[0];

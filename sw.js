@@ -1,6 +1,6 @@
 // Service worker: cachea el "cascarón" de la app para carga instantánea.
 // Los datos (POST a la API) nunca se cachean.
-var CACHE = 'ga-pwa-v59';
+var CACHE = 'ga-pwa-v60';
 var ASSETS = ['./', './index.html',   './js/gagraf.js', './js/analisis.js', './js/arranque.js', './js/brokers.js', './js/buscador.js', './js/config.js', './js/graficos.js', './js/ia.js', './js/nucleo.js', './js/paneles.js', './js/seguridad.js', './js/sincronizar.js', './js/trade.js', './js/vistas.js',
   './apple-touch-icon.png', './icon-512.png', './favicon.png', './manifest.json'];
 

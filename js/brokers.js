@@ -143,7 +143,7 @@ sujeto: 'La conexión IBKR',
 cargandoDry: 'Consultando IBKR... puede tardar medio minuto (el reporte se genera al momento).',
 cargandoApply: 'Aplicando cambios en la hoja IB...',
 cerradaTxt: 'cerrada en IBKR',
-total: function (r) { return r.posicionesIBKR; },
+total: function (r) { return r.posicionesBroker !== undefined ? r.posicionesBroker : r.posicionesIBKR; },
 lock: function (v) { ibkrSyncEnCurso = v; },
 alAplicar: function () { cargarEstadoIBKR(); },
 ejecutar: function (dryRun, forzar, ok, fail) {

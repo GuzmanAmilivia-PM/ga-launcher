@@ -229,6 +229,11 @@ function fmtNum(n) {
 if (n === null || n === undefined || n === '') return '\u2014';
 return (typeof n === 'number') ? (Math.round(n * 100) / 100) : n;
 }
+// Montos de los paneles (dividendos/aportes), con el ojito de privacidad ya
+// aplicado. La misma cadena mask('US$ ' + ...) estaba repetida 15 veces en
+// paneles.js. fmtUsd: 2 decimales; fmtUsdEnt: redondeado, con miles es-UY.
+function fmtUsd(n) { return mask('US$ ' + (Number(n) || 0).toFixed(2)); }
+function fmtUsdEnt(n) { return mask('US$ ' + Math.round(Number(n) || 0).toLocaleString('es-UY')); }
 function fmtPctRaw(n) {
 if (n === null || n === undefined || n === '') return '\u2014';
 if (typeof n === 'number') return (n * 100).toFixed(2) + '%';

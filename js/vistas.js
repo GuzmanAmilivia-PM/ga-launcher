@@ -45,6 +45,8 @@ document.getElementById('mRefrescar').onclick = function () { sincronizarTodo();
 
 // ---------- Navegación (barra inferior) ----------
 var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'config', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb', 'cs'];
+// La barra no cambia nunca: se consulta el DOM una sola vez, no en cada setView.
+var NAVTABS = document.querySelectorAll('.navtab');
 var currentView = 'inicio';
 function setView(name) {
 currentView = name;
@@ -62,7 +64,7 @@ el.style.display = 'none';
 }
 });
 var navName = (name === 'account') ? accountReturnView : name;
-document.querySelectorAll('.navtab').forEach(function (b) {
+NAVTABS.forEach(function (b) {
 b.classList.toggle('active', b.getAttribute('data-view') === navName);
 });
 if (name === 'portafolio') { renderPortafolio(); if (!anaCargado) cargarAnalisis(false); }
@@ -79,7 +81,7 @@ google.script.run.withSuccessHandler(function (d) { noticiasCargadas = true; ren
 if (name === 'trade' && !opsCargadas) cargarOperaciones(false);
 window.scrollTo(0, 0);
 }
-document.querySelectorAll('.navtab').forEach(function (b) {
+NAVTABS.forEach(function (b) {
 b.addEventListener('click', function () { setView(b.getAttribute('data-view')); });
 });
 

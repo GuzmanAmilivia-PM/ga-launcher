@@ -97,28 +97,17 @@ function getFilteredDataPoints(serie) {
   document.getElementById('expandBtn').onclick = openChartModal;
   document.getElementById('chartModalClose').onclick = closeChartModal;
 
-// ---------- Capital aportado (V1) ----------
-// OJO — 17/08/2026: esto NO se dibuja en el grafico de Evolucion. Estuvo una
-// tarde (v50-v52) y se saco a pedido de Guzman, con razon: el patrimonio TOTAL
-// incluye Itau y BTG, cuyos aportes solo existen si se cargan a mano en la hoja
-// Transacciones, y no estan. Con aportes faltantes el "Pusiste" queda corto y el
-// "Rindio" queda inflado — el numero no era incompleto, era MENTIROSO. El
-// grafico de Evolucion volvio a ser el generico de siempre (una sola linea).
-//
-// Los calculos quedan porque la comparacion se va a rehacer en el panel de
-// Aportes, restringida a las cuentas cuyos aportes se conocen de verdad
-// (Schwab e IBKR los informa el broker; Binance sale de Transacciones).
-//
-// Se calcula SOBRE LA VENTANA que elige el usuario, no desde el inicio:
-//   capital = patrimonio al arrancar la ventana + aportes desde entonces
-// El motivo es un limite de datos, no una preferencia: el Historico de
-// patrimonio es mas viejo que la actividad que informan los brokers (Schwab da
-// ~400 dias, IBKR lo que diga su Flex Query). El backend dice desde cuando la
-// lista esta COMPLETA (`desde`) y aca no se dibuja ni un pixel antes de esa
-// fecha — un area que arrancara antes seria una mentira prolija.
-var aportesLista = [], aportesDesde = null, aportesPedidos = false;
-var COLOR_CAPITAL = '#8c96aa';
-var COLOR_INDICE = '#5b8def';
+// ---------- Aportes (estado compartido) ----------
+// La lista de aportes la pide el panel de Aportes (cargarAportes, paneles.js)
+// y se guarda aca porque tambien la consume comparacionGrupo(). El area de
+// "capital aportado" sobre el grafico de Evolucion (V1) y el indice simulado
+// del grafico (V2) se BORRARON el 17/08/2026: estuvieron una tarde (v50-v52),
+// se sacaron a pedido de Guzman (el patrimonio TOTAL incluye Itau y BTG,
+// cuyos aportes no estan cargados, y el numero salia mentiroso) y su
+// reemplazo real — la comparacion del panel de Aportes (V7,
+// comparacionGrupo) — ya esta en produccion. Si alguna vez vuelven, viven en
+// el historial de git.
+var aportesLista = [];
 
 // 'yyyy-mm-dd' -> ms de la medianoche LOCAL. new Date('2025-03-10') parsea en
 // UTC y en Montevideo caeria el dia anterior.
@@ -128,42 +117,11 @@ function apISOaMs(s) {
   return new Date(+p[0], +p[1] - 1, +p[2]).getTime();
 }
 
-/**
- * El capital sobre la ventana ya filtrada del patrimonio.
- * Devuelve null cuando no se puede afirmar nada: sin cobertura, sin aportes, o
- * cuando lo que queda de ventana cubierta son menos de dos puntos.
- */
-function serieCapital(pts) {
-  if (!pts || pts.length < 2 || !aportesDesde || !aportesLista.length) return null;
-  var desdeTs = apISOaMs(aportesDesde);
-  if (!isFinite(desdeTs)) return null;
-  var i0 = 0;
-  while (i0 < pts.length && pts[i0].x < desdeTs) i0++;
-  if (pts.length - i0 < 2) return null;
-
-  var base = pts[i0].y, t0 = pts[i0].x;
-  var ap = [];
-  aportesLista.forEach(function (r) {
-    var ts = apISOaMs(r.fecha);
-    // Los del dia del arranque ya estan dentro del patrimonio que hace de base.
-    if (isFinite(ts) && ts > t0 && isFinite(r.monto)) ap.push({ ts: ts, monto: r.monto });
-  });
-  ap.sort(function (a, b) { return a.ts - b.ts; });
-
-  var out = [], acum = 0, j = 0;
-  for (var i = i0; i < pts.length; i++) {
-    while (j < ap.length && ap[j].ts <= pts[i].x) { acum += ap[j].monto; j++; }
-    out.push({ x: pts[i].x, y: base + acum });
-  }
-  return { pts: out, base: base, capital: base + acum, recortado: i0 > 0, desde: t0 };
-}
-
-// ---------- El indice simulado (V2) ----------
-// El indice NO se compara "en general": se simula la MISMA plata puesta en las
-// MISMAS fechas. La pregunta que contesta es la unica que importa — si eso
-// mismo hubiera ido al S&P 500, cuanto tendria hoy.
+// ---------- El indice de referencia ----------
 // El backend manda el cierre del indice alineado punto a punto con la serie
-// (`bench.valores`), asi el telefono no tiene que buscar ninguna fecha.
+// (`bench.valores`), asi el telefono no tiene que buscar ninguna fecha. Lo
+// consume comparacionGrupo(): el indice NO se compara "en general", se simula
+// la MISMA plata puesta en las MISMAS fechas.
 var benchPuntos = [], benchNombre = '', benchLargo = 0;
 
 function limpiarBench() { benchPuntos = []; benchNombre = ''; benchLargo = 0; }
@@ -201,40 +159,6 @@ function benchEn(ts) {
     v = benchPuntos[i].valor;
   }
   return v;
-}
-
-/**
- * Cuanto valdria hoy la misma plata puesta en el indice. Compra "unidades" del
- * indice con el capital inicial y con cada aporte al cierre de SU dia, y las
- * valua en cada punto. Corre sobre los mismos puntos que el capital (cap.pts),
- * asi las tres lineas arrancan y terminan juntas.
- */
-function serieIndice(cap) {
-  if (!cap || !cap.pts.length || !benchPuntos.length) return null;
-  var b0 = benchEn(cap.desde);
-  if (!b0) return null;
-  var unidades = cap.base / b0;
-  var fin = cap.pts[cap.pts.length - 1].x;
-
-  var ap = [];
-  aportesLista.forEach(function (r) {
-    var ts = apISOaMs(r.fecha);
-    if (isFinite(ts) && ts > cap.desde && ts <= fin && isFinite(r.monto)) ap.push({ ts: ts, monto: r.monto });
-  });
-  ap.sort(function (a, b) { return a.ts - b.ts; });
-
-  var out = [], j = 0;
-  for (var i = 0; i < cap.pts.length; i++) {
-    while (j < ap.length && ap[j].ts <= cap.pts[i].x) {
-      var bv = benchEn(ap[j].ts);
-      if (bv) unidades += ap[j].monto / bv;
-      j++;
-    }
-    var aqui = benchEn(cap.pts[i].x);
-    if (aqui) out.push({ x: cap.pts[i].x, y: unidades * aqui });
-  }
-  if (out.length < 2) return null;
-  return { pts: out, final: out[out.length - 1].y, nombre: benchNombre };
 }
 
 // ---------- La comparacion del panel de Aportes (V7) ----------
@@ -345,31 +269,11 @@ function comparacionGrupo() {
 
 // La lista de aportes NO viaja en el payload del portafolio a proposito:
 // consultar los brokers puede tardar varios segundos y frenaria el arranque,
-// que es el momento mas sensible de la app. Se pide aparte, despues del primer
-// pintado, y se guarda en el MISMO cache local que usa el panel de Aportes
-// (una sola consulta sirve a los dos).
-function cargarAportesGrafico(forzar) {
-  var c = forzar ? null : cacheLeer('ga_cache_apo');
-  if (c && c.data) aplicarAportes(c.data, false);
-  if (aportesPedidos && !forzar) return;
-  aportesPedidos = true;
-  google.script.run
-    .withSuccessHandler(function (r) {
-      if (r && r.ok) { cacheGuardar('ga_cache_apo', r); aplicarAportes(r, true); }
-    })
-    .withFailureHandler(function () { aportesPedidos = false; })
-    .getAportes();
-}
-
-function aplicarAportes(r, redibujar) {
+// que es el momento mas sensible de la app. La pide el panel de Aportes
+// (cargarAportes, paneles.js) y aca solo se guarda lo que comparacionGrupo()
+// necesita.
+function aplicarAportes(r) {
   aportesLista = (r && r.lista) || [];
-  aportesDesde = (r && r.desde) || null;
-  if (!redibujar) return;
-  try {
-    drawLineChart(filterSerie(currentRangeDias));
-    var m = document.getElementById('chartModal');
-    if (m && m.style.display !== 'none') drawBigChart();
-  } catch (e) {}
 }
 
 // Variacion del dia de mercado (verde/rojo), estilo Binance. Va arriba del

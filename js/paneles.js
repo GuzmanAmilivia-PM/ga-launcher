@@ -146,10 +146,10 @@ document.getElementById('divAnio').textContent = r.anio;
 var totalAnio = Math.round(((r.totalCobrado || 0) + (r.totalProximo || 0)) * 100) / 100;
 var prom = Math.round(totalAnio / 12 * 100) / 100;
 document.getElementById('divStats').style.display = '';
-document.getElementById('divTotalAnio').textContent = mask('US$ ' + totalAnio.toFixed(2));
+document.getElementById('divTotalAnio').textContent = fmtUsd(totalAnio);
 document.getElementById('divPromedio').innerHTML =
-'Promedio mensual: <b>' + esc(mask('US$ ' + prom.toFixed(2))) + '</b><br>' +
-'Cobrado: ' + esc(mask('US$ ' + (r.totalCobrado || 0).toFixed(2))) + ' &middot; A cobrar: ' + esc(mask('US$ ' + (r.totalProximo || 0).toFixed(2)));
+'Promedio mensual: <b>' + esc(fmtUsd(prom)) + '</b><br>' +
+'Cobrado: ' + esc(fmtUsd(r.totalCobrado)) + ' &middot; A cobrar: ' + esc(fmtUsd(r.totalProximo));
 document.getElementById('divChartBox').style.display = '';
 document.getElementById('divHint').style.display = '';
 var cobrados = (r.meses || []).map(function (m) { return m.cobrado || 0; });
@@ -193,7 +193,7 @@ box.setAttribute('data-mes', String(mes));
 var det = (divDatos && divDatos.detalle && divDatos.detalle[mes]) || [];
 var filas = det.map(function (d) {
 var etiqueta = d.estado === 'proximo' ? (d.estimado ? ' <span class="desc">~ estimado</span>' : ' <span class="desc">a pagar</span>') : '';
-return esc(d.broker) + ' &middot; <span class="sym">' + esc(d.symbol || 'CASH') + '</span> &middot; ' + esc(mask('US$ ' + d.monto.toFixed(2))) + etiqueta;
+return esc(d.broker) + ' &middot; <span class="sym">' + esc(d.symbol || 'CASH') + '</span> &middot; ' + esc(fmtUsd(d.monto)) + etiqueta;
 }).join('<br>');
 box.innerHTML = '<div class="divdetbox"><b>' + MESES_CORTOS[mes - 1] + ' ' + esc((divDatos && divDatos.anio) || '') + '</b><br>' + (filas || '<span class="desc">Sin movimientos ese mes</span>') + '</div>';
 ajustarAlturaDeck();
@@ -220,12 +220,12 @@ var r = divDatos;
 document.getElementById('divModalAnio').textContent = r.anio;
 var totalAnio = Math.round(((r.totalCobrado || 0) + (r.totalProximo || 0)) * 100) / 100;
 document.getElementById('divModalTotales').innerHTML =
-'Estimado del a&ntilde;o: <b>' + esc(mask('US$ ' + totalAnio.toFixed(2))) + '</b> &middot; Cobrado: ' + esc(mask('US$ ' + (r.totalCobrado || 0).toFixed(2))) + ' &middot; A cobrar: ' + esc(mask('US$ ' + (r.totalProximo || 0).toFixed(2)));
+'Estimado del a&ntilde;o: <b>' + esc(fmtUsd(totalAnio)) + '</b> &middot; Cobrado: ' + esc(fmtUsd(r.totalCobrado)) + ' &middot; A cobrar: ' + esc(fmtUsd(r.totalProximo));
 var brokers = Object.keys(r.porBroker || {});
 brokersBox.innerHTML = brokers.length ? brokers.map(function (b, i) {
 var pb = r.porBroker[b];
 var tot = Math.round((pb.cobrado + pb.proximo) * 100) / 100;
-return '<div class="apostat"><span><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:' + PIE_COLORS[i % PIE_COLORS.length] + '"></span>' + esc(nombrePlataforma(b)) + '<span class="desc" style="margin-left:8px">cobrado ' + esc(mask('US$ ' + pb.cobrado.toFixed(2))) + ' &middot; a cobrar ' + esc(mask('US$ ' + pb.proximo.toFixed(2))) + '</span></span><b>' + esc(mask('US$ ' + tot.toFixed(2))) + '</b></div>';
+return '<div class="apostat"><span><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:' + PIE_COLORS[i % PIE_COLORS.length] + '"></span>' + esc(nombrePlataforma(b)) + '<span class="desc" style="margin-left:8px">cobrado ' + esc(fmtUsd(pb.cobrado)) + ' &middot; a cobrar ' + esc(fmtUsd(pb.proximo)) + '</span></span><b>' + esc(fmtUsd(tot)) + '</b></div>';
 }).join('') : '<p class="newsempty">Sin datos por broker todav&iacute;a.</p>';
 var t = temaChart();
 if (divChartBigInstance) divChartBigInstance.destroy();
@@ -267,7 +267,7 @@ box.setAttribute('data-mes', String(mes));
 var det = (divDatos && divDatos.detalle && divDatos.detalle[mes]) || [];
 var filas = det.map(function (d) {
 var etiqueta = d.estado === 'proximo' ? (d.estimado ? ' <span class="desc">~ estimado</span>' : ' <span class="desc">a pagar</span>') : '';
-return esc(nombrePlataforma(d.broker)) + ' &middot; <span class="sym">' + esc(d.symbol || 'CASH') + '</span> &middot; ' + esc(mask('US$ ' + d.monto.toFixed(2))) + etiqueta;
+return esc(nombrePlataforma(d.broker)) + ' &middot; <span class="sym">' + esc(d.symbol || 'CASH') + '</span> &middot; ' + esc(fmtUsd(d.monto)) + etiqueta;
 }).join('<br>');
 box.innerHTML = '<div class="divdetbox"><b>' + MESES_CORTOS[mes - 1] + ' ' + esc((divDatos && divDatos.anio) || '') + '</b><br>' + (filas || '<span class="desc">Sin movimientos ese mes</span>') + '</div>';
 }
@@ -297,14 +297,13 @@ body.innerHTML = '<p class="newsempty">' + esc(((r && r.mensajes) || ['Error']).
 return;
 }
 document.getElementById('apoAnio').textContent = r.anio;
-// El panel y el grafico comen del MISMO pedido: si el panel trae datos mas
-// frescos (o el usuario apreto refrescar), la linea de "lo que pusiste" tiene
-// que moverse con ellos. Si no, los dos numeros de la app se contradicen.
-try { aplicarAportes(r, true); } catch (e) {}
+// La lista de aportes queda guardada en graficos.js porque la comparacion
+// del grupo (htmlComparacion -> comparacionGrupo) la necesita mas abajo.
+try { aplicarAportes(r); } catch (e) {}
 var html = '';
-html += '<div class="apostat"><span>Entr&oacute; a tus apps</span><b>' + esc(mask('US$ ' + Math.round(r.aportes).toLocaleString('es-UY'))) + '</b></div>';
-html += '<div class="apostat"><span>Sali&oacute; de tus apps</span><b>' + esc(mask('US$ ' + Math.round(r.retiros).toLocaleString('es-UY'))) + '</b></div>';
-html += '<div class="apostat"><span>Neto del a&ntilde;o</span><b>' + esc(mask('US$ ' + Math.round(r.neto).toLocaleString('es-UY'))) + '</b></div>';
+html += '<div class="apostat"><span>Entr&oacute; a tus apps</span><b>' + esc(fmtUsdEnt(r.aportes)) + '</b></div>';
+html += '<div class="apostat"><span>Sali&oacute; de tus apps</span><b>' + esc(fmtUsdEnt(r.retiros)) + '</b></div>';
+html += '<div class="apostat"><span>Neto del a&ntilde;o</span><b>' + esc(fmtUsdEnt(r.neto)) + '</b></div>';
 // OJO — ac&aacute; NO va "rendimiento = total &minus; inicio &minus; neto". Ese
 // numero se mostro y era FALSO (reporte de Guzman, 17/08/2026): una
 // transferencia de Itau/BTG (que estan DENTRO del total) hacia IBKR cuenta
@@ -347,7 +346,7 @@ h += '<div><p class="lbl">Rindi&oacute;</p>' + pct(c.pct) + '</div>';
 h += '<div><p class="lbl">' + esc(c.idxNombre || 'Índice') + '</p>' + pct(c.idxPct) + '</div>';
 h += '</div>';
 h += '<p class="capnota">Desde el ' + fechaCortaMs(c.desde) + ', sobre ' +
-esc(mask('US$ ' + Math.round(c.capital).toLocaleString('es-UY'))) + ' de capital. Los bancos (Ita&uacute;, BTG) no entran: no rinden, y pasarles plata a las apps cuenta como aporte, no como ganancia.' +
+esc(fmtUsdEnt(c.capital)) + ' de capital. Los bancos (Ita&uacute;, BTG) no entran: no rinden, y pasarles plata a las apps cuenta como aporte, no como ganancia.' +
 (c.idxPct !== null ? ' El &iacute;ndice no paga dividendos y tus cuentas s&iacute;.' : '') + '</p>';
 return h;
 }
