@@ -297,6 +297,10 @@ body.innerHTML = '<p class="newsempty">' + esc(((r && r.mensajes) || ['Error']).
 return;
 }
 document.getElementById('apoAnio').textContent = r.anio;
+// El panel y el grafico comen del MISMO pedido: si el panel trae datos mas
+// frescos (o el usuario apreto refrescar), la linea de "lo que pusiste" tiene
+// que moverse con ellos. Si no, los dos numeros de la app se contradicen.
+try { aplicarAportes(r, true); } catch (e) {}
 // Valor al arrancar el año, desde el histórico que ya está cargado en la app.
 var enero1 = new Date(r.anio, 0, 1).getTime();
 var inicio = null;

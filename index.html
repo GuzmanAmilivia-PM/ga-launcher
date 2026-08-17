@@ -110,6 +110,15 @@ body { font-family: 'Manrope', -apple-system, "Segoe UI", Roboto, Arial, sans-se
 .rangepct { font-size: 13px; font-weight: 700; margin-left: 8px; }
 .up { color: var(--green); font-weight: 700; }
 .down { color: var(--red); font-weight: 700; }
+/* Capital aportado debajo de la curva (V1): leyenda, los dos numeros y la nota
+   de hasta donde llegan los datos de aportes. */
+.capleg { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--muted); margin-top: 10px; }
+.capdot { width: 13px; height: 3px; border-radius: 2px; display: inline-block; }
+.cappat { background: var(--gold); }
+.capcap { background: #8c96aa; }
+.caprow { display: flex; gap: 22px; margin-top: 8px; }
+.capval { font-size: 15px; font-weight: 700; margin: 0; }
+.capnota { font-size: 11px; color: var(--muted); margin: 8px 0 0; line-height: 1.35; }
 
 /* --- Cards y tablas --- */
 .card { background: var(--navy2); border: 1px solid var(--border); border-radius: 18px; padding: 18px; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.18); min-width: 0; }
@@ -395,6 +404,14 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div class="rangebar" id="rangeBar"></div><button class="expandbtn" id="expandBtn" title="Ampliar">&#9974;</button>
 </div>
 <div class="chartbox"><canvas id="lineChart"></canvas></div>
+<div id="capBox" style="display:none">
+<div class="capleg"><span class="capdot cappat"></span>Patrimonio <span class="capdot capcap"></span>Lo que pusiste</div>
+<div class="caprow">
+<div><p class="lbl">Pusiste</p><p class="capval" id="capPuso">&mdash;</p></div>
+<div><p class="lbl">Rindi&oacute;</p><p class="capval" id="capRend">&mdash;</p></div>
+</div>
+<p class="capnota" id="capNota" style="display:none"></p>
+</div>
 </div>
 <div class="sweeppanel">
 <div class="cardhead">

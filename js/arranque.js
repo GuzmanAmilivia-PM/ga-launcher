@@ -74,6 +74,10 @@ currentTotal = data.total;
 try {
 drawLineChart(filterSerie(currentRangeDias));
 updateRangePct();
+// El capital aportado (la linea de "lo que pusiste") se pide aparte y llega
+// despues: consultar los brokers tarda y no puede frenar el arranque. Pinta
+// del cache local al instante si ya lo vio alguna vez.
+cargarAportesGrafico();
 } catch (eChart) {
 var cb = document.querySelector('.chartbox');
 if (cb) cb.innerHTML = '<p class="newsempty">No se pudo dibujar el gr&aacute;fico.</p>';

@@ -71,9 +71,12 @@ function getFilteredDataPoints(serie) {
   if (lineChartInstance) lineChartInstance.destroy();
   lineChartInstance = new Chart(document.getElementById('lineChart'), {
   type: 'line',
-  data: { datasets: [{ data: dataPoints, borderColor: '#d4af37', backgroundColor: 'rgba(212,175,55,0.12)', fill: true, tension: 0.3, pointRadius: 0 }] },
+  data: { datasets: datasetsEvolucion(dataPoints) },
   options: buildChartOptions(dataPoints)
   });
+  // Los numeros de abajo se rehacen con el mismo calculo que la linea, asi no
+  // pueden contar una historia distinta a la del dibujo.
+  try { pintarCapital(dataPoints); } catch (e) {}
   }
   var bigChartInstance = null;
   function drawBigChart() {
@@ -81,7 +84,7 @@ function getFilteredDataPoints(serie) {
   if (bigChartInstance) bigChartInstance.destroy();
   bigChartInstance = new Chart(document.getElementById('lineChartBig'), {
   type: 'line',
-  data: { datasets: [{ data: dataPoints, borderColor: '#d4af37', backgroundColor: 'rgba(212,175,55,0.12)', fill: true, tension: 0.3, pointRadius: 0 }] },
+  data: { datasets: datasetsEvolucion(dataPoints) },
   options: buildChartOptions(dataPoints)
   });
   }
@@ -96,6 +99,126 @@ function getFilteredDataPoints(serie) {
   }
   document.getElementById('expandBtn').onclick = openChartModal;
   document.getElementById('chartModalClose').onclick = closeChartModal;
+
+// ---------- Capital aportado (V1) ----------
+// El grafico mostraba el patrimonio y nada mas: si subia, no habia forma de
+// saber si fue porque Guzman deposito o porque la plata rindio. Ahora debajo de
+// la curva va el CAPITAL QUE PUSO, y la brecha entre las dos lineas es el
+// rendimiento del periodo.
+//
+// Se calcula SOBRE LA VENTANA que elige el usuario, no desde el inicio:
+//   capital = patrimonio al arrancar la ventana + aportes desde entonces
+// El motivo es un limite de datos, no una preferencia: el Historico de
+// patrimonio es mas viejo que la actividad que informan los brokers (Schwab da
+// ~400 dias, IBKR lo que diga su Flex Query). El backend dice desde cuando la
+// lista esta COMPLETA (`desde`) y aca no se dibuja ni un pixel antes de esa
+// fecha — un area que arrancara antes seria una mentira prolija.
+var aportesLista = [], aportesDesde = null, aportesPedidos = false;
+var COLOR_CAPITAL = '#8c96aa';
+
+// 'yyyy-mm-dd' -> ms de la medianoche LOCAL. new Date('2025-03-10') parsea en
+// UTC y en Montevideo caeria el dia anterior.
+function apISOaMs(s) {
+  var p = String(s || '').split('-');
+  if (p.length !== 3) return NaN;
+  return new Date(+p[0], +p[1] - 1, +p[2]).getTime();
+}
+
+/**
+ * El capital sobre la ventana ya filtrada del patrimonio.
+ * Devuelve null cuando no se puede afirmar nada: sin cobertura, sin aportes, o
+ * cuando lo que queda de ventana cubierta son menos de dos puntos.
+ */
+function serieCapital(pts) {
+  if (!pts || pts.length < 2 || !aportesDesde || !aportesLista.length) return null;
+  var desdeTs = apISOaMs(aportesDesde);
+  if (!isFinite(desdeTs)) return null;
+  var i0 = 0;
+  while (i0 < pts.length && pts[i0].x < desdeTs) i0++;
+  if (pts.length - i0 < 2) return null;
+
+  var base = pts[i0].y, t0 = pts[i0].x;
+  var ap = [];
+  aportesLista.forEach(function (r) {
+    var ts = apISOaMs(r.fecha);
+    // Los del dia del arranque ya estan dentro del patrimonio que hace de base.
+    if (isFinite(ts) && ts > t0 && isFinite(r.monto)) ap.push({ ts: ts, monto: r.monto });
+  });
+  ap.sort(function (a, b) { return a.ts - b.ts; });
+
+  var out = [], acum = 0, j = 0;
+  for (var i = i0; i < pts.length; i++) {
+    while (j < ap.length && ap[j].ts <= pts[i].x) { acum += ap[j].monto; j++; }
+    out.push({ x: pts[i].x, y: base + acum });
+  }
+  return { pts: out, base: base, capital: base + acum, recortado: i0 > 0, desde: t0 };
+}
+
+// Los datasets del grafico de evolucion. Un solo lugar para las dos versiones
+// (la tarjeta y el modal ampliado), que antes eran dos copias de la misma
+// config y ya con tres series divergirian seguro.
+function datasetsEvolucion(pts) {
+  var ds = [{ data: pts, borderColor: '#d4af37', backgroundColor: 'rgba(212,175,55,0.12)', fill: true, borderWidth: 2.5, tension: 0.3, pointRadius: 0 }];
+  var cap = serieCapital(pts);
+  if (cap) {
+    // Sin relleno: el area del patrimonio ya esta pintada y dos rellenos
+    // encimados ensucian el dibujo. La linea sola alcanza para leer la brecha.
+    ds.push({ data: cap.pts, borderColor: COLOR_CAPITAL, borderWidth: 2, tension: 0.3, pointRadius: 0 });
+  }
+  return ds;
+}
+
+// Los numeros de abajo del grafico: cuanto puso y cuanto rindio en la ventana.
+function pintarCapital(pts) {
+  var box = document.getElementById('capBox');
+  if (!box) return;
+  var cap = serieCapital(pts);
+  if (!cap || !currentTotal) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  var rend = currentTotal - cap.capital;
+  var pct = cap.capital ? (rend / cap.capital * 100) : 0;
+  document.getElementById('capPuso').textContent = mask('US$ ' + Math.round(cap.capital).toLocaleString('es-UY'));
+  var el = document.getElementById('capRend');
+  el.textContent = mask((rend >= 0 ? '+' : '') + 'US$ ' + Math.round(rend).toLocaleString('es-UY')) +
+    (montosOcultos ? '' : ' (' + (rend >= 0 ? '+' : '') + pct.toFixed(1) + '%)');
+  el.className = 'capval ' + (rend >= 0 ? 'up' : 'down');
+  // Si la ventana pedida es mas vieja que los datos, decirlo. Un numero que
+  // parece exacto y no lo es es peor que no mostrarlo.
+  var nota = document.getElementById('capNota');
+  nota.textContent = cap.recortado
+    ? 'Desde el ' + fechaCortaMs(cap.desde) + ': antes de esa fecha los brokers no informan aportes.'
+    : '';
+  nota.style.display = cap.recortado ? '' : 'none';
+}
+
+// La lista de aportes NO viaja en el payload del portafolio a proposito:
+// consultar los brokers puede tardar varios segundos y frenaria el arranque,
+// que es el momento mas sensible de la app. Se pide aparte, despues del primer
+// pintado, y se guarda en el MISMO cache local que usa el panel de Aportes
+// (una sola consulta sirve a los dos).
+function cargarAportesGrafico(forzar) {
+  var c = forzar ? null : cacheLeer('ga_cache_apo');
+  if (c && c.data) aplicarAportes(c.data, false);
+  if (aportesPedidos && !forzar) return;
+  aportesPedidos = true;
+  google.script.run
+    .withSuccessHandler(function (r) {
+      if (r && r.ok) { cacheGuardar('ga_cache_apo', r); aplicarAportes(r, true); }
+    })
+    .withFailureHandler(function () { aportesPedidos = false; })
+    .getAportes();
+}
+
+function aplicarAportes(r, redibujar) {
+  aportesLista = (r && r.lista) || [];
+  aportesDesde = (r && r.desde) || null;
+  if (!redibujar) return;
+  try {
+    drawLineChart(filterSerie(currentRangeDias));
+    var m = document.getElementById('chartModal');
+    if (m && m.style.display !== 'none') drawBigChart();
+  } catch (e) {}
+}
 
 // Variacion del dia de mercado (verde/rojo), estilo Binance
 function daychgHtml(p) {
