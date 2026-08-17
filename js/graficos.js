@@ -71,12 +71,9 @@ function getFilteredDataPoints(serie) {
   if (lineChartInstance) lineChartInstance.destroy();
   lineChartInstance = new Chart(document.getElementById('lineChart'), {
   type: 'line',
-  data: { datasets: datasetsEvolucion(dataPoints) },
+  data: { datasets: [{ data: dataPoints, borderColor: '#d4af37', backgroundColor: 'rgba(212,175,55,0.12)', fill: true, tension: 0.3, pointRadius: 0 }] },
   options: buildChartOptions(dataPoints)
   });
-  // Los numeros de abajo se rehacen con el mismo calculo que la linea, asi no
-  // pueden contar una historia distinta a la del dibujo.
-  try { pintarCapital(dataPoints); } catch (e) {}
   }
   var bigChartInstance = null;
   function drawBigChart() {
@@ -84,7 +81,7 @@ function getFilteredDataPoints(serie) {
   if (bigChartInstance) bigChartInstance.destroy();
   bigChartInstance = new Chart(document.getElementById('lineChartBig'), {
   type: 'line',
-  data: { datasets: datasetsEvolucion(dataPoints) },
+  data: { datasets: [{ data: dataPoints, borderColor: '#d4af37', backgroundColor: 'rgba(212,175,55,0.12)', fill: true, tension: 0.3, pointRadius: 0 }] },
   options: buildChartOptions(dataPoints)
   });
   }
@@ -101,10 +98,16 @@ function getFilteredDataPoints(serie) {
   document.getElementById('chartModalClose').onclick = closeChartModal;
 
 // ---------- Capital aportado (V1) ----------
-// El grafico mostraba el patrimonio y nada mas: si subia, no habia forma de
-// saber si fue porque Guzman deposito o porque la plata rindio. Ahora debajo de
-// la curva va el CAPITAL QUE PUSO, y la brecha entre las dos lineas es el
-// rendimiento del periodo.
+// OJO — 17/08/2026: esto NO se dibuja en el grafico de Evolucion. Estuvo una
+// tarde (v50-v52) y se saco a pedido de Guzman, con razon: el patrimonio TOTAL
+// incluye Itau y BTG, cuyos aportes solo existen si se cargan a mano en la hoja
+// Transacciones, y no estan. Con aportes faltantes el "Pusiste" queda corto y el
+// "Rindio" queda inflado — el numero no era incompleto, era MENTIROSO. El
+// grafico de Evolucion volvio a ser el generico de siempre (una sola linea).
+//
+// Los calculos quedan porque la comparacion se va a rehacer en el panel de
+// Aportes, restringida a las cuentas cuyos aportes se conocen de verdad
+// (Schwab e IBKR los informa el broker; Binance sale de Transacciones).
 //
 // Se calcula SOBRE LA VENTANA que elige el usuario, no desde el inicio:
 //   capital = patrimonio al arrancar la ventana + aportes desde entonces
@@ -232,67 +235,6 @@ function serieIndice(cap) {
   }
   if (out.length < 2) return null;
   return { pts: out, final: out[out.length - 1].y, nombre: benchNombre };
-}
-
-// Los datasets del grafico de evolucion. Un solo lugar para las dos versiones
-// (la tarjeta y el modal ampliado), que antes eran dos copias de la misma
-// config y ya con tres series divergirian seguro.
-function datasetsEvolucion(pts) {
-  var ds = [{ data: pts, borderColor: '#d4af37', backgroundColor: 'rgba(212,175,55,0.12)', fill: true, borderWidth: 2.5, tension: 0.3, pointRadius: 0 }];
-  var cap = serieCapital(pts);
-  if (cap) {
-    // Sin relleno: el area del patrimonio ya esta pintada y dos rellenos
-    // encimados ensucian el dibujo. La linea sola alcanza para leer la brecha.
-    ds.push({ data: cap.pts, borderColor: COLOR_CAPITAL, borderWidth: 2, tension: 0.3, pointRadius: 0 });
-    var idx = serieIndice(cap);
-    if (idx) ds.push({ data: idx.pts, borderColor: COLOR_INDICE, borderWidth: 2, borderDash: [5, 4], tension: 0.3, pointRadius: 0 });
-  }
-  return ds;
-}
-
-// Los numeros de abajo del grafico: cuanto puso y cuanto rindio en la ventana.
-function pintarCapital(pts) {
-  var box = document.getElementById('capBox');
-  if (!box) return;
-  var cap = serieCapital(pts);
-  if (!cap || !currentTotal) { box.style.display = 'none'; return; }
-  box.style.display = '';
-  var rend = currentTotal - cap.capital;
-  var pct = cap.capital ? (rend / cap.capital * 100) : 0;
-  document.getElementById('capPuso').textContent = mask('US$ ' + Math.round(cap.capital).toLocaleString('es-UY'));
-  var el = document.getElementById('capRend');
-  el.textContent = mask((rend >= 0 ? '+' : '') + 'US$ ' + Math.round(rend).toLocaleString('es-UY')) +
-    (montosOcultos ? '' : ' (' + (rend >= 0 ? '+' : '') + pct.toFixed(1) + '%)');
-  el.className = 'capval ' + (rend >= 0 ? 'up' : 'down');
-
-  // La comparacion contra el indice, sobre la MISMA ventana y los MISMOS
-  // aportes. Si no hay datos del indice, el bloque entero desaparece en vez de
-  // mostrar un guion sin explicacion.
-  var idx = serieIndice(cap);
-  var boxIdx = document.getElementById('capIdxBox');
-  var legIdx = document.getElementById('capIdxLeg');
-  if (legIdx) legIdx.style.display = (idx && cap.capital) ? '' : 'none';
-  if (boxIdx) {
-    if (idx && cap.capital) {
-      var pctIdx = (idx.final / cap.capital - 1) * 100;
-      document.getElementById('capIdxNombre').textContent = idx.nombre;
-      var ei = document.getElementById('capIdx');
-      ei.textContent = (pctIdx >= 0 ? '+' : '') + pctIdx.toFixed(1) + '%';
-      ei.className = 'capval ' + (pctIdx >= 0 ? 'up' : 'down');
-      boxIdx.style.display = '';
-    } else {
-      boxIdx.style.display = 'none';
-    }
-  }
-
-  // Las aclaraciones, en una sola linea. Un numero que parece exacto y no lo es
-  // es peor que no mostrarlo.
-  var notas = [];
-  if (cap.recortado) notas.push('Desde el ' + fechaCortaMs(cap.desde) + ': antes de esa fecha los brokers no informan aportes.');
-  if (idx) notas.push('La comparacion simula tus mismos aportes en las mismas fechas; el indice no incluye dividendos y tu patrimonio si.');
-  var nota = document.getElementById('capNota');
-  nota.textContent = notas.join(' ');
-  nota.style.display = notas.length ? '' : 'none';
 }
 
 // La lista de aportes NO viaja en el payload del portafolio a proposito:

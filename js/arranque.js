@@ -74,14 +74,11 @@ currentTotal = data.total;
 try {
 // El indice para comparar viaja con la serie (y como ella, NO en el poll lite:
 // una respuesta lite deja el bench de la carga completa anterior, que sigue
-// siendo el correcto porque fullSerie tampoco cambio).
+// siendo el correcto porque fullSerie tampoco cambio). No se dibuja en este
+// grafico — lo usa la comparacion del panel de Aportes.
 if (!data.lite) aplicarBench(data);
 drawLineChart(filterSerie(currentRangeDias));
 updateRangePct();
-// El capital aportado (la linea de "lo que pusiste") se pide aparte y llega
-// despues: consultar los brokers tarda y no puede frenar el arranque. Pinta
-// del cache local al instante si ya lo vio alguna vez.
-cargarAportesGrafico();
 } catch (eChart) {
 var cb = document.querySelector('.chartbox');
 if (cb) cb.innerHTML = '<p class="newsempty">No se pudo dibujar el gr&aacute;fico.</p>';
