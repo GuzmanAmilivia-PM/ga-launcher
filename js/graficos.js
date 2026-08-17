@@ -342,11 +342,26 @@ function aplicarAportes(r, redibujar) {
   } catch (e) {}
 }
 
-// Variacion del dia de mercado (verde/rojo), estilo Binance
+// Variacion del dia de mercado (verde/rojo), estilo Binance. Va arriba del
+// PRECIO, que es el numero que se movio hoy — pedido de Guzman (17/08/2026).
+// Antes estaba arriba del valor total, donde se confundia con la ganancia
+// acumulada de la posicion.
 function daychgHtml(p) {
   if (p.cambioDia === null || p.cambioDia === undefined || p.cambioDia === '') return '';
   var v = Number(p.cambioDia);
   if (!isFinite(v)) return '';
+  return '<span class="daychg ' + (v >= 0 ? 'up' : 'down') + '">' + (v >= 0 ? '+' : '') + v.toFixed(2) + '%</span>';
+}
+
+// Ganancia acumulada de la posicion: precio actual contra el precio medio de
+// compra. Va arriba del VALOR, que es la plata que representa. Sin precio de
+// compra no se muestra nada: el promedio sale de las hojas de cada cuenta y hay
+// posiciones (cripto vieja, cash) que no lo tienen. Un cero ahi diria "no
+// ganaste nada", que es una afirmacion, no un dato que falta.
+function gananciaHtml(p) {
+  var pm = Number(p.precioCompra), pa = Number(p.precioActual);
+  if (!isFinite(pm) || pm <= 0 || !isFinite(pa) || pa <= 0) return '';
+  var v = (pa / pm - 1) * 100;
   return '<span class="daychg ' + (v >= 0 ? 'up' : 'down') + '">' + (v >= 0 ? '+' : '') + v.toFixed(2) + '%</span>';
 }
 // ---------- Detalle desplegable por activo + grafico TradingView ----------
@@ -423,8 +438,8 @@ if (idx >= HOLD_VISIBLE && !holdingsExpanded) tr.className = 'hidden-row';
 var pctDisplay = (h.pct * 100).toFixed(1) + '%';
 tr.innerHTML = '<td><span class="sym">' + esc(h.symbol) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></td>' +
 '<td>' + esc(fmtNum(h.qty)) + '</td>' +
-'<td>' + esc(fmtNum(h.precioActual)) + '</td>' +
-'<td>' + daychgHtml(h) + fmt(h.valor) + '</td>' +
+'<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
+'<td>' + gananciaHtml(h) + fmt(h.valor) + '</td>' +
 '<td class="holdpct col-pct">' + pctDisplay + '</td>';
 tr.className += ' asset-row';
 tr.onclick = function () { toggleDetalle(tr, h); };

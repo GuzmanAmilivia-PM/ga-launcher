@@ -186,8 +186,8 @@ lista.forEach(function (h) {
 var tr = document.createElement('tr');
 tr.innerHTML = '<td><span class="sym">' + esc(h.symbol) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></td>' +
 '<td>' + esc(fmtNum(h.qty)) + '</td>' +
-'<td>' + esc(fmtNum(h.precioActual)) + '</td>' +
-'<td>' + daychgHtml(h) + fmt(h.valor) + '</td>' +
+'<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
+'<td>' + gananciaHtml(h) + fmt(h.valor) + '</td>' +
 '<td class="holdpct col-pct">' + (h.pct * 100).toFixed(1) + '%</td>';
 tr.className = 'asset-row';
 tr.onclick = function () { toggleDetalle(tr, h); };
