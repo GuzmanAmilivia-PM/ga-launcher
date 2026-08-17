@@ -1,7 +1,8 @@
 // Grafico propio en canvas — reemplaza Chart.js (196 KB) por ~7 KB.
 // Expone la MISMA interfaz `new Chart(canvas, config)` para el subconjunto
 // exacto que la app usa, asi los cinco lugares que dibujan no cambiaron nada:
-//   - line: puntos {x,y}, relleno, curva suave, ejes con ticks y callbacks
+//   - line: puntos {x,y}, VARIAS series superpuestas (relleno, punteado, grosor
+//     por dataset), curva suave, ejes con ticks y callbacks
 //   - doughnut: cutout, colores, borde (la leyenda es HTML propio, no de aca)
 //   - bar: apiladas por stack, radio, onClick por indice, y una linea encima
 // Sin animaciones ni tooltips de biblioteca: la unica interaccion que la app
@@ -75,17 +76,33 @@
   function tickFont(eje) { return (eje && eje.ticks && eje.ticks.font && eje.ticks.font.size) || 11; }
   function gridColor(eje, defecto) { return (eje && eje.grid && eje.grid.color) || defecto; }
 
-  // ----- linea con relleno (la evolucion del patrimonio) -----
+  // ----- lineas con relleno (la evolucion del patrimonio) -----
+  // Dibuja TODOS los datasets, no solo el primero: el grafico de patrimonio
+  // superpone el capital aportado (area) y el indice simulado (punteado). La
+  // escala y el rango de fechas se calculan sobre la union de las series, asi
+  // ninguna se sale del cuadro. Con un solo dataset el resultado es identico al
+  // de antes. Cada dataset acepta: borderColor, borderWidth, borderDash,
+  // fill (bool) y backgroundColor.
   Chart.prototype._linea = function (ctx, caja) {
     var cfg = this.config;
-    var ds = (cfg.data && cfg.data.datasets && cfg.data.datasets[0]) || {};
-    var pts = ds.data || [];
+    var todos = ((cfg.data && cfg.data.datasets) || []).filter(function (d) {
+      return d && d.data && d.data.length;
+    });
     var ejes = (cfg.options && cfg.options.scales) || {};
-    if (!pts.length) return;
+    if (!todos.length) return;
+    var ds = todos[0];
+    var pts = ds.data;
 
-    var ys = pts.map(function (p) { return p.y; });
+    var ys = [], xs = [];
+    todos.forEach(function (d) {
+      d.data.forEach(function (p) {
+        if (isFinite(p.y)) ys.push(p.y);
+        if (isFinite(p.x)) xs.push(p.x);
+      });
+    });
+    if (!ys.length || !xs.length) return;
     var e = escalaLinda(Math.min.apply(null, ys), Math.max.apply(null, ys), 4);
-    var x0 = pts[0].x, x1 = pts[pts.length - 1].x;
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs);
     if (x1 === x0) x1 = x0 + 1;
 
     var cbY = tickCb(ejes.y), cbX = tickCb(ejes.x);
@@ -123,29 +140,40 @@
     }
 
     // curva suave (puntos medios, el efecto del tension 0.3)
-    function trazar() {
+    function trazar(p) {
       ctx.beginPath();
-      ctx.moveTo(X(pts[0].x), Y(pts[0].y));
-      for (var i = 1; i < pts.length; i++) {
-        var xa = X(pts[i - 1].x), ya = Y(pts[i - 1].y);
-        var xb = X(pts[i].x), yb = Y(pts[i].y);
+      ctx.moveTo(X(p[0].x), Y(p[0].y));
+      for (var i = 1; i < p.length; i++) {
+        var xa = X(p[i - 1].x), ya = Y(p[i - 1].y);
+        var xb = X(p[i].x), yb = Y(p[i].y);
         ctx.quadraticCurveTo(xa, ya, (xa + xb) / 2, (ya + yb) / 2);
       }
-      ctx.lineTo(X(pts[pts.length - 1].x), Y(pts[pts.length - 1].y));
+      ctx.lineTo(X(p[p.length - 1].x), Y(p[p.length - 1].y));
     }
-    if (ds.fill) {
-      trazar();
-      ctx.lineTo(X(pts[pts.length - 1].x), padArr + H);
-      ctx.lineTo(X(pts[0].x), padArr + H);
+
+    // Los rellenos van TODOS antes de los trazos: si cada dataset se dibujara
+    // completo por turno, el area del segundo taparia la linea del primero.
+    todos.forEach(function (d) {
+      if (!d.fill) return;
+      var p = d.data;
+      trazar(p);
+      ctx.lineTo(X(p[p.length - 1].x), padArr + H);
+      ctx.lineTo(X(p[0].x), padArr + H);
       ctx.closePath();
-      ctx.fillStyle = ds.backgroundColor || 'rgba(212,175,55,.12)';
+      ctx.fillStyle = d.backgroundColor || 'rgba(212,175,55,.12)';
       ctx.fill();
-    }
-    trazar();
-    ctx.strokeStyle = ds.borderColor || '#d4af37';
-    ctx.lineWidth = 2;
+    });
     ctx.lineJoin = 'round';
-    ctx.stroke();
+    todos.forEach(function (d) {
+      trazar(d.data);
+      ctx.strokeStyle = d.borderColor || '#d4af37';
+      ctx.lineWidth = isFinite(d.borderWidth) ? d.borderWidth : 2;
+      // El punteado del indice simulado. Se apaga siempre despues de trazar:
+      // el contexto es compartido y quedaria punteando la siguiente linea.
+      if (d.borderDash && d.borderDash.length && ctx.setLineDash) ctx.setLineDash(d.borderDash);
+      ctx.stroke();
+      if (ctx.setLineDash) ctx.setLineDash([]);
+    });
   };
 
   // ----- torta con agujero (el portafolio) -----
