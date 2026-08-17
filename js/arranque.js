@@ -72,6 +72,10 @@ currentTotal = data.total;
 // puesto todo lo que venia despues — posiciones, precios y el auto-sync de
 // Binance quedaban sin pintar. Ahora falla solo el grafico.
 try {
+// El indice para comparar viaja con la serie (y como ella, NO en el poll lite:
+// una respuesta lite deja el bench de la carga completa anterior, que sigue
+// siendo el correcto porque fullSerie tampoco cambio).
+if (!data.lite) aplicarBench(data);
 drawLineChart(filterSerie(currentRangeDias));
 updateRangePct();
 // El capital aportado (la linea de "lo que pusiste") se pide aparte y llega

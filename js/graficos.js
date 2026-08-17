@@ -115,6 +115,7 @@ function getFilteredDataPoints(serie) {
 // fecha — un area que arrancara antes seria una mentira prolija.
 var aportesLista = [], aportesDesde = null, aportesPedidos = false;
 var COLOR_CAPITAL = '#8c96aa';
+var COLOR_INDICE = '#5b8def';
 
 // 'yyyy-mm-dd' -> ms de la medianoche LOCAL. new Date('2025-03-10') parsea en
 // UTC y en Montevideo caeria el dia anterior.
@@ -154,6 +155,75 @@ function serieCapital(pts) {
   return { pts: out, base: base, capital: base + acum, recortado: i0 > 0, desde: t0 };
 }
 
+// ---------- El indice simulado (V2) ----------
+// El indice NO se compara "en general": se simula la MISMA plata puesta en las
+// MISMAS fechas. La pregunta que contesta es la unica que importa — si eso
+// mismo hubiera ido al S&P 500, cuanto tendria hoy.
+// El backend manda el cierre del indice alineado punto a punto con la serie
+// (`bench.valores`), asi el telefono no tiene que buscar ninguna fecha.
+var benchPuntos = [], benchNombre = '';
+
+function aplicarBench(data) {
+  benchPuntos = [];
+  benchNombre = '';
+  var b = data && data.bench;
+  if (!b || !b.valores || !b.valores.length) return;
+  benchNombre = b.nombre || 'el indice';
+  // El pegamento es el INDICE del arreglo: bench.valores[i] corresponde a
+  // fullSerie[i]. Si el backend cambiara una sin la otra, esto se desalinea, y
+  // por eso la longitud se verifica antes de usar nada.
+  if (b.valores.length !== (fullSerie || []).length) return;
+  fullSerie.forEach(function (p, i) {
+    var v = b.valores[i];
+    if (v !== null && isFinite(v)) benchPuntos.push({ ts: p.fecha, valor: v });
+  });
+}
+
+// El cierre del indice en una fecha: el ultimo anterior o igual (no cotiza
+// fines de semana ni feriados). null si la fecha es previa a todo lo que hay.
+function benchEn(ts) {
+  var v = null;
+  for (var i = 0; i < benchPuntos.length; i++) {
+    if (benchPuntos[i].ts > ts) break;
+    v = benchPuntos[i].valor;
+  }
+  return v;
+}
+
+/**
+ * Cuanto valdria hoy la misma plata puesta en el indice. Compra "unidades" del
+ * indice con el capital inicial y con cada aporte al cierre de SU dia, y las
+ * valua en cada punto. Corre sobre los mismos puntos que el capital (cap.pts),
+ * asi las tres lineas arrancan y terminan juntas.
+ */
+function serieIndice(cap) {
+  if (!cap || !cap.pts.length || !benchPuntos.length) return null;
+  var b0 = benchEn(cap.desde);
+  if (!b0) return null;
+  var unidades = cap.base / b0;
+  var fin = cap.pts[cap.pts.length - 1].x;
+
+  var ap = [];
+  aportesLista.forEach(function (r) {
+    var ts = apISOaMs(r.fecha);
+    if (isFinite(ts) && ts > cap.desde && ts <= fin && isFinite(r.monto)) ap.push({ ts: ts, monto: r.monto });
+  });
+  ap.sort(function (a, b) { return a.ts - b.ts; });
+
+  var out = [], j = 0;
+  for (var i = 0; i < cap.pts.length; i++) {
+    while (j < ap.length && ap[j].ts <= cap.pts[i].x) {
+      var bv = benchEn(ap[j].ts);
+      if (bv) unidades += ap[j].monto / bv;
+      j++;
+    }
+    var aqui = benchEn(cap.pts[i].x);
+    if (aqui) out.push({ x: cap.pts[i].x, y: unidades * aqui });
+  }
+  if (out.length < 2) return null;
+  return { pts: out, final: out[out.length - 1].y, nombre: benchNombre };
+}
+
 // Los datasets del grafico de evolucion. Un solo lugar para las dos versiones
 // (la tarjeta y el modal ampliado), que antes eran dos copias de la misma
 // config y ya con tres series divergirian seguro.
@@ -164,6 +234,8 @@ function datasetsEvolucion(pts) {
     // Sin relleno: el area del patrimonio ya esta pintada y dos rellenos
     // encimados ensucian el dibujo. La linea sola alcanza para leer la brecha.
     ds.push({ data: cap.pts, borderColor: COLOR_CAPITAL, borderWidth: 2, tension: 0.3, pointRadius: 0 });
+    var idx = serieIndice(cap);
+    if (idx) ds.push({ data: idx.pts, borderColor: COLOR_INDICE, borderWidth: 2, borderDash: [5, 4], tension: 0.3, pointRadius: 0 });
   }
   return ds;
 }
@@ -182,13 +254,35 @@ function pintarCapital(pts) {
   el.textContent = mask((rend >= 0 ? '+' : '') + 'US$ ' + Math.round(rend).toLocaleString('es-UY')) +
     (montosOcultos ? '' : ' (' + (rend >= 0 ? '+' : '') + pct.toFixed(1) + '%)');
   el.className = 'capval ' + (rend >= 0 ? 'up' : 'down');
-  // Si la ventana pedida es mas vieja que los datos, decirlo. Un numero que
-  // parece exacto y no lo es es peor que no mostrarlo.
+
+  // La comparacion contra el indice, sobre la MISMA ventana y los MISMOS
+  // aportes. Si no hay datos del indice, el bloque entero desaparece en vez de
+  // mostrar un guion sin explicacion.
+  var idx = serieIndice(cap);
+  var boxIdx = document.getElementById('capIdxBox');
+  var legIdx = document.getElementById('capIdxLeg');
+  if (legIdx) legIdx.style.display = (idx && cap.capital) ? '' : 'none';
+  if (boxIdx) {
+    if (idx && cap.capital) {
+      var pctIdx = (idx.final / cap.capital - 1) * 100;
+      document.getElementById('capIdxNombre').textContent = idx.nombre;
+      var ei = document.getElementById('capIdx');
+      ei.textContent = (pctIdx >= 0 ? '+' : '') + pctIdx.toFixed(1) + '%';
+      ei.className = 'capval ' + (pctIdx >= 0 ? 'up' : 'down');
+      boxIdx.style.display = '';
+    } else {
+      boxIdx.style.display = 'none';
+    }
+  }
+
+  // Las aclaraciones, en una sola linea. Un numero que parece exacto y no lo es
+  // es peor que no mostrarlo.
+  var notas = [];
+  if (cap.recortado) notas.push('Desde el ' + fechaCortaMs(cap.desde) + ': antes de esa fecha los brokers no informan aportes.');
+  if (idx) notas.push('La comparacion simula tus mismos aportes en las mismas fechas; el indice no incluye dividendos y tu patrimonio si.');
   var nota = document.getElementById('capNota');
-  nota.textContent = cap.recortado
-    ? 'Desde el ' + fechaCortaMs(cap.desde) + ': antes de esa fecha los brokers no informan aportes.'
-    : '';
-  nota.style.display = cap.recortado ? '' : 'none';
+  nota.textContent = notas.join(' ');
+  nota.style.display = notas.length ? '' : 'none';
 }
 
 // La lista de aportes NO viaja en el payload del portafolio a proposito:
