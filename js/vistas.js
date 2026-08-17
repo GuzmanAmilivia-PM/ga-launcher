@@ -8,13 +8,18 @@
 // sw.js era una fuente doble de verdad, y la que manda es la del sw (si subis
 // solo la del index, el sw sigue sirviendo el index viejo y no se publica
 // nada). Asi el badge no puede mentir: muestra el shell que estas corriendo.
+var _versionPintada = false;
 function pintarVersion() {
 var v = document.getElementById('mbVersion');
 if (!v) return;
+// La version no cambia dentro de una sesion (una actualizacion del SW pide
+// recargar): consultar caches.keys() en cada poll era gasto puro.
+if (_versionPintada) return;
 if (!window.caches || !caches.keys) { v.textContent = '&mdash;'; return; }
 caches.keys().then(function (claves) {
 var c = claves.filter(function (k) { return k.indexOf('ga-pwa-') === 0; })[0];
 v.textContent = c ? c.replace('ga-pwa-', '') : '—';
+_versionPintada = true;
 }).catch(function () {});
 }
 function pintarBadges(estado) {
@@ -48,6 +53,8 @@ var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'co
 // La barra no cambia nunca: se consulta el DOM una sola vez, no en cada setView.
 var NAVTABS = document.querySelectorAll('.navtab');
 var currentView = 'inicio';
+var CONFIG_REFRESCO_MS = 5 * 60 * 1000;
+var configUltimaCarga = 0;
 function setView(name) {
 currentView = name;
 VIEWS.forEach(function (v) {
@@ -68,7 +75,17 @@ NAVTABS.forEach(function (b) {
 b.classList.toggle('active', b.getAttribute('data-view') === navName);
 });
 if (name === 'portafolio') { renderPortafolio(); if (!anaCargado) cargarAnalisis(false); }
-if (name === 'config') { cargarPlataformas(); cargarEstadoIA(); cargarBackups(); pintarSaludApp(); }
+// Configuracion dispara 3 llamadas al backend (~1,5 s cada una): dentro de la
+// sesion se refrescan como mucho cada 5 min. Guardar algo sigue llamando
+// cargarPlataformas()/cargarEstadoIA() directo, asi lo editado se ve al toque.
+// pintarSaludApp es 100% local y se repinta siempre (muestra edades de cache).
+if (name === 'config') {
+pintarSaludApp();
+if (Date.now() - configUltimaCarga > CONFIG_REFRESCO_MS) {
+configUltimaCarga = Date.now();
+cargarPlataformas(); cargarEstadoIA(); cargarBackups();
+}
+}
 if (name === 'ibkr') cargarEstadoIBKR();
 if (name === 'bnb') prepararBNB();
 if (name === 'cs') cargarEstadoCS();
@@ -91,12 +108,22 @@ function showAccount(acc, fromView) {
 accountReturnView = fromView || 'portafolio';
 setView('account');
 document.getElementById('accTitle').textContent = nombrePlataforma(acc.nombre);
+var accErr = document.getElementById('accError'); if (accErr) accErr.innerHTML = '';
+// Si es la misma cuenta de la ultima visita, se pinta lo ultimo visto al
+// instante y el pedido corre por atras (mismo criterio que cargarConCache).
+// Antes: "Cargando..." 1,5 s aunque hubieras salido hace 10 segundos.
+var enCache = !!(lastAcc && lastAcc.key === acc.key && lastAccData);
+if (enCache) {
+renderAccount(acc, lastAccData);
+} else {
 document.getElementById('accTotal').textContent = 'Cargando...';
 document.getElementById('accLiq').textContent = '';
 document.getElementById('accBody').innerHTML = '';
-var accErr = document.getElementById('accError'); if (accErr) accErr.innerHTML = '';
+}
 google.script.run.withSuccessHandler(function (data) { renderAccount(acc, data); })
 .withFailureHandler(function (err) {
+// Con datos ya pintados, un fallo de red no borra la pantalla.
+if (enCache) return;
 document.getElementById('accTotal').textContent = '--';
 errorEnVista('accError', err, 'el detalle de la cuenta');
 }).getAccountData(acc.key);

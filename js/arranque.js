@@ -105,19 +105,24 @@ bnbAutoSync();
   // Con claves ORDENADAS: la respuesta lite trae las claves en otro orden (la
   // serie se le agrega al final), y un stringify directo daria huellas
   // distintas para datos iguales — o sea, repintaria siempre.
+  // La serie (y sus gemelas alineadas bench/serieGrupo) queda AFUERA de la
+  // huella: solo viaja en la carga completa —que repinta siempre, ver
+  // vinoSerie en loadData— y serializar ~100 KB en cada poll era puro CPU.
   function huellaDatos(d) {
-    function estable(v) {
+    function estable(v, esRaiz) {
       if (v === null || typeof v !== 'object') return JSON.stringify(v);
       if (Object.prototype.toString.call(v) === '[object Array]') {
-        return '[' + v.map(estable).join(',') + ']';
+        return '[' + v.map(function (x) { return estable(x, false); }).join(',') + ']';
       }
       return '{' + Object.keys(v).sort().filter(function (k) {
-        return k !== 'actualizado' && k !== 'lite';
+        if (k === 'actualizado' || k === 'lite') return false;
+        if (esRaiz && (k === 'serie' || k === 'bench' || k === 'serieGrupo')) return false;
+        return true;
       }).map(function (k) {
-        return JSON.stringify(k) + ':' + estable(v[k]);
+        return JSON.stringify(k) + ':' + estable(v[k], false);
       }).join(',') + '}';
     }
-    return estable(d);
+    return estable(d, true);
   }
   function loadData(){
     var completa = !fullSerie || !fullSerie.length || (Date.now() - ultimaCargaCompleta > CARGA_COMPLETA_MS);
@@ -130,16 +135,19 @@ bnbAutoSync();
       var t=document.getElementById('total'); if(t){ t.textContent='ERR: '+err.message; }
     }).withSuccessHandler(function(data){
       if (!data) return;
-      if (data.serie && data.serie.length) ultimaCargaCompleta = Date.now();
+      var vinoSerie = !!(data.serie && data.serie.length);
+      if (vinoSerie) ultimaCargaCompleta = Date.now();
       else data.serie = fullSerie; // respuesta lite: la serie no viajó, se conserva la última
       var av = document.getElementById('autoAviso');
       if (av && av.innerHTML.indexOf('Sin conexi') !== -1) { av.style.display='none'; av.innerHTML=''; }
       pintarBadges('ok');
       // Si nada cambió, no se toca el DOM: el poll dejaba de lado la batería,
       // parpadeaba la pantalla y cerraba el gráfico de TradingView que
-      // estuvieras mirando, para pintar exactamente lo mismo.
+      // estuvieras mirando, para pintar exactamente lo mismo. Una respuesta
+      // CON serie (carga completa) repinta siempre: la serie no entra en la
+      // huella y puede haber sumado el punto del día.
       var h = huellaDatos(data);
-      if (h === ultimaHuella) return;
+      if (h === ultimaHuella && !vinoSerie) return;
       ultimaHuella = h;
       cacheGuardar('ga_cache_data', data);
       render(data);
