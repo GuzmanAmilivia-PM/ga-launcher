@@ -315,8 +315,40 @@ var rend = Math.round(currentTotal - inicio.valor - r.neto);
 html += '<div class="apostat"><span>Rendimiento del a&ntilde;o</span><b class="' + (rend >= 0 ? 'up' : 'down') + '">' + esc(mask((rend >= 0 ? '+' : '') + 'US$ ' + rend.toLocaleString('es-UY'))) + '</b></div>';
 html += '<p class="newsempty" style="font-size:11.5px;margin-top:8px">Rendimiento = valor actual &minus; valor al inicio del a&ntilde;o &minus; aporte neto (con tu hist&oacute;rico como base).</p>';
 }
+html += htmlComparacion();
 (r.avisos || []).forEach(function (a) { html += '<p class="newsempty" style="font-size:12px">&#9888; ' + esc(a) + '</p>'; });
 body.innerHTML = html;
+}
+
+/**
+ * Tu porcentaje contra el del S&P 500, sobre las cuentas cuyos aportes se
+ * conocen de verdad. Vive acá y no en el gráfico de Evolución porque el
+ * patrimonio TOTAL incluye Itaú y BTG, cuyos aportes no están cargados: ahí el
+ * rendimiento salía inflado (17/08/2026, reporte de Guzmán).
+ * La cuenta la hace comparacionGrupo() en graficos.js; acá solo se pinta.
+ */
+function htmlComparacion() {
+var c;
+try { c = comparacionGrupo(); } catch (e) { return ''; }
+if (!c) return '';
+var h = '<p class="lbl" style="margin-top:14px">' + esc(c.nombre || 'Cuentas con aportes conocidos') + '</p>';
+if (c.pocos) {
+// Un guion sin explicacion no sirve: hay que decir que esto recien arranca.
+h += '<p class="capnota">Empez&oacute; a medirse hoy. Con un d&iacute;a m&aacute;s de historia aparece el primer porcentaje.</p>';
+return h;
+}
+function pct(v, esNum) {
+if (v === null || !isFinite(v)) return '<p class="capval">&mdash;</p>';
+return '<p class="capval ' + (v >= 0 ? 'up' : 'down') + '">' + (v >= 0 ? '+' : '') + v.toFixed(1) + '%</p>';
+}
+h += '<div class="caprow">';
+h += '<div><p class="lbl">Rindi&oacute;</p>' + pct(c.pct) + '</div>';
+h += '<div><p class="lbl">' + esc(c.idxNombre || '&Iacute;ndice') + '</p>' + pct(c.idxPct) + '</div>';
+h += '</div>';
+h += '<p class="capnota">Desde el ' + fechaCortaMs(c.desde) + ', sobre ' +
+esc(mask('US$ ' + Math.round(c.capital).toLocaleString('es-UY'))) + '. No incluye Ita&uacute; ni BTG: su saldo cuenta entero como aporte.' +
+(c.idxPct !== null ? ' El &iacute;ndice no paga dividendos y tus cuentas s&iacute;.' : '') + '</p>';
+return h;
 }
 
 // Sincronización automática: al abrir la app (y al volver a ella) lee Binance

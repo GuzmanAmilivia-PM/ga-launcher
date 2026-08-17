@@ -76,7 +76,7 @@ try {
 // una respuesta lite deja el bench de la carga completa anterior, que sigue
 // siendo el correcto porque fullSerie tampoco cambio). No se dibuja en este
 // grafico — lo usa la comparacion del panel de Aportes.
-if (!data.lite) aplicarBench(data);
+if (!data.lite) { aplicarBench(data); aplicarGrupo(data); }
 drawLineChart(filterSerie(currentRangeDias));
 updateRangePct();
 } catch (eChart) {

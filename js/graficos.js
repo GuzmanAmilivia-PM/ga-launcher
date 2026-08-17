@@ -237,6 +237,82 @@ function serieIndice(cap) {
   return { pts: out, final: out[out.length - 1].y, nombre: benchNombre };
 }
 
+// ---------- La comparacion del panel de Aportes (V7) ----------
+// Solo las cuentas cuyos aportes se conocen de verdad: Schwab e IBKR los informa
+// el broker, Binance sale de lo que carga Guzman. Itau y BTG NO entran — su
+// saldo cuenta entero como aporte, asi que aportan cero rendimiento y no pueden
+// inflar el numero. El backend decide quien entra (`serieGrupo`) y manda su valor
+// dia por dia; aca no se duplica ninguna regla de nombres.
+// Arranca el 17/08/2026: antes de eso no hay historia por cuenta que leer.
+var grupoPuntos = [], grupoNombre = '', grupoLargo = 0;
+
+function limpiarGrupo() { grupoPuntos = []; grupoNombre = ''; grupoLargo = 0; }
+
+function aplicarGrupo(data) {
+  var g = data && data.serieGrupo;
+  if (!g || !g.valores || !g.valores.length) {
+    // Igual que el indice: una respuesta sin el dato no borra el que ya estaba,
+    // mientras siga alineado a la misma serie.
+    if (grupoPuntos.length && (fullSerie || []).length === grupoLargo) return;
+    limpiarGrupo();
+    return;
+  }
+  if (g.valores.length !== (fullSerie || []).length) { limpiarGrupo(); return; }
+  limpiarGrupo();
+  grupoNombre = g.nombre || '';
+  grupoLargo = g.valores.length;
+  fullSerie.forEach(function (p, i) {
+    var v = g.valores[i];
+    if (v !== null && isFinite(v)) grupoPuntos.push({ ts: p.fecha, valor: v });
+  });
+}
+
+/**
+ * Porcentaje real contra porcentaje del indice, sobre las mismas cuentas, el
+ * mismo periodo y el mismo capital.
+ * - null: no hay nada que decir (ni un dia guardado).
+ * - {pocos:true}: hay historia pero todavia no alcanza para un porcentaje.
+ */
+function comparacionGrupo() {
+  if (!grupoPuntos.length) return null;
+  if (grupoPuntos.length < 2) return { pocos: true, dias: grupoPuntos.length, nombre: grupoNombre };
+
+  var t0 = grupoPuntos[0].ts, tFin = grupoPuntos[grupoPuntos.length - 1].ts;
+  var base = grupoPuntos[0].valor, valor = grupoPuntos[grupoPuntos.length - 1].valor;
+
+  // Solo la parte del aporte que fue a estas cuentas (el backend la separa en
+  // `grupo`); los del dia del arranque ya estan dentro de la base.
+  var enVentana = [];
+  aportesLista.forEach(function (r) {
+    var ts = apISOaMs(r.fecha);
+    var m = Number(r.grupo);
+    if (isFinite(ts) && ts > t0 && ts <= tFin && isFinite(m) && m !== 0) enVentana.push({ ts: ts, monto: m });
+  });
+  var aportes = 0;
+  enVentana.forEach(function (a) { aportes += a.monto; });
+
+  var capital = base + aportes;
+  if (!capital) return null;
+  var out = {
+    nombre: grupoNombre, desde: t0, hasta: tFin, dias: grupoPuntos.length,
+    capital: capital, valor: valor, aportes: aportes,
+    pct: (valor / capital - 1) * 100, idxPct: null, idxNombre: benchNombre
+  };
+
+  // El indice, con los MISMOS aportes en las MISMAS fechas y medido contra el
+  // MISMO capital: si no, los dos porcentajes no serian comparables.
+  var b0 = benchEn(t0), bFin = benchEn(tFin);
+  if (b0 && bFin) {
+    var unidades = base / b0;
+    enVentana.forEach(function (a) {
+      var bv = benchEn(a.ts);
+      if (bv) unidades += a.monto / bv;
+    });
+    out.idxPct = ((unidades * bFin) / capital - 1) * 100;
+  }
+  return out;
+}
+
 // La lista de aportes NO viaja en el payload del portafolio a proposito:
 // consultar los brokers puede tardar varios segundos y frenaria el arranque,
 // que es el momento mas sensible de la app. Se pide aparte, despues del primer
