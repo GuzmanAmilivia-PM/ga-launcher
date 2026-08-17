@@ -161,18 +161,28 @@ function serieCapital(pts) {
 // mismo hubiera ido al S&P 500, cuanto tendria hoy.
 // El backend manda el cierre del indice alineado punto a punto con la serie
 // (`bench.valores`), asi el telefono no tiene que buscar ninguna fecha.
-var benchPuntos = [], benchNombre = '';
+var benchPuntos = [], benchNombre = '', benchLargo = 0;
+
+function limpiarBench() { benchPuntos = []; benchNombre = ''; benchLargo = 0; }
 
 function aplicarBench(data) {
-  benchPuntos = [];
-  benchNombre = '';
   var b = data && data.bench;
-  if (!b || !b.valores || !b.valores.length) return;
-  benchNombre = b.nombre || 'el indice';
+  if (!b || !b.valores || !b.valores.length) {
+    // Una respuesta SIN indice no borra el que ya estaba, siempre que siga
+    // alineado a la misma serie. Mientras la hoja del backend se llena, varias
+    // respuestas seguidas vienen sin indice, y borrarlo hacia que la linea
+    // apareciera y desapareciera sola.
+    if (benchPuntos.length && (fullSerie || []).length === benchLargo) return;
+    limpiarBench();
+    return;
+  }
   // El pegamento es el INDICE del arreglo: bench.valores[i] corresponde a
   // fullSerie[i]. Si el backend cambiara una sin la otra, esto se desalinea, y
   // por eso la longitud se verifica antes de usar nada.
-  if (b.valores.length !== (fullSerie || []).length) return;
+  if (b.valores.length !== (fullSerie || []).length) { limpiarBench(); return; }
+  limpiarBench();
+  benchNombre = b.nombre || 'el indice';
+  benchLargo = b.valores.length;
   fullSerie.forEach(function (p, i) {
     var v = b.valores[i];
     if (v !== null && isFinite(v)) benchPuntos.push({ ts: p.fecha, valor: v });
