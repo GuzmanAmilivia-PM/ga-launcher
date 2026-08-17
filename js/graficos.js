@@ -267,6 +267,13 @@ function aplicarGrupo(data) {
   });
 }
 
+// Medianoche local del dia de `ts` — para comparar aportes (que solo traen
+// FECHA, sin hora) contra el dia calendario de un snapshot.
+function _inicioDelDia(ts) {
+  var d = new Date(ts);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
 /**
  * Porcentaje real contra porcentaje del indice, sobre las mismas cuentas, el
  * mismo periodo y el mismo capital.
@@ -277,11 +284,34 @@ function comparacionGrupo() {
   if (!grupoPuntos.length) return null;
   if (grupoPuntos.length < 2) return { pocos: true, dias: grupoPuntos.length, nombre: grupoNombre };
 
-  var t0 = grupoPuntos[0].ts, tFin = grupoPuntos[grupoPuntos.length - 1].ts;
-  var base = grupoPuntos[0].valor, valor = grupoPuntos[grupoPuntos.length - 1].valor;
+  // El primer punto es un snapshot tomado EN UN MOMENTO del dia (el trigger de
+  // las 8:00, o cuando se apreto Actualizar). Un aporte fechado ESE MISMO DIA
+  // (los aportes solo traen fecha, sin hora) puede haber pasado antes o
+  // despues del snapshot, y no hay forma de saberlo. Asumir que "ya estaba en
+  // la base" sin poder probarlo fue el bug real (reporte de Guzman,
+  // 17/08/2026): el aporte de ese dia aparecia contado como rendimiento,
+  // porque el valor final SI lo incluia pero el capital no. Se resuelve
+  // corriendo la base al primer dia SIN esa ambiguedad — mejor un dia menos
+  // de historia que un numero mentiroso.
+  var i0 = 0;
+  while (i0 < grupoPuntos.length - 1) {
+    var diaBase = _inicioDelDia(grupoPuntos[i0].ts);
+    var ambiguo = aportesLista.some(function (r) {
+      var ts = apISOaMs(r.fecha);
+      var m = Number(r.grupo);
+      return isFinite(ts) && ts === diaBase && isFinite(m) && m !== 0;
+    });
+    if (!ambiguo) break;
+    i0++;
+  }
+  if (i0 >= grupoPuntos.length - 1) return { pocos: true, dias: grupoPuntos.length, nombre: grupoNombre };
+
+  var t0 = grupoPuntos[i0].ts, tFin = grupoPuntos[grupoPuntos.length - 1].ts;
+  var base = grupoPuntos[i0].valor, valor = grupoPuntos[grupoPuntos.length - 1].valor;
 
   // Solo la parte del aporte que fue a estas cuentas (el backend la separa en
-  // `grupo`); los del dia del arranque ya estan dentro de la base.
+  // `grupo`); los del dia del arranque (ya sin ambiguedad, por el ajuste de
+  // arriba) ya estan dentro de la base.
   var enVentana = [];
   aportesLista.forEach(function (r) {
     var ts = apISOaMs(r.fecha);
