@@ -248,6 +248,33 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .opspick:last-child { border-bottom: none; }
 .opspick.sel { color: var(--gold); }
 .opspick.sel::after { content: ' \2713'; }
+
+/* --- Analisis de la cartera --- */
+.cardtop { display: flex; justify-content: space-between; align-items: center; }
+.anascore { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 2px; }
+.anascore b { font-size: clamp(22px, 6vw, 28px); font-weight: 700; }
+.anascore span { color: var(--muted); font-size: 12px; }
+.anabarra { height: 6px; border-radius: 4px; background: rgba(255,255,255,.08); overflow: hidden; margin-bottom: 14px; }
+.anabarra i { display: block; height: 100%; border-radius: 4px; background: var(--gold); }
+.anagrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.anacelda { border: 1px solid var(--border); border-radius: 12px; padding: 9px 10px; }
+.anacelda span { display: block; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.anacelda b { font-size: 15px; font-weight: 700; }
+.anacelda em { display: block; color: var(--muted); font-size: 10.5px; font-style: normal; margin-top: 1px; }
+.anasub { font-size: 12px; color: var(--gold); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin: 4px 0 8px; }
+.anapeso { margin-bottom: 9px; font-size: 12.5px; }
+.anapeso-top { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
+.anapeso-bar { height: 7px; border-radius: 4px; background: rgba(255,255,255,.07); overflow: hidden; }
+.anapeso-bar i { display: block; height: 100%; border-radius: 4px; background: var(--gold); }
+.anapeso.otras .anapeso-bar i { background: var(--muted); opacity: .5; }
+.anachk { display: flex; gap: 9px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.anachk:last-child { border-bottom: none; }
+.anachk .luz { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; margin-top: 5px; background: var(--green); }
+.anachk.atencion .luz { background: var(--gold); }
+.anachk.riesgo .luz { background: var(--red); }
+.anachk b { display: block; font-weight: 700; }
+.anachk em { color: var(--muted); font-style: normal; line-height: 1.45; }
+html.light .anabarra, html.light .anapeso-bar { background: rgba(20,40,80,.08); }
 .opsresumen { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; font-size: 12.5px; }
 .opsresumen span { display: block; color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; }
 .opsresumen b { font-size: 14px; font-weight: 700; }
@@ -462,6 +489,11 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div class="pieholder"><canvas id="pieChart"></canvas></div>
 <div class="pielegend" id="pieLegend"></div>
 </div>
+</div>
+<div class="card">
+<div class="cardtop"><h2>An&aacute;lisis de la cartera</h2><button class="expandbtn" id="anaRefreshBtn" title="Actualizar">&#8635;</button></div>
+<div id="anaCacheAviso" style="display:none"></div>
+<div id="anaBody"><p class="loadingtxt">Analizando tu cartera...</p></div>
 </div>
 <div class="card">
 <h2>Todas las posiciones</h2>
@@ -813,15 +845,15 @@ Home</button>
 <button class="navtab" data-view="portafolio">
 <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5V12l6 6"/></svg>
 Portfolio</button>
-<button class="navtab navtab-center" data-view="trade">
-<span class="cbtn"><svg viewBox="0 0 24 24"><path d="M4 7h13M14 3.5 17.5 7 14 10.5"/><path d="M20 17H7M10 13.5 6.5 17l3.5 3.5"/></svg></span>
-Trade</button>
+<button class="navtab navtab-center" data-view="noticias">
+<span class="cbtn"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7 9.5h10M7 13h10M7 16.5h6"/></svg></span>
+News</button>
 <button class="navtab" data-view="cash">
 <svg viewBox="0 0 24 24"><path d="M8.5 10.5V4M8.5 4 5.5 7M8.5 4l3 3"/><path d="M15.5 13.5V20M15.5 20l-3-3M15.5 20l3-3"/></svg>
 Banking</button>
-<button class="navtab" data-view="noticias">
-<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7 9.5h10M7 13h10M7 16.5h6"/></svg>
-News</button>
+<button class="navtab" data-view="trade">
+<svg viewBox="0 0 24 24"><path d="M4 7h13M14 3.5 17.5 7 14 10.5"/><path d="M20 17H7M10 13.5 6.5 17l3.5 3.5"/></svg>
+Trades</button>
 </nav>
 
 <div class="chartmodal" id="chartModal" style="display:none">
@@ -856,6 +888,7 @@ News</button>
 <script src="./js/config.js"></script>
 <script src="./js/brokers.js"></script>
 <script src="./js/paneles.js"></script>
+<script src="./js/analisis.js"></script>
 <script src="./js/sincronizar.js"></script>
 <script src="./js/ia.js"></script>
 <script src="./js/seguridad.js"></script>

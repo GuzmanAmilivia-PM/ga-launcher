@@ -1,0 +1,112 @@
+// Analisis de la cartera: concentracion, diversificacion y riesgo (item V3)
+// ---------- Analisis de la cartera ----------
+// El backend (fn 'analisis') hace las cuentas y manda todo resuelto, incluidos
+// los textos de cada chequeo: aca solo se pinta. Cache local igual que
+// dividendos y aportes — se ve al instante lo ultimo y se refresca por atras.
+var anaCargado = false, lastAna = null;
+
+function cargarAnalisis(forzar) {
+anaCargado = true;
+cargarConCache({
+clave: 'ga_cache_ana',
+avisoId: 'anaCacheAviso',
+bodyId: 'anaBody',
+cargando: 'Analizando tu cartera...',
+forzar: !!forzar,
+render: renderAnalisis,
+alFallar: function () { anaCargado = false; },
+pedir: function (ok, fail) {
+google.script.run.withSuccessHandler(ok).withFailureHandler(fail).getAnalisis({ forzar: !!forzar });
+}
+});
+}
+
+function anaPct(x, dec) {
+if (x === null || x === undefined || !isFinite(x)) return '—';
+return (Math.round(x * (dec === 1 ? 1000 : 100)) / (dec === 1 ? 10 : 1)).toFixed(dec === 1 ? 1 : 0) + '%';
+}
+function anaFecha(ms) {
+if (!ms) return '';
+var d = new Date(ms);
+return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear();
+}
+
+// Barras horizontales ordenadas: es la lectura que mejor funciona en un
+// telefono para "cuanto pesa cada cosa" (la torta ya esta arriba, para pocas
+// categorias). Se muestran las 6 mayores y el resto se junta en "otras".
+function anaBarras(items, total) {
+if (!items.length) return '';
+var tope = items[0].valor || 1;
+return items.map(function (it) {
+var pct = total ? (it.valor / total) : 0;
+return '<div class="anapeso' + (it.otras ? ' otras' : '') + '">' +
+'<div class="anapeso-top"><span>' + esc(it.label) + '</span><span>' + esc(anaPct(pct, 1)) + '</span></div>' +
+'<div class="anapeso-bar"><i style="width:' + (Math.max(2, Math.round((it.valor / tope) * 100))) + '%"></i></div>' +
+'</div>';
+}).join('');
+}
+
+function renderAnalisis(r) {
+lastAna = r;
+var body = document.getElementById('anaBody');
+if (!r || !r.ok) {
+body.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>';
+return;
+}
+var c = r.concentracion || {}, rep = r.reparto || {}, rie = r.riesgo || {};
+var html = '';
+
+// Puntaje: como esta ARMADA la cartera, no cuanto rindio. La barra hace de
+// lectura rapida; el detalle real son los chequeos de abajo.
+html += '<div class="anascore"><b>' + esc(r.nivel || '') + '</b><span>' + (r.puntaje || 0) + '/100</span></div>';
+html += '<div class="anabarra"><i style="width:' + Math.max(2, Math.min(100, r.puntaje || 0)) + '%"></i></div>';
+
+// Numeros duros. "Posiciones efectivas" = 1/HHI: con que se sienten 12
+// posiciones si una pesa el 60% (respuesta: con 2).
+html += '<div class="anagrid">' +
+'<div class="anacelda"><span>Posiciones</span><b>' + (c.posiciones || 0) + '</b><em>equivalen a ' + (c.efectivas || 0).toFixed(1) + ' parejas</em></div>' +
+'<div class="anacelda"><span>Top 5</span><b>' + esc(anaPct(c.top5, 1)) + '</b><em>de lo invertido</em></div>' +
+'<div class="anacelda"><span>Volatilidad</span><b>' + esc(anaPct(rie.volAnual, 1)) + '</b><em>' + (rie.volAnual === null ? 'sin historial suficiente' : 'anualizada') + '</em></div>' +
+'<div class="anacelda"><span>Peor caída</span><b>' + esc(anaPct(rie.drawdown, 1)) + '</b><em>' + (rie.drawdown === null ? '—' : 'desde su punto más alto') + '</em></div>' +
+'</div>';
+
+// Reparto por tipo de activo y por plataforma.
+var tipos = (rep.porTipo || []).map(function (t) { return { label: t.label, valor: t.valor }; });
+if (tipos.length) {
+html += '<p class="anasub">Por tipo de activo</p>' + anaBarras(tipos, r.total);
+}
+var plats = (rep.porPlataforma || []).map(function (p) { return { label: nombrePlataforma(p.nombre), valor: p.valor }; });
+if (plats.length > 1) {
+html += '<p class="anasub">Por plataforma</p>' + anaBarras(plats, r.total);
+}
+
+// Concentracion por posicion: las 6 mayores y el resto agrupado, para que se
+// vea si el peso esta en dos papeles o repartido.
+var mayores = (r.mayores || []).slice();
+if (mayores.length) {
+var vistas = mayores.slice(0, 6).map(function (p) { return { label: p.symbol, valor: p.valor }; });
+var resto = mayores.slice(6);
+if (resto.length) {
+var suma = 0;
+resto.forEach(function (p) { suma += (Number(p.valor) || 0); });
+vistas.push({ label: 'Otras ' + resto.length, valor: suma, otras: true });
+}
+html += '<p class="anasub">Posiciones más pesadas</p>' + anaBarras(vistas, rep.invertido || r.total);
+}
+
+// Chequeos: el corazon de la pantalla. Cada uno dice como esta ese aspecto y
+// por que, en criollo.
+html += '<p class="anasub">Chequeos</p>';
+(r.chequeos || []).forEach(function (q) {
+html += '<div class="anachk ' + esc(q.estado) + '"><i class="luz"></i><div><b>' + esc(q.titulo) + '</b><em>' + esc(q.detalle) + '</em></div></div>';
+});
+
+if (rie.drawdown && rie.drawdownDesde) {
+html += '<p class="newsempty" style="margin-top:10px">La peor caída fue entre el ' + esc(anaFecha(rie.drawdownDesde)) + ' y el ' + esc(anaFecha(rie.drawdownHasta)) + '.</p>';
+}
+html += '<p class="newsempty" style="margin-top:6px">Es una descripción de cómo está armada tu cartera, no una recomendación de compra o venta.</p>';
+
+body.innerHTML = html;
+}
+
+document.getElementById('anaRefreshBtn').onclick = function () { cargarAnalisis(true); };
