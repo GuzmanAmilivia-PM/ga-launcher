@@ -177,21 +177,8 @@ row.innerHTML = '<span class="lname"><span class="dot" style="background:' + PIE
 if (c.acc) row.onclick = function () { showAccount(c.acc, 'portafolio'); };
 leg.appendChild(row);
 });
-// Desglose completo
-var el = document.getElementById('allPosList');
-el.innerHTML = '';
-var lista = lastData.posiciones || [];
-if (!lista.length) { el.innerHTML = '<tr><td colspan="5" class="newsempty">Sin posiciones.</td></tr>'; return; }
-lista.forEach(function (h) {
-var tr = document.createElement('tr');
-tr.innerHTML = '<td><span class="sym">' + esc(h.symbol) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></td>' +
-'<td>' + esc(fmtNum(h.qty)) + '</td>' +
-'<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
-'<td>' + gananciaHtml(h) + fmt(h.valor) + '</td>' +
-'<td class="holdpct col-pct">' + (h.pct * 100).toFixed(1) + '%</td>';
-tr.className = 'asset-row';
-tr.onclick = function () { toggleDetalle(tr, h); };
-el.appendChild(tr);
-});
+// La tabla con TODAS las posiciones salio de esta vista el 17/08/2026 (pedido
+// de Guzman): va a vivir en otro lado. La de Inicio (renderHoldings, en
+// graficos.js) sigue siendo la referencia de como se arma la fila.
 }
 

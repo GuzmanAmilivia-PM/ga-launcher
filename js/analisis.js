@@ -31,21 +31,6 @@ var d = new Date(ms);
 return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear();
 }
 
-// Barras horizontales ordenadas: es la lectura que mejor funciona en un
-// telefono para "cuanto pesa cada cosa" (la torta ya esta arriba, para pocas
-// categorias). Se muestran las 6 mayores y el resto se junta en "otras".
-function anaBarras(items, total) {
-if (!items.length) return '';
-var tope = items[0].valor || 1;
-return items.map(function (it) {
-var pct = total ? (it.valor / total) : 0;
-return '<div class="anapeso' + (it.otras ? ' otras' : '') + '">' +
-'<div class="anapeso-top"><span>' + esc(it.label) + '</span><span>' + esc(anaPct(pct, 1)) + '</span></div>' +
-'<div class="anapeso-bar"><i style="width:' + (Math.max(2, Math.round((it.valor / tope) * 100))) + '%"></i></div>' +
-'</div>';
-}).join('');
-}
-
 function renderAnalisis(r) {
 lastAna = r;
 var body = document.getElementById('anaBody');
@@ -53,7 +38,7 @@ if (!r || !r.ok) {
 body.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>';
 return;
 }
-var c = r.concentracion || {}, rep = r.reparto || {}, rie = r.riesgo || {};
+var c = r.concentracion || {}, rie = r.riesgo || {};
 var html = '';
 
 // Puntaje: como esta ARMADA la cartera, no cuanto rindio. La barra hace de
@@ -70,29 +55,10 @@ html += '<div class="anagrid">' +
 '<div class="anacelda"><span>Peor caída</span><b>' + esc(anaPct(rie.drawdown, 1)) + '</b><em>' + (rie.drawdown === null ? '—' : 'desde su punto más alto') + '</em></div>' +
 '</div>';
 
-// Reparto por tipo de activo y por plataforma.
-var tipos = (rep.porTipo || []).map(function (t) { return { label: t.label, valor: t.valor }; });
-if (tipos.length) {
-html += '<p class="anasub">Por tipo de activo</p>' + anaBarras(tipos, r.total);
-}
-var plats = (rep.porPlataforma || []).map(function (p) { return { label: nombrePlataforma(p.nombre), valor: p.valor }; });
-if (plats.length > 1) {
-html += '<p class="anasub">Por plataforma</p>' + anaBarras(plats, r.total);
-}
-
-// Concentracion por posicion: las 6 mayores y el resto agrupado, para que se
-// vea si el peso esta en dos papeles o repartido.
-var mayores = (r.mayores || []).slice();
-if (mayores.length) {
-var vistas = mayores.slice(0, 6).map(function (p) { return { label: p.symbol, valor: p.valor }; });
-var resto = mayores.slice(6);
-if (resto.length) {
-var suma = 0;
-resto.forEach(function (p) { suma += (Number(p.valor) || 0); });
-vistas.push({ label: 'Otras ' + resto.length, valor: suma, otras: true });
-}
-html += '<p class="anasub">Posiciones más pesadas</p>' + anaBarras(vistas, rep.invertido || r.total);
-}
+// El reparto por tipo, por plataforma y por posicion NO se dibuja aca
+// (17/08/2026, pedido de Guzman): ya esta en Inicio y en la torta de arriba de
+// esta misma vista. Los datos igual llegan en la respuesta y los usan los
+// chequeos.
 
 // Chequeos: el corazon de la pantalla. Cada uno dice como esta ese aspecto y
 // por que, en criollo.
