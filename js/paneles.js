@@ -301,20 +301,17 @@ document.getElementById('apoAnio').textContent = r.anio;
 // frescos (o el usuario apreto refrescar), la linea de "lo que pusiste" tiene
 // que moverse con ellos. Si no, los dos numeros de la app se contradicen.
 try { aplicarAportes(r, true); } catch (e) {}
-// Valor al arrancar el año, desde el histórico que ya está cargado en la app.
-var enero1 = new Date(r.anio, 0, 1).getTime();
-var inicio = null;
-(fullSerie || []).forEach(function (p) { if (p.fecha <= enero1 && (!inicio || p.fecha > inicio.fecha)) inicio = p; });
-if (!inicio && (fullSerie || []).length) inicio = fullSerie[0];
 var html = '';
-html += '<div class="apostat"><span>Aportaste</span><b>' + esc(mask('US$ ' + Math.round(r.aportes).toLocaleString('es-UY'))) + '</b></div>';
-html += '<div class="apostat"><span>Retiraste</span><b>' + esc(mask('US$ ' + Math.round(r.retiros).toLocaleString('es-UY'))) + '</b></div>';
-html += '<div class="apostat"><span>Aporte neto</span><b>' + esc(mask('US$ ' + Math.round(r.neto).toLocaleString('es-UY'))) + '</b></div>';
-if (inicio && currentTotal) {
-var rend = Math.round(currentTotal - inicio.valor - r.neto);
-html += '<div class="apostat"><span>Rendimiento del a&ntilde;o</span><b class="' + (rend >= 0 ? 'up' : 'down') + '">' + esc(mask((rend >= 0 ? '+' : '') + 'US$ ' + rend.toLocaleString('es-UY'))) + '</b></div>';
-html += '<p class="newsempty" style="font-size:11.5px;margin-top:8px">Rendimiento = valor actual &minus; valor al inicio del a&ntilde;o &minus; aporte neto (con tu hist&oacute;rico como base).</p>';
-}
+html += '<div class="apostat"><span>Entr&oacute; a tus apps</span><b>' + esc(mask('US$ ' + Math.round(r.aportes).toLocaleString('es-UY'))) + '</b></div>';
+html += '<div class="apostat"><span>Sali&oacute; de tus apps</span><b>' + esc(mask('US$ ' + Math.round(r.retiros).toLocaleString('es-UY'))) + '</b></div>';
+html += '<div class="apostat"><span>Neto del a&ntilde;o</span><b>' + esc(mask('US$ ' + Math.round(r.neto).toLocaleString('es-UY'))) + '</b></div>';
+// OJO — ac&aacute; NO va "rendimiento = total &minus; inicio &minus; neto". Ese
+// numero se mostro y era FALSO (reporte de Guzman, 17/08/2026): una
+// transferencia de Itau/BTG (que estan DENTRO del total) hacia IBKR cuenta
+// como deposito para el broker sin que el patrimonio haya cambiado — la plata
+// solo se mudo de bolsillo — y cada transferencia interna restaba rendimiento
+// de mentira, hasta dar "perdidas" en un a&ntilde;o ganador. El rendimiento
+// real vive en htmlComparacion(): solo las apps, contra sus propios aportes.
 html += htmlComparacion();
 (r.avisos || []).forEach(function (a) { html += '<p class="newsempty" style="font-size:12px">&#9888; ' + esc(a) + '</p>'; });
 body.innerHTML = html;
@@ -334,19 +331,23 @@ if (!c) return '';
 var h = '<p class="lbl" style="margin-top:14px">' + esc(c.nombre || 'Cuentas con aportes conocidos') + '</p>';
 if (c.pocos) {
 // Un guion sin explicacion no sirve: hay que decir que esto recien arranca.
-h += '<p class="capnota">Empez&oacute; a medirse hoy. Con un d&iacute;a m&aacute;s de historia aparece el primer porcentaje.</p>';
+h += '<p class="capnota">El rendimiento se mide solo sobre tus apps de inversi&oacute;n (los bancos no rinden, son capital), y esa historia empez&oacute; a guardarse hoy. Con un d&iacute;a m&aacute;s aparece el primer n&uacute;mero.</p>';
 return h;
 }
 function pct(v, esNum) {
 if (v === null || !isFinite(v)) return '<p class="capval">&mdash;</p>';
 return '<p class="capval ' + (v >= 0 ? 'up' : 'down') + '">' + (v >= 0 ? '+' : '') + v.toFixed(1) + '%</p>';
 }
+// El rendimiento en plata: lo que las apps valen hoy menos su capital (el
+// valor con el que arrancó la medición más lo que entró después).
+var rendUsd = Math.round(c.valor - c.capital);
+h += '<div class="apostat"><span>Rendimiento</span><b class="' + (rendUsd >= 0 ? 'up' : 'down') + '">' + esc(mask((rendUsd >= 0 ? '+' : '') + 'US$ ' + rendUsd.toLocaleString('es-UY'))) + '</b></div>';
 h += '<div class="caprow">';
 h += '<div><p class="lbl">Rindi&oacute;</p>' + pct(c.pct) + '</div>';
-h += '<div><p class="lbl">' + esc(c.idxNombre || '&Iacute;ndice') + '</p>' + pct(c.idxPct) + '</div>';
+h += '<div><p class="lbl">' + esc(c.idxNombre || 'Índice') + '</p>' + pct(c.idxPct) + '</div>';
 h += '</div>';
 h += '<p class="capnota">Desde el ' + fechaCortaMs(c.desde) + ', sobre ' +
-esc(mask('US$ ' + Math.round(c.capital).toLocaleString('es-UY'))) + '. No incluye Ita&uacute; ni BTG: su saldo cuenta entero como aporte.' +
+esc(mask('US$ ' + Math.round(c.capital).toLocaleString('es-UY'))) + ' de capital. Los bancos (Ita&uacute;, BTG) no entran: no rinden, y pasarles plata a las apps cuenta como aporte, no como ganancia.' +
 (c.idxPct !== null ? ' El &iacute;ndice no paga dividendos y tus cuentas s&iacute;.' : '') + '</p>';
 return h;
 }
