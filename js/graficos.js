@@ -364,8 +364,9 @@ var holdFilas = [];
 // test-posiciones verifica aca que cada porcentaje quede en su columna.
 function filaHoldingHtml(h) {
 var pctDisplay = (h.pct * 100).toFixed(1) + '%';
+// Sin columna de cantidad (pedido de Guzman, 18/08/2026): "no importa
+// cuantas acciones tengo". La cantidad sigue en el detalle desplegable.
 return '<td><span class="sym">' + esc(h.symbol) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></td>' +
-'<td>' + esc(fmtNum(h.qty)) + '</td>' +
 '<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
 '<td>' + gananciaHtml(h) + fmt(h.valor) + '</td>' +
 '<td class="holdpct col-pct">' + pctDisplay + '</td>';
@@ -377,7 +378,7 @@ var el = document.getElementById('holdingsList');
 var btn = document.getElementById('holdMoreBtn');
 if (btn && !btn._wired) { btn._wired = true; btn.addEventListener('click', toggleHoldings); }
 lastHoldings = list || [];
-if (!list || !list.length) { holdFilas = []; el.innerHTML = '<tr><td colspan="5" class="newsempty">Sin posiciones.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
+if (!list || !list.length) { holdFilas = []; el.innerHTML = '<tr><td colspan="4" class="newsempty">Sin posiciones.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
 // Actualizacion EN EL LUGAR (R4): si la tabla ya muestra estos simbolos en
 // este orden, se refrescan las celdas de cada fila sin vaciar el tbody.
 // Vaciarlo en cada poll cerraba el detalle abierto (y recargaba su grafico

@@ -129,23 +129,37 @@ errorEnVista('accError', err, 'el detalle de la cuenta');
 }).getAccountData(acc.key);
 }
 document.getElementById('accBack').onclick = function () { setView(accountReturnView); };
+// La variacion intradia por simbolo ya viaja en el payload del Inicio
+// (lastData.posiciones): se reusa aca en vez de pedirla de nuevo (regla R1).
+// Sin datos del Inicio devuelve null y el porcentaje simplemente no se muestra.
+function cambioDiaDe(symbol) {
+var s = String(symbol || '').toUpperCase();
+var lista = (lastData && lastData.posiciones) || [];
+for (var i = 0; i < lista.length; i++) {
+if (String(lista[i].symbol).toUpperCase() === s) return lista[i].cambioDia;
+}
+return null;
+}
 function renderAccount(acc, data) {
 lastAcc = acc; lastAccData = data;
 document.getElementById('accTotal').textContent = fmt(data.total);
 document.getElementById('accLiq').textContent = 'Cash en la cuenta: ' + fmt(data.liquidez);
 var body = document.getElementById('accBody');
 body.innerHTML = '';
-data.posiciones.forEach(function (p) {
+// Podada a 4 columnas (pedido de Guzman, 18/08/2026): precio medio de
+// compra, precio actual con el % del dia arriba, y valor con la ganancia
+// total arriba — mismos helpers y mismo orden que la tabla del Inicio
+// (test-posiciones vigila que las dos digan lo mismo). La cantidad y el
+// resto viven en el detalle desplegable.
+data.posiciones.forEach(function (h) {
+h.cambioDia = cambioDiaDe(h.symbol);
 var tr = document.createElement('tr');
-tr.innerHTML = '<td><span class="sym">' + esc(p.symbol) + '</span><span class="desc">' + esc(p.descripcion || '') + '</span></td>' +
-'<td>' + esc(fmtNum(p.qty)) + '</td>' +
-'<td>' + esc(fmtNum(p.precioActual)) + '</td>' +
-'<td>' + fmt(p.valor) + '</td>' +
-'<td class="' + chipClass(p.gainAmt) + '">' + fmt(p.gainAmt) + '</td>' +
-'<td class="' + chipClass(p.gainPct) + '">' + esc(fmtPctRaw(p.gainPct)) + '</td>' +
-'<td>' + esc(fmtPctRaw(p.pctAccount)) + '</td>';
+tr.innerHTML = '<td><span class="sym">' + esc(h.symbol) + '</span><span class="desc">' + esc(h.descripcion || '') + '</span></td>' +
+'<td>' + (Number(h.precioCompra) > 0 ? esc(fmtNum(h.precioCompra)) : '&mdash;') + '</td>' +
+'<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
+'<td>' + gananciaHtml(h) + fmt(h.valor) + '</td>';
 tr.className = 'asset-row';
-tr.onclick = function () { toggleDetalle(tr, { symbol: p.symbol, precioCompra: p.precioCompra, precioActual: p.precioActual, qty: p.qty, cripto: acc.key === 'BNB' }); };
+tr.onclick = function () { toggleDetalle(tr, { symbol: h.symbol, precioCompra: h.precioCompra, precioActual: h.precioActual, qty: h.qty, cripto: acc.key === 'BNB' }); };
 body.appendChild(tr);
 });
 }

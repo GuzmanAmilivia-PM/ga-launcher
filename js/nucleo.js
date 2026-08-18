@@ -234,15 +234,9 @@ return (typeof n === 'number') ? (Math.round(n * 100) / 100) : n;
 // paneles.js. fmtUsd: 2 decimales; fmtUsdEnt: redondeado, con miles es-UY.
 function fmtUsd(n) { return mask('US$ ' + (Number(n) || 0).toFixed(2)); }
 function fmtUsdEnt(n) { return mask('US$ ' + Math.round(Number(n) || 0).toLocaleString('es-UY')); }
-function fmtPctRaw(n) {
-if (n === null || n === undefined || n === '') return '\u2014';
-if (typeof n === 'number') return (n * 100).toFixed(2) + '%';
-return n;
-}
-function chipClass(n) {
-if (n === null || n === undefined) return '';
-return n >= 0 ? 'up' : 'down';
-}
+// fmtPctRaw y chipClass se fueron el 18/08/2026: su unico llamador era la
+// tabla del detalle de cuenta, que se podo a los mismos helpers del Inicio
+// (daychgHtml/gananciaHtml en graficos.js).
 // Etiqueta visual de una plataforma. La Sheet y el backend conservan el
 // nombre real ("Interactive Brokers", anclado a su hoja); ac\u00e1 solo se
 // muestra la marca oficial corta.
