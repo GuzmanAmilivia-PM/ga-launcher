@@ -112,6 +112,7 @@ if (c.tipo === 'qty') txt = '<span class="sym">' + esc(c.symbol) + '</span> cant
 else if (c.tipo === 'cerrada') txt = '<span class="sym">' + esc(c.symbol) + '</span> ' + cfg.cerradaTxt + ' &rarr; queda en 0';
 else if (c.tipo === 'nueva') txt = '<span class="sym">' + esc(c.symbol) + '</span> nueva &middot; ' + esc(c.despues) + (c.descripcion ? ' &middot; ' + esc(c.descripcion) : '');
 else if (c.tipo === 'cash') txt = '<span class="sym">CASH</span> ' + esc(c.antes) + ' &rarr; ' + esc(c.despues);
+else if (c.tipo === 'costo') txt = '<span class="sym">' + esc(c.symbol) + '</span> precio compra ' + (c.antes ? esc(c.antes) : '&mdash;') + ' &rarr; ' + esc(c.despues);
 else txt = esc(c.tipo + ' ' + (c.symbol || ''));
 html += '<div class="row"><span>' + txt + '</span></div>';
 });
