@@ -358,15 +358,32 @@ function toggleDetalle(tr, pos) {
 var HOLD_VISIBLE = 4;
 var holdingsExpanded = false;
 var lastHoldings = [];
-// Las filas pintadas ({symbol, tr}), para poder actualizar EN EL LUGAR.
+// Las filas pintadas ({symbol, tr}) y las cabeceras de seccion ({tr, idx de
+// su primera fila}), para poder actualizar EN EL LUGAR.
 var holdFilas = [];
+var holdCabezas = [];
+// Tipo visual de una posicion; TIPO_LABELS (vistas.js) le pone el nombre.
+function tipoDe(h) {
+return (h.tipo === 'accion' || h.tipo === 'etf' || h.tipo === 'cripto' || h.tipo === 'cash') ? h.tipo : (h.cripto ? 'cripto' : 'accion');
+}
+// Agrupado por tipo (referencia de Guzman, 18/08/2026: la lista de mercado de
+// TradingView): las secciones separan acciones de ETFs y cripto. Dentro de
+// cada grupo se conserva el orden que ya viene (valor descendente).
+function ordenarPorTipo(list) {
+var orden = ['accion', 'etf', 'cripto'];
+var out = [];
+orden.forEach(function (t) { list.forEach(function (h) { if (tipoDe(h) === t) out.push(h); }); });
+list.forEach(function (h) { if (orden.indexOf(tipoDe(h)) === -1) out.push(h); });
+return out;
+}
 // La fila se arma en UN solo lugar, la use quien la use (crear o actualizar):
 // test-posiciones verifica aca que cada porcentaje quede en su columna.
+// Sin columna de cantidad (pedido de Guzman): la cantidad vive en el detalle.
 function filaHoldingHtml(h) {
 var pctDisplay = (h.pct * 100).toFixed(1) + '%';
-// Sin columna de cantidad (pedido de Guzman, 18/08/2026): "no importa
-// cuantas acciones tengo". La cantidad sigue en el detalle desplegable.
-return '<td><span class="sym">' + esc(h.symbol) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></td>' +
+var sym = String(h.symbol || '');
+var inic = sym.length <= 3 ? sym : sym.slice(0, 2);
+return '<td><span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + esc(inic) + '</span><span class="holdid"><span class="sym">' + esc(sym) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></span></span></td>' +
 '<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
 '<td>' + gananciaHtml(h) + fmt(h.valor) + '</td>' +
 '<td class="holdpct col-pct">' + pctDisplay + '</td>';
@@ -378,23 +395,38 @@ var el = document.getElementById('holdingsList');
 var btn = document.getElementById('holdMoreBtn');
 if (btn && !btn._wired) { btn._wired = true; btn.addEventListener('click', toggleHoldings); }
 lastHoldings = list || [];
-if (!list || !list.length) { holdFilas = []; el.innerHTML = '<tr><td colspan="4" class="newsempty">Sin posiciones.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
+if (!list || !list.length) { holdFilas = []; holdCabezas = []; el.innerHTML = '<tr><td colspan="4" class="newsempty">Sin posiciones.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
+var lista = ordenarPorTipo(list);
 // Actualizacion EN EL LUGAR (R4): si la tabla ya muestra estos simbolos en
 // este orden, se refrescan las celdas de cada fila sin vaciar el tbody.
 // Vaciarlo en cada poll cerraba el detalle abierto (y recargaba su grafico
 // de TradingView) para pintar casi lo mismo. Si cambian los simbolos o el
 // orden (una compra, un sorpasso por valor), se reconstruye como siempre.
-var enLugar = holdFilas.length === list.length && holdFilas.every(function (f, i) { return f.symbol === list[i].symbol && f.tr.parentNode === el; });
-if (!enLugar) { el.innerHTML = ''; holdFilas = []; }
-list.forEach(function (h, idx) {
+var enLugar = holdFilas.length === lista.length && holdFilas.every(function (f, i) { return f.symbol === lista[i].symbol && f.tr.parentNode === el; });
+if (!enLugar) { el.innerHTML = ''; holdFilas = []; holdCabezas = []; }
+var tipoPrev = null;
+lista.forEach(function (h, idx) {
+var t = tipoDe(h);
+if (!enLugar && t !== tipoPrev) {
+var sec = document.createElement('tr');
+sec.innerHTML = '<td colspan="4">' + esc((typeof TIPO_LABELS !== 'undefined' && TIPO_LABELS[t]) || t) + '</td>';
+el.appendChild(sec);
+holdCabezas.push({ tr: sec, idx: idx });
+tipoPrev = t;
+}
 var tr = enLugar ? holdFilas[idx].tr : document.createElement('tr');
 tr.className = claseFila(idx);
 tr.innerHTML = filaHoldingHtml(h);
 tr.onclick = function () { toggleDetalle(tr, h); };
 if (!enLugar) { el.appendChild(tr); holdFilas.push({ symbol: h.symbol, tr: tr }); }
 });
+// La cabecera de una seccion se esconde junto con TODAS sus filas: si su
+// primera fila quedo detras de "Ver todas", la seccion entera esta oculta.
+holdCabezas.forEach(function (c) {
+c.tr.className = 'holdsec' + ((c.idx >= HOLD_VISIBLE && !holdingsExpanded) ? ' hidden-row' : '');
+});
 if (btn) {
-if (list.length > HOLD_VISIBLE) { btn.style.display = 'block'; btn.textContent = holdingsExpanded ? 'Ver menos' : ('Ver todas (' + list.length + ')'); }
+if (lista.length > HOLD_VISIBLE) { btn.style.display = 'block'; btn.textContent = holdingsExpanded ? 'Ver menos' : ('Ver todas (' + lista.length + ')'); }
 else { btn.style.display = 'none'; }
 }
 }
