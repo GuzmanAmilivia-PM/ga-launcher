@@ -358,26 +358,39 @@ function toggleDetalle(tr, pos) {
 var HOLD_VISIBLE = 4;
 var holdingsExpanded = false;
 var lastHoldings = [];
+// Las filas pintadas ({symbol, tr}), para poder actualizar EN EL LUGAR.
+var holdFilas = [];
+// La fila se arma en UN solo lugar, la use quien la use (crear o actualizar):
+// test-posiciones verifica aca que cada porcentaje quede en su columna.
+function filaHoldingHtml(h) {
+var pctDisplay = (h.pct * 100).toFixed(1) + '%';
+return '<td><span class="sym">' + esc(h.symbol) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></td>' +
+'<td>' + esc(fmtNum(h.qty)) + '</td>' +
+'<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
+'<td>' + gananciaHtml(h) + fmt(h.valor) + '</td>' +
+'<td class="holdpct col-pct">' + pctDisplay + '</td>';
+}
+function claseFila(idx) { return (idx >= HOLD_VISIBLE && !holdingsExpanded ? 'hidden-row ' : '') + 'asset-row'; }
 function toggleHoldings() { try { holdingsExpanded = !holdingsExpanded; renderHoldings(lastHoldings); } catch (e) { var b = document.getElementById('holdMoreBtn'); if (b) b.textContent = 'ERR ' + (e && e.message); } }
 function renderHoldings(list) {
 var el = document.getElementById('holdingsList');
 var btn = document.getElementById('holdMoreBtn');
 if (btn && !btn._wired) { btn._wired = true; btn.addEventListener('click', toggleHoldings); }
 lastHoldings = list || [];
-el.innerHTML = '';
-if (!list || !list.length) { el.innerHTML = '<tr><td colspan="5" class="newsempty">Sin posiciones.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
+if (!list || !list.length) { holdFilas = []; el.innerHTML = '<tr><td colspan="5" class="newsempty">Sin posiciones.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
+// Actualizacion EN EL LUGAR (R4): si la tabla ya muestra estos simbolos en
+// este orden, se refrescan las celdas de cada fila sin vaciar el tbody.
+// Vaciarlo en cada poll cerraba el detalle abierto (y recargaba su grafico
+// de TradingView) para pintar casi lo mismo. Si cambian los simbolos o el
+// orden (una compra, un sorpasso por valor), se reconstruye como siempre.
+var enLugar = holdFilas.length === list.length && holdFilas.every(function (f, i) { return f.symbol === list[i].symbol && f.tr.parentNode === el; });
+if (!enLugar) { el.innerHTML = ''; holdFilas = []; }
 list.forEach(function (h, idx) {
-var tr = document.createElement('tr');
-if (idx >= HOLD_VISIBLE && !holdingsExpanded) tr.className = 'hidden-row';
-var pctDisplay = (h.pct * 100).toFixed(1) + '%';
-tr.innerHTML = '<td><span class="sym">' + esc(h.symbol) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></td>' +
-'<td>' + esc(fmtNum(h.qty)) + '</td>' +
-'<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
-'<td>' + gananciaHtml(h) + fmt(h.valor) + '</td>' +
-'<td class="holdpct col-pct">' + pctDisplay + '</td>';
-tr.className += ' asset-row';
+var tr = enLugar ? holdFilas[idx].tr : document.createElement('tr');
+tr.className = claseFila(idx);
+tr.innerHTML = filaHoldingHtml(h);
 tr.onclick = function () { toggleDetalle(tr, h); };
-el.appendChild(tr);
+if (!enLugar) { el.appendChild(tr); holdFilas.push({ symbol: h.symbol, tr: tr }); }
 });
 if (btn) {
 if (list.length > HOLD_VISIBLE) { btn.style.display = 'block'; btn.textContent = holdingsExpanded ? 'Ver menos' : ('Ver todas (' + list.length + ')'); }
