@@ -122,10 +122,7 @@ function refrescarVistaIBKR() { if (currentView === 'ibkr') cargarEstadoIBKR(); 
 // El backend guarda una foto de la hoja antes de cada escritura automatica.
 // Aca se listan y se puede volver atras. Restaurar tambien deja respaldo, asi
 // que tocarlo por error se deshace tocandolo de nuevo.
-function fechaBackup(iso) {
-var d = new Date(iso);
-return isNaN(d.getTime()) ? String(iso || '') : fechaCortaMs(d.getTime());
-}
+// (fechaBackup era una copia de fechaSalud, config.js; se unificaron en E6.)
 var bakEnCurso = false;
 function cargarBackups() {
 var cont = document.getElementById('bakList');
@@ -136,7 +133,7 @@ if (!r || !r.ok) { errorEnVista('bakList', null, 'las copias'); return; }
 if (!r.backups.length) { cont.innerHTML = '<div class="vacio"><span class="vic">&#128190;</span><b>Sin copias todav&iacute;a</b>Se guardan solas antes de cada sincronizaci&oacute;n u operaci&oacute;n.</div>'; return; }
 cont.innerHTML = r.backups.map(function (b) {
 return '<div class="row"><span>' + esc(nombrePlataforma(b.hoja)) +
-'<br><span class="newsempty">' + esc(fechaBackup(b.cuando)) + (b.motivo ? ' &middot; ' + esc(b.motivo) : '') + '</span></span>' +
+'<br><span class="newsempty">' + esc(fechaSalud(b.cuando)) + (b.motivo ? ' &middot; ' + esc(b.motivo) : '') + '</span></span>' +
 '<button class="ghostbtn bakBtn" data-hoja="' + esc(b.hoja) + '" data-cuando="' + esc(b.cuando) + '" style="width:auto;padding:6px 12px;margin:0">Volver a esto</button></div>';
 }).join('');
 Array.prototype.forEach.call(cont.querySelectorAll('.bakBtn'), function (btn) {

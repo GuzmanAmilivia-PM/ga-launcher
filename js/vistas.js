@@ -9,18 +9,26 @@
 // solo la del index, el sw sigue sirviendo el index viejo y no se publica
 // nada). Asi el badge no puede mentir: muestra el shell que estas corriendo.
 var _versionPintada = false;
+// La version del shell, leida del nombre del cache que el SW sirve. La misma
+// consulta estaba copiada en pintarSaludApp (config.js); ambos usan esta.
+// cb recibe 'v67' o null (sin soporte de caches, o sin cache ga-pwa-).
+function versionShell(cb) {
+if (!window.caches || !caches.keys) { cb(null); return; }
+caches.keys().then(function (claves) {
+var c = claves.filter(function (k) { return k.indexOf('ga-pwa-') === 0; })[0];
+cb(c ? c.replace('ga-pwa-', '') : null);
+}).catch(function () { cb(null); });
+}
 function pintarVersion() {
 var v = document.getElementById('mbVersion');
 if (!v) return;
 // La version no cambia dentro de una sesion (una actualizacion del SW pide
 // recargar): consultar caches.keys() en cada poll era gasto puro.
 if (_versionPintada) return;
-if (!window.caches || !caches.keys) { v.textContent = '&mdash;'; return; }
-caches.keys().then(function (claves) {
-var c = claves.filter(function (k) { return k.indexOf('ga-pwa-') === 0; })[0];
-v.textContent = c ? c.replace('ga-pwa-', '') : '—';
-_versionPintada = true;
-}).catch(function () {});
+versionShell(function (ver) {
+v.textContent = ver || '—';
+if (ver) _versionPintada = true;
+});
 }
 function pintarBadges(estado) {
 pintarVersion();

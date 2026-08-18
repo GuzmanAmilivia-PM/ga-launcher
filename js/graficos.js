@@ -66,24 +66,22 @@ function getFilteredDataPoints(serie) {
   }
   };
   }
-  function drawLineChart(serie) {
+  // El grafico chico y el del modal eran la misma llamada copiada (E6).
+  function dibujarEvolucion(canvasId, prev, serie) {
   var dataPoints = getFilteredDataPoints(serie);
-  if (lineChartInstance) lineChartInstance.destroy();
-  lineChartInstance = new Chart(document.getElementById('lineChart'), {
+  if (prev) prev.destroy();
+  return new Chart(document.getElementById(canvasId), {
   type: 'line',
   data: { datasets: [{ data: dataPoints, borderColor: '#d4af37', backgroundColor: 'rgba(212,175,55,0.12)', fill: true, tension: 0.3, pointRadius: 0 }] },
   options: buildChartOptions(dataPoints)
   });
   }
+  function drawLineChart(serie) {
+  lineChartInstance = dibujarEvolucion('lineChart', lineChartInstance, serie);
+  }
   var bigChartInstance = null;
   function drawBigChart() {
-  var dataPoints = getFilteredDataPoints(filterSerie(currentRangeDias));
-  if (bigChartInstance) bigChartInstance.destroy();
-  bigChartInstance = new Chart(document.getElementById('lineChartBig'), {
-  type: 'line',
-  data: { datasets: [{ data: dataPoints, borderColor: '#d4af37', backgroundColor: 'rgba(212,175,55,0.12)', fill: true, tension: 0.3, pointRadius: 0 }] },
-  options: buildChartOptions(dataPoints)
-  });
+  bigChartInstance = dibujarEvolucion('lineChartBig', bigChartInstance, filterSerie(currentRangeDias));
   }
   function openChartModal() {
   document.getElementById('chartModal').style.display = 'flex';
@@ -284,7 +282,7 @@ function daychgHtml(p) {
   if (p.cambioDia === null || p.cambioDia === undefined || p.cambioDia === '') return '';
   var v = Number(p.cambioDia);
   if (!isFinite(v)) return '';
-  return '<span class="daychg ' + (v >= 0 ? 'up' : 'down') + '">' + (v >= 0 ? '+' : '') + v.toFixed(2) + '%</span>';
+  return pctHtml(v, 2);
 }
 
 // Ganancia acumulada de la posicion: precio actual contra el precio medio de
@@ -295,8 +293,7 @@ function daychgHtml(p) {
 function gananciaHtml(p) {
   var pm = Number(p.precioCompra), pa = Number(p.precioActual);
   if (!isFinite(pm) || pm <= 0 || !isFinite(pa) || pa <= 0) return '';
-  var v = (pa / pm - 1) * 100;
-  return '<span class="daychg ' + (v >= 0 ? 'up' : 'down') + '">' + (v >= 0 ? '+' : '') + v.toFixed(2) + '%</span>';
+  return pctHtml((pa / pm - 1) * 100, 2);
 }
 // ---------- Detalle desplegable por activo + grafico TradingView ----------
 var detalleAbierto = null;

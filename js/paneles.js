@@ -138,7 +138,7 @@ function renderDividendos(r) {
 var body = document.getElementById('divBody');
 if (!r || !r.ok) {
 divCargado = false;
-body.innerHTML = '<p class="newsempty">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</p>';
+body.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>';
 return;
 }
 divDatos = r;
@@ -193,7 +193,9 @@ box.setAttribute('data-mes', String(mes));
 var det = (divDatos && divDatos.detalle && divDatos.detalle[mes]) || [];
 var filas = det.map(function (d) {
 var etiqueta = d.estado === 'proximo' ? (d.estimado ? ' <span class="desc">~ estimado</span>' : ' <span class="desc">a pagar</span>') : '';
-return esc(d.broker) + ' &middot; <span class="sym">' + esc(d.symbol || 'CASH') + '</span> &middot; ' + esc(fmtUsd(d.monto)) + etiqueta;
+// nombrePlataforma como en el modal: antes "Interactive Brokers" no se
+// acortaba a IBKR en el panel chico (inconsistencia cazada en E6).
+return esc(nombrePlataforma(d.broker)) + ' &middot; <span class="sym">' + esc(d.symbol || 'CASH') + '</span> &middot; ' + esc(fmtUsd(d.monto)) + etiqueta;
 }).join('<br>');
 box.innerHTML = '<div class="divdetbox"><b>' + MESES_CORTOS[mes - 1] + ' ' + esc((divDatos && divDatos.anio) || '') + '</b><br>' + (filas || '<span class="desc">Sin movimientos ese mes</span>') + '</div>';
 ajustarAlturaDeck();
@@ -293,7 +295,7 @@ function renderAportes(r) {
 var body = document.getElementById('apoBody');
 if (!r || !r.ok) {
 apoCargado = false;
-body.innerHTML = '<p class="newsempty">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</p>';
+body.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>';
 return;
 }
 document.getElementById('apoAnio').textContent = r.anio;

@@ -237,6 +237,11 @@ function fmtUsdEnt(n) { return mask('US$ ' + Math.round(Number(n) || 0).toLocale
 // fmtPctRaw y chipClass se fueron el 18/08/2026: su unico llamador era la
 // tabla del detalle de cuenta, que se podo a los mismos helpers del Inicio
 // (daychgHtml/gananciaHtml en graficos.js).
+// Chip de porcentaje firmado (verde/rojo): la linea estaba copiada identica
+// en daychgHtml y gananciaHtml (E6).
+function pctHtml(v, dec) {
+return '<span class="daychg ' + (v >= 0 ? 'up' : 'down') + '">' + (v >= 0 ? '+' : '') + v.toFixed(dec) + '%</span>';
+}
 // Etiqueta visual de una plataforma. La Sheet y el backend conservan el
 // nombre real ("Interactive Brokers", anclado a su hoja); ac\u00e1 solo se
 // muestra la marca oficial corta.

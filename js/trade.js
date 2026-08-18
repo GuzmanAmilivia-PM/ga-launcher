@@ -315,8 +315,6 @@ if (!data || (Array.isArray(data) && !data.length)) {
 body.innerHTML = '<div class="vacio"><span class="vic">&#128240;</span><b>Sin novedades por ahora</b>Cuando haya titulares sobre tus posiciones, van a aparecer ac&aacute;.</div>';
 return;
 }
-// Compatibilidad: el backend viejo devuelve un array plano por empresa.
-if (Array.isArray(data)) data = { bruscos: [], mercado: [], empresas: data };
 
 // 1) Movimientos bruscos (±3% o más en 24h), siempre arriba.
 var card = document.createElement('div');

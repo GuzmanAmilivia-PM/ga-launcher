@@ -144,7 +144,7 @@ sujeto: 'La conexión IBKR',
 cargandoDry: 'Consultando IBKR... puede tardar medio minuto (el reporte se genera al momento).',
 cargandoApply: 'Aplicando cambios en la hoja IB...',
 cerradaTxt: 'cerrada en IBKR',
-total: function (r) { return r.posicionesBroker !== undefined ? r.posicionesBroker : r.posicionesIBKR; },
+total: function (r) { return r.posicionesBroker; },
 lock: function (v) { ibkrSyncEnCurso = v; },
 alAplicar: function () { cargarEstadoIBKR(); },
 ejecutar: function (dryRun, forzar, ok, fail) {
@@ -269,7 +269,9 @@ prepararBNB();
 },
 hintDry: function (r) {
 var cerradas = r.cambios.filter(function (c) { return c.tipo === 'cerrada'; }).length;
-if (cerradas < 2) return '';
+// El umbral es EL MISMO que frena la sync automatica (BNB_CERRADAS_FRENO,
+// sincronizar.js — corre en runtime, el orden de carga no molesta).
+if (cerradas < BNB_CERRADAS_FRENO) return '';
 return '<p class="newsempty">&#9888; Varias posiciones aparecen sin saldo. Ojo: la clave solo ve la billetera <b>spot</b>; si ten&eacute;s fondos en Binance Earn u otra billetera, NO apliques y avisale a Claude.</p>';
 },
 ejecutar: function (dryRun, forzar, ok, fail) {
@@ -359,7 +361,7 @@ sujeto: 'La conexión con Schwab',
 cargandoDry: 'Consultando tus posiciones de Schwab...',
 cargandoApply: 'Aplicando cambios en la hoja CS...',
 cerradaTxt: 'cerrada en Schwab',
-total: function (r) { return r.posicionesBroker !== undefined ? r.posicionesBroker : r.posicionesIBKR; },
+total: function (r) { return r.posicionesBroker; },
 lock: function (v) { csEnCurso = v; },
 alAplicar: function () { cargarEstadoCS(); },
 ejecutar: function (dryRun, forzar, ok, fail) {

@@ -201,12 +201,9 @@ html += filaSalud('Dividendos guardados', edadCache('ga_cache_div'));
 html += filaSalud('Binance en este tel&eacute;fono', bnbConfig() ? 'configurado' : 'sin configurar');
 html += filaSalud('Bloqueo de seguridad', (function () { try { var s = JSON.parse(localStorage.getItem('ga_sec') || '{}'); return (s.pin || s.bio) ? 'activado' : 'desactivado'; } catch (e) { return '?'; } })());
 el.innerHTML = html;
-if (window.caches && caches.keys) {
-caches.keys().then(function (ks) {
-var v = ks.filter(function (k) { return k.indexOf('ga-pwa-') === 0; })[0];
-el.innerHTML = filaSalud('Versi&oacute;n de la app', v ? v.replace('ga-pwa-', '') : '?') + el.innerHTML;
-}).catch(function () {});
-}
+versionShell(function (ver) {
+el.innerHTML = filaSalud('Versi&oacute;n de la app', ver || '?') + el.innerHTML;
+});
 }
 function fechaSalud(iso) {
 var d = new Date(iso);

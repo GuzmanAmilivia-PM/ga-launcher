@@ -3,7 +3,7 @@
 // El backend (fn 'analisis') hace las cuentas y manda todo resuelto, incluidos
 // los textos de cada chequeo: aca solo se pinta. Cache local igual que
 // dividendos y aportes — se ve al instante lo ultimo y se refresca por atras.
-var anaCargado = false, lastAna = null;
+var anaCargado = false;
 
 function cargarAnalisis(forzar) {
 anaCargado = true;
@@ -32,7 +32,6 @@ return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2
 }
 
 function renderAnalisis(r) {
-lastAna = r;
 var body = document.getElementById('anaBody');
 if (!r || !r.ok) {
 body.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>';
