@@ -14,8 +14,8 @@
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
   script-src 'self' 'sha256-eCEv2Xtk/d4etq+pER4EYyojYMTusYCys+IfxZyAxE0=';
-  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-  font-src 'self' https://fonts.gstatic.com data:;
+  style-src 'self' 'unsafe-inline';
+  font-src 'self' data:;
   img-src 'self' data: https:;
   connect-src 'self' https://script.google.com https://script.googleusercontent.com wss://ws-api.binance.com;
   frame-src https://s.tradingview.com https://www.tradingview.com;
@@ -28,8 +28,10 @@
 <script>try{if(localStorage.getItem('ga_tema')==='claro')document.documentElement.classList.add('light');}catch(e){}</script>
 <base target="_top">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@500&display=swap" rel="stylesheet">
+<!-- Las fuentes viven en la app desde v65 (R4): el CSS de Google Fonts
+     bloqueaba el primer pintado y no pasaba por el service worker. Manrope es
+     variable (un archivo cubre los pesos 400-800); subconjunto latin, que
+     alcanza para el espanol. Los @font-face estan al principio del <style>. -->
 <meta name="theme-color" content="#0d1420">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -39,6 +41,8 @@
 <link rel="manifest" href="manifest.json">
 
 <style>
+@font-face { font-family: 'Manrope'; font-style: normal; font-weight: 400 800; font-display: swap; src: url('./fonts/manrope.woff2') format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 500; font-display: swap; src: url('./fonts/montserrat-500.woff2') format('woff2'); }
 :root { --navy: #0d1420; --navy2: #17233a; --navy3: #1e2c47; --gold: #d4af37; --green: #22c55e; --red: #f43f5e; --text: #eef1f6; --muted: #90a0b8; --border: rgba(255,255,255,.07); }
 * { box-sizing: border-box; }
 html { overflow-x: hidden; max-width: 100%; background: var(--navy); }
