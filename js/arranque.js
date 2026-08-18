@@ -15,12 +15,29 @@ buildRangeBar('rangeBar');
 buildRangeBar('rangeBarBig');
 buildTradeForm();
 buildCashForm();
+// El presupuesto del poll se declara ANTES del arranque: la primera llamada a
+// loadData sale de la linea de abajo, y con las declaraciones despues (como
+// estaban) esa llamada corria con los dos undefined — "completa al abrir"
+// quedaba librado a un NaN, y un cache viejo de dias arrancaba lite igual.
+var CARGA_COMPLETA_MS = 30 * 60 * 1000;
+var ultimaCargaCompleta = 0;
+var ultimaHuella = '';
 // Pintado instantáneo: al abrir se muestran los últimos datos vistos
 // (guardados en este dispositivo) y el refresco real corre por atrás.
 function pintarCache() {
   var c = cacheLeer('ga_cache_data');
   if (!c || !c.data.cuentas) return false;
   render(c.data);
+  // Arranque lite-first (R4): si el cache pintado es fresco (<30 min) y trae
+  // el juego completo (serie + bench + serieGrupo), cuenta como "ultima carga
+  // completa": la primera llamada sale lite (~80% menos payload) y el grafico
+  // usa la serie que ya se pinto. La completa llega sola cuando el cache
+  // cumpla los 30 min. Sin bench o sin serieGrupo no se arriesga: carga
+  // completa como siempre (un cache anterior a v63 no los guardaba).
+  if (c.t && (Date.now() - c.t) < CARGA_COMPLETA_MS &&
+      c.data.serie && c.data.serie.length && c.data.bench && c.data.serieGrupo) {
+    ultimaCargaCompleta = c.t;
+  }
   pintarBadges('cache');
   return true;
 }
@@ -72,11 +89,13 @@ currentTotal = data.total;
 // puesto todo lo que venia despues — posiciones, precios y el auto-sync de
 // Binance quedaban sin pintar. Ahora falla solo el grafico.
 try {
-// El indice para comparar viaja con la serie (y como ella, NO en el poll lite:
-// una respuesta lite deja el bench de la carga completa anterior, que sigue
-// siendo el correcto porque fullSerie tampoco cambio). No se dibuja en este
-// grafico — lo usa la comparacion del panel de Aportes.
-if (!data.lite) { aplicarBench(data); aplicarGrupo(data); }
+// El indice y la serie del grupo se aplican siempre que vengan en el payload
+// (aplicarBench/aplicarGrupo son defensivos: una respuesta sin el dato no
+// borra el que estaba alineado). Antes los lite se salteaban, pero desde v63
+// el cache local guarda bench y serieGrupo re-adjuntados, y al arrancar del
+// cache hay que aplicarlos o el panel de Aportes queda sin comparacion. No se
+// dibujan en este grafico — los usa la comparacion del panel de Aportes.
+aplicarBench(data); aplicarGrupo(data);
 drawLineChart(filterSerie(currentRangeDias));
 updateRangePct();
 } catch (eChart) {
@@ -96,11 +115,11 @@ bnbAutoSync();
   // El poll de 60 s pide el payload SIN la serie histórica ({lite:true}): la
   // serie es un punto por día desde el inicio y era ~80% de lo que viajaba,
   // para un gráfico que no cambia en un minuto. La carga completa corre al
-  // abrir y después a lo sumo cada 30 min (por si el histórico sumó el punto
-  // del día). Un backend viejo ignora el argumento y manda todo: compatible.
-  var CARGA_COMPLETA_MS = 30 * 60 * 1000;
-  var ultimaCargaCompleta = 0;
-  var ultimaHuella = '';
+  // abrir —salvo cache fresco y completo, ver pintarCache— y después a lo
+  // sumo cada 30 min (por si el histórico sumó el punto del día). Un backend
+  // viejo ignora el argumento y manda todo: compatible.
+  // (CARGA_COMPLETA_MS / ultimaCargaCompleta / ultimaHuella se declaran arriba
+  // del arranque, que las usa antes de que esta zona del archivo ejecute.)
   // Huella del payload sin los campos que cambian solos en cada respuesta.
   // Con claves ORDENADAS: la respuesta lite trae las claves en otro orden (la
   // serie se le agrega al final), y un stringify directo daria huellas
@@ -137,7 +156,17 @@ bnbAutoSync();
       if (!data) return;
       var vinoSerie = !!(data.serie && data.serie.length);
       if (vinoSerie) ultimaCargaCompleta = Date.now();
-      else data.serie = fullSerie; // respuesta lite: la serie no viajó, se conserva la última
+      else {
+        // Respuesta lite: la serie no viajó, se conserva la última. Bench y
+        // serieGrupo tampoco viajan y siguen valiendo (la serie no cambió):
+        // se re-adjuntan para que el cache local quede COMPLETO — es lo que
+        // habilita el arranque lite-first de la próxima apertura.
+        data.serie = fullSerie;
+        if (lastData) {
+          if (!data.bench && lastData.bench) data.bench = lastData.bench;
+          if (!data.serieGrupo && lastData.serieGrupo) data.serieGrupo = lastData.serieGrupo;
+        }
+      }
       var av = document.getElementById('autoAviso');
       if (av && av.innerHTML.indexOf('Sin conexi') !== -1) { av.style.display='none'; av.innerHTML=''; }
       pintarBadges('ok');
