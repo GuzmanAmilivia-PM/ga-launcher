@@ -66,9 +66,9 @@ var tvEl = document.getElementById('busTv');
 if (tvEl) crearTvWidget(tvEl, r.cripto ? ('BINANCE:' + r.symbol + 'USDT') : r.symbol);
 }).withFailureHandler(function (err) {
 btn.disabled = false;
-var m = String((err && err.message) || err);
-if (m.indexOf('unknown_fn') !== -1) m = 'El buscador se activa con la próxima actualización del servidor. Avisale a Claude que despliegue el backend.';
-out.innerHTML = '<div class="card"><p class="newsempty">' + esc(m) + '</p></div>';
+// La traduccion de unknown_fn vive en msgErr (brokers.js): era el quinto
+// traductor copiado a mano y ya habia divergido del resto.
+out.innerHTML = '<div class="card"><p class="newsempty">' + esc(msgErr(err, 'El buscador')) + '</p></div>';
 }).buscarTicker({ symbol: q });
 }
 document.getElementById('busGo').onclick = buscarActivo;

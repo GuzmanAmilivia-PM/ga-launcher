@@ -7,6 +7,18 @@ pintarOjo();
 if (lastData) render(lastData);
 if (lastAcc && lastAccData) renderAccount(lastAcc, lastAccData);
 if (lastOps) renderOperaciones(lastOps);
+// Los paneles lentos tambien obedecen al ojito (auditoria 19/08/2026): sin
+// esto, si los extras no viajaron en el ultimo payload, Dividendos, Aportes
+// y Analisis seguian mostrando los montos con el ojo cerrado. Se repinta
+// desde el cache local (siempre tiene lo ultimo pintado); la bandera evita
+// tapar un error o un spinner con datos viejos.
+function repintarPanel(cargado, clave, render) {
+var c = cargado && cacheLeer(clave);
+if (c) render(c.data);
+}
+repintarPanel(divCargado, 'ga_cache_div', renderDividendos);
+repintarPanel(apoCargado, 'ga_cache_apo', renderAportes);
+repintarPanel(anaCargado, 'ga_cache_ana', renderAnalisis);
 };
 pintarOjo();
 

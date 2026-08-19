@@ -34,6 +34,7 @@ return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2
 function renderAnalisis(r) {
 var body = document.getElementById('anaBody');
 if (!r || !r.ok) {
+anaCargado = false; // la proxima visita reintenta (mismo criterio que dividendos)
 body.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>';
 return;
 }

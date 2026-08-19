@@ -22,9 +22,9 @@ fin();
 if (!r2 || !r2.ok) { alError(msgBackend(r2)); return; }
 try { localStorage.setItem('ga_bnb_ultima', fechaCortaMs(Date.now())); } catch (e) {}
 alOk(r2);
-}).withFailureHandler(function (err) { fin(); alError(msgErr(err, 'La sincronizaci&oacute;n con Binance')); })
+}).withFailureHandler(function (err) { fin(); alError(msgErr(err, 'La sincronización con Binance')); })
 .sincronizarBNB({ balances: saldos, dryRun: false });
-}).withFailureHandler(function (err) { fin(); alError(msgErr(err, 'La sincronizaci&oacute;n con Binance')); })
+}).withFailureHandler(function (err) { fin(); alError(msgErr(err, 'La sincronización con Binance')); })
 .sincronizarBNB({ balances: saldos, dryRun: true });
 }, function () { fin(); alError('no se pudieron leer los saldos desde el tel&eacute;fono.'); });
 }

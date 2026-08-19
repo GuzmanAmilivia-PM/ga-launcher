@@ -237,6 +237,6 @@ html += filaSalud('Hist&oacute;rico', esc((s.historico && s.historico.error) || 
 out.innerHTML = html;
 }).withFailureHandler(function (err) {
 btn._busy = false;
-out.innerHTML = '<p class="newsempty">' + esc(msgErr(err, 'El diagn&oacute;stico')) + '</p>';
+out.innerHTML = '<p class="newsempty">' + esc(msgErr(err, 'El diagnóstico')) + '</p>';
 }).getSalud();
 };

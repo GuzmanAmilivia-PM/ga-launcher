@@ -4,11 +4,13 @@
 // Habia CUATRO traductores de error identicos (ibkrMsgErr, bnbMsgErr, csMsgErr,
 // actErrMsg) que solo cambiaban el sujeto de la frase, y cada funcion nueva del
 // backend pedia el suyo. Ahora es uno solo.
+// Devuelve TEXTO PLANO (acentos reales, sin entidades): casi todos los
+// llamadores lo pasan por esc(), y una entidad escapada se veia literal.
 function msgErr(err, sujeto) {
 var m = (err && err.message) ? err.message : String(err);
 if (m.indexOf('unknown_fn') === -1) return m;
 return (sujeto ? sujeto + ' se activa' : 'Se activa') +
-' con la pr&oacute;xima actualizaci&oacute;n del servidor. Avisale a Claude que despliegue el backend.';
+' con la próxima actualización del servidor. Avisale a Claude que despliegue el backend.';
 }
 // El mismo mensaje, pero para una respuesta {ok:false, mensajes:[...]}.
 function msgBackend(r) {

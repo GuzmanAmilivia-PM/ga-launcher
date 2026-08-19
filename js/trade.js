@@ -237,6 +237,7 @@ var avisosEl = document.getElementById('opsAvisos');
 resumenEl.innerHTML = '';
 avisosEl.innerHTML = '';
 if (!r || !r.ok) {
+opsCargadas = false; // la proxima visita reintenta (mismo criterio que dividendos)
 body.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>';
 return;
 }
