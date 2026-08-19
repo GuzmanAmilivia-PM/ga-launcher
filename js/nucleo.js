@@ -232,15 +232,33 @@ return (typeof n === 'number') ? (Math.round(n * 100) / 100) : n;
 // Montos de los paneles (dividendos/aportes), con el ojito de privacidad ya
 // aplicado. La misma cadena mask('US$ ' + ...) estaba repetida 15 veces en
 // paneles.js. fmtUsd: 2 decimales; fmtUsdEnt: redondeado, con miles es-UY.
+// La etiqueta difiere A PROPOSITO: el patrimonio y los trades dicen "USD"
+// (fmt/opsMonto), los paneles de ingresos "US$" (auditoria 19/08/2026).
 function fmtUsd(n) { return mask('US$ ' + (Number(n) || 0).toFixed(2)); }
 function fmtUsdEnt(n) { return mask('US$ ' + Math.round(Number(n) || 0).toLocaleString('es-UY')); }
 // fmtPctRaw y chipClass se fueron el 18/08/2026: su unico llamador era la
 // tabla del detalle de cuenta, que se podo a los mismos helpers del Inicio
 // (daychgHtml/gananciaHtml en graficos.js).
+// Confirmacion destructiva en dos toques: el primero pregunta y se desarma
+// solo; el segundo, dentro de la ventana, ejecuta. Estaba copiado en "Quitar
+// plataforma" (config.js) y "Olvide mi clave" (seguridad.js) — auditoria
+// 19/08/2026. (restaurarHoja y confirmarParcial usan window.confirm porque
+// necesitan bloquear: son pasos de un flujo, no un boton suelto.)
+function confirmarDosToques(el, pregunta, normal, ms, accion) {
+if (el._confirm) { el._confirm = false; accion(); return; }
+el._confirm = true;
+el.textContent = pregunta;
+setTimeout(function () { el._confirm = false; el.textContent = normal; }, ms);
+}
+// El nucleo del porcentaje firmado, SIN envoltorio: cada pantalla le pone el
+// suyo (chip del buscador, comparacion, resultado del detalle, bruscos). El
+// signo y los decimales salen de un solo lugar (auditoria 19/08/2026: el
+// patron estaba rearmado a mano en cinco sitios).
+function signoPct(v, dec) { return (v >= 0 ? '+' : '') + v.toFixed(dec) + '%'; }
 // Chip de porcentaje firmado (verde/rojo): la linea estaba copiada identica
 // en daychgHtml y gananciaHtml (E6).
 function pctHtml(v, dec) {
-return '<span class="daychg ' + (v >= 0 ? 'up' : 'down') + '">' + (v >= 0 ? '+' : '') + v.toFixed(dec) + '%</span>';
+return '<span class="daychg ' + (v >= 0 ? 'up' : 'down') + '">' + signoPct(v, dec) + '</span>';
 }
 // Etiqueta visual de una plataforma. La Sheet y el backend conservan el
 // nombre real ("Interactive Brokers", anclado a su hoja); ac\u00e1 solo se

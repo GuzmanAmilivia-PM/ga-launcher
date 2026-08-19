@@ -373,7 +373,7 @@ return h;
 }
 function pct(v, esNum) {
 if (v === null || !isFinite(v)) return '<p class="capval">&mdash;</p>';
-return '<p class="capval ' + (v >= 0 ? 'up' : 'down') + '">' + (v >= 0 ? '+' : '') + v.toFixed(1) + '%</p>';
+return '<p class="capval ' + (v >= 0 ? 'up' : 'down') + '">' + signoPct(v, 1) + '</p>';
 }
 // El rendimiento en plata: lo que las apps valen hoy menos su capital (el
 // valor con el que arrancó la medición más lo que entró después).

@@ -55,8 +55,8 @@ if (!base) { el.textContent = ''; return; }
 var pct = (currentTotal / base - 1) * 100;
 var dias = (serie[serie.length - 1].fecha - serie[0].fecha) / 86400000;
 var anual = pctAnualizado(pct, dias);
-el.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%' +
-(anual !== null ? ' · ' + (anual >= 0 ? '+' : '') + anual.toFixed(1) + '% anual' : '');
+el.textContent = signoPct(pct, 2) +
+(anual !== null ? ' · ' + signoPct(anual, 1) + ' anual' : '');
 el.className = 'rangepct ' + (pct >= 0 ? 'up' : 'down');
 }
 function getFilteredDataPoints(serie) {
@@ -376,7 +376,7 @@ function toggleDetalle(tr, pos) {
     '<span><span class="detlbl">Base de coste</span><b>' + (base ? fmt(base) : '&mdash;') + '</b></span>';
   if (tienePm && isFinite(pa) && pa > 0) {
     var res = (pa / pm - 1) * 100;
-    html += '<span><span class="detlbl">Resultado</span><b class="' + (res >= 0 ? 'up' : 'down') + '">' + (res >= 0 ? '+' : '') + res.toFixed(1) + '%</b></span>';
+    html += '<span><span class="detlbl">Resultado</span><b class="' + (res >= 0 ? 'up' : 'down') + '">' + signoPct(res, 1) + '</b></span>';
   }
   html += '</div><div class="tvwrap"></div>';
   td.innerHTML = html;

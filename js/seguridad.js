@@ -236,12 +236,7 @@ else { document.getElementById('secPinInput').value = ''; document.getElementByI
 document.getElementById('secPinInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('secPinGo').click(); });
 document.getElementById('secOlvide').onclick = function () {
 var l = document.getElementById('secOlvide');
-if (!l._confirm) {
-l._confirm = true;
-l.textContent = 'Se borra el bloqueo y vas a tener que poner de nuevo la clave de la API. \u00bfSeguro?';
-setTimeout(function () { l._confirm = false; l.textContent = olvTxt; }, 6000);
-return;
-}
+confirmarDosToques(l, 'Se borra el bloqueo y vas a tener que poner de nuevo la clave de la API. \u00bfSeguro?', olvTxt, 6000, function () {
 // Fallar CERRADO del todo: tambien la clave de Binance y TODOS los caches
 // con el portafolio (GA_CACHES, en paneles.js — la lista unica evita que un
 // cache nuevo quede vivo). Re-pegar la clave cuesta un minuto; dejarla, un riesgo.
@@ -249,6 +244,7 @@ try {
 ['ga_sec', 'ga_token', 'ga_bnb', 'ga_bnb_ultima'].concat(GA_CACHES).forEach(function (k) { localStorage.removeItem(k); });
 } catch (e) {}
 try { location.reload(); } catch (e) {}
+});
 };
 })();
 

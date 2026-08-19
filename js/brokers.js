@@ -25,6 +25,13 @@ var d = new Date(ms);
 function p2(n) { return (n < 10 ? '0' : '') + n; }
 return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
 }
+// La linea "Ultima sincronizacion: ..." de las pantallas IBKR y Schwab era
+// identica en las dos (auditoria 19/08/2026); el Diagnostico usa su propio
+// formato (fechaSalud, sin detalle) a proposito.
+function ultimaSyncHtml(u) {
+if (!u || !u.cuando) return '';
+return '<br>&Uacute;ltima sincronizaci&oacute;n: ' + (u.ok ? '' : '&#9888; ') + esc(fechaCortaMs(u.cuando)) + ' &middot; ' + esc(u.detalle || '');
+}
 function cargarEstadoIBKR() {
 var t = document.getElementById('ibkrEstadoTxt');
 t.innerHTML = 'Comprobando configuraci&oacute;n...';
@@ -34,9 +41,7 @@ var syncCard = document.getElementById('ibkrSyncCard');
 if (syncCard) syncCard.style.display = (st && st.configurada) ? '' : 'none';
 if (st && st.configurada) {
 var html = '&#10003; Conectado a IBKR. La hoja IB se actualiza sola una vez por d&iacute;a (~8:00).';
-if (st.ultimaSync && st.ultimaSync.cuando) {
-html += '<br>&Uacute;ltima sincronizaci&oacute;n: ' + (st.ultimaSync.ok ? '' : '&#9888; ') + esc(fechaCortaMs(st.ultimaSync.cuando)) + ' &middot; ' + esc(st.ultimaSync.detalle || '');
-}
+html += ultimaSyncHtml(st.ultimaSync);
 if (st.triggerDiario === false) html += '<br>&#9888; La sincronizaci&oacute;n diaria autom&aacute;tica no est&aacute; activa: volv&eacute; a guardar la conexi&oacute;n.';
 html += st.actividadConfigurada
 ? '<br>&#10003; Dividendos de IBKR incluidos (consulta de actividad configurada).'
@@ -268,6 +273,11 @@ terminar(new Error(msg));
 };
 }
 var bnbEnCurso = false;
+// UNICO punto de escritura del candado de Binance: lo usan la pantalla de
+// sync (cfg.lock) y el protocolo bnbSincronizar (sincronizar.js). Tenia tres
+// escritores sueltos en dos archivos, y este candado ya tiene historial de
+// quedar trabado para siempre (auditoria 19/08/2026).
+function bnbLock(v) { bnbEnCurso = v; }
 // Binance difiere en el origen de los datos: los saldos se leen EN EL
 // TELEFONO (dry run) y se reusan al aplicar. El resto del flujo es el
 // conductor comun — incluida la confirmacion de reporte parcial, que a esta
@@ -280,7 +290,7 @@ cargandoDry: 'Leyendo tus saldos reales de Binance...',
 cargandoApply: 'Aplicando en la hoja BNB...',
 cerradaTxt: 'sin saldo en Binance',
 total: function (r) { return r.saldosBinance; },
-lock: function (v) { bnbEnCurso = v; },
+lock: bnbLock,
 alEmpezarDry: function () { bnbSaldosLeidos = null; },
 alAplicar: function () {
 try { localStorage.setItem('ga_bnb_ultima', fechaCortaMs(Date.now())); } catch (e) {}
@@ -300,7 +310,7 @@ bnbSaldosLeidos = saldos;
 google.script.run.withSuccessHandler(ok).withFailureHandler(fail).sincronizarBNB({ balances: saldos, dryRun: true });
 }, fail);
 } else {
-if (!bnbSaldosLeidos) { bnbEnCurso = false; return; }
+if (!bnbSaldosLeidos) { bnbLock(false); return; }
 google.script.run.withSuccessHandler(ok).withFailureHandler(fail).sincronizarBNB({ balances: bnbSaldosLeidos, dryRun: false, forzar: forzar });
 }
 }
@@ -327,9 +337,7 @@ btnCon.style.display = '';
 return;
 }
 var html = '&#10003; Conectado a Schwab v&iacute;a SnapTrade (' + esc((st.cuentas || []).join(', ') || 'cuenta conectada') + '). La hoja CS se actualiza sola una vez por d&iacute;a (~8:00).';
-if (st.ultimaSync && st.ultimaSync.cuando) {
-html += '<br>&Uacute;ltima sincronizaci&oacute;n: ' + (st.ultimaSync.ok ? '' : '&#9888; ') + esc(fechaCortaMs(st.ultimaSync.cuando)) + ' &middot; ' + esc(st.ultimaSync.detalle || '');
-}
+html += ultimaSyncHtml(st.ultimaSync);
 t.innerHTML = html;
 sync.style.display = '';
 btnCon.style.display = 'none';

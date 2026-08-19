@@ -9,8 +9,8 @@ var BNB_AVISO_EARN = 'Binance: varias posiciones aparecen sin saldo (&iquest;fon
 function bnbSincronizar(cb) {
 var alOk = cb.alOk || function () {};
 var alError = cb.alError || function () {};
-function fin() { bnbEnCurso = false; }
-bnbEnCurso = true;
+function fin() { bnbLock(false); }
+bnbLock(true);
 bnbLeerSaldos(function (saldos) {
 google.script.run.withSuccessHandler(function (r) {
 if (!r || !r.ok) { fin(); alError(msgBackend(r)); return; }

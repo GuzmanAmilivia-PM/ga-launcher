@@ -23,7 +23,7 @@ function fichaBuscarHtml(r) {
 var chip = '';
 if (r.cambioDia !== null && r.cambioDia !== undefined && isFinite(Number(r.cambioDia))) {
 var v = Number(r.cambioDia);
-chip = '<span class="bus-chip ' + (v >= 0 ? 'up' : 'down') + '">' + (v >= 0 ? '+' : '') + v.toFixed(2) + '% ' + (r.cripto ? '(24h)' : 'hoy') + '</span>';
+chip = '<span class="bus-chip ' + (v >= 0 ? 'up' : 'down') + '">' + signoPct(v, 2) + ' ' + (r.cripto ? '(24h)' : 'hoy') + '</span>';
 }
 var h = '<div class="card"><div class="bus-head"><span><span class="sym" style="font-size:18px">' + esc(r.symbol) + '</span><span class="desc">' + esc(r.nombre || '') + '</span></span>' + chip + '</div>';
 h += '<p class="bus-precio">USD ' + esc(fmtNum(r.precio)) + '</p>';

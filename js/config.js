@@ -129,15 +129,12 @@ var bq = document.createElement('button');
 bq.textContent = 'Quitar';
 bq.onclick = function (ev) {
 ev.stopPropagation();
-if (bq._confirm) {
+confirmarDosToques(bq, '\u00bfSeguro?', 'Quitar', 3000, function () {
 google.script.run.withSuccessHandler(function (res) {
 platsMsg(esc(((res && res.mensajes) || []).join(' ')), res && res.ok);
 cargarPlataformas(); loadData();
 }).withFailureHandler(function (err) { platsMsg('Error: ' + esc(err.message), false); }).quitarPlataforma({ nombre: pl.nombre });
-} else {
-bq._confirm = true; bq.textContent = '\u00bfSeguro?';
-setTimeout(function () { bq._confirm = false; bq.textContent = 'Quitar'; }, 3000);
-}
+});
 };
 btns.appendChild(bq);
 }

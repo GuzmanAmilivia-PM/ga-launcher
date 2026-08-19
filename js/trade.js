@@ -145,8 +145,10 @@ function opsFechaTxt(iso) {
 var p = String(iso || '').split('-');
 return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : String(iso || '');
 }
+// Delegado en fmt (nucleo.js): misma etiqueta USD, mismo redondeo y ojito;
+// solo cambia que aca un null cuenta como 0 (son sumas de montos).
 function opsMonto(n) {
-return mask('USD ' + (Math.round(Number(n) || 0)).toLocaleString('es-UY'));
+return fmt(Number(n) || 0);
 }
 // Los tickers que hay para elegir salen de lo que esta cargado, no de una
 // lista fija: si nunca operaste algo, no tiene sentido ofrecerlo.
@@ -327,7 +329,7 @@ html += '<p class="newsempty">Ninguna posición se movió &plusmn;3% en las últ
 data.bruscos.forEach(function (b) {
 var up = Number(b.cambio) >= 0;
 html += '<div class="newsmove"><span><b>' + esc(b.symbol) + '</b>' + (b.nombre ? ' — ' + esc(b.nombre) : '') + '</span>' +
-'<span class="' + (up ? 'up' : 'down') + '">' + (up ? '+' : '') + Number(b.cambio).toFixed(2) + '%</span></div>' +
+'<span class="' + (up ? 'up' : 'down') + '">' + signoPct(Number(b.cambio), 2) + '</span></div>' +
 newsItemsHtml(b.noticias);
 });
 }
