@@ -265,6 +265,31 @@ function comparacionGrupo() {
     pct: (valor / capital - 1) * 100, idxPct: null, idxNombre: benchNombre
   };
 
+  // El rendimiento de la CARTERA, encadenado dia a dia y SIN el efecto del
+  // timing de los aportes (V6): cada tramo entre dos puntos rinde su valor
+  // final —quitando los aportes que cayeron en el tramo— contra el valor
+  // anterior, y los tramos se multiplican. El "pct" de arriba es lo que
+  // lograste VOS (tu plata, tus fechas); este es lo que rindieron las
+  // inversiones como tales. Un aporte se asume al cierre de su dia, la misma
+  // convencion que la simulacion del indice (V2). Si algun tramo no se puede
+  // medir con honestidad (valor no positivo), viaja null, no un invento.
+  out.twrPct = null;
+  var twr = 1, twrOk = true;
+  for (var i = i0 + 1; i < grupoPuntos.length; i++) {
+    var vPrev = grupoPuntos[i - 1].valor, vHoy = grupoPuntos[i].valor;
+    var tsPrev = grupoPuntos[i - 1].ts, tsHoy = grupoPuntos[i].ts;
+    if (!(vPrev > 0) || !isFinite(vHoy)) { twrOk = false; break; }
+    var flujo = 0;
+    // Por RANGO (tsPrev, tsHoy], no por dia exacto: un aporte fechado en un
+    // dia sin punto de la serie (finde, snapshot perdido) igual se descuenta
+    // de su tramo — si no, contaria como rendimiento.
+    enVentana.forEach(function (a) { if (a.ts > tsPrev && a.ts <= tsHoy) flujo += a.monto; });
+    var vSinFlujo = vHoy - flujo;
+    if (!(vSinFlujo > 0)) { twrOk = false; break; }
+    twr *= vSinFlujo / vPrev;
+  }
+  if (twrOk) out.twrPct = (twr - 1) * 100;
+
   // El indice, con los MISMOS aportes en las MISMAS fechas y medido contra el
   // MISMO capital: si no, los dos porcentajes no serian comparables.
   var b0 = benchEn(t0), bFin = benchEn(tFin);

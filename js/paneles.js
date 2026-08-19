@@ -377,10 +377,11 @@ var rendUsd = Math.round(c.valor - c.capital);
 h += '<div class="apostat"><span>Rendimiento</span><b class="' + (rendUsd >= 0 ? 'up' : 'down') + '">' + esc(mask((rendUsd >= 0 ? '+' : '') + 'US$ ' + rendUsd.toLocaleString('es-UY'))) + '</b></div>';
 h += '<div class="caprow">';
 h += '<div><p class="lbl">Rindi&oacute;</p>' + pct(c.pct) + '</div>';
+h += '<div><p class="lbl">La cartera</p>' + pct(c.twrPct) + '</div>';
 h += '<div><p class="lbl">' + esc(c.idxNombre || 'Índice') + '</p>' + pct(c.idxPct) + '</div>';
 h += '</div>';
 h += '<p class="capnota">Desde el ' + fechaCortaMs(c.desde) + ', sobre ' +
-esc(fmtUsdEnt(c.capital)) + ' de capital. Los bancos (Ita&uacute;, BTG) no entran: no rinden, y pasarles plata a las apps cuenta como aporte, no como ganancia.' +
+esc(fmtUsdEnt(c.capital)) + ' de capital. &quot;Rindi&oacute;&quot; es TU resultado (tu plata, tus fechas de aporte); &quot;la cartera&quot; es c&oacute;mo rindieron las inversiones sin el efecto de ese timing. Los bancos (Ita&uacute;, BTG) no entran: no rinden, y pasarles plata a las apps cuenta como aporte, no como ganancia.' +
 (c.idxPct !== null ? ' El &iacute;ndice no paga dividendos y tus cuentas s&iacute;.' : '') + '</p>';
 return h;
 }
