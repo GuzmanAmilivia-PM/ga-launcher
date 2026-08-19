@@ -229,7 +229,8 @@ if (c.acc) row.onclick = function () { showAccount(c.acc, 'portafolio'); };
 leg.appendChild(row);
 });
 // La tabla con TODAS las posiciones salio de esta vista el 17/08/2026 (pedido
-// de Guzman): va a vivir en otro lado. La de Inicio (renderHoldings, en
-// graficos.js) sigue siendo la referencia de como se arma la fila.
+// de Guzman); su rol lo cumple el detalle de cada cuenta (V8).
+// El mapa de calor mensual (V5) se calcula sobre fullSerie, ya en memoria.
+renderMapaCalor();
 }
 

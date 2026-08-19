@@ -112,6 +112,12 @@ body { font-family: 'Manrope', -apple-system, "Segoe UI", Roboto, Arial, sans-se
 /* caprow/capval/capnota: los numeros y la nota de la comparacion (V7).
    La leyenda del grafico de V1/V2 (capleg/capdot/...) se fue en E6. */
 .caprow { display: flex; gap: 22px; margin-top: 8px; }
+/* Mapa de calor mensual (V5): grilla de divs, sin gagraf. */
+.mc-fila { display: flex; gap: 3px; margin-bottom: 3px; align-items: center; }
+.mc-anio { width: 34px; flex-shrink: 0; font-size: 11px; color: var(--muted); font-weight: 700; }
+.mc-celda { flex: 1; min-width: 0; height: 26px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 9.5px; font-weight: 700; color: var(--text); overflow: hidden; }
+.mc-vacia { background: var(--border); opacity: .35; }
+.mc-head .mc-celda { background: none; color: var(--muted); font-size: 10px; height: 16px; }
 .capval { font-size: 15px; font-weight: 700; margin: 0; }
 .capnota { font-size: 11px; color: var(--muted); margin: 8px 0 0; line-height: 1.35; }
 
@@ -492,6 +498,11 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div class="cardtop"><h2>An&aacute;lisis de la cartera</h2><button class="expandbtn" id="anaRefreshBtn" title="Actualizar">&#8635;</button></div>
 <div id="anaCacheAviso" style="display:none"></div>
 <div id="anaBody"><p class="loadingtxt">Analizando tu cartera...</p></div>
+</div>
+<div class="card">
+<h2>Rendimiento por mes</h2>
+<div id="mapaCalor"></div>
+<p class="capnota">Cierre de cada mes contra el anterior, sobre el patrimonio total: un aporte o retiro grande cuenta como movimiento del mes.</p>
 </div>
 </div>
 

@@ -427,4 +427,57 @@ if (lista.length > HOLD_VISIBLE) { btn.style.display = 'block'; btn.textContent 
 else { btn.style.display = 'none'; }
 }
 }
+// ---------- Mapa de calor mensual (V5) ----------
+// Rendimiento de cada mes sobre la serie de patrimonio que YA llega: cierre
+// del mes contra cierre del mes anterior. La serie compacta guarda un punto
+// por mes hacia atras, asi que el cierre mensual existe tambien en la zona
+// vieja. Sin mes anterior no se inventa nada (queda vacio); el mes en curso
+// se mide hasta hoy (el ultimo punto de la serie es siempre el valor actual).
+// OJO: es sobre el patrimonio TOTAL — un aporte o retiro grande cuenta como
+// movimiento del mes; la nota debajo del mapa lo dice (regla U2).
+function mapaCalorMensual(serie) {
+if (!serie || serie.length < 2) return [];
+var cierres = {}; // anio*12+mes -> ultimo valor del mes (la serie es ascendente)
+serie.forEach(function (p) {
+var d = new Date(p.fecha);
+var v = Number(p.valor);
+if (!isFinite(v)) return;
+cierres[d.getFullYear() * 12 + d.getMonth()] = v;
+});
+var claves = Object.keys(cierres).map(Number).sort(function (a, b) { return a - b; });
+var porAnio = {};
+for (var i = 1; i < claves.length; i++) {
+var k = claves[i];
+if (claves[i - 1] !== k - 1) continue; // hueco: sin cierre del mes anterior
+var prev = cierres[k - 1];
+if (!(prev > 0)) continue;
+var anio = Math.floor(k / 12), mes = k % 12;
+if (!porAnio[anio]) { porAnio[anio] = []; for (var m = 0; m < 12; m++) porAnio[anio].push(null); }
+porAnio[anio][mes] = Math.round((cierres[k] / prev - 1) * 10000) / 10000;
+}
+return Object.keys(porAnio).map(Number).sort(function (a, b) { return b - a; })
+.map(function (a) { return { anio: a, meses: porAnio[a] }; });
+}
+var MC_MESES = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+function celdaCalor(pct) {
+if (pct === null || pct === undefined) return '<span class="mc-celda mc-vacia"></span>';
+var v = pct * 100;
+// La intensidad crece con el tamano del movimiento y se planta en ±8%.
+var alpha = Math.min(0.85, 0.18 + (Math.abs(v) / 8) * 0.6);
+var rgb = v >= 0 ? '34,197,94' : '244,63,94';
+var txt = (v >= 0 ? '+' : '') + (Math.abs(v) >= 9.95 ? v.toFixed(0) : v.toFixed(1));
+return '<span class="mc-celda" style="background:rgba(' + rgb + ',' + alpha.toFixed(2) + ')">' + txt + '</span>';
+}
+function renderMapaCalor() {
+var el = document.getElementById('mapaCalor');
+if (!el) return;
+var filas = mapaCalorMensual(fullSerie || []);
+if (!filas.length) { el.innerHTML = '<p class="newsempty">Con un mes m&aacute;s de historia aparece el primer mes.</p>'; return; }
+var html = '<div class="mc-fila mc-head"><span class="mc-anio"></span>' +
+MC_MESES.map(function (m) { return '<span class="mc-celda">' + m + '</span>'; }).join('') + '</div>';
+filas.forEach(function (f) {
+html += '<div class="mc-fila"><span class="mc-anio">' + f.anio + '</span>' + f.meses.map(celdaCalor).join('') + '</div>';
+});
+el.innerHTML = html;
+}
 
