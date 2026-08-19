@@ -153,17 +153,33 @@ if (!mostrarLockPendiente()) hideSplash();
 // Intento de biometria. `auto` = disparado solo al abrir la app, sin toque:
 // Safari exige un gesto del usuario para WebAuthn, asi que si ese intento se
 // rechaza no se muestra error, queda el boton para reintentar a mano.
-function intentarBio(auto) {
+// `forzado` = el boton Desbloquear: el UNICO que puede abortar una peticion
+// viva y reintentar (la salida para una peticion colgada).
+// Con una hoja de Face ID YA abierta, un intento nuevo la abortaba y la
+// volvia a abrir: Face ID aparecia DOS veces seguidas (reporte de Guzman,
+// 19/08/2026 \u2014 el toque de abrir la app caia sobre la pantalla de bloqueo
+// mientras el intento automatico ya estaba en vuelo). Por eso: si hay un
+// intento en curso, los toques y el automatico NO hacen nada.
+var bioEnCurso = false;
+var bioIntento = 0;
+function intentarBio(auto, forzado) {
+if (bioEnCurso && !forzado) return;
+var mio = ++bioIntento;
+bioEnCurso = true;
 var err = document.getElementById('secErr');
 if (!auto) err.textContent = '';
-// El boton NUNCA se deshabilita: si la peticion queda colgada (el caso que
-// dejaba la app trancada), volver a tocarlo aborta la anterior y reintenta.
 var btn = document.getElementById('secBioGo');
 if (!auto) btn.textContent = 'Verificando...';
 return bioVerificar(s.bio).then(function () {
+// Un intento abortado por el boton puede responder tarde: se ignora entero
+// (su exito o su error son de una peticion que ya no existe para el user).
+if (mio !== bioIntento) return;
+bioEnCurso = false;
 btn.textContent = 'Desbloquear';
 abrir();
 }).catch(function (e) {
+if (mio !== bioIntento) return;
+bioEnCurso = false;
 // Si el intento automatico se rechaza es, casi siempre, porque iOS pide un
 // gesto: se invita a tocar en vez de mostrar un error, y NO cuenta como
 // fallo (el sensor ni llego a mirarlo).
@@ -195,7 +211,9 @@ return;
 // a abrir en loop).
 setTimeout(function () { if (appBloqueada && modoBio) intentarBio(true); }, 350);
 });
-document.getElementById('secBioGo').onclick = function () { intentarBio(false); };
+// El boton NUNCA se deshabilita y es el unico FORZADO: si la peticion quedo
+// colgada (el caso que dejaba la app trancada), tocarlo aborta y reintenta.
+document.getElementById('secBioGo').onclick = function () { intentarBio(false, true); };
 // Si iOS rechaza el intento automatico por falta de gesto, cualquier toque en
 // la pantalla de bloqueo sirve: no hay que apuntarle al boton.
 el.addEventListener('click', function (ev) {
