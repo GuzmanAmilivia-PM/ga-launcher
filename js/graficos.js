@@ -35,6 +35,17 @@ out = fullSerie.slice(idx < 0 ? 0 : idx);
 }
 return out;
 }
+// Rendimiento anualizado (V6): en ventanas largas el % total no alcanza para
+// saber si fue bueno — +40% en 3 años es otra cosa que +40% en uno. Aparece
+// recien pasado ~1 año de datos (dias >= 400): anualizar un rango corto
+// proyecta una racha como si durara un año, que es inventar. null = no
+// corresponde mostrarlo.
+function pctAnualizado(pct, dias) {
+if (!(dias >= 400)) return null;
+var factor = 1 + pct / 100;
+if (factor <= 0) return null; // -100% o peor: la formula no tiene sentido
+return (Math.pow(factor, 365 / dias) - 1) * 100;
+}
 function updateRangePct() {
 var el = document.getElementById('rangePct');
 var serie = filterSerie(currentRangeDias);
@@ -42,7 +53,10 @@ if (!serie.length || !currentTotal) { el.textContent = ''; el.className = 'range
 var base = serie[0].valor;
 if (!base) { el.textContent = ''; return; }
 var pct = (currentTotal / base - 1) * 100;
-el.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+var dias = (serie[serie.length - 1].fecha - serie[0].fecha) / 86400000;
+var anual = pctAnualizado(pct, dias);
+el.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%' +
+(anual !== null ? ' · ' + (anual >= 0 ? '+' : '') + anual.toFixed(1) + '% anual' : '');
 el.className = 'rangepct ' + (pct >= 0 ? 'up' : 'down');
 }
 function getFilteredDataPoints(serie) {
