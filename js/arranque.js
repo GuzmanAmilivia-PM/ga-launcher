@@ -103,6 +103,9 @@ var cb = document.querySelector('.chartbox');
 if (cb) cb.innerHTML = '<p class="newsempty">No se pudo dibujar el gr&aacute;fico.</p>';
 }
 renderHoldings(data.topHoldings);
+// R1: si el payload trajo los agregados de los paneles ya calculados, se
+// aplican aca (despues de fullSerie/serieGrupo: la comparacion los usa).
+if (data.extras) aplicarExtras(data.extras);
 if (typeof ajustarAlturaDeck === 'function') ajustarAlturaDeck();
 actualizarSymbols();
 if (document.getElementById('view-portafolio').style.display !== 'none') renderPortafolio();
@@ -135,7 +138,9 @@ bnbAutoSync();
       }
       return '{' + Object.keys(v).sort().filter(function (k) {
         if (k === 'actualizado' || k === 'lite') return false;
-        if (esRaiz && (k === 'serie' || k === 'bench' || k === 'serieGrupo')) return false;
+        // extras (R1) tampoco entra: solo viaja en cargas completas (que
+        // repintan siempre) y serializarlo en cada poll seria puro CPU.
+        if (esRaiz && (k === 'serie' || k === 'bench' || k === 'serieGrupo' || k === 'extras')) return false;
         return true;
       }).map(function (k) {
         return JSON.stringify(k) + ':' + estable(v[k], false);

@@ -110,6 +110,38 @@ ajustarAlturaDeck();
 });
 }
 
+// ---------- R1: agregados que llegan con el dashboard ----------
+// El payload completo puede traer `extras` (dividendos, aportes y analisis ya
+// calculados, si el cache del servidor estaba caliente). Se guardan en los
+// caches locales, se pintan los paneles aunque esten fuera de pantalla y se
+// marcan como cargados: el primer deslizado a Dividendos o Aportes y la
+// tarjeta de analisis aparecen SIN su propia llamada al backend. Si extras no
+// vino (cache frio o backend viejo), cada panel se pide aparte como siempre.
+// Solo se acepta un payload sano (ok:true): un error no pisa datos buenos.
+function aplicarExtras(ex) {
+try {
+if (ex.dividendos && ex.dividendos.ok) {
+cacheGuardar('ga_cache_div', ex.dividendos);
+renderDividendos(ex.dividendos);
+limpiarMarca('divCacheAviso');
+divCargado = true;
+}
+if (ex.aportes && ex.aportes.ok) {
+cacheGuardar('ga_cache_apo', ex.aportes);
+renderAportes(ex.aportes);
+limpiarMarca('apoCacheAviso');
+apoCargado = true;
+}
+if (ex.analisis && ex.analisis.ok) {
+cacheGuardar('ga_cache_ana', ex.analisis);
+renderAnalisis(ex.analisis);
+limpiarMarca('anaCacheAviso');
+anaCargado = true;
+}
+ajustarAlturaDeck();
+} catch (e) { try { console.error('aplicarExtras:', e); } catch (e2) {} }
+}
+
 var divChartInstance = null, divDatos = null;
 function cargarDividendos(forzar) {
 divCargado = true;
