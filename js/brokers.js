@@ -49,22 +49,39 @@ wrap.style.display = 'none';
 t.innerHTML = esc(msgErr(err, 'La conexión IBKR'));
 }).estadoIBKR();
 }
-document.getElementById('ibkrGuardar').onclick = function () {
-var btn = this, tk = document.getElementById('ibkrToken'), q = document.getElementById('ibkrQuery'), qa = document.getElementById('ibkrQueryAct'), res = document.getElementById('ibkrKeyResultado');
+// ---------- Guardar credenciales (conductor unico) ----------
+// Las tres pantallas de credenciales (IBKR, Schwab, IA) hacian lo mismo con
+// el esqueleto copiado (E6): deshabilitar el boton, llamar al backend, y
+// segun el resultado vaciar los inputs + exito + refrescar el estado, o el
+// error legible. De paso, los mensajes extra del backend en el exito ya no
+// se pierden (Schwab los descartaba).
+function guardarConBoton(cfg) {
+var btn = cfg.btn, res = document.getElementById(cfg.resId);
 btn.disabled = true;
-google.script.run.withSuccessHandler(function (r) {
+cfg.pedir(function (r) {
 btn.disabled = false;
 if (r && r.ok) {
-tk.value = ''; q.value = ''; qa.value = '';
-res.innerHTML = '<div class="tmsg ok">&#10003; Conexi&oacute;n guardada.' + ((r.mensajes && r.mensajes.length) ? ' ' + esc(r.mensajes.join(' ')) : '') + '</div>';
-cargarEstadoIBKR();
+cfg.inputs.forEach(function (i) { i.value = ''; });
+res.innerHTML = '<div class="tmsg ok">&#10003; ' + cfg.exito + ((r.mensajes && r.mensajes.length) ? ' ' + esc(r.mensajes.join(' ')) : '') + '</div>';
+cfg.alOk();
 } else {
-res.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</div>';
+res.innerHTML = '<div class="tmsg err">' + esc(msgBackend(r)) + '</div>';
 }
-}).withFailureHandler(function (err) {
+}, function (err) {
 btn.disabled = false;
-res.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, 'La conexión IBKR')) + '</div>';
-}).guardarConfigIBKR({ token: tk.value, queryId: q.value, queryActId: qa.value });
+res.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, cfg.sujeto)) + '</div>';
+});
+}
+document.getElementById('ibkrGuardar').onclick = function () {
+var tk = document.getElementById('ibkrToken'), q = document.getElementById('ibkrQuery'), qa = document.getElementById('ibkrQueryAct');
+guardarConBoton({
+btn: this, inputs: [tk, q, qa], resId: 'ibkrKeyResultado',
+sujeto: 'La conexión IBKR', exito: 'Conexi&oacute;n guardada.',
+alOk: cargarEstadoIBKR,
+pedir: function (ok, fail) {
+google.script.run.withSuccessHandler(ok).withFailureHandler(fail).guardarConfigIBKR({ token: tk.value, queryId: q.value, queryActId: qa.value });
+}
+});
 };
 // El backend frena solo las sincronizaciones que dejarian demasiadas
 // posiciones en cero (reporte incompleto del broker). Si Guzman ya miro la
@@ -319,21 +336,15 @@ t.innerHTML = esc(msgErr(err, 'La conexión con Schwab'));
 }).estadoCS();
 }
 document.getElementById('csGuardar').onclick = function () {
-var btn = this, ci = document.getElementById('csClientId'), ck = document.getElementById('csConsumerKey'), res = document.getElementById('csKeyResultado');
-btn.disabled = true;
-google.script.run.withSuccessHandler(function (r) {
-btn.disabled = false;
-if (r && r.ok) {
-ci.value = ''; ck.value = '';
-res.innerHTML = '<div class="tmsg ok">&#10003; Credenciales guardadas. Ahora toc&aacute; "Conectar cuenta Schwab".</div>';
-cargarEstadoCS();
-} else {
-res.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</div>';
+var ci = document.getElementById('csClientId'), ck = document.getElementById('csConsumerKey');
+guardarConBoton({
+btn: this, inputs: [ci, ck], resId: 'csKeyResultado',
+sujeto: 'La conexión con Schwab', exito: 'Credenciales guardadas. Ahora toc&aacute; "Conectar cuenta Schwab".',
+alOk: cargarEstadoCS,
+pedir: function (ok, fail) {
+google.script.run.withSuccessHandler(ok).withFailureHandler(fail).guardarConfigCS({ clientId: ci.value, consumerKey: ck.value });
 }
-}).withFailureHandler(function (err) {
-btn.disabled = false;
-res.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, 'La conexión con Schwab')) + '</div>';
-}).guardarConfigCS({ clientId: ci.value, consumerKey: ck.value });
+});
 };
 document.getElementById('csConectar').onclick = function () {
 var btn = this, res = document.getElementById('csConectarResultado');

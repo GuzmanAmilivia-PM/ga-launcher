@@ -13,16 +13,16 @@ if (aviso) aviso.style.display = iaConfigurada ? 'none' : '';
 }).withFailureHandler(function () {}).estadoIA();
 }
 document.getElementById('iaKeyGuardar').onclick = function () {
-var btn = this, inp = document.getElementById('iaKey'), res = document.getElementById('iaKeyResultado');
-btn.disabled = true;
-google.script.run.withSuccessHandler(function (r) {
-btn.disabled = false;
-if (r && r.ok) { inp.value = ''; res.innerHTML = '<div class="tmsg ok">&#10003; Clave guardada.</div>'; cargarEstadoIA(); }
-else { res.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</div>'; }
-}).withFailureHandler(function (err) {
-btn.disabled = false;
-res.innerHTML = '<div class="tmsg err">Error: ' + esc(err.message) + '</div>';
-}).guardarClaveIA({ apiKey: inp.value });
+var inp = document.getElementById('iaKey');
+// guardarConBoton vive en brokers.js (el conductor unico de credenciales).
+guardarConBoton({
+btn: this, inputs: [inp], resId: 'iaKeyResultado',
+sujeto: 'La clave de IA', exito: 'Clave guardada.',
+alOk: cargarEstadoIA,
+pedir: function (ok, fail) {
+google.script.run.withSuccessHandler(ok).withFailureHandler(fail).guardarClaveIA({ apiKey: inp.value });
+}
+});
 };
 document.getElementById('iaIrConfig').onclick = function () { setView('config'); };
 document.getElementById('iaBack').onclick = function () { setView('inicio'); };
