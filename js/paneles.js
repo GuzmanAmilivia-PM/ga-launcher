@@ -58,6 +58,10 @@ var MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Set
 // Cache local de los paneles lentos (dividendos y aportes): consultar los
 // brokers tarda varios segundos, asi que se pinta al instante lo ultimo visto
 // y se refresca por atras. Mismo criterio que pintarCache() en el arranque.
+// GA_CACHES: TODAS las claves de cache local con datos del portafolio. El
+// borrado de emergencia (seguridad.js) la recorre; una clave nueva que no se
+// anote aca queda viva despues de "Olvide mi clave".
+var GA_CACHES = ['ga_cache_data', 'ga_cache_div', 'ga_cache_apo', 'ga_cache_ops', 'ga_cache_ana'];
 function cacheLeer(clave) {
 try {
 var j = JSON.parse(localStorage.getItem(clave) || 'null');
