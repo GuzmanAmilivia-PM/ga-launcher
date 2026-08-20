@@ -1,6 +1,11 @@
 // API (shim google.script.run), pantalla de clave, helpers, errorEnVista
 // ===== API (Apps Script como backend, autenticado por clave) =====
-var API_URL = 'https://script.google.com/macros/s/AKfycbyrMsdxH2PM0s1I5X2p48ottTNltbayYoKBfTE8npOLUk_hapjFcSMIWJ0hvkbF2XBV/exec';
+// El backend vive en Cloudflare Workers desde el 20/08/2026 (Fase 1 de la
+// migracion: el codigo se mudo, los datos siguen en la MISMA Google Sheet).
+// ROLLBACK: volver a la linea de Apps Script de abajo — el deployment /exec
+// sigue vivo y la CSP de index.html deja pasar los dos dominios a proposito.
+var API_URL = 'https://ga-portfolio-worker.ga-portfolio.workers.dev';
+// var API_URL = 'https://script.google.com/macros/s/AKfycbyrMsdxH2PM0s1I5X2p48ottTNltbayYoKBfTE8npOLUk_hapjFcSMIWJ0hvkbF2XBV/exec';
 function getApiToken() { try { return localStorage.getItem('ga_token') || ''; } catch (e) { return ''; } }
 // hideSplash vive ACA (el primer archivo) y no en arranque.js: seguridad.js
 // la referencia al CARGAR (setTimeout(hideSplash, 700) evalua el nombre en
