@@ -176,7 +176,7 @@ document.getElementById('cfgBack').onclick = function () { setView('inicio'); };
 
 // ---------- Diagnostico ----------
 // Lado APP al entrar (todo local, instantaneo); lado SERVIDOR a pedido, que
-// cuesta el viaje de ~1,5 s a Apps Script y lecturas de la Sheet.
+// cuesta el viaje al backend y las lecturas de la Sheet.
 function filaSalud(etiqueta, valor, esOk) {
 var color = esOk === undefined ? '' : (esOk ? ' style="color:var(--green)"' : ' style="color:var(--red)"');
 return '<div class="row"><span>' + etiqueta + '</span><span' + color + '>' + valor + '</span></div>';

@@ -1,5 +1,5 @@
 // API (shim google.script.run), pantalla de clave, helpers, errorEnVista
-// ===== API (Apps Script como backend, autenticado por clave) =====
+// ===== API (Cloudflare Workers como backend, autenticado por clave) =====
 // El backend vive en Cloudflare Workers desde el 20/08/2026 (Fase 1 de la
 // migracion: el codigo se mudo, los datos siguen en la MISMA Google Sheet).
 // ROLLBACK: volver a la linea de Apps Script de abajo — el deployment /exec
@@ -39,9 +39,9 @@ function mostrarLockPendiente() {
 function apiCall(fn, args) {
   return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: getApiToken(), fn: fn, args: args || null }) })
     .then(function (r) {
-      // Apps Script no siempre responde JSON: con cuota excedida, deploy roto
-      // o redireccion de login devuelve HTML, y un r.json() pelado explota con
-      // "Unexpected token <", que no le dice nada a nadie.
+      // Un backend no siempre responde JSON: Apps Script devolvia HTML con la
+      // cuota excedida, y Cloudflare devuelve su pagina de error en un 5xx. Un
+      // r.json() pelado explotaria con "Unexpected token <": la defensa se queda.
       return r.text().then(function (t) {
         try { return JSON.parse(t); }
         catch (e) {

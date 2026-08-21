@@ -116,7 +116,7 @@ mostrarResultado('Error: ' + esc(err.message), false);
 // ---------- Operaciones (compras y ventas) ----------
 // La lista viaja entera desde el backend (brokers + lo cargado a mano) y los
 // filtros se aplican ACA: cambiar de rango o de tipo es instantaneo, sin pagar
-// el viaje de ~1,5 s que cuesta cada llamada a Apps Script.
+// el viaje que cuesta cada llamada al backend.
 var opsRango = 'ytd', opsTipo = 'todas', opsTicker = 'todos', lastOps = null;
 // t = lo que dice la pantallita de opciones; c = lo que entra en el boton
 // (en un telefono de 375 px el boton mide ~87: "Desde el inicio" se cortaba).
