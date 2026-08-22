@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <!-- Politica de contenido. Lo importante es connect-src: aunque algun script
      de terceros llegara a correr, no tiene a donde MANDAR la clave de Binance
-     ni el token de la API. Los destinos permitidos son el Worker de Cloudflare
-     (el backend desde el 20/08/2026), los dos dominios de Apps Script — que
-     siguen habilitados SOLO mientras dure la ventana de vuelta atras y se
-     sacan al jubilar el /exec — y el WebSocket de Binance, que la PWA consulta
-     desde el telefono.
+     ni el token de la API. Los UNICOS destinos permitidos son el Worker de
+     Cloudflare (el backend desde el 20/08/2026) y el WebSocket de Binance, que
+     la PWA consulta desde el telefono. Los dos dominios de Apps Script se
+     sacaron el 22/08/2026, al apagar ese backend: eran dos destinos de
+     exfiltracion que ya no cumplian ninguna funcion.
      script-src SIN 'unsafe-inline' (desde v39): todo el codigo vive en js/*.js
      y el unico inline es el snippet del tema, permitido por su hash sha256.
      OJO: si se EDITA ese snippet hay que recalcular el hash o el tema deja de
@@ -19,7 +19,7 @@
   style-src 'self' 'unsafe-inline';
   font-src 'self' data:;
   img-src 'self' data: https:;
-  connect-src 'self' https://ga-portfolio-worker.ga-portfolio.workers.dev https://script.google.com https://script.googleusercontent.com wss://ws-api.binance.com;
+  connect-src 'self' https://ga-portfolio-worker.ga-portfolio.workers.dev wss://ws-api.binance.com;
   frame-src https://s.tradingview.com https://www.tradingview.com;
   worker-src 'self';
   object-src 'none';

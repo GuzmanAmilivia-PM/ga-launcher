@@ -2,10 +2,12 @@
 // ===== API (Cloudflare Workers como backend, autenticado por clave) =====
 // El backend vive en Cloudflare Workers desde el 20/08/2026 (Fase 1 de la
 // migracion: el codigo se mudo, los datos siguen en la MISMA Google Sheet).
-// ROLLBACK: volver a la linea de Apps Script de abajo — el deployment /exec
-// sigue vivo y la CSP de index.html deja pasar los dos dominios a proposito.
+// Apps Script quedo APAGADO el 22/08/2026 (/exec en "Solo yo" y sin
+// activadores), asi que la linea de rollback y sus dominios en la CSP se
+// fueron con el: apuntaban a algo que ya no atiende. Volver atras hoy exige
+// reabrir el acceso del /exec y recrear los triggers primero — los pasos estan
+// en el CLAUDE.md del repo ga-portfolio-tracker.
 var API_URL = 'https://ga-portfolio-worker.ga-portfolio.workers.dev';
-// var API_URL = 'https://script.google.com/macros/s/AKfycbyrMsdxH2PM0s1I5X2p48ottTNltbayYoKBfTE8npOLUk_hapjFcSMIWJ0hvkbF2XBV/exec';
 function getApiToken() { try { return localStorage.getItem('ga_token') || ''; } catch (e) { return ''; } }
 // hideSplash vive ACA (el primer archivo) y no en arranque.js: seguridad.js
 // la referencia al CARGAR (setTimeout(hideSplash, 700) evalua el nombre en
