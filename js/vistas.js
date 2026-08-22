@@ -204,7 +204,14 @@ var t = TIPO_LABELS[p.tipo] ? p.tipo : (p.cripto ? 'cripto' : 'accion');
 grupos[t] += (Number(p.valor) || 0);
 sumaPos += (Number(p.valor) || 0);
 });
+// La segunda rama faltaba y el backend SI la tiene (_repartoPorTipo en
+// Analisis.js): cuando las posiciones suman casi el total —o sea, no queda
+// resto sin asignar— pero hay liquidez, esta torta no mostraba la porcion Cash
+// mientras la tarjeta de Analisis, en la MISMA pantalla, decia "tenes X% en
+// cash". Dos numeros contradiciendose. Auditoria del 22/08/2026.
+var cash = Number(lastData.liquidez) || 0;
 if (total - sumaPos > 1) grupos.cash += (total - sumaPos);
+else if (grupos.cash === 0 && cash > 0) grupos.cash = cash;
 return ['accion', 'etf', 'cripto', 'cash'].filter(function (t) { return grupos[t] > 0.5; })
 .map(function (t) { return { label: TIPO_LABELS[t], valor: Math.round(grupos[t] * 100) / 100, acc: null }; });
 }

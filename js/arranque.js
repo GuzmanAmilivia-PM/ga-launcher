@@ -183,6 +183,13 @@ bnbAutoSync();
         if (lastData) {
           if (!data.bench && lastData.bench) data.bench = lastData.bench;
           if (!data.serieGrupo && lastData.serieGrupo) data.serieGrupo = lastData.serieGrupo;
+          // Los cierres del mini-grafico (V6) tampoco viajan en el lite y
+          // siguen valiendo. Faltaba re-adjuntarlos y por eso el cache local
+          // quedaba SIN ellos: al reabrir la app, la columna "Mes" salia vacia
+          // hasta que tocara una carga completa (hasta media hora despues).
+          // La defensa de aplicarSparks vive solo en memoria y el cache la
+          // saltea. Auditoria del 22/08/2026.
+          if (!data.sparks && lastData.sparks) data.sparks = lastData.sparks;
         }
       }
       var av = document.getElementById('autoAviso');

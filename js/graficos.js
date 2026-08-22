@@ -423,7 +423,10 @@ return out;
 var sparksPorSym = {};
 function aplicarSparks(data) {
 var s = data && data.sparks;
-if (!s || typeof s !== 'object') return;
+// Un objeto VACIO tambien se ignora: el backend manda {} cuando la hoja _spark
+// falla (Sheets caida, GOOGLEFINANCE sin responder, cuota), y pisar con vacio
+// borraria dibujos que siguen siendo validos. Auditoria del 22/08/2026.
+if (!s || typeof s !== 'object' || !Object.keys(s).length) return;
 sparksPorSym = s;
 }
 // Un <svg> escrito a mano: dibujar 7 lineas de 24 puntos no justifica una
@@ -439,14 +442,22 @@ var rango = max - min;
 var pad = 2, alto = SPARK_H - pad * 2, ancho = SPARK_W - pad * 2;
 var pts = [];
 for (var j = 0; j < serie.length; j++) {
-var x = pad + (serie.length === 1 ? ancho / 2 : (j * ancho) / (serie.length - 1));
+var x = pad + (j * ancho) / (serie.length - 1);
 var y = pad + (rango === 0 ? alto / 2 : alto - ((serie[j] - min) / rango) * alto);
 pts.push(x.toFixed(1) + ',' + y.toFixed(1));
 }
+// El color sale del TEMA, no de un hexadecimal fijo: la app tiene tema claro y
+// ahi el verde es #0f9d58 (el #22c55e del tema oscuro sobre fondo blanco da
+// 2,3:1 de contraste, por debajo del minimo). Va como clase porque un
+// stroke="var(--green)" en el ATRIBUTO no lo resuelve el navegador.
 var sube = serie[serie.length - 1] >= serie[0];
-var color = sube ? '#22c55e' : '#f43f5e';
-return '<svg class="spark" width="' + SPARK_W + '" height="' + SPARK_H + '" viewBox="0 0 ' + SPARK_W + ' ' + SPARK_H + '" aria-hidden="true" focusable="false">' +
-'<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + color + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+var pct = serie[0] ? ((serie[serie.length - 1] / serie[0] - 1) * 100) : 0;
+// El texto para lectores de pantalla no es adorno: la columna se llama "Mes" y
+// sin esto anuncia siete celdas VACIAS — promete un dato y no lo entrega.
+var dicho = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '% en el mes';
+return '<svg class="spark ' + (sube ? 'sube' : 'baja') + '" width="' + SPARK_W + '" height="' + SPARK_H +
+'" viewBox="0 0 ' + SPARK_W + ' ' + SPARK_H + '" role="img" aria-label="' + dicho + '">' +
+'<polyline points="' + pts.join(' ') + '"/></svg>';
 }
 function sparkDe(h) {
 var s = sparksPorSym[String(h && h.symbol || '').toUpperCase()];
