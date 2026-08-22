@@ -415,11 +415,49 @@ return out;
 // La fila se arma en UN solo lugar, la use quien la use (crear o actualizar):
 // test-posiciones verifica aca que cada porcentaje quede en su columna.
 // Sin columna de cantidad (pedido de Guzman): la cantidad vive en el detalle.
+// ---------- Mini-grafico por posicion (V6) ----------
+// Los cierres del ultimo mes por simbolo llegan en el payload COMPLETO
+// (data.sparks); el poll de 60 s no los trae, porque un mes de cierres no
+// cambia en 60 segundos. Por eso una respuesta sin el dato NO borra el que
+// ya estaba — mismo criterio defensivo que el indice y la serie del grupo.
+var sparksPorSym = {};
+function aplicarSparks(data) {
+var s = data && data.sparks;
+if (!s || typeof s !== 'object') return;
+sparksPorSym = s;
+}
+// Un <svg> escrito a mano: dibujar 7 lineas de 24 puntos no justifica una
+// libreria (regla R2), y una <polyline> es exactamente eso.
+var SPARK_W = 46, SPARK_H = 20;
+function sparkSvg(serie) {
+if (!serie || serie.length < 2) return '';
+var min = serie[0], max = serie[0];
+for (var i = 1; i < serie.length; i++) { if (serie[i] < min) min = serie[i]; if (serie[i] > max) max = serie[i]; }
+var rango = max - min;
+// Un mes plano (o un solo precio repetido) se dibuja como una raya al medio,
+// no como una division por cero.
+var pad = 2, alto = SPARK_H - pad * 2, ancho = SPARK_W - pad * 2;
+var pts = [];
+for (var j = 0; j < serie.length; j++) {
+var x = pad + (serie.length === 1 ? ancho / 2 : (j * ancho) / (serie.length - 1));
+var y = pad + (rango === 0 ? alto / 2 : alto - ((serie[j] - min) / rango) * alto);
+pts.push(x.toFixed(1) + ',' + y.toFixed(1));
+}
+var sube = serie[serie.length - 1] >= serie[0];
+var color = sube ? '#22c55e' : '#f43f5e';
+return '<svg class="spark" width="' + SPARK_W + '" height="' + SPARK_H + '" viewBox="0 0 ' + SPARK_W + ' ' + SPARK_H + '" aria-hidden="true" focusable="false">' +
+'<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + color + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+function sparkDe(h) {
+var s = sparksPorSym[String(h && h.symbol || '').toUpperCase()];
+return sparkSvg(s);
+}
 function filaHoldingHtml(h) {
 var pctDisplay = (h.pct * 100).toFixed(1) + '%';
 var sym = String(h.symbol || '');
 var inic = sym.length <= 3 ? sym : sym.slice(0, 2);
 return '<td><span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + esc(inic) + '</span><span class="holdid"><span class="sym">' + esc(sym) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></span></span></td>' +
+'<td class="col-spark">' + sparkDe(h) + '</td>' +
 '<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
 '<td>' + gananciaHtml(h) + fmt(h.valor) + '</td>' +
 '<td class="holdpct col-pct">' + pctDisplay + '</td>';
@@ -431,7 +469,7 @@ var el = document.getElementById('holdingsList');
 var btn = document.getElementById('holdMoreBtn');
 if (btn && !btn._wired) { btn._wired = true; btn.addEventListener('click', toggleHoldings); }
 lastHoldings = list || [];
-if (!list || !list.length) { holdFilas = []; holdCabezas = []; el.innerHTML = '<tr><td colspan="4" class="newsempty">Sin posiciones.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
+if (!list || !list.length) { holdFilas = []; holdCabezas = []; el.innerHTML = '<tr><td colspan="5" class="newsempty">Sin posiciones.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
 var lista = ordenarPorTipo(list);
 // Actualizacion EN EL LUGAR (R4): si la tabla ya muestra estos simbolos en
 // este orden, se refrescan las celdas de cada fila sin vaciar el tbody.
@@ -445,7 +483,7 @@ lista.forEach(function (h, idx) {
 var t = tipoDe(h);
 if (!enLugar && t !== tipoPrev) {
 var sec = document.createElement('tr');
-sec.innerHTML = '<td colspan="4">' + esc((typeof TIPO_LABELS !== 'undefined' && TIPO_LABELS[t]) || t) + '</td>';
+sec.innerHTML = '<td colspan="5">' + esc((typeof TIPO_LABELS !== 'undefined' && TIPO_LABELS[t]) || t) + '</td>';
 el.appendChild(sec);
 holdCabezas.push({ tr: sec, idx: idx });
 tipoPrev = t;

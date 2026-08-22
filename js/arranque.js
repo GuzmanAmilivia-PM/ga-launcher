@@ -114,6 +114,7 @@ updateRangePct();
 var cb = document.querySelector('.chartbox');
 if (cb) cb.innerHTML = '<p class="newsempty">No se pudo dibujar el gr&aacute;fico.</p>';
 }
+aplicarSparks(data);
 renderHoldings(data.topHoldings);
 // R1: si el payload trajo los agregados de los paneles ya calculados, se
 // aplican aca (despues de fullSerie/serieGrupo: la comparacion los usa).
