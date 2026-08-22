@@ -470,7 +470,10 @@ var inic = sym.length <= 3 ? sym : sym.slice(0, 2);
 return '<td><span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + esc(inic) + '</span><span class="holdid"><span class="sym">' + esc(sym) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></span></span></td>' +
 '<td class="col-spark">' + sparkDe(h) + '</td>' +
 '<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
-'<td>' + gananciaHtml(h) + fmt(h.valor) + '</td>' +
+// Pedido de Guzman (22/08/2026): sin el monto en dolares — no le interesa
+// ese dato aca. Queda la ganancia %, que es la que si le sirve por posicion.
+// El detalle de cuenta (vistas.js) NO se toca: sigue mostrando el valor.
+'<td>' + gananciaHtml(h) + '</td>' +
 '<td class="holdpct col-pct">' + pctDisplay + '</td>';
 }
 function claseFila(idx) { return (idx >= HOLD_VISIBLE && !holdingsExpanded ? 'hidden-row ' : '') + 'asset-row'; }
