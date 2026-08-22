@@ -7,7 +7,7 @@ iaConfigurada = !!(st && st.configurada);
 var t = document.getElementById('iaEstadoTxt');
 if (t) t.innerHTML = iaConfigurada
 ? '&#10003; Clave configurada. Los an&aacute;lisis se generan con Claude (claude-opus-5) y se guardan 6 horas.'
-: 'Sin configurar. Cre&aacute; una clave de API en <b>console.anthropic.com</b> y pegala ac&aacute;. Se guarda en tu Apps Script privado, nunca en esta p&aacute;gina.';
+: 'Sin configurar. Cre&aacute; una clave de API en <b>console.anthropic.com</b> y pegala ac&aacute;. Se guarda en tu servidor privado de Cloudflare, nunca en esta p&aacute;gina.';
 var aviso = document.getElementById('iaKeyAviso');
 if (aviso) aviso.style.display = iaConfigurada ? 'none' : '';
 }).withFailureHandler(function () {}).estadoIA();

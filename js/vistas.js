@@ -100,8 +100,13 @@ if (name === 'cs') cargarEstadoCS();
 if (name === 'ia') prepararIA();
 if (name === 'seguridad') prepararSeguridad();
 if (name === 'noticias' && !noticiasCargadas) {
-google.script.run.withSuccessHandler(function (d) { noticiasCargadas = true; renderNoticias(d); })
-.withFailureHandler(function (err) { errorEnVista('noticiasBody', err, 'las noticias'); }).getNoticias();
+// La bandera se marca ANTES de pedir, no en el handler de exito: si no, cada
+// toque en la pestana mientras el pedido esta en vuelo disparaba OTRA llamada
+// de hasta dos minutos. Si falla se revierte, para poder reintentar. Es el
+// mismo patron que ya usaba cargarOperaciones.
+noticiasCargadas = true;
+google.script.run.withSuccessHandler(function (d) { renderNoticias(d); })
+.withFailureHandler(function (err) { noticiasCargadas = false; errorEnVista('noticiasBody', err, 'las noticias'); }).getNoticias();
 }
 if (name === 'trade' && !opsCargadas) cargarOperaciones(false);
 window.scrollTo(0, 0);

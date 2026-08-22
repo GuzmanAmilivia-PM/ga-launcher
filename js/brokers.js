@@ -8,6 +8,9 @@
 // llamadores lo pasan por esc(), y una entidad escapada se veia literal.
 function msgErr(err, sujeto) {
 var m = (err && err.message) ? err.message : String(err);
+// Sin señal, Safari tira TypeError('Load failed') y eso se pintaba tal cual en
+// media app. La traduccion vive en nucleo.js para que sea la misma en todos lados.
+if (typeof esErrorDeRed === 'function' && esErrorDeRed(err)) return MSJ_SIN_RED;
 if (m.indexOf('unknown_fn') === -1) return m;
 return (sujeto ? sujeto + ' se activa' : 'Se activa') +
 ' con la próxima actualización del servidor. Avisale a Claude que despliegue el backend.';
@@ -49,7 +52,7 @@ html += st.actividadConfigurada
 t.innerHTML = html;
 wrap.style.display = '';
 } else {
-t.innerHTML = 'Sin configurar. Gener&aacute; el token en el portal de IBKR (pasos ac&aacute; abajo) y pegalo: se guarda en tu Apps Script privado, nunca en esta p&aacute;gina. El acceso es de solo lectura.';
+t.innerHTML = 'Sin configurar. Gener&aacute; el token en el portal de IBKR (pasos ac&aacute; abajo) y pegalo: se guarda en tu servidor privado de Cloudflare, nunca en esta p&aacute;gina. El acceso es de solo lectura.';
 wrap.style.display = 'none';
 }
 }).withFailureHandler(function (err) {
@@ -325,7 +328,7 @@ google.script.run.withSuccessHandler(function (st) {
 var sync = document.getElementById('csSyncCard');
 var btnCon = document.getElementById('csConectar');
 if (!st || !st.configurada) {
-t.innerHTML = 'Sin configurar. Cre&aacute; tu cuenta gratis en <b>snaptrade.com</b>, copi&aacute; el clientId y la consumerKey del panel (pasos ac&aacute; abajo) y guardalas: van a tu Apps Script privado, nunca a esta p&aacute;gina.';
+t.innerHTML = 'Sin configurar. Cre&aacute; tu cuenta gratis en <b>snaptrade.com</b>, copi&aacute; el clientId y la consumerKey del panel (pasos ac&aacute; abajo) y guardalas: van a tu servidor privado de Cloudflare, nunca a esta p&aacute;gina.';
 sync.style.display = 'none';
 btnCon.style.display = 'none';
 return;

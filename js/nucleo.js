@@ -36,8 +36,36 @@ function mostrarLockPendiente() {
   mostrarLock(m);
   return true;
 }
+// Presupuesto de espera por pedido. Sin esto el fetch va pelado y queda a
+// merced del timeout de red de WebKit: en el subte o con senal mala, la app se
+// quedaba colgada sin cancelar ni avisar. 'noticias' baja quince feeds RSS y
+// puede tardar minutos; el resto es rapido y no tiene por que esperar tanto.
+var API_TIMEOUT_MS = 25000;
+var API_TIMEOUT_LARGO_MS = 180000;
+var FNS_LENTAS = { noticias: 1, analisis: 1, refrescar: 1, ibkr_sync: 1, cs_sync: 1, restaurar: 1 };
+
+// Un fallo de red de Safari llega como TypeError('Load failed'), y eso es lo
+// que se pintaba tal cual en Noticias, Dividendos, Aportes, Analisis, Buscador
+// y Diagnostico. Se traduce una sola vez, aca, para todas las vistas.
+function esErrorDeRed(e) {
+  var m = String((e && e.message) || e || '');
+  return (e instanceof TypeError) || /Load failed|Failed to fetch|NetworkError|network/i.test(m);
+}
+var MSJ_SIN_RED = 'Sin conexión. Proba de nuevo cuando tengas señal.';
+
 function apiCall(fn, args) {
-  return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: getApiToken(), fn: fn, args: args || null }) })
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var limite = FNS_LENTAS[fn] ? API_TIMEOUT_LARGO_MS : API_TIMEOUT_MS;
+  var vencio = false;
+  var reloj = setTimeout(function () { vencio = true; if (ctrl) ctrl.abort(); }, limite);
+  var opciones = { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: getApiToken(), fn: fn, args: args || null }) };
+  if (ctrl) opciones.signal = ctrl.signal;
+  return fetch(API_URL, opciones)
+    .catch(function (e) {
+      throw new Error(vencio
+        ? 'El servidor tardo demasiado. Proba de nuevo en un minuto.'
+        : (esErrorDeRed(e) ? MSJ_SIN_RED : String((e && e.message) || e)));
+    })
     .then(function (r) {
       // Un backend no siempre responde JSON: Apps Script devolvia HTML con la
       // cuota excedida, y Cloudflare devuelve su pagina de error en un 5xx. Un
@@ -63,7 +91,11 @@ function apiCall(fn, args) {
       }
       if (j && j.error) throw new Error(j.message || j.error);
       return j.data;
-    });
+    })
+    .then(
+      function (d) { clearTimeout(reloj); return d; },
+      function (e) { clearTimeout(reloj); throw e; }
+    );
 }
 // Shim compatible con google.script.run: el resto del codigo no cambia.
 (function () {
