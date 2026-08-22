@@ -44,30 +44,42 @@ function mostrarLockPendiente() {
 // puede tardar minutos; el resto es rapido y no tiene por que esperar tanto.
 var API_TIMEOUT_MS = 25000;
 var API_TIMEOUT_LARGO_MS = 180000;
-var FNS_LENTAS = { noticias: 1, analisis: 1, refrescar: 1, ibkr_sync: 1, cs_sync: 1, restaurar: 1 };
+// Todas las que hablan con un tercero o reescriben la planilla. ia_analizar,
+// bnb_sync, dividendos y aportes faltaban, y la de la IA era una contradiccion
+// con la pantalla: ia.js le dice al usuario "puede tardar hasta un minuto"
+// mientras el pedido se cortaba a los 25 s. Segunda auditoria del 22/08/2026.
+var FNS_LENTAS = {
+  noticias: 1, analisis: 1, refrescar: 1, restaurar: 1,
+  ibkr_sync: 1, cs_sync: 1, bnb_sync: 1,
+  ia_analizar: 1, dividendos: 1, aportes: 1
+};
 
 // Un fallo de red de Safari llega como TypeError('Load failed'), y eso es lo
 // que se pintaba tal cual en Noticias, Dividendos, Aportes, Analisis, Buscador
 // y Diagnostico. Se traduce una sola vez, aca, para todas las vistas.
 function esErrorDeRed(e) {
   var m = String((e && e.message) || e || '');
+  if (esAborto(e)) return false;   // un aborto NO es falta de senal
   return (e instanceof TypeError) || /Load failed|Failed to fetch|NetworkError|network/i.test(m);
 }
+function esAborto(e) {
+  var n = String((e && e.name) || '');
+  var m = String((e && e.message) || e || '');
+  return n === 'AbortError' || /abort/i.test(m);
+}
 var MSJ_SIN_RED = 'Sin conexión. Proba de nuevo cuando tengas señal.';
+var MSJ_TARDO = 'El servidor tardó demasiado. Proba de nuevo en un minuto.';
 
 function apiCall(fn, args) {
   var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
   var limite = FNS_LENTAS[fn] ? API_TIMEOUT_LARGO_MS : API_TIMEOUT_MS;
   var vencio = false;
-  var reloj = setTimeout(function () { vencio = true; if (ctrl) ctrl.abort(); }, limite);
+  // El cuerpo se arma ANTES del reloj: si JSON.stringify tirara, apiCall
+  // lanzaria de forma sincrona y el temporizador quedaria vivo para siempre.
   var opciones = { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: getApiToken(), fn: fn, args: args || null }) };
+  var reloj = setTimeout(function () { vencio = true; if (ctrl) ctrl.abort(); }, limite);
   if (ctrl) opciones.signal = ctrl.signal;
   return fetch(API_URL, opciones)
-    .catch(function (e) {
-      throw new Error(vencio
-        ? 'El servidor tardo demasiado. Proba de nuevo en un minuto.'
-        : (esErrorDeRed(e) ? MSJ_SIN_RED : String((e && e.message) || e)));
-    })
     .then(function (r) {
       // Un backend no siempre responde JSON: Apps Script devolvia HTML con la
       // cuota excedida, y Cloudflare devuelve su pagina de error en un 5xx. Un
@@ -91,12 +103,32 @@ function apiCall(fn, args) {
         eAuth.auth = true;
         throw eAuth;
       }
+      // Codigos del servidor que tienen que llegar en castellano y no como
+      // etiqueta interna. 'demasiados_pedidos' es el freno por IP que se puso
+      // el 21/08; sin esto la pantalla decia literalmente "demasiados_pedidos".
+      var TRADUCIDOS = {
+        demasiados_pedidos: 'Demasiados pedidos seguidos. Esperá un minuto y proba de nuevo.',
+        cuerpo_grande: 'El pedido era demasiado grande.',
+        origen: 'El servidor no aceptó el origen de este pedido.'
+      };
+      if (j && j.error && TRADUCIDOS[j.error]) throw new Error(TRADUCIDOS[j.error]);
       if (j && j.error) throw new Error(j.message || j.error);
       return j.data;
     })
     .then(
       function (d) { clearTimeout(reloj); return d; },
-      function (e) { clearTimeout(reloj); throw e; }
+      function (e) {
+        clearTimeout(reloj);
+        // La traduccion va ACA, al final, y no colgada del fetch: el aborto por
+        // vencimiento puede llegar mientras se DRENA el cuerpo (r.text()), o
+        // sea por debajo de un catch puesto sobre el fetch. Asi se perdia el
+        // mensaje amable justo en el caso para el que existe: senal mala y
+        // respuesta grande. Segunda auditoria del 22/08/2026.
+        if (e && e.auth) throw e;                       // clave vencida: intacto
+        if (vencio || esAborto(e)) throw new Error(MSJ_TARDO);
+        if (esErrorDeRed(e)) throw new Error(MSJ_SIN_RED);
+        throw e;
+      }
     );
 }
 // Shim compatible con google.script.run: el resto del codigo no cambia.

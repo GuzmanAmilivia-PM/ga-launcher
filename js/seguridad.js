@@ -106,10 +106,16 @@ document.getElementById('segPinQuitar').onclick = function () {
 var s = secLeer(); delete s.pin; secGuardar(s); prepararSeguridad();
 segMsg('segPinMsg', '&#10003; Clave quitada.', true);
 };
-// Arranque: si hay bloqueo configurado y ya hay token, pedir desbloqueo
-(function () {
+// Pide el desbloqueo (Face ID o clave). Se llama al cargar Y al volver del
+// segundo plano tras un rato: antes esto era un IIFE que corria UNA sola vez,
+// al parsear el archivo, asi que una PWA de iOS —que vive dias— quedaba
+// desbloqueada para siempre despues del primer ingreso. Mandarla al fondo y
+// volver entraba directo a los montos. Segunda auditoria del 22/08/2026.
+var _listenersDelBloqueo = false;
+function activarBloqueo() {
 var s = secLeer();
 if (!(s.pin || s.bio) || !getApiToken()) return;
+if (appBloqueada) return;   // ya esta pidiendo entrar
 // El bloqueo vive DENTRO del splash: una sola pantalla de arranque. Mientras
 // appBloqueada este en true, hideSplash() no hace nada (nucleo.js), asi que el
 // logo no se va hasta que se entra.
@@ -233,7 +239,10 @@ if (h === s.pin) abrir();
 else { document.getElementById('secPinInput').value = ''; document.getElementById('secErr').textContent = 'Clave incorrecta.'; }
 });
 };
+if (!_listenersDelBloqueo) {
+_listenersDelBloqueo = true;
 document.getElementById('secPinInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('secPinGo').click(); });
+}
 document.getElementById('secOlvide').onclick = function () {
 var l = document.getElementById('secOlvide');
 confirmarDosToques(l, 'Se borra el bloqueo y vas a tener que poner de nuevo la clave de la API. \u00bfSeguro?', olvTxt, 6000, function () {
@@ -246,5 +255,20 @@ try {
 try { location.reload(); } catch (e) {}
 });
 };
-})();
+}
 
+// Al cargar.
+activarBloqueo();
+
+// Y al volver del segundo plano, si estuvo afuera un rato. El umbral es corto
+// a proposito: cambiar de app un segundo para copiar un dato no tiene que
+// pedir Face ID, pero dejar el telefono sobre la mesa si.
+var BLOQUEO_TRAS_MS = 5 * 60 * 1000;
+var _seFueALasSombras = 0;
+document.addEventListener('visibilitychange', function () {
+if (document.visibilityState === 'hidden') { _seFueALasSombras = Date.now(); return; }
+if (!_seFueALasSombras) return;
+var afuera = Date.now() - _seFueALasSombras;
+_seFueALasSombras = 0;
+if (afuera >= BLOQUEO_TRAS_MS) activarBloqueo();
+});
