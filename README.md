@@ -15,8 +15,10 @@ Son dos repos privados distintos, y conviene no confundirlos:
 documentación lo nombre `ga-portfolio-tracker`: es el mismo.)
 
 **Los pendientes de esta app NO están acá.** Viven en el `MEJORAS.md` del repo
-del backend, junto con los del backend, porque casi toda mejora toca las dos
-mitades. Leerlo antes de proponer trabajo sobre esta app.
+`ga-portfolio-tracker` — el ex-backend, que es donde quedó TODA la
+documentación. Ojo: **no** es el repo del backend vivo (`ga-portfolio-worker`),
+que no tiene `MEJORAS.md`. Están juntos los de las dos mitades porque casi toda
+mejora toca las dos. Leerlo antes de proponer trabajo sobre esta app.
 
 ## Las dos reglas que rompen la app si se ignoran
 
