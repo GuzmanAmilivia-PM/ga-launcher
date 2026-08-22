@@ -1,0 +1,16 @@
+# Este repo es PUBLICO. Todo lo que entre acá queda a la vista de cualquiera,
+# y para siempre en el historial: la lista existe para que un `git add -A`
+# distraído no publique algo que no corresponde.
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+
+# Configuración local de Claude Code: rutas de esta máquina y permisos.
+.claude/settings.local.json
+
+# Nada de credenciales acá NUNCA. La clave de la API la ingresa el usuario en
+# el teléfono y vive solo en su localStorage; la de Binance, igual.
+.env
+.secrets/
+*.pem

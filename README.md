@@ -1,9 +1,18 @@
 # ga-launcher — la app (PWA) de GA Portfolio Tracker
 
 Interfaz del tracker personal de inversiones. Se publica sola con GitHub Pages
-en cada push a `main` (~30-60 s). El backend vive en otro repo (privado):
-`portfolio-tracker`, que es también donde están los tests de ESTA app
-(`npm run test:ui` desde allá).
+en cada push a `main` (~30-60 s).
+
+Son dos repos privados distintos, y conviene no confundirlos:
+
+- **El backend** vive en `ga-portfolio-worker` (Cloudflare Workers). Es el que
+  atiende a esta app desde el 20/08/2026.
+- **Los tests de ESTA app** viven en `portfolio-tracker` — el ex-backend de
+  Apps Script, apagado el 22/08/2026 —, en `scripts/ui/`. Se corren con
+  `npm run test:ui` desde allá, y son la única red que tiene este repo.
+
+(El repo de los tests se llama `portfolio-tracker` en GitHub aunque la
+documentación lo nombre `ga-portfolio-tracker`: es el mismo.)
 
 **Los pendientes de esta app NO están acá.** Viven en el `MEJORAS.md` del repo
 del backend, junto con los del backend, porque casi toda mejora toca las dos
