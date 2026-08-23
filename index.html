@@ -106,12 +106,17 @@ body { font-family: 'Manrope', -apple-system, "Segoe UI", Roboto, Arial, sans-se
 .topstats { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .topstats > div { min-width: 0; }
 .liqblock { text-align: right; flex-shrink: 0; }
-.liqval { font-size: clamp(17px, 5.5vw, 24px); font-weight: 800; margin: 0; white-space: nowrap; }
-.liqpct { font-size: 13.5px; color: var(--muted); margin: 4px 0 0; }
+/* El cash es contexto, no el titular: bajo de 24px a 19 (pedido de Guzman). */
+.liqval { font-size: clamp(15px, 4.2vw, 19px); font-weight: 700; margin: 0; white-space: nowrap; }
+.liqpct { font-size: 12px; color: var(--muted); margin: 2px 0 0; }
 .subtotal { font-size: 14.5px; color: var(--muted); margin: 6px 0 0; }
 .subtotal b { color: var(--text); font-weight: 700; }
 .viewtitle { font-size: 22px; font-weight: 800; margin: 0 0 14px; }
-.rangepct { font-size: 13px; font-weight: 700; margin-left: 8px; }
+.rangepct { font-size: 15px; font-weight: 700; }
+/* El % del periodo vive al lado del TOTAL (pedido de Guzman, 22/08/2026): es
+   la lectura que uno busca al abrir, y ahi no compite con nada. */
+.totalpct { margin: 3px 0 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.totalpct-per { font-size: 11.5px; color: var(--muted); font-weight: 600; }
 .up { color: var(--green); font-weight: 700; }
 .down { color: var(--red); font-weight: 700; }
 /* caprow/capval/capnota: los numeros y la nota de la comparacion (V7).
@@ -442,6 +447,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div>
 <p class="lbl">Valor total estimado <button class="eyebtn" id="eyeBtn" aria-label="Ocultar montos"></button></p>
 <p class="total" id="total">&mdash;</p>
+<p class="totalpct"><span class="rangepct" id="rangePct"></span> <span class="totalpct-per" id="rangeNombre"></span></p>
 </div>
 <div class="liqblock">
 <p class="lbl" style="justify-content:flex-end">Cash</p>
@@ -457,7 +463,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div class="sweepdeck" id="sweepDeck">
 <div class="sweeppanel">
 <div class="cardhead">
-<h2>Evoluci&oacute;n <span class="rangepct" id="rangePct"></span></h2>
+<h2>Evoluci&oacute;n</h2>
 <div class="rangebar" id="rangeBar"></div><button class="expandbtn" id="evoAmpliarBtn" title="Pantalla completa" style="display:none">&#9974;</button>
 </div>
 <div class="evomini" id="evoMini" role="button" tabindex="0" title="Tocar para ver el gr&aacute;fico"></div>

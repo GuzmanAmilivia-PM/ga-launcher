@@ -59,6 +59,13 @@ var anual = pctAnualizado(pct, dias);
 el.textContent = signoPct(pct, 2) +
 (anual !== null ? ' · ' + signoPct(anual, 1) + ' anual' : '');
 el.className = 'rangepct ' + (pct >= 0 ? 'up' : 'down');
+// Al lado del total, el % solo NO dice de que periodo habla: el selector esta
+// mas abajo, en otra tarjeta. Se escribe la etiqueta del rango elegido.
+var elPer = document.getElementById('rangeNombre');
+if (elPer) {
+var r = RANGES.filter(function (x) { return x.dias === currentRangeDias; })[0];
+elPer.textContent = r ? ('en ' + r.key) : '';
+}
 }
 function getFilteredDataPoints(serie) {
   return serie.filter(function (p, i) {
@@ -613,7 +620,13 @@ var pct = serie[0] ? ((serie[serie.length - 1] / serie[0] - 1) * 100) : 0;
 // sin esto anuncia siete celdas VACIAS — promete un dato y no lo entrega.
 var dicho = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '% ' + (dicePct || 'en el mes');
 return '<svg class="spark ' + (sube ? 'sube' : 'baja') + '" width="' + W + '" height="' + H +
-'" viewBox="0 0 ' + SPARK_W + ' ' + SPARK_H + '" role="img" aria-label="' + dicho + '">' +
+// El viewBox tiene que ser el MISMO W/H con el que se calcularon los puntos.
+// Quedo en SPARK_W/SPARK_H al generalizar la funcion y la mini de Evolucion
+// —que dibuja en 300x44— salia recortada: se veia un pedacito de linea y el
+// resto afuera del cuadro. Lo agarro una captura de Guzman, no una prueba.
+// preserveAspectRatio="none" para que la linea ocupe TODO el ancho: una
+// sparkline se estira a proposito, no se centra con bordes vacios.
+'" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="' + dicho + '">' +
 '<polyline points="' + pts.join(' ') + '"/></svg>';
 }
 function sparkDe(h) {
