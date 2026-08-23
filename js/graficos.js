@@ -147,7 +147,7 @@ function getFilteredDataPoints(serie) {
     m.push(vals[vals.length - 1]);
     vals = m;
   }
-  el.innerHTML = sparkSvg(vals, 300, 44, 'en el periodo') ||
+  el.innerHTML = sparkSvg(vals, 300, 44, 'en el periodo', { area: true, puntos: true }) ||
     '<span class="evomini-vacio">Sin datos todav&iacute;a</span>';
   }
   function pintarBotonEvo() {
@@ -592,11 +592,38 @@ sparksPorSym = s;
 // todo el alto disponible, asi que un mini-grafico mas alto DISTINGUE mejor
 // los movimientos chicos, no solo se ve mas grande.
 var SPARK_W = 80, SPARK_H = 32;
+// Cada relleno necesita su propio degradado: dos <svg> con el MISMO id de
+// gradiente se pisan (el navegador usa el primero que encuentra) y el segundo
+// saldria pintado del color del primero — verde bajo una linea roja.
+var _sparkId = 0;
+// Un punto se dibuja cuando los tramos son largos; con tramos cortos serian
+// una mancha. El umbral esta en unidades del dibujo, que es donde vive la
+// geometria: 24 cierres en 80 de ancho dan 3,3 (nada), 7 dias en 300 dan 49.
+var SPARK_SEP_PUNTO = 8;
 // w/h opcionales: la tabla de posiciones usa el tamano chico de siempre, y la
 // mini de Evolucion pide uno ancho y bajo. Misma funcion para las dos — el
 // dibujo ya estaba probado y no tiene sentido tener dos.
-function sparkSvg(serie, w, h, dicePct) {
+//
+// `opts` (23/08/2026) — el pedido de Guzman fue por el rango 1S, donde el
+// grafico se veia "facetado, tipo montana con quiebres duros". La causa NO era
+// el dibujo sino los DATOS: el historico guarda un valor por dia, asi que una
+// semana son 7 puntos y 6 tramos rectos; estirados sobre la tarjeta ancha cada
+// tramo mide ~55px y el codo se ve enorme. Los minis de las posiciones se ven
+// organicos porque meten 24 cierres en 76px — 3,3px por tramo, invisible.
+//
+// Ningun tamano arregla eso: 7 puntos son 7 puntos. Lo que se hace es que se
+// LEAN como lo que son.
+//   opts.puntos — marca cada valor. El codo deja de ser un defecto y pasa a
+//     ser un dato. Se decidio esto y NO suavizar la curva: una curva entre dos
+//     dias dibuja plata en lugares donde no estuvo, que es el mismo criterio
+//     por el que las criptas sin historial no dibujan nada.
+//   opts.area — rellena debajo. La tarjeta de Evolucion es ancha y una linea
+//     fina sola adentro es justo lo que Guzman ya habia rechazado ("mucho
+//     espacio para un grafico chico"). En la TABLA no va: siete filas con
+//     relleno la vuelven pesada.
+function sparkSvg(serie, w, h, dicePct, opts) {
 if (!serie || serie.length < 2) return '';
+var o = opts || {};
 var W = w || SPARK_W, H = h || SPARK_H;
 var min = serie[0], max = serie[0];
 for (var i = 1; i < serie.length; i++) { if (serie[i] < min) min = serie[i]; if (serie[i] > max) max = serie[i]; }
@@ -604,10 +631,11 @@ var rango = max - min;
 // Un mes plano (o un solo precio repetido) se dibuja como una raya al medio,
 // no como una division por cero.
 var pad = 2, alto = H - pad * 2, ancho = W - pad * 2;
-var pts = [];
+var pts = [], xs = [], ys = [];
 for (var j = 0; j < serie.length; j++) {
 var x = pad + (j * ancho) / (serie.length - 1);
 var y = pad + (rango === 0 ? alto / 2 : alto - ((serie[j] - min) / rango) * alto);
+xs.push(x); ys.push(y);
 pts.push(x.toFixed(1) + ',' + y.toFixed(1));
 }
 // El color sale del TEMA, no de un hexadecimal fijo: la app tiene tema claro y
@@ -619,6 +647,27 @@ var pct = serie[0] ? ((serie[serie.length - 1] / serie[0] - 1) * 100) : 0;
 // El texto para lectores de pantalla no es adorno: la columna se llama "Mes" y
 // sin esto anuncia siete celdas VACIAS — promete un dato y no lo entrega.
 var dicho = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '% ' + (dicePct || 'en el mes');
+// El relleno baja hasta el borde de abajo (H), no hasta H-pad: apoyado en el
+// piso de la tarjeta parece un area, flotando 2px parece un error.
+var relleno = '';
+if (o.area) {
+var gid = 'sparkfill' + (++_sparkId);
+relleno = '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">' +
+'<stop offset="0" stop-color="currentColor" stop-opacity=".26"/>' +
+'<stop offset="1" stop-color="currentColor" stop-opacity="0"/>' +
+'</linearGradient></defs>' +
+'<path class="sparkarea" fill="url(#' + gid + ')" d="M' + pts.join(' L') +
+' L' + xs[xs.length - 1].toFixed(1) + ',' + H + ' L' + xs[0].toFixed(1) + ',' + H + ' Z"/>';
+}
+var puntos = '';
+if (o.puntos && ancho / (serie.length - 1) >= SPARK_SEP_PUNTO) {
+for (var k = 0; k < xs.length; k++) {
+// El ultimo va hueco: es DONDE ESTAS HOY, no un dia mas de la serie.
+var hoy = k === xs.length - 1;
+puntos += '<circle' + (hoy ? ' class="hoy" r="3.2"' : ' r="2.4"') +
+' cx="' + xs[k].toFixed(1) + '" cy="' + ys[k].toFixed(1) + '"/>';
+}
+}
 return '<svg class="spark ' + (sube ? 'sube' : 'baja') + '" width="' + W + '" height="' + H +
 // El viewBox tiene que ser el MISMO W/H con el que se calcularon los puntos.
 // Quedo en SPARK_W/SPARK_H al generalizar la funcion y la mini de Evolucion
@@ -627,7 +676,7 @@ return '<svg class="spark ' + (sube ? 'sube' : 'baja') + '" width="' + W + '" he
 // preserveAspectRatio="none" para que la linea ocupe TODO el ancho: una
 // sparkline se estira a proposito, no se centra con bordes vacios.
 '" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="' + dicho + '">' +
-'<polyline points="' + pts.join(' ') + '"/></svg>';
+relleno + '<polyline points="' + pts.join(' ') + '"/>' + puntos + '</svg>';
 }
 function sparkDe(h) {
 var s = sparksPorSym[String(h && h.symbol || '').toUpperCase()];
