@@ -277,9 +277,19 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .sweepwrap { overflow: hidden; transition: height .25s ease; }
 .sweepdeck { display: flex; align-items: flex-start; transition: transform .28s ease; touch-action: pan-y; }
 .sweeppanel { min-width: 100%; }
-.sweepdots { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+/* Los puntitos del carrusel se sacan DE LA VISTA, no del documento
+   (23/08/2026: "que el carrusel se mueva pero que no aparezcan los puntitos
+   abajo, no es necesario y tambien ocupan pila de espacio"). Siguen ahi porque
+   son la unica forma de cambiar de tarjeta SIN deslizar: con teclado o con
+   VoiceOver, el deslizamiento no existe y sin ellos las tarjetas 2 y 3 quedan
+   inalcanzables. Ocupan 0 de alto. */
+.sweepdots { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .sweepdots .sdot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); border: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .sweepdots .sdot.active { background: var(--gold); }
+/* Al recibir foco con el teclado vuelven a la vista: un control que se puede
+   enfocar y no se ve deja al usuario sin saber donde esta parado. */
+.sweepdots:focus-within { position: static; width: auto; height: auto; overflow: visible;
+  clip-path: none; display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
 .divbig { font-size: clamp(24px, 7vw, 32px); font-weight: 700; margin: 2px 0; letter-spacing: -.01em; }
 .divavg { color: var(--muted); font-size: 12.5px; margin: 0 0 8px; line-height: 1.5; }
 .divdetbox { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 12.5px; line-height: 1.75; }
@@ -495,7 +505,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div class="sweeppanel">
 <div class="totalrow">
 <div class="tr-val">
-<p class="lbl">Valor total estimado <button class="eyebtn" id="eyeBtn" aria-label="Ocultar montos"></button></p>
+<p class="lbl">Valor total <button class="eyebtn" id="eyeBtn" aria-label="Ocultar montos"></button></p>
 <p class="total" id="total">&mdash;</p>
 </div>
 <div class="evomini" id="evoMini" role="button" tabindex="0" title="Tocar para ver el gr&aacute;fico"></div>
