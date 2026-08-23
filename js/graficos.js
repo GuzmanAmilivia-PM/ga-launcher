@@ -119,8 +119,43 @@ function getFilteredDataPoints(serie) {
   document.getElementById('chartModal').style.display = 'none';
   if (bigChartInstance) { bigChartInstance.destroy(); bigChartInstance = null; }
   }
-  document.getElementById('expandBtn').onclick = openChartModal;
+  // El boton PLIEGA Y DESPLIEGA la caja ahi mismo (pedido de Guzman,
+  // 22/08/2026: "que expanda, no que genere una pagina nueva... que cuando se
+  // expande quede como antes"). El grafico grande a pantalla completa sigue
+  // existiendo, en el boton del icono que aparece solo cuando esta desplegado.
+  //
+  // La eleccion se recuerda: si Guzman lo deja abierto, la proxima vez abre
+  // abierto. Arranca PLEGADO la primera vez, que es lo que pidio.
+  function pintarBotonEvo() {
+  var abierto = !evoPlegado();
+  var b = document.getElementById('expandBtn');
+  if (b) { b.innerHTML = abierto ? 'Ocultar' : 'Gr&aacute;fico &#9974;'; b.title = abierto ? 'Ocultar el grafico' : 'Ver el grafico'; }
+  var amp = document.getElementById('evoAmpliarBtn');
+  if (amp) amp.style.display = abierto ? '' : 'none';
+  }
+  function toggleEvo() {
+  var box = document.getElementById('evoChartBox');
+  if (!box) return;
+  var abrir = evoPlegado();
+  box.style.display = abrir ? '' : 'none';
+  try { localStorage.setItem('ga_evo_abierto', abrir ? '1' : '0'); } catch (e) {}
+  pintarBotonEvo();
+  // Se dibuja DESPUES de mostrar la caja: sobre un canvas de alto cero la
+  // escala sale mal.
+  if (abrir) drawLineChart(filterSerie(currentRangeDias));
+  if (typeof ajustarAlturaDeck === 'function') ajustarAlturaDeck();
+  }
+  document.getElementById('expandBtn').onclick = toggleEvo;
+  var _ampBtn = document.getElementById('evoAmpliarBtn');
+  if (_ampBtn) _ampBtn.onclick = openChartModal;
   document.getElementById('chartModalClose').onclick = closeChartModal;
+  try {
+  if (localStorage.getItem('ga_evo_abierto') === '1') {
+    var _box = document.getElementById('evoChartBox');
+    if (_box) _box.style.display = '';
+  }
+  } catch (e) {}
+  pintarBotonEvo();
 
 // ---------- Aportes (estado compartido) ----------
 // La lista de aportes la pide el panel de Aportes (cargarAportes, paneles.js)
