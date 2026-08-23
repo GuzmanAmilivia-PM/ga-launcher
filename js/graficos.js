@@ -431,7 +431,12 @@ sparksPorSym = s;
 }
 // Un <svg> escrito a mano: dibujar 7 lineas de 24 puntos no justifica una
 // libreria (regla R2), y una <polyline> es exactamente eso.
-var SPARK_W = 46, SPARK_H = 20;
+// 64x28 desde el 22/08/2026: al sacar las columnas de monto y ganancia sobro
+// ancho, y el dibujo de 46x20 quedaba chico para lo que ahora es el dato
+// principal de la fila junto al precio. El alto tambien sube — la escala usa
+// todo el alto disponible, asi que un mini-grafico mas alto DISTINGUE mejor
+// los movimientos chicos, no solo se ve mas grande.
+var SPARK_W = 64, SPARK_H = 28;
 function sparkSvg(serie) {
 if (!serie || serie.length < 2) return '';
 var min = serie[0], max = serie[0];
@@ -500,7 +505,7 @@ var avatar = logo
   : esc(inic);
 return '<td><span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + avatar + '</span><span class="holdid"><span class="sym">' + esc(sym) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></span></span></td>' +
 '<td class="col-spark">' + sparkDe(h) + '</td>' +
-'<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
+'<td class="col-precio">' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
 // Pedido de Guzman (22/08/2026), en dos pasos: primero se saco el monto en
 // dolares y despues la ganancia acumulada. Esta tabla queda como una lista de
 // mercado —simbolo, tendencia del mes, precio con su variacion del dia— y no
