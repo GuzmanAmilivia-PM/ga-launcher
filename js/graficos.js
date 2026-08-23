@@ -405,8 +405,12 @@ return (h.tipo === 'accion' || h.tipo === 'etf' || h.tipo === 'cripto' || h.tipo
 // Agrupado por tipo (referencia de Guzman, 18/08/2026: la lista de mercado de
 // TradingView): las secciones separan acciones de ETFs y cripto. Dentro de
 // cada grupo se conserva el orden que ya viene (valor descendente).
+//
+// Los ETFs van PRIMERO desde el 22/08/2026 (pedido de Guzman). Tiene sentido
+// con su cartera: los dos ETFs mas grandes (VOO y QQQ) pesan mas que
+// cualquier accion suelta, asi que lo primero que se ve es lo que mas pesa.
 function ordenarPorTipo(list) {
-var orden = ['accion', 'etf', 'cripto'];
+var orden = ['etf', 'accion', 'cripto'];
 var out = [];
 orden.forEach(function (t) { list.forEach(function (h) { if (tipoDe(h) === t) out.push(h); }); });
 list.forEach(function (h) { if (orden.indexOf(tipoDe(h)) === -1) out.push(h); });
