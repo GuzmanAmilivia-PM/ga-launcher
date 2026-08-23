@@ -599,7 +599,14 @@ var _sparkId = 0;
 // Un punto se dibuja cuando los tramos son largos; con tramos cortos serian
 // una mancha. El umbral esta en unidades del dibujo, que es donde vive la
 // geometria: 24 cierres en 80 de ancho dan 3,3 (nada), 7 dias en 300 dan 49.
-var SPARK_SEP_PUNTO = 8;
+//
+// 25 y no 8 (23/08/2026, segunda vuelta). Con 8 entraban series de hasta 38
+// puntos y el YTD real —unos 30— salio "horrible": treinta circulos sobre la
+// linea no son un dato, son una cortina. El error fue de VALIDACION, no de
+// codigo: se probo la maqueta con 1S, que es el caso raro, cuando la pantalla
+// que Guzman mira siempre es YTD. Con 25 los puntos aparecen solo hasta ~12
+// valores, o sea 1S y poco mas: exactamente donde la linea sola se ve rota.
+var SPARK_SEP_PUNTO = 25;
 // w/h opcionales: la tabla de posiciones usa el tamano chico de siempre, y la
 // mini de Evolucion pide uno ancho y bajo. Misma funcion para las dos — el
 // dibujo ya estaba probado y no tiene sentido tener dos.
@@ -630,7 +637,15 @@ for (var i = 1; i < serie.length; i++) { if (serie[i] < min) min = serie[i]; if 
 var rango = max - min;
 // Un mes plano (o un solo precio repetido) se dibuja como una raya al medio,
 // no como una division por cero.
-var pad = 2, alto = H - pad * 2, ancho = W - pad * 2;
+// Se decide PRIMERO si va a haber puntos, porque de eso depende el margen. La
+// separacion se mide contra el margen chico: la diferencia entre 296 y 291 de
+// ancho no mueve la decision, y asi la cuenta no se muerde la cola.
+var hayPuntos = !!o.puntos && (W - 4) / (serie.length - 1) >= SPARK_SEP_PUNTO;
+// Con puntos el margen tiene que dar para el CIRCULO, no solo para la linea:
+// el de hoy tiene radio 3,2 mas su borde, y contra un pad de 2 salia cortado
+// por la mitad en el lado derecho de la tarjeta (se vio en el telefono).
+// Sin puntos vuelve a 2, si no el relleno deja un hueco contra los bordes.
+var pad = hayPuntos ? 4.5 : 2, alto = H - pad * 2, ancho = W - pad * 2;
 var pts = [], xs = [], ys = [];
 for (var j = 0; j < serie.length; j++) {
 var x = pad + (j * ancho) / (serie.length - 1);
@@ -660,7 +675,7 @@ relleno = '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">' 
 ' L' + xs[xs.length - 1].toFixed(1) + ',' + H + ' L' + xs[0].toFixed(1) + ',' + H + ' Z"/>';
 }
 var puntos = '';
-if (o.puntos && ancho / (serie.length - 1) >= SPARK_SEP_PUNTO) {
+if (hayPuntos) {
 for (var k = 0; k < xs.length; k++) {
 // El ultimo va hueco: es DONDE ESTAS HOY, no un dia mas de la serie.
 var hoy = k === xs.length - 1;
