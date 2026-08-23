@@ -120,6 +120,14 @@ function getFilteredDataPoints(serie) {
 // comparacionGrupo) — ya esta en produccion. Si alguna vez vuelven, viven en
 // el historial de git.
 var aportesLista = [];
+// "Todavia no se cargaron" y "no hubo ninguno" son la MISMA lista vacia, y
+// confundirlos es grave: comparacionAnual() sin flujos devuelve el cambio
+// BRUTO del patrimonio —el numero inflado que incluye lo que Guzman aporto—
+// presentado como rendimiento. Los aportes solo llegan al arrancar si el cache
+// del servidor esta caliente (regla R1); si no, recien cuando se abre el panel
+// de Aportes. Esta bandera hace que la tarjeta del año no se dibuje hasta
+// saberlo de verdad.
+var aportesCargados = false;
 
 // 'yyyy-mm-dd' -> ms de la medianoche LOCAL. new Date('2025-03-10') parsea en
 // UTC y en Montevideo caeria el dia anterior.
@@ -304,6 +312,70 @@ function comparacionGrupo() {
   return out;
 }
 
+// El año contra el indice (pedido de Guzman, 22/08/2026: "que aparezcan
+// comparaciones vs sp500 ytd", en la vista Portafolio).
+//
+// LA TRAMPA, y por que este calculo no es una resta:
+// el cambio bruto del patrimonio en el año INCLUYE la plata que Guzman puso.
+// Con sus numeros del 22/08/2026: el patrimonio subio 30,8% pero 7.000 de esos
+// los aporto el; el rendimiento de verdad fue 21,6%. Poner el 30,8% al lado
+// del S&P seria exactamente el error que este proyecto ya cometio y saco en
+// v58 ("Rendimiento del año" = total - inicio - aportes netos).
+//
+// Asi que se encadena tramo a tramo descontando los aportes de cada tramo —
+// la misma tecnica que `twrPct` en comparacionGrupo(), aplicada a la serie
+// TOTAL. Es honesto SIEMPRE QUE los movimientos del año esten cargados; en
+// 2026 lo estan (los aportes suman exactamente lo que informa el backend).
+//
+// Devuelve null cuando no se puede afirmar nada: sin serie del año anterior no
+// hay punto de partida, y sin indice alineado no hay con que comparar.
+function comparacionAnual() {
+  if (!aportesCargados) return null;   // ver aportesCargados: sin flujos el numero miente
+  if (!fullSerie || fullSerie.length < 2) return null;
+  var ini = new Date(new Date().getFullYear(), 0, 1).getTime();
+
+  // La base es el ULTIMO punto del año PASADO: el cierre con el que se arranca.
+  // Si la serie empieza dentro de este año, no hay punto de partida y no se
+  // inventa uno — se devuelve null y la tarjeta no se dibuja.
+  var i0 = -1;
+  for (var i = 0; i < fullSerie.length; i++) { if (fullSerie[i].fecha < ini) i0 = i; }
+  if (i0 < 0 || i0 >= fullSerie.length - 1) return null;
+
+  var base = fullSerie[i0].valor, fin = fullSerie[fullSerie.length - 1].valor;
+  if (!(base > 0)) return null;
+
+  var flujos = [];
+  aportesLista.forEach(function (r) {
+    var ts = apISOaMs(r.fecha);
+    var m = Number(r.grupo);
+    if (isFinite(ts) && ts > fullSerie[i0].fecha && isFinite(m) && m !== 0) flujos.push({ ts: ts, monto: m });
+  });
+
+  // Encadenado por tramos: cada tramo rinde su valor final MENOS los aportes
+  // que cayeron dentro, contra el valor anterior. Un tramo que no se puede
+  // medir con honestidad (valor no positivo) anula el numero entero.
+  var twr = 1, ok = true;
+  for (var j = i0 + 1; j < fullSerie.length; j++) {
+    var vPrev = fullSerie[j - 1].valor, vHoy = fullSerie[j].valor;
+    var flujo = 0;
+    flujos.forEach(function (a) { if (a.ts > fullSerie[j - 1].fecha && a.ts <= fullSerie[j].fecha) flujo += a.monto; });
+    if (!(vPrev > 0) || !(vHoy - flujo > 0)) { ok = false; break; }
+    twr *= (vHoy - flujo) / vPrev;
+  }
+  if (!ok) return null;
+
+  var b0 = benchEn(fullSerie[i0].fecha), bFin = benchEn(fullSerie[fullSerie.length - 1].fecha);
+  var out = {
+    desde: fullSerie[i0].fecha,
+    pct: (twr - 1) * 100,
+    bruto: (fin / base - 1) * 100,
+    aportes: flujos.reduce(function (m, a) { return m + a.monto; }, 0),
+    idxNombre: benchNombre,
+    idxPct: (b0 && bFin) ? ((bFin / b0 - 1) * 100) : null
+  };
+  return out;
+}
+
 // La lista de aportes NO viaja en el payload del portafolio a proposito:
 // consultar los brokers puede tardar varios segundos y frenaria el arranque,
 // que es el momento mas sensible de la app. La pide el panel de Aportes
@@ -311,6 +383,7 @@ function comparacionGrupo() {
 // necesita.
 function aplicarAportes(r) {
   aportesLista = (r && r.lista) || [];
+  if (r) aportesCargados = true;
 }
 
 // Variacion del dia de mercado (verde/rojo), estilo Binance. Va arriba del
@@ -601,6 +674,42 @@ var rgb = v >= 0 ? '34,197,94' : '244,63,94';
 var txt = (v >= 0 ? '+' : '') + (Math.abs(v) >= 9.95 ? v.toFixed(0) : v.toFixed(1));
 return '<span class="mc-celda" style="background:rgba(' + rgb + ',' + alpha.toFixed(2) + ')">' + txt + '</span>';
 }
+// La tarjeta "Este año vs el mercado" (Portafolio). Si comparacionAnual()
+// devuelve null la tarjeta NO se dibuja: preferimos que no este a que muestre
+// un guion sin explicacion.
+function renderAnual() {
+var card = document.getElementById('anualCard');
+var el = document.getElementById('anualBody');
+if (!card || !el) return;
+var c = null;
+try { c = comparacionAnual(); } catch (e) { c = null; }
+if (!c) { card.style.display = 'none'; return; }
+card.style.display = '';
+
+function pct(v) {
+if (v === null || !isFinite(v)) return '<p class="capval">&mdash;</p>';
+return '<p class="capval ' + (v >= 0 ? 'up' : 'down') + '">' + signoPct(v, 1) + '</p>';
+}
+var dif = (c.idxPct !== null && isFinite(c.idxPct)) ? (c.pct - c.idxPct) : null;
+
+var h = '<div class="caprow">';
+h += '<div><p class="lbl">Tu cartera</p>' + pct(c.pct) + '</div>';
+h += '<div><p class="lbl">' + esc(c.idxNombre || 'Índice') + '</p>' + pct(c.idxPct) + '</div>';
+if (dif !== null) {
+h += '<div><p class="lbl">Diferencia</p><p class="capval ' + (dif >= 0 ? 'up' : 'down') + '">' +
+signoPct(dif, 1) + '</p></div>';
+}
+h += '</div>';
+
+// La nota NO es relleno: sin ella el numero se lee como el cambio del
+// patrimonio, que es otra cosa y siempre mas grande.
+h += '<p class="capnota">Del ' + fechaCortaMs(c.desde) + ' a hoy. Es el rendimiento de tus ' +
+'inversiones <b>descontando lo que aportaste</b>: tu patrimonio subi&oacute; ' +
+signoPct(c.bruto, 1) + ', pero ' + esc(fmtUsdEnt(c.aportes)) + ' de eso los pusiste vos, no los ganaste. ' +
+(c.idxPct !== null ? 'El &iacute;ndice no paga dividendos y tus cuentas s&iacute;.' : '') + '</p>';
+el.innerHTML = h;
+}
+
 function renderMapaCalor() {
 var el = document.getElementById('mapaCalor');
 if (!el) return;

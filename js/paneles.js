@@ -338,6 +338,11 @@ document.getElementById('apoAnio').textContent = r.anio;
 // La lista de aportes queda guardada en graficos.js porque la comparacion
 // del grupo (htmlComparacion -> comparacionGrupo) la necesita mas abajo.
 try { aplicarAportes(r); } catch (e) {}
+// Y la tarjeta "Este año vs el mercado" (Portafolio) se repinta: hasta que los
+// aportes no llegan NO se dibuja, porque sin los flujos el numero seria el
+// cambio bruto del patrimonio. Si ya estabas parado en Portafolio, aparece
+// sola en cuanto llegan.
+try { if (typeof renderAnual === 'function') renderAnual(); } catch (e) {}
 var html = '';
 html += '<div class="apostat"><span>Entr&oacute; a tus apps</span><b>' + esc(fmtUsdEnt(r.aportes)) + '</b></div>';
 html += '<div class="apostat"><span>Sali&oacute; de tus apps</span><b>' + esc(fmtUsdEnt(r.retiros)) + '</b></div>';
