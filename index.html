@@ -296,6 +296,25 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .anascore span { color: var(--muted); font-size: 12px; }
 .anabarra { height: 6px; border-radius: 4px; background: rgba(255,255,255,.08); overflow: hidden; margin-bottom: 14px; }
 .anabarra i { display: block; height: 100%; border-radius: 4px; background: var(--gold); }
+/* El puntaje se toca para ver de donde sale (pedido de Guzman, 22/08/2026). */
+.anascore { cursor: pointer; }
+.anascore-chev { color: var(--muted); font-size: 18px; margin-left: auto; transition: transform .18s ease; display: inline-block; }
+.anascore-chev.abierto { transform: rotate(90deg); color: var(--gold); }
+.anadesglose { margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,.03); border: 1px solid var(--border); }
+.anadesg-tit { margin: 0 0 10px; font-size: 12.5px; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: .05em; }
+.anadesg-fila { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.anadesg-fila span { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.anadesg-fila b { font-variant-numeric: tabular-nums; font-weight: 700; }
+.anadesg-fila em { grid-column: 1 / -1; font-style: normal; color: var(--muted); font-size: 11.5px; line-height: 1.4; }
+.anadesg-fila .luz { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
+.anadesg-fila.atencion .luz { background: var(--gold); }
+.anadesg-fila.riesgo .luz { background: var(--red); }
+.anadesg-fila.atencion b { color: var(--gold); }
+.anadesg-fila.riesgo b { color: var(--red); }
+.anadesg-fila.base, .anadesg-fila.total { font-size: 13.5px; }
+.anadesg-fila.total { border-bottom: none; border-top: 1px solid var(--border-strong, var(--border)); padding-top: 10px; }
+.anadesg-fila.total b { color: var(--gold); font-size: 15px; }
+.anadesg-nota { font-size: 11.5px; color: var(--muted); margin: 8px 0 0; line-height: 1.45; }
 .anagrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
 .anacelda { border: 1px solid var(--border); border-radius: 12px; padding: 9px 10px; }
 .anacelda span { display: block; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }

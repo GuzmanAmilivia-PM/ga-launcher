@@ -31,6 +31,45 @@ var d = new Date(ms);
 return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear();
 }
 
+// El desglose del puntaje: de donde sale el numero. Cada chequeo aporta su
+// descuento (`resta`, que calcula el backend) y el total tiene que dar
+// exactamente el puntaje mostrado — si no diera, la pantalla estaria mintiendo
+// y por eso se verifica al pie en vez de asumirlo.
+function anaDesgloseHtml(r) {
+var base = (typeof r.puntajeBase === 'number') ? r.puntajeBase : 100;
+var chequeos = r.chequeos || [];
+// Sin el dato del backend (respuesta vieja del cache) no se inventa una
+// cuenta: se dice que no esta.
+var tieneRestas = chequeos.length > 0 && chequeos.every(function (q) { return typeof q.resta === 'number'; });
+if (!tieneRestas) {
+return '<p class="anadesg-nota">El detalle del c&aacute;lculo llega con el an&aacute;lisis actualizado. ' +
+'Tocá el bot&oacute;n de actualizar de esta tarjeta.</p>';
+}
+var h = '<p class="anadesg-tit">C&oacute;mo se llega a ' + (r.puntaje || 0) + '</p>';
+h += '<div class="anadesg-fila base"><span>Punto de partida</span><b>' + base + '</b></div>';
+h += '<p class="anadesg-nota">Toda cartera arranca en ' + base + '. Cada chequeo que no da bien descuenta: ' +
+'<b>&minus;20</b> si es un riesgo, <b>&minus;10</b> si merece atenci&oacute;n, <b>0</b> si est&aacute; bien.</p>';
+chequeos.forEach(function (q) {
+var signo = q.resta > 0 ? ('&minus;' + q.resta) : '0';
+h += '<div class="anadesg-fila ' + esc(q.estado) + '">' +
+'<span><i class="luz"></i>' + esc(q.titulo) + '</span><b>' + signo + '</b>' +
+'<em>' + esc(q.detalle) + '</em></div>';
+});
+var suma = 0;
+chequeos.forEach(function (q) { suma += (Number(q.resta) || 0); });
+var total = Math.max(0, base - suma);
+h += '<div class="anadesg-fila total"><span>Total</span><b>' + total + '/100</b></div>';
+// Si la cuenta no cerrara, decirlo es mejor que mostrar dos numeros distintos
+// sin explicacion. No deberia pasar nunca: el backend lo verifica con un test.
+if (total !== (r.puntaje || 0)) {
+h += '<p class="anadesg-nota">Ojo: el puntaje de arriba dice ' + (r.puntaje || 0) + ' y esta cuenta da ' + total + '. ' +
+'Es un error nuestro, no de tus datos.</p>';
+}
+h += '<p class="anadesg-nota">Esto mide c&oacute;mo est&aacute; <b>armada</b> la cartera (concentraci&oacute;n, ' +
+'reparto, colch&oacute;n de cash), no cu&aacute;nto rindi&oacute;. No es una recomendaci&oacute;n de compra ni de venta.</p>';
+return h;
+}
+
 function renderAnalisis(r) {
 var body = document.getElementById('anaBody');
 if (!r || !r.ok) {
@@ -41,10 +80,16 @@ return;
 var c = r.concentracion || {}, rie = r.riesgo || {};
 var html = '';
 
-// Puntaje: como esta ARMADA la cartera, no cuanto rindio. La barra hace de
-// lectura rapida; el detalle real son los chequeos de abajo.
-html += '<div class="anascore"><b>' + esc(r.nivel || '') + '</b><span>' + (r.puntaje || 0) + '/100</span></div>';
-html += '<div class="anabarra"><i style="width:' + Math.max(2, Math.min(100, r.puntaje || 0)) + '%"></i></div>';
+// Puntaje: como esta ARMADA la cartera, no cuanto rindio. Se puede TOCAR para
+// ver de donde sale (pedido de Guzman, 22/08/2026): arranca en 100 y cada
+// chequeo flojo descuenta. El descuento de cada uno lo manda el backend
+// (`resta`), NO se recalcula aca — dos copias de la misma regla terminan
+// divergiendo, que es la leccion de los tickers de las hojas ocultas.
+html += '<div class="anascore" id="anaScore" role="button" tabindex="0" title="Tocar para ver como se calcula">' +
+'<b>' + esc(r.nivel || '') + '</b><span>' + (r.puntaje || 0) + '/100</span>' +
+'<span class="anascore-chev" id="anaScoreChev">&rsaquo;</span></div>';
+html += '<div class="anabarra" id="anaBarra"><i style="width:' + Math.max(2, Math.min(100, r.puntaje || 0)) + '%"></i></div>';
+html += '<div class="anadesglose" id="anaDesglose" style="display:none">' + anaDesgloseHtml(r) + '</div>';
 
 // Numeros duros. "Posiciones efectivas" = 1/HHI: con que se sienten 12
 // posiciones si una pesa el 60% (respuesta: con 2).
@@ -73,6 +118,28 @@ html += '<p class="newsempty" style="margin-top:10px">La peor caída fue entre e
 html += '<p class="newsempty" style="margin-top:6px">Es una descripción de cómo está armada tu cartera, no una recomendación de compra o venta.</p>';
 
 body.innerHTML = html;
+
+// El puntaje se toca para ver de donde sale. Se engancha DESPUES de escribir
+// el html: los nodos no existen antes.
+var score = document.getElementById('anaScore');
+var desg = document.getElementById('anaDesglose');
+var chev = document.getElementById('anaScoreChev');
+if (score && desg) {
+var abrir = function () {
+var abierto = desg.style.display === 'none';
+desg.style.display = abierto ? '' : 'none';
+if (chev) chev.className = 'anascore-chev' + (abierto ? ' abierto' : '');
+score.title = abierto ? 'Tocar para ocultar el calculo' : 'Tocar para ver como se calcula';
+};
+score.onclick = abrir;
+// Con teclado tambien: el div hace de boton (role="button"), asi que tiene
+// que responder a Enter y espacio como uno.
+score.onkeydown = function (e) {
+if (e && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abrir(); }
+};
+var barra = document.getElementById('anaBarra');
+if (barra) { barra.style.cursor = 'pointer'; barra.onclick = abrir; }
+}
 }
 
 document.getElementById('anaRefreshBtn').onclick = function () { cargarAnalisis(true); };
