@@ -156,15 +156,18 @@ function getFilteredDataPoints(serie) {
     m.push(vals[vals.length - 1]);
     vals = m;
   }
-  el.innerHTML = sparkSvg(vals, EVO_W, EVO_H, 'en el periodo', { area: true, puntos: true }) ||
+  el.innerHTML = sparkSvg(vals, EVO_W, EVO_H, 'en el periodo', { area: true }) ||
     '<span class="evomini-vacio">Sin datos todav&iacute;a</span>';
   }
   function pintarBotonEvo() {
   var abierto = !evoPlegado();
   var mini = document.getElementById('evoMini');
   if (mini) mini.style.display = abierto ? 'none' : '';
-  var amp = document.getElementById('evoAmpliarBtn');
-  if (amp) amp.style.display = abierto ? '' : 'none';
+  // Los botones de periodo y el de pantalla completa viajan JUNTOS con el
+  // grafico: plegado no se ven, que era el pedido. Un solo nodo para los dos,
+  // asi no puede quedar uno visible y el otro no.
+  var ctl = document.getElementById('evoControls');
+  if (ctl) ctl.style.display = abierto ? '' : 'none';
   }
   function toggleEvo() {
   var box = document.getElementById('evoChartBox');
@@ -613,32 +616,22 @@ var _sparkId = 0;
 // cambiaba el tamano —de 300 a 120 el mismo umbral pasaba a significar otra
 // cosa—, asi que el numero no describia ninguna regla. Lo que importa es
 // simple: pocas lecturas se marcan, muchas no.
-//
-// 8 sale del caso real: una semana son 7 dias. Un mes o un YTD traen 30, y ahi
-// treinta circulos sobre la linea no son un dato sino una cortina (se probo con
-// 38 permitidos y Guzman lo vio "horrible" en el telefono el 23/08/2026).
-var SPARK_MAX_PUNTOS = 8;
 // w/h opcionales: la tabla de posiciones usa el tamano chico de siempre, y la
 // mini de Evolucion pide uno ancho y bajo. Misma funcion para las dos — el
 // dibujo ya estaba probado y no tiene sentido tener dos.
 //
-// `opts` (23/08/2026) — el pedido de Guzman fue por el rango 1S, donde el
-// grafico se veia "facetado, tipo montana con quiebres duros". La causa NO era
-// el dibujo sino los DATOS: el historico guarda un valor por dia, asi que una
-// semana son 7 puntos y 6 tramos rectos; estirados sobre la tarjeta ancha cada
-// tramo mide ~55px y el codo se ve enorme. Los minis de las posiciones se ven
-// organicos porque meten 24 cierres en 76px — 3,3px por tramo, invisible.
+// `opts.area` rellena debajo de la linea. En la TABLA no va: siete filas con
+// relleno la vuelven pesada.
 //
-// Ningun tamano arregla eso: 7 puntos son 7 puntos. Lo que se hace es que se
-// LEAN como lo que son.
-//   opts.puntos — marca cada valor. El codo deja de ser un defecto y pasa a
-//     ser un dato. Se decidio esto y NO suavizar la curva: una curva entre dos
-//     dias dibuja plata en lugares donde no estuvo, que es el mismo criterio
-//     por el que las criptas sin historial no dibujan nada.
-//   opts.area — rellena debajo. La tarjeta de Evolucion es ancha y una linea
-//     fina sola adentro es justo lo que Guzman ya habia rechazado ("mucho
-//     espacio para un grafico chico"). En la TABLA no va: siete filas con
-//     relleno la vuelven pesada.
+// LOS PUNTOS POR VALOR SE SACARON (23/08/2026). El pedido original fue por el
+// rango 1S, que se veia "facetado, tipo montana con quiebres duros" — y la
+// causa eran los DATOS, no el dibujo: el historico guarda un valor por dia, o
+// sea 7 puntos y 6 tramos rectos por semana. Se intento marcarlos con un
+// circulo para que el codo se leyera como dato y no como defecto. No funciono:
+// "saca los puntitos esos". Lo que SI resolvio el problema fue achicar el
+// dibujo — de 305px de ancho a 87, el tramo de una semana pasa de 50px a 16 y
+// el codo se disimula solo. Si algun dia vuelve a aparecer facetado, la palanca
+// es el TAMANO, no marcar los puntos: ya se probo y se descarto.
 function sparkSvg(serie, w, h, dicePct, opts) {
 if (!serie || serie.length < 2) return '';
 var o = opts || {};
@@ -648,20 +641,12 @@ for (var i = 1; i < serie.length; i++) { if (serie[i] < min) min = serie[i]; if 
 var rango = max - min;
 // Un mes plano (o un solo precio repetido) se dibuja como una raya al medio,
 // no como una division por cero.
-// Se decide PRIMERO si va a haber puntos, porque de eso depende el margen. La
-// separacion se mide contra el margen chico: la diferencia entre 296 y 291 de
-// ancho no mueve la decision, y asi la cuenta no se muerde la cola.
-var hayPuntos = !!o.puntos && serie.length <= SPARK_MAX_PUNTOS;
-// Con puntos el margen tiene que dar para el CIRCULO, no solo para la linea:
-// el de hoy tiene radio 3,2 mas su borde, y contra un pad de 2 salia cortado
-// por la mitad en el lado derecho de la tarjeta (se vio en el telefono).
-// Sin puntos vuelve a 2, si no el relleno deja un hueco contra los bordes.
-var pad = hayPuntos ? 4.5 : 2, alto = H - pad * 2, ancho = W - pad * 2;
-var pts = [], xs = [], ys = [];
+var pad = 2, alto = H - pad * 2, ancho = W - pad * 2;
+var pts = [], xs = [];
 for (var j = 0; j < serie.length; j++) {
 var x = pad + (j * ancho) / (serie.length - 1);
 var y = pad + (rango === 0 ? alto / 2 : alto - ((serie[j] - min) / rango) * alto);
-xs.push(x); ys.push(y);
+xs.push(x);
 pts.push(x.toFixed(1) + ',' + y.toFixed(1));
 }
 // El color sale del TEMA, no de un hexadecimal fijo: la app tiene tema claro y
@@ -685,15 +670,6 @@ relleno = '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">' 
 '<path class="sparkarea" fill="url(#' + gid + ')" d="M' + pts.join(' L') +
 ' L' + xs[xs.length - 1].toFixed(1) + ',' + H + ' L' + xs[0].toFixed(1) + ',' + H + ' Z"/>';
 }
-var puntos = '';
-if (hayPuntos) {
-for (var k = 0; k < xs.length; k++) {
-// El ultimo va hueco: es DONDE ESTAS HOY, no un dia mas de la serie.
-var hoy = k === xs.length - 1;
-puntos += '<circle' + (hoy ? ' class="hoy" r="3.2"' : ' r="2.4"') +
-' cx="' + xs[k].toFixed(1) + '" cy="' + ys[k].toFixed(1) + '"/>';
-}
-}
 return '<svg class="spark ' + (sube ? 'sube' : 'baja') + '" width="' + W + '" height="' + H +
 // El viewBox tiene que ser el MISMO W/H con el que se calcularon los puntos.
 // Quedo en SPARK_W/SPARK_H al generalizar la funcion y la mini de Evolucion
@@ -702,7 +678,7 @@ return '<svg class="spark ' + (sube ? 'sube' : 'baja') + '" width="' + W + '" he
 // preserveAspectRatio="none" para que la linea ocupe TODO el ancho: una
 // sparkline se estira a proposito, no se centra con bordes vacios.
 '" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="' + dicho + '">' +
-relleno + '<polyline points="' + pts.join(' ') + '"/>' + puntos + '</svg>';
+relleno + '<polyline points="' + pts.join(' ') + '"/></svg>';
 }
 function sparkDe(h) {
 var s = sparksPorSym[String(h && h.symbol || '').toUpperCase()];
