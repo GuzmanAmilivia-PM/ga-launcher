@@ -157,8 +157,9 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .backlink { color: var(--gold); font-size: 13px; cursor: pointer; margin-bottom: 14px; display: inline-block; font-weight: 600; }
 .holdtable { font-size: 15px; }
 .holdtable td { padding: 13px 8px; }
-.holdtable .sym { font-size: 17px; font-weight: 800; }
-.holdtable .desc { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 38vw; }
+.holdtable .sym { font-size: 17.5px; font-weight: 800; }
+.holdtable .desc { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.holdtable td:first-child { max-width: 0; width: 100%; }
 .holdtable tr.hidden-row { display: none; }
 /* Estilo lista de mercado (18/08/2026, referencia de Guzman: TradingView):
    avatar circular con las iniciales coloreado por tipo + secciones. */
@@ -177,16 +178,16 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 /* .holdtable delante a proposito: sin eso, la regla de <=560px (.holdtable td,
    que suma clase + elemento) le gana a .col-spark y el padding volvia a 5px
    justo en el telefono, que es el unico lugar donde se usa la app. */
-.holdtable .col-spark { width: 72px; padding-left: 2px; padding-right: 2px; text-align: center; }
+.holdtable .col-spark { width: 84px; padding-left: 2px; padding-right: 2px; text-align: center; }
 /* El precio es, junto al mini-grafico, el dato principal de esta fila desde
    que salieron el monto y la ganancia: va un punto mas grande que el resto. */
-.holdtable .col-precio { font-size: 16.5px; font-weight: 600; white-space: nowrap; }
+.holdtable .col-precio { font-size: 18px; font-weight: 600; white-space: nowrap; }
 .spark { display: block; margin: 0 auto; opacity: .95; }
 /* El trazo toma el color del TEMA (el claro usa otro verde y otro rojo). */
 .spark polyline { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; stroke: var(--red); }
 .spark.sube polyline { stroke: var(--green); }
 .morebtn { position: relative; z-index: 5; display: none; width: 100%; margin-top: 10px; padding: 9px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid var(--border); color: var(--muted); font-size: 11.5px; font-weight: 700; cursor: pointer; }
-@media (max-width: 560px) { .col-pct { display: none; } .holdtable { font-size: 13.5px; } .holdtable td, .holdtable th { padding: 11px 5px; } .holdav { width: 34px; height: 34px; font-size: 11.5px; } .holdtable .sym { font-size: 16px; } .holdtable .col-precio { font-size: 15.5px; } }
+@media (max-width: 560px) { .col-pct { display: none; } .holdtable { font-size: 13.5px; } .holdtable td, .holdtable th { padding: 11px 5px; } .holdav { width: 34px; height: 34px; font-size: 11.5px; } .holdtable .sym { font-size: 17.5px; } .holdtable .col-precio { font-size: 20px; } .holdtable .daychg { font-size: 12.5px; } }
 
 /* --- Rango del gráfico + modal --- */
 .rangebar { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 0; scrollbar-width: none; }

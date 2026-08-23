@@ -436,7 +436,7 @@ sparksPorSym = s;
 // principal de la fila junto al precio. El alto tambien sube — la escala usa
 // todo el alto disponible, asi que un mini-grafico mas alto DISTINGUE mejor
 // los movimientos chicos, no solo se ve mas grande.
-var SPARK_W = 64, SPARK_H = 28;
+var SPARK_W = 80, SPARK_H = 32;
 function sparkSvg(serie) {
 if (!serie || serie.length < 2) return '';
 var min = serie[0], max = serie[0];
