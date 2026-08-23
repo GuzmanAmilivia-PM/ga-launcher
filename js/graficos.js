@@ -90,7 +90,20 @@ function getFilteredDataPoints(serie) {
   options: buildChartOptions(dataPoints)
   });
   }
+  // El grafico de Evolucion arranca PLEGADO (pedido de Guzman, 22/08/2026:
+  // "que no ocupe tanto a lo largo... solo dice como fue en % durante el
+  // periodo seleccionado"). Lo que queda a la vista es el % del rango y los
+  // botones de rango; el dibujo se ve al tocar Ampliar, que ya abria el
+  // grafico grande.
+  //
+  // Con la caja oculta NO se dibuja: Chart.js sobre un canvas de alto cero
+  // calcula mal la escala y ademas seria trabajo tirado en cada poll.
+  function evoPlegado() {
+  var box = document.getElementById('evoChartBox');
+  return !box || box.style.display === 'none';
+  }
   function drawLineChart(serie) {
+  if (evoPlegado()) return;
   lineChartInstance = dibujarEvolucion('lineChart', lineChartInstance, serie);
   }
   var bigChartInstance = null;
