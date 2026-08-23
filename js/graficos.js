@@ -135,6 +135,15 @@ function getFilteredDataPoints(serie) {
   // Plegado NO queda un hueco: se dibuja la MISMA mini grafica que las filas
   // de posiciones (sparkSvg), asi la tarjeta dice algo aunque este compacta.
   // La eleccion se recuerda; la primera vez arranca compacta.
+  // 100x40, "apenas un poco mas grande" que los 80x32 de las filas de
+  // posiciones (23/08/2026). El tamano NO es decoracion: a 305px de ancho —lo
+  // que medía cuando ocupaba la tarjeta entera— una semana daba 50px por tramo
+  // y se veia como una montana rota; en 100 da 16 y el codo se disimula solo.
+  //
+  // 100 y no 120 porque el dibujo se estira SIN conservar la proporcion: la
+  // celda mide 97px medidos en el navegador, asi que un viewBox de 120 lo
+  // comprimiria a 0,81 y los circulos saldrian ovalados. Con 100 queda 1:1.
+  var EVO_W = 100, EVO_H = 40;
   function renderEvoMini() {
   var el = document.getElementById('evoMini');
   if (!el) return;
@@ -147,7 +156,7 @@ function getFilteredDataPoints(serie) {
     m.push(vals[vals.length - 1]);
     vals = m;
   }
-  el.innerHTML = sparkSvg(vals, 300, 44, 'en el periodo', { area: true, puntos: true }) ||
+  el.innerHTML = sparkSvg(vals, EVO_W, EVO_H, 'en el periodo', { area: true, puntos: true }) ||
     '<span class="evomini-vacio">Sin datos todav&iacute;a</span>';
   }
   function pintarBotonEvo() {
@@ -597,16 +606,18 @@ var SPARK_W = 80, SPARK_H = 32;
 // saldria pintado del color del primero — verde bajo una linea roja.
 var _sparkId = 0;
 // Un punto se dibuja cuando los tramos son largos; con tramos cortos serian
-// una mancha. El umbral esta en unidades del dibujo, que es donde vive la
-// geometria: 24 cierres en 80 de ancho dan 3,3 (nada), 7 dias en 300 dan 49.
+// una mancha.
 //
-// 25 y no 8 (23/08/2026, segunda vuelta). Con 8 entraban series de hasta 38
-// puntos y el YTD real —unos 30— salio "horrible": treinta circulos sobre la
-// linea no son un dato, son una cortina. El error fue de VALIDACION, no de
-// codigo: se probo la maqueta con 1S, que es el caso raro, cuando la pantalla
-// que Guzman mira siempre es YTD. Con 25 los puntos aparecen solo hasta ~12
-// valores, o sea 1S y poco mas: exactamente donde la linea sola se ve rota.
-var SPARK_SEP_PUNTO = 25;
+// El umbral se cuenta en PUNTOS, no en separacion. La primera version medía la
+// separacion en unidades del dibujo y habia que reajustarla cada vez que
+// cambiaba el tamano —de 300 a 120 el mismo umbral pasaba a significar otra
+// cosa—, asi que el numero no describia ninguna regla. Lo que importa es
+// simple: pocas lecturas se marcan, muchas no.
+//
+// 8 sale del caso real: una semana son 7 dias. Un mes o un YTD traen 30, y ahi
+// treinta circulos sobre la linea no son un dato sino una cortina (se probo con
+// 38 permitidos y Guzman lo vio "horrible" en el telefono el 23/08/2026).
+var SPARK_MAX_PUNTOS = 8;
 // w/h opcionales: la tabla de posiciones usa el tamano chico de siempre, y la
 // mini de Evolucion pide uno ancho y bajo. Misma funcion para las dos — el
 // dibujo ya estaba probado y no tiene sentido tener dos.
@@ -640,7 +651,7 @@ var rango = max - min;
 // Se decide PRIMERO si va a haber puntos, porque de eso depende el margen. La
 // separacion se mide contra el margen chico: la diferencia entre 296 y 291 de
 // ancho no mueve la decision, y asi la cuenta no se muerde la cola.
-var hayPuntos = !!o.puntos && (W - 4) / (serie.length - 1) >= SPARK_SEP_PUNTO;
+var hayPuntos = !!o.puntos && serie.length <= SPARK_MAX_PUNTOS;
 // Con puntos el margen tiene que dar para el CIRCULO, no solo para la linea:
 // el de hoy tiene radio 3,2 mas su borde, y contra un pad de 2 salia cortado
 // por la mitad en el lado derecho de la tarjeta (se vio en el telefono).

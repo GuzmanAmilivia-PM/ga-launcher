@@ -102,13 +102,10 @@ body { font-family: 'Manrope', -apple-system, "Segoe UI", Roboto, Arial, sans-se
 .lbl { color: var(--muted); font-size: 12.5px; font-weight: 600; margin: 0 0 4px; display: flex; align-items: center; gap: 6px; }
 .eyebtn { background: none; border: none; color: var(--muted); cursor: pointer; padding: 2px; display: inline-flex; align-items: center; }
 .eyebtn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.total { font-size: clamp(26px, 8vw, 38px); font-weight: 800; margin: 0; letter-spacing: -.02em; white-space: nowrap; line-height: 1.1; }
-.topstats { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.topstats > div { min-width: 0; }
-.liqblock { text-align: right; flex-shrink: 0; }
-/* El cash es contexto, no el titular: bajo de 24px a 19 (pedido de Guzman). */
-.liqval { font-size: clamp(15px, 4.2vw, 19px); font-weight: 700; margin: 0; white-space: nowrap; }
-.liqpct { font-size: 12px; color: var(--muted); margin: 2px 0 0; }
+/* Baja de 38px a 25 (23/08/2026): dejo de estar solo en su renglon y ahora
+   comparte fila con el dibujo y el %, como una posicion de la tabla. Sigue
+   siendo el numero mas grande de la pantalla. */
+.total { font-size: clamp(20px, 6vw, 25px); font-weight: 800; margin: 0; letter-spacing: -.02em; white-space: nowrap; line-height: 1.1; }
 .subtotal { font-size: 14.5px; color: var(--muted); margin: 6px 0 0; }
 .subtotal b { color: var(--text); font-weight: 700; }
 .viewtitle { font-size: 22px; font-weight: 800; margin: 0 0 14px; }
@@ -212,9 +209,22 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .expandbtn:hover { color: var(--gold); }
 /* La mini de Evolucion: el area del grafico ES el control, plegada y
    desplegada. Compacta muestra la misma linea que las filas de posiciones. */
-.evomini { cursor: pointer; padding: 8px 0 2px; }
-.evomini svg { width: 100%; height: 44px; display: block; }
-.evomini-vacio { color: var(--muted); font-size: 12px; }
+/* La fila del total: MISMO esquema que una fila de posiciones (nombre a la
+   izquierda, dibujo al medio, % a la derecha), apenas mas grande. La celda del
+   dibujo es la elastica; las otras dos se quedan con lo que piden. */
+.totalrow { display: flex; align-items: center; gap: 12px; }
+.totalrow .tr-val { min-width: 0; flex: 0 1 auto; }
+.totalrow .tr-pct { flex: 0 0 auto; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+.totalrow .tr-pct .totalpct-per { margin-top: 1px; }
+.evomini { cursor: pointer; flex: 1 1 auto; min-width: 54px; }
+.evomini svg { width: 100%; height: 40px; display: block; }
+.evomini-vacio { color: var(--muted); font-size: 11px; }
+/* Cash discreto: era un bloque propio arriba a la derecha y competia con el
+   total. Ahora es un renglon al pie de la tarjeta. */
+.cashline { display: flex; align-items: baseline; gap: 8px; margin: 13px 0 0; padding-top: 11px;
+  border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+.cashline b { color: var(--text); font-weight: 700; margin-left: auto; }
+.cashline #liquidezPct { font-size: 12px; }
 #evoChartBox { cursor: pointer; }
 .chartmodal { position: fixed; inset: 0; background: rgba(4,7,14,.85); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .chartmodal-inner { background: var(--navy2); border-radius: 18px; border: 1px solid var(--border); padding: 18px; width: 100%; max-width: 900px; }
@@ -471,31 +481,29 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div id="updateAviso" style="display:none"><div class="tmsg ok" style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span>Hay una versi&oacute;n nueva de la app.</span><button class="ghostbtn" id="updateBtn" style="width:auto;margin:0;padding:6px 14px">Actualizar</button></div></div>
 <div id="syncAviso" style="display:none"></div>
 <div id="autoAviso" style="display:none"></div>
-<div class="topstats">
-<div>
-<p class="lbl">Valor total estimado <button class="eyebtn" id="eyeBtn" aria-label="Ocultar montos"></button></p>
-<p class="total" id="total">&mdash;</p>
-<p class="totalpct"><span class="rangepct" id="rangePct"></span> <span class="totalpct-per" id="rangeNombre"></span></p>
-</div>
-<div class="liqblock">
-<p class="lbl" style="justify-content:flex-end">Cash</p>
-<p class="liqval" id="liquidezVal">&mdash;</p>
-<p class="liqpct" id="liquidezPct">&mdash;</p>
-</div>
-</div>
-
-
-<div class="grid2" style="margin-top:18px">
+<div class="grid2">
 <div class="card">
 <div class="sweepwrap" id="sweepWrap">
 <div class="sweepdeck" id="sweepDeck">
+<!-- Tarjeta 1 = el valor total (23/08/2026). Antes el numero vivia arriba,
+     afuera del carrusel, y esta tarjeta se llamaba "Evolucion" con el grafico
+     solo. Guzman: "tarjeta 1 valor total... que no diga evolucion, ya se a que
+     es esa grafica". El total, su dibujo y su % pasan a una sola fila con el
+     MISMO esquema que las filas de posiciones, apenas mas grande. -->
 <div class="sweeppanel">
 <div class="cardhead">
-<h2>Evoluci&oacute;n</h2>
 <div class="rangebar" id="rangeBar"></div><button class="expandbtn" id="evoAmpliarBtn" title="Pantalla completa" style="display:none">&#9974;</button>
 </div>
+<div class="totalrow">
+<div class="tr-val">
+<p class="lbl">Valor total estimado <button class="eyebtn" id="eyeBtn" aria-label="Ocultar montos"></button></p>
+<p class="total" id="total">&mdash;</p>
+</div>
 <div class="evomini" id="evoMini" role="button" tabindex="0" title="Tocar para ver el gr&aacute;fico"></div>
+<div class="tr-pct"><span class="rangepct" id="rangePct"></span><span class="totalpct-per" id="rangeNombre"></span></div>
+</div>
 <div class="chartbox" id="evoChartBox" style="display:none" title="Tocar para compactar"><canvas id="lineChart"></canvas></div>
+<p class="cashline"><span>Cash</span><b id="liquidezVal">&mdash;</b><span id="liquidezPct">&mdash;</span></p>
 </div>
 <div class="sweeppanel">
 <div class="cardhead">
