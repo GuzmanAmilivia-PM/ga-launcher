@@ -501,10 +501,12 @@ var avatar = logo
 return '<td><span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + avatar + '</span><span class="holdid"><span class="sym">' + esc(sym) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></span></span></td>' +
 '<td class="col-spark">' + sparkDe(h) + '</td>' +
 '<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
-// Pedido de Guzman (22/08/2026): sin el monto en dolares — no le interesa
-// ese dato aca. Queda la ganancia %, que es la que si le sirve por posicion.
-// El detalle de cuenta (vistas.js) NO se toca: sigue mostrando el valor.
-'<td>' + gananciaHtml(h) + '</td>' +
+// Pedido de Guzman (22/08/2026), en dos pasos: primero se saco el monto en
+// dolares y despues la ganancia acumulada. Esta tabla queda como una lista de
+// mercado —simbolo, tendencia del mes, precio con su variacion del dia— y no
+// como un estado de cuenta. Los dos datos que salieron siguen estando en el
+// detalle de cada cuenta (vistas.js), que NO se toco, y la ganancia por
+// posicion tambien en el desplegable de la fila.
 '<td class="holdpct col-pct">' + pctDisplay + '</td>';
 }
 function claseFila(idx) { return (idx >= HOLD_VISIBLE && !holdingsExpanded ? 'hidden-row ' : '') + 'asset-row'; }
@@ -514,7 +516,7 @@ var el = document.getElementById('holdingsList');
 var btn = document.getElementById('holdMoreBtn');
 if (btn && !btn._wired) { btn._wired = true; btn.addEventListener('click', toggleHoldings); }
 lastHoldings = list || [];
-if (!list || !list.length) { holdFilas = []; holdCabezas = []; el.innerHTML = '<tr><td colspan="5" class="newsempty">Sin posiciones.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
+if (!list || !list.length) { holdFilas = []; holdCabezas = []; el.innerHTML = '<tr><td colspan="4" class="newsempty">Sin posiciones.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
 var lista = ordenarPorTipo(list);
 // Actualizacion EN EL LUGAR (R4): si la tabla ya muestra estos simbolos en
 // este orden, se refrescan las celdas de cada fila sin vaciar el tbody.
@@ -528,7 +530,7 @@ lista.forEach(function (h, idx) {
 var t = tipoDe(h);
 if (!enLugar && t !== tipoPrev) {
 var sec = document.createElement('tr');
-sec.innerHTML = '<td colspan="5">' + esc((typeof TIPO_LABELS !== 'undefined' && TIPO_LABELS[t]) || t) + '</td>';
+sec.innerHTML = '<td colspan="4">' + esc((typeof TIPO_LABELS !== 'undefined' && TIPO_LABELS[t]) || t) + '</td>';
 el.appendChild(sec);
 holdCabezas.push({ tr: sec, idx: idx });
 tipoPrev = t;
