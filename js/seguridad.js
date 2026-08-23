@@ -181,7 +181,7 @@ return bioVerificar(s.bio).then(function () {
 // (su exito o su error son de una peticion que ya no existe para el user).
 if (mio !== bioIntento) return;
 bioEnCurso = false;
-btn.textContent = 'Desbloquear';
+btn.textContent = 'Desbloquear con Face ID';
 abrir();
 }).catch(function (e) {
 if (mio !== bioIntento) return;
@@ -189,8 +189,15 @@ bioEnCurso = false;
 // Si el intento automatico se rechaza es, casi siempre, porque iOS pide un
 // gesto: se invita a tocar en vez de mostrar un error, y NO cuenta como
 // fallo (el sensor ni llego a mirarlo).
-btn.textContent = auto ? 'Toc\u00e1 para desbloquear' : 'Reintentar';
-if (auto) return;
+btn.textContent = auto ? 'Desbloquear con Face ID' : 'Reintentar';
+if (auto) {
+// NotAllowedError en un intento AUTOMATICO = el sistema pidio un gesto. No
+// es un fallo de reconocimiento: el sensor ni miro. Se ANOTA para que las
+// proximas aperturas no pierdan el ciclo \u2014 es lo que Guzman veia como "parece
+// que precarga la biometria pero igual tengo que tocar" (22/08/2026).
+if (e && e.name === 'NotAllowedError') { try { localStorage.setItem('ga_bio_auto', '0'); } catch (e2) {} }
+return;
+}
 fallos++;
 // Que no te reconozca no puede dejarte afuera: al primer fallo aparece el
 // link a la clave, y despues de varios se pasa solo.
@@ -212,10 +219,16 @@ if (s.pin) { modoBio = false; pintarModo(); return; }
 document.getElementById('secErr').textContent = 'La biometr\u00eda no est\u00e1 disponible en este navegador. Toc\u00e1 "No puedo entrar".';
 return;
 }
-// Arranque directo con la biometria, sin tocar el boton. Un solo intento
-// automatico por apertura (si no, cancelar la hoja del sistema la vuelve
-// a abrir en loop).
-setTimeout(function () { if (appBloqueada && modoBio) intentarBio(true); }, 350);
+// Arranque directo con la biometria, sin tocar el boton — DONDE SE PUEDA.
+// En iOS el sistema exige un gesto del usuario para WebAuthn, asi que ese
+// intento se rechaza SIEMPRE y lo unico que lograba era un ciclo perdido y un
+// cartel que cambiaba solo. En vez de adivinar el sistema operativo, se
+// APRENDE: al primer rechazo por falta de gesto se anota y no se vuelve a
+// intentar en este dispositivo. Donde si funciona (Windows Hello, Android),
+// sigue abriendo sin tocar nada.
+var autoSirve = true;
+try { autoSirve = localStorage.getItem('ga_bio_auto') !== '0'; } catch (e) {}
+if (autoSirve) setTimeout(function () { if (appBloqueada && modoBio) intentarBio(true); }, 350);
 });
 // El boton NUNCA se deshabilita y es el unico FORZADO: si la peticion quedo
 // colgada (el caso que dejaba la app trancada), tocarlo aborta y reintenta.
