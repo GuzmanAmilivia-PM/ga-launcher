@@ -298,7 +298,12 @@ return 'USD ' + Math.round(n).toLocaleString('es-UY');
 }
 function fmtNum(n) {
 if (n === null || n === undefined || n === '') return '\u2014';
-return (typeof n === 'number') ? (Math.round(n * 100) / 100) : n;
+// Era el UNICO numero de toda la app sin pasar por es-UY (miles con punto,
+// decimales con coma) \u2014 fmt/fmtUsd/fmtUsdEnt ya lo hacian. Un precio de
+// 1763.76 salia con el punto y la coma de JS al reves de como se lee ahi:
+// "1763.76" en vez de "1.763,76". Pedido de Guzman (22/08/2026): "en
+// TradingView se ve un poco mejor los numeros".
+return (typeof n === 'number') ? (Math.round(n * 100) / 100).toLocaleString('es-UY') : n;
 }
 // Montos de los paneles (dividendos/aportes), con el ojito de privacidad ya
 // aplicado. La misma cadena mask('US$ ' + ...) estaba repetida 15 veces en

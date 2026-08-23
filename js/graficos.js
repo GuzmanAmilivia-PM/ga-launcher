@@ -463,11 +463,42 @@ function sparkDe(h) {
 var s = sparksPorSym[String(h && h.symbol || '').toUpperCase()];
 return sparkSvg(s);
 }
+// Logos de verdad en vez de las iniciales (pedido de Guzman, 22/08/2026: "en
+// TradingView se ve mejor... y me gustaria que aparezcan los logos asi").
+//
+// Las dos fuentes van POR TICKER, no por dominio. Es la propiedad importante:
+// el ticker ES la identidad del activo, asi que un logo o carga el correcto o
+// no carga nada. La primera version usaba Clearbit, que pide el DOMINIO de la
+// empresa: obligaba a mantener una tabla adivinada a mano y, peor, un dominio
+// mal adivinado habria mostrado el logo de OTRA empresa al lado de plata de
+// verdad — un error que no se ve como error. (Ademas Clearbit ya no responde:
+// verificado el 22/08/2026, no devuelve nada.)
+//
+// Cobertura medida contra la cartera real ese dia: 16 de 19 acciones/ETFs, y
+// 4 de 6 criptos. Lo que no esta en ninguna de las dos (NA9 en Xetra, TEP en
+// Paris, MPT, RUNE, POL) se queda con las iniciales de siempre — que es el
+// comportamiento anterior, no una falla.
+function logoUrl(h) {
+var sym = String(h.symbol || '').toUpperCase();
+if (tipoDe(h) === 'cash') return null;
+if (tipoDe(h) === 'cripto') return 'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@master/128/color/' + sym.toLowerCase() + '.png';
+return 'https://assets.parqet.com/logos/symbol/' + encodeURIComponent(sym);
+}
+// Si el logo no carga (dominio sin logo, cripto fuera del set, sin red), se
+// cae a las iniciales de siempre — nunca queda un hueco vacio.
+function _sinLogo(img) {
+img.style.display = 'none';
+if (img.nextElementSibling) img.nextElementSibling.style.display = 'flex';
+}
 function filaHoldingHtml(h) {
 var pctDisplay = (h.pct * 100).toFixed(1) + '%';
 var sym = String(h.symbol || '');
 var inic = sym.length <= 3 ? sym : sym.slice(0, 2);
-return '<td><span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + esc(inic) + '</span><span class="holdid"><span class="sym">' + esc(sym) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></span></span></td>' +
+var logo = logoUrl(h);
+var avatar = logo
+  ? '<img src="' + esc(logo) + '" alt="" loading="lazy" onerror="_sinLogo(this)"><span class="holdinit" style="display:none">' + esc(inic) + '</span>'
+  : esc(inic);
+return '<td><span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + avatar + '</span><span class="holdid"><span class="sym">' + esc(sym) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></span></span></td>' +
 '<td class="col-spark">' + sparkDe(h) + '</td>' +
 '<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
 // Pedido de Guzman (22/08/2026): sin el monto en dolares — no le interesa
