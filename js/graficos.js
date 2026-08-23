@@ -703,7 +703,11 @@ h += '</div>';
 
 // La nota NO es relleno: sin ella el numero se lee como el cambio del
 // patrimonio, que es otra cosa y siempre mas grande.
-h += '<p class="capnota">Del ' + fechaCortaMs(c.desde) + ' a hoy. Es el rendimiento de tus ' +
+// Fecha SIN hora: fechaCortaMs trae la hora (sirve para "ultima sync"), y en
+// una fecha de cierre de año "30/12 12:00" solo estorba.
+var dDesde = new Date(c.desde);
+var desdeTxt = ('0' + dDesde.getDate()).slice(-2) + '/' + ('0' + (dDesde.getMonth() + 1)).slice(-2) + '/' + dDesde.getFullYear();
+h += '<p class="capnota">Del ' + desdeTxt + ' a hoy. Es el rendimiento de tus ' +
 'inversiones <b>descontando lo que aportaste</b>: tu patrimonio subi&oacute; ' +
 signoPct(c.bruto, 1) + ', pero ' + esc(fmtUsdEnt(c.aportes)) + ' de eso los pusiste vos, no los ganaste. ' +
 (c.idxPct !== null ? 'El &iacute;ndice no paga dividendos y tus cuentas s&iacute;.' : '') + '</p>';
