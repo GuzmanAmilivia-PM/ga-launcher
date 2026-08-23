@@ -13,6 +13,7 @@ currentRangeDias = r.dias;
 syncRangeBars();
 drawLineChart(filterSerie(currentRangeDias));
 updateRangePct();
+renderEvoMini();
 if (document.getElementById('chartModal').style.display !== 'none') drawBigChart();
 };
 bar.appendChild(btn);
@@ -119,17 +120,33 @@ function getFilteredDataPoints(serie) {
   document.getElementById('chartModal').style.display = 'none';
   if (bigChartInstance) { bigChartInstance.destroy(); bigChartInstance = null; }
   }
-  // El boton PLIEGA Y DESPLIEGA la caja ahi mismo (pedido de Guzman,
-  // 22/08/2026: "que expanda, no que genere una pagina nueva... que cuando se
-  // expande quede como antes"). El grafico grande a pantalla completa sigue
-  // existiendo, en el boton del icono que aparece solo cuando esta desplegado.
+  // SE TOCA EL GRAFICO, no un boton al costado (pedido de Guzman, 22/08/2026:
+  // "que se expanda cuando aprieto sobre la mini grafica, no con el boton
+  // chico del costado; si vuelvo a clickear sobre el grafico expandido se
+  // vuelve a compactar en el mini").
   //
-  // La eleccion se recuerda: si Guzman lo deja abierto, la proxima vez abre
-  // abierto. Arranca PLEGADO la primera vez, que es lo que pidio.
+  // Plegado NO queda un hueco: se dibuja la MISMA mini grafica que las filas
+  // de posiciones (sparkSvg), asi la tarjeta dice algo aunque este compacta.
+  // La eleccion se recuerda; la primera vez arranca compacta.
+  function renderEvoMini() {
+  var el = document.getElementById('evoMini');
+  if (!el) return;
+  var serie = filterSerie(currentRangeDias) || [];
+  var vals = serie.map(function (p) { return p.valor; });
+  // Mas de ~120 puntos en 300 de ancho es ruido: se muestrea parejo.
+  if (vals.length > 120) {
+    var paso = vals.length / 120, m = [];
+    for (var i = 0; i < 120; i++) m.push(vals[Math.floor(i * paso)]);
+    m.push(vals[vals.length - 1]);
+    vals = m;
+  }
+  el.innerHTML = sparkSvg(vals, 300, 44, 'en el periodo') ||
+    '<span class="evomini-vacio">Sin datos todav&iacute;a</span>';
+  }
   function pintarBotonEvo() {
   var abierto = !evoPlegado();
-  var b = document.getElementById('expandBtn');
-  if (b) { b.innerHTML = abierto ? 'Ocultar' : 'Gr&aacute;fico &#9974;'; b.title = abierto ? 'Ocultar el grafico' : 'Ver el grafico'; }
+  var mini = document.getElementById('evoMini');
+  if (mini) mini.style.display = abierto ? 'none' : '';
   var amp = document.getElementById('evoAmpliarBtn');
   if (amp) amp.style.display = abierto ? '' : 'none';
   }
@@ -142,12 +159,18 @@ function getFilteredDataPoints(serie) {
   pintarBotonEvo();
   // Se dibuja DESPUES de mostrar la caja: sobre un canvas de alto cero la
   // escala sale mal.
-  if (abrir) drawLineChart(filterSerie(currentRangeDias));
+  if (abrir) drawLineChart(filterSerie(currentRangeDias)); else renderEvoMini();
   if (typeof ajustarAlturaDeck === 'function') ajustarAlturaDeck();
   }
-  document.getElementById('expandBtn').onclick = toggleEvo;
+  // El area del grafico ES el control, plegada y desplegada.
+  var _mini = document.getElementById('evoMini');
+  if (_mini) _mini.onclick = toggleEvo;
+  var _caja = document.getElementById('evoChartBox');
+  if (_caja) _caja.onclick = toggleEvo;
   var _ampBtn = document.getElementById('evoAmpliarBtn');
-  if (_ampBtn) _ampBtn.onclick = openChartModal;
+  // stopPropagation: hoy el boton vive en la cabecera, fuera de la caja, pero
+  // si alguna vez se mueve adentro un clic en el no debe plegar el grafico.
+  if (_ampBtn) _ampBtn.onclick = function (e) { if (e && e.stopPropagation) e.stopPropagation(); openChartModal(); };
   document.getElementById('chartModalClose').onclick = closeChartModal;
   try {
   if (localStorage.getItem('ga_evo_abierto') === '1') {
@@ -562,14 +585,18 @@ sparksPorSym = s;
 // todo el alto disponible, asi que un mini-grafico mas alto DISTINGUE mejor
 // los movimientos chicos, no solo se ve mas grande.
 var SPARK_W = 80, SPARK_H = 32;
-function sparkSvg(serie) {
+// w/h opcionales: la tabla de posiciones usa el tamano chico de siempre, y la
+// mini de Evolucion pide uno ancho y bajo. Misma funcion para las dos — el
+// dibujo ya estaba probado y no tiene sentido tener dos.
+function sparkSvg(serie, w, h, dicePct) {
 if (!serie || serie.length < 2) return '';
+var W = w || SPARK_W, H = h || SPARK_H;
 var min = serie[0], max = serie[0];
 for (var i = 1; i < serie.length; i++) { if (serie[i] < min) min = serie[i]; if (serie[i] > max) max = serie[i]; }
 var rango = max - min;
 // Un mes plano (o un solo precio repetido) se dibuja como una raya al medio,
 // no como una division por cero.
-var pad = 2, alto = SPARK_H - pad * 2, ancho = SPARK_W - pad * 2;
+var pad = 2, alto = H - pad * 2, ancho = W - pad * 2;
 var pts = [];
 for (var j = 0; j < serie.length; j++) {
 var x = pad + (j * ancho) / (serie.length - 1);
@@ -584,8 +611,8 @@ var sube = serie[serie.length - 1] >= serie[0];
 var pct = serie[0] ? ((serie[serie.length - 1] / serie[0] - 1) * 100) : 0;
 // El texto para lectores de pantalla no es adorno: la columna se llama "Mes" y
 // sin esto anuncia siete celdas VACIAS — promete un dato y no lo entrega.
-var dicho = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '% en el mes';
-return '<svg class="spark ' + (sube ? 'sube' : 'baja') + '" width="' + SPARK_W + '" height="' + SPARK_H +
+var dicho = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '% ' + (dicePct || 'en el mes');
+return '<svg class="spark ' + (sube ? 'sube' : 'baja') + '" width="' + W + '" height="' + H +
 '" viewBox="0 0 ' + SPARK_W + ' ' + SPARK_H + '" role="img" aria-label="' + dicho + '">' +
 '<polyline points="' + pts.join(' ') + '"/></svg>';
 }

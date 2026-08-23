@@ -110,6 +110,7 @@ try {
 aplicarBench(data); aplicarGrupo(data);
 drawLineChart(filterSerie(currentRangeDias));
 updateRangePct();
+renderEvoMini();
 } catch (eChart) {
 var cb = document.querySelector('.chartbox');
 if (cb) cb.innerHTML = '<p class="newsempty">No se pudo dibujar el gr&aacute;fico.</p>';
