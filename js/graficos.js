@@ -768,26 +768,41 @@ return '<td><span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + av
  *
  * Las 5 se eligen por VALOR, no por el orden en que vengan.
  */
-var HOLD_NO_ETF = 5;
-function esEtf(h) { return tipoDe(h) === 'etf'; }
+var HOLD_ETFS = 3;
+var HOLD_ACCIONES = 5;
 function porValor(a, b) { return (Number(b.valor) || 0) - (Number(a.valor) || 0); }
+function _masGrandes(list, tipo, cuantos) {
+  return list.filter(function (h) { return tipoDe(h) === tipo; }).sort(porValor).slice(0, cuantos);
+}
+/**
+ * Qué muestra la tarjeta (pedido de Guzmán, 24/08/2026, en dos pasos):
+ *   - plegada: sus 3 ETFs más grandes;
+ *   - "Ver todas": esos 3 ETFs más sus 5 acciones más grandes. Nada más.
+ *
+ * Los dos números son fijos a propósito: la tarjeta mide siempre lo mismo. Con
+ * "todos los ETFs" alcanzó con que el backend mandara más posiciones para que
+ * apareciera un cuarto (IWM) que Guzmán no quería ver ahí.
+ *
+ * Y se elige por VALOR, nunca por posición en la lista. El agrupado por tipo
+ * (ETFs primero, pedido del 22/08) es de PRESENTACIÓN: cuando el corte se hacía
+ * contando filas sobre esa lista ya agrupada, la pantalla mostraba SMH —la más
+ * chica de todas, 4,1% de la cartera— y escondía META (5,6%) y GOOG (4,4%),
+ * solo porque SMH es un ETF y los ETFs van arriba.
+ *
+ * La cripto NO entra en esta tarjeta: las cinco son acciones. Se ve entera en
+ * Portafolio, que es la lista completa.
+ */
 function repartoHoldings(list) {
   var todos = (list || []).slice();
-  // Los DOS grupos se ordenan por valor acá y no se confía en el orden en que
-  // llegan: la tabla dice "principales posiciones", así que dentro de cada
-  // sección manda el peso. (El backend hoy los manda ordenados, pero eso es una
-  // coincidencia afortunada, no un contrato.)
-  var etfs = todos.filter(esEtf).sort(porValor);
-  var resto = todos.filter(function (h) { return !esEtf(h); })
-    .sort(porValor)
-    .slice(0, HOLD_NO_ETF);
-  // Sin ETFs, plegado no puede quedar vacío: se muestran las más grandes.
-  var plegados = etfs.length ? etfs : resto;
+  var etfs = _masGrandes(todos, 'etf', HOLD_ETFS);
+  var acciones = _masGrandes(todos, 'accion', HOLD_ACCIONES);
+  // Sin ETFs, plegada no puede quedar vacía: se muestran las acciones.
+  var plegados = etfs.length ? etfs : acciones;
   var ocultos = {};
-  etfs.concat(resto).forEach(function (h) {
+  etfs.concat(acciones).forEach(function (h) {
     if (plegados.indexOf(h) === -1) ocultos[String(h.symbol).toUpperCase()] = true;
   });
-  return { lista: etfs.concat(resto), ocultos: ocultos };
+  return { lista: etfs.concat(acciones), ocultos: ocultos };
 }
 function claseFila(h, ocultos) {
   var oculta = !holdingsExpanded && ocultos[String(h.symbol).toUpperCase()];
