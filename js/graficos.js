@@ -581,7 +581,10 @@ function toggleDetalle(tr, pos) {
   detalleAbierto = { tr: tr, det: det };
 }
 // ---------- Principales posiciones (Inicio) ----------
-var HOLD_VISIBLE = 4;
+// Cuantas filas se ven sin tocar "Ver todas". CINCO desde el 24/08/2026 (pedido
+// de Guzman); el backend manda 7, asi que el boton sigue teniendo algo que
+// mostrar.
+var HOLD_VISIBLE = 5;
 var holdingsExpanded = false;
 var lastHoldings = [];
 // Las filas pintadas ({symbol, tr}) y las cabeceras de seccion ({tr, idx de

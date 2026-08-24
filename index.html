@@ -105,7 +105,10 @@ body { font-family: 'Manrope', -apple-system, "Segoe UI", Roboto, Arial, sans-se
 /* Baja de 38px a 25 (23/08/2026): dejo de estar solo en su renglon y ahora
    comparte fila con el dibujo y el %, como una posicion de la tabla. Sigue
    siendo el numero mas grande de la pantalla. */
-.total { font-size: clamp(20px, 6vw, 25px); font-weight: 800; margin: 0; letter-spacing: -.02em; white-space: nowrap; line-height: 1.1; }
+/* El total, un poco mas grande (pedido de Guzman, 24/08/2026). Sigue siendo un
+   clamp: es el numero mas largo de la fila y en una pantalla angosta tiene que
+   poder achicarse antes que empujar al % fuera de la tarjeta. */
+.total { font-size: clamp(22px, 7vw, 30px); font-weight: 800; margin: 0; letter-spacing: -.02em; white-space: nowrap; line-height: 1.1; }
 .subtotal { font-size: 14.5px; color: var(--muted); margin: 6px 0 0; }
 .subtotal b { color: var(--text); font-weight: 700; }
 .viewtitle { font-size: 22px; font-weight: 800; margin: 0 0 14px; }
