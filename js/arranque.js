@@ -112,8 +112,14 @@ drawLineChart(filterSerie(currentRangeDias));
 updateRangePct();
 renderEvoMini();
 } catch (eChart) {
-var cb = document.querySelector('.chartbox');
-if (cb) cb.innerHTML = '<p class="newsempty">No se pudo dibujar el gr&aacute;fico.</p>';
+// El aviso va donde SE VE. Antes iba al primer `.chartbox` del documento, que
+// desde v92 es la caja de Evolucion y arranca PLEGADA: con el grafico cerrado
+// —el estado por omision— el error se escribia en un div oculto, la app se
+// veia normal y no decia nada. Peor: reemplazaba el <canvas>, asi que al
+// expandir despues tiraba otra excepcion, esa sin try alrededor.
+// Auditoria del 23/08/2026.
+var cb = document.getElementById('evoMini');
+if (cb) cb.innerHTML = '<span class="evomini-vacio">No se pudo dibujar el gr&aacute;fico.</span>';
 }
 aplicarSparks(data);
 renderHoldings(data.topHoldings);

@@ -231,6 +231,16 @@ html += filaSalud('Hist&oacute;rico', s.historico.filas + ' d&iacute;as, &uacute
 } else {
 html += filaSalud('Hist&oacute;rico', esc((s.historico && s.historico.error) || '?'), false);
 }
+// Lo que la lectura del resumen no encontro (bloque de cuentas, fila del
+// total, fila de Liquidez). Esta pantalla es "¿esta bien mi planilla?" y era
+// el unico lugar donde esos avisos no llegaban. Con la planilla sana la lista
+// viene vacia y no se dibuja nada: un aviso que aparece siempre es ruido.
+// Auditoria del 23/08/2026.
+var avs = (s.avisosResumen && s.avisosResumen.length) ? s.avisosResumen : null;
+html += filaSalud('Hoja "resumen"', avs ? (avs.length + ' aviso(s)') : '&#10003; sin avisos', !avs);
+if (avs) {
+avs.forEach(function (a) { html += '<p class="newsempty" style="margin:2px 0 0">' + esc(a) + '</p>'; });
+}
 out.innerHTML = html;
 }).withFailureHandler(function (err) {
 btn._busy = false;

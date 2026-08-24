@@ -172,6 +172,7 @@ function intentarBio(auto, forzado) {
 if (bioEnCurso && !forzado) return;
 var mio = ++bioIntento;
 bioEnCurso = true;
+var t0 = Date.now();
 var err = document.getElementById('secErr');
 if (!auto) err.textContent = '';
 var btn = document.getElementById('secBioGo');
@@ -191,11 +192,21 @@ bioEnCurso = false;
 // fallo (el sensor ni llego a mirarlo).
 btn.textContent = auto ? 'Desbloquear con Face ID' : 'Reintentar';
 if (auto) {
-// NotAllowedError en un intento AUTOMATICO = el sistema pidio un gesto. No
-// es un fallo de reconocimiento: el sensor ni miro. Se ANOTA para que las
-// proximas aperturas no pierdan el ciclo \u2014 es lo que Guzman veia como "parece
-// que precarga la biometria pero igual tengo que tocar" (22/08/2026).
-if (e && e.name === 'NotAllowedError') { try { localStorage.setItem('ga_bio_auto', '0'); } catch (e2) {} }
+// NotAllowedError en un intento AUTOMATICO suele ser "el sistema pidio un
+// gesto". Se ANOTA para que las proximas aperturas no pierdan el ciclo \u2014 es
+// lo que Guzman veia como "parece que precarga la biometria pero igual tengo
+// que tocar" (22/08/2026).
+//
+// Pero el MISMO error lo tira el navegador cuando el usuario CANCELA la hoja
+// del sistema o cuando la peticion expira (timeout de 60 s). En Windows Hello
+// y Android \u2014donde el automatico si abre el dialogo\u2014 una sola cancelacion
+// apagaba el desbloqueo sin tocar nada para siempre, justo donde era util.
+// La senal barata para distinguirlos es el tiempo: un rechazo por falta de
+// gesto vuelve en milisegundos, una persona tarda segundos.
+// Auditoria del 23/08/2026.
+if (e && e.name === 'NotAllowedError' && (Date.now() - t0) < 1000) {
+  try { localStorage.setItem('ga_bio_auto', '0'); } catch (e2) {}
+}
 return;
 }
 fallos++;
@@ -263,7 +274,7 @@ confirmarDosToques(l, 'Se borra el bloqueo y vas a tener que poner de nuevo la c
 // con el portafolio (GA_CACHES, en paneles.js — la lista unica evita que un
 // cache nuevo quede vivo). Re-pegar la clave cuesta un minuto; dejarla, un riesgo.
 try {
-['ga_sec', 'ga_token', 'ga_bnb', 'ga_bnb_ultima'].concat(GA_CACHES).forEach(function (k) { localStorage.removeItem(k); });
+['ga_sec', 'ga_token', 'ga_bnb', 'ga_bnb_ultima', 'ga_bio_auto'].concat(GA_CACHES).forEach(function (k) { localStorage.removeItem(k); });
 } catch (e) {}
 try { location.reload(); } catch (e) {}
 });

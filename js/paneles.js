@@ -40,6 +40,12 @@ setTimeout(ajustarAlturaDeck, 350);
 document.querySelectorAll('.sweepdots .sdot').forEach(function (d) {
 d.addEventListener('click', function () { sweepGo(parseInt(d.getAttribute('data-sw'), 10)); });
 });
+// ¿El ultimo gesto sobre el carrusel fue un deslizamiento? Lo consulta quien
+// tenga un onclick GRANDE adentro del deck. Antes no hacia falta: el unico
+// control era un boton chico en un rincon. Desde que el area del grafico ES el
+// control (v94), deslizar hacia Dividendos arrancando el dedo sobre el grafico
+// puede llegar como clic y plegarlo de paso. Auditoria del 23/08/2026.
+var huboSwipe = false;
 (function () {
 var wrap = document.getElementById('sweepWrap');
 if (!wrap) return;
@@ -50,6 +56,13 @@ if (x0 === null) return;
 var dx = e.changedTouches[0].clientX - x0;
 var dy = e.changedTouches[0].clientY - y0;
 x0 = null;
+// El umbral para "esto fue un arrastre" es mas bajo que el del cambio de
+// tarjeta a proposito: un dedo que se movio 20px no queria hacer clic,
+// aunque no haya llegado a cambiar de panel.
+if (Math.abs(dx) > 20 || Math.abs(dy) > 20) {
+  huboSwipe = true;
+  setTimeout(function () { huboSwipe = false; }, 400);
+}
 if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) sweepGo(sweepIdx + (dx < 0 ? 1 : -1));
 }, { passive: true });
 })();

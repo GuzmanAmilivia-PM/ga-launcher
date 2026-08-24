@@ -18,7 +18,7 @@
   script-src 'self' 'sha256-eCEv2Xtk/d4etq+pER4EYyojYMTusYCys+IfxZyAxE0=';
   style-src 'self' 'unsafe-inline';
   font-src 'self' data:;
-  img-src 'self' data: https:;
+  img-src 'self' data:;
   connect-src 'self' https://ga-portfolio-worker.ga-portfolio.workers.dev wss://ws-api.binance.com;
   frame-src https://s.tradingview.com https://www.tradingview.com;
   worker-src 'self';
@@ -109,10 +109,12 @@ body { font-family: 'Manrope', -apple-system, "Segoe UI", Roboto, Arial, sans-se
 .subtotal { font-size: 14.5px; color: var(--muted); margin: 6px 0 0; }
 .subtotal b { color: var(--text); font-weight: 700; }
 .viewtitle { font-size: 22px; font-weight: 800; margin: 0 0 14px; }
-.rangepct { font-size: 15px; font-weight: 700; }
+.rangepct { font-size: 13px; font-weight: 700; margin-left: 8px; }
+/* El tamano grande es solo el de la fila del total (v100), no el del ano de
+   Dividendos/Aportes, que comparten esta clase. Auditoria del 23/08/2026. */
+.totalrow .rangepct { font-size: 15px; margin-left: 0; }
 /* El % del periodo vive al lado del TOTAL (pedido de Guzman, 22/08/2026): es
    la lectura que uno busca al abrir, y ahi no compite con nada. */
-.totalpct { margin: 3px 0 0; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
 .totalpct-per { font-size: 11.5px; color: var(--muted); font-weight: 600; }
 .up { color: var(--green); font-weight: 700; }
 .down { color: var(--red); font-weight: 700; }
@@ -193,10 +195,6 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
    resuelve solo, igual que el trazo. */
 .spark { color: var(--red); }
 .spark.sube { color: var(--green); }
-.spark circle { fill: currentColor; }
-/* El punto de hoy va hueco sobre el fondo de la tarjeta: se lee como "estas
-   aca" y no como un dia mas de la serie. */
-.spark circle.hoy { fill: var(--navy2); stroke: currentColor; stroke-width: 1.6; }
 .morebtn { position: relative; z-index: 5; display: none; width: 100%; margin-top: 10px; padding: 9px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid var(--border); color: var(--muted); font-size: 11.5px; font-weight: 700; cursor: pointer; }
 @media (max-width: 560px) { .col-pct { display: none; } .holdtable { font-size: 13.5px; } .holdtable td, .holdtable th { padding: 11px 5px; } .holdav { width: 34px; height: 34px; font-size: 11.5px; } .holdtable .sym { font-size: 17.5px; } .holdtable .col-precio { font-size: 20px; } .holdtable .daychg { font-size: 12.5px; } }
 
@@ -214,13 +212,13 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
    dibujo es la elastica; las otras dos se quedan con lo que piden. */
 .totalrow { display: flex; align-items: center; gap: 12px; }
 .totalrow .tr-val { min-width: 0; flex: 0 1 auto; }
-.totalrow .tr-pct { flex: 0 0 auto; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+.totalrow .tr-pct { flex: 0 1 auto; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
 .totalrow .tr-pct .totalpct-per { margin-top: 1px; }
 .evomini { cursor: pointer; flex: 1 1 auto; min-width: 54px; }
 .evomini svg { width: 100%; height: 40px; display: block; }
 .evomini-vacio { color: var(--muted); font-size: 11px; }
 /* Los controles del grafico: solo con el grafico abierto (ver el html). */
-.evocontrols { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.evocontrols { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 /* Cash discreto: era un bloque propio arriba a la derecha y competia con el
    total. Ahora es un renglon al pie de la tarjeta. */
 .cashline { display: flex; align-items: baseline; gap: 8px; margin: 13px 0 0; padding-top: 11px;
@@ -511,7 +509,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div class="evomini" id="evoMini" role="button" tabindex="0" title="Tocar para ver el gr&aacute;fico"></div>
 <div class="tr-pct"><span class="rangepct" id="rangePct"></span><span class="totalpct-per" id="rangeNombre"></span></div>
 </div>
-<div class="chartbox" id="evoChartBox" style="display:none" title="Tocar para compactar"><canvas id="lineChart"></canvas></div>
+<div class="chartbox" id="evoChartBox" role="button" tabindex="0" style="display:none" title="Tocar para compactar"><canvas id="lineChart"></canvas></div>
 <!-- Elegir el periodo ocupaba una franja entera arriba, siempre, para algo que
      casi nunca se toca (23/08/2026: "ocupa mucho espacio, que no aparezcan
      cuando no expando la grafica"). Baja debajo del dibujo y solo se ve con el

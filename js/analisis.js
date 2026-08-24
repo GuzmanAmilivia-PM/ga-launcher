@@ -4,6 +4,13 @@
 // los textos de cada chequeo: aca solo se pinta. Cache local igual que
 // dividendos y aportes — se ve al instante lo ultimo y se refresca por atras.
 var anaCargado = false;
+// Si el desglose del puntaje estaba abierto, sigue abierto despues de repintar.
+// renderAnalisis reescribe el panel entero, y se repinta seguido: al pintar del
+// cache y otra vez cuando llega la respuesta fresca, y tambien al tocar el
+// ojito. Sin esto, se abria el desglose y dos segundos despues se cerraba solo.
+// Es la misma leccion que ya estaba anotada para el detalle de posiciones.
+// Auditoria del 23/08/2026.
+var anaDesgAbierto = false;
 
 function cargarAnalisis(forzar) {
 anaCargado = true;
@@ -36,6 +43,11 @@ return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2
 // exactamente el puntaje mostrado — si no diera, la pantalla estaria mintiendo
 // y por eso se verifica al pie en vez de asumirlo.
 function anaDesgloseHtml(r) {
+// El puntaje es el UNICO dato del backend que se interpolaba crudo. Hoy el
+// contrato garantiza que sea numero, pero el payload se guarda en localStorage
+// y la regla de la casa es que todo lo que viene de afuera se normaliza o se
+// escapa. Auditoria del 23/08/2026.
+var pj = Number(r.puntaje) || 0;
 var base = (typeof r.puntajeBase === 'number') ? r.puntajeBase : 100;
 var chequeos = r.chequeos || [];
 // Sin el dato del backend (respuesta vieja del cache) no se inventa una
@@ -45,7 +57,7 @@ if (!tieneRestas) {
 return '<p class="anadesg-nota">El detalle del c&aacute;lculo llega con el an&aacute;lisis actualizado. ' +
 'Tocá el bot&oacute;n de actualizar de esta tarjeta.</p>';
 }
-var h = '<p class="anadesg-tit">C&oacute;mo se llega a ' + (r.puntaje || 0) + '</p>';
+var h = "<p class=\"anadesg-tit\">C&oacute;mo se llega a " + pj + "</p>";
 h += '<div class="anadesg-fila base"><span>Punto de partida</span><b>' + base + '</b></div>';
 h += '<p class="anadesg-nota">Toda cartera arranca en ' + base + '. Cada chequeo que no da bien descuenta: ' +
 '<b>&minus;20</b> si es un riesgo, <b>&minus;10</b> si merece atenci&oacute;n, <b>0</b> si est&aacute; bien.</p>';
@@ -61,8 +73,8 @@ var total = Math.max(0, base - suma);
 h += '<div class="anadesg-fila total"><span>Total</span><b>' + total + '/100</b></div>';
 // Si la cuenta no cerrara, decirlo es mejor que mostrar dos numeros distintos
 // sin explicacion. No deberia pasar nunca: el backend lo verifica con un test.
-if (total !== (r.puntaje || 0)) {
-h += '<p class="anadesg-nota">Ojo: el puntaje de arriba dice ' + (r.puntaje || 0) + ' y esta cuenta da ' + total + '. ' +
+if (total !== pj) {
+h += '<p class="anadesg-nota">Ojo: el puntaje de arriba dice ' + pj + ' y esta cuenta da ' + total + '. ' +
 'Es un error nuestro, no de tus datos.</p>';
 }
 h += '<p class="anadesg-nota">Esto mide c&oacute;mo est&aacute; <b>armada</b> la cartera (concentraci&oacute;n, ' +
@@ -86,9 +98,9 @@ var html = '';
 // (`resta`), NO se recalcula aca — dos copias de la misma regla terminan
 // divergiendo, que es la leccion de los tickers de las hojas ocultas.
 html += '<div class="anascore" id="anaScore" role="button" tabindex="0" title="Tocar para ver como se calcula">' +
-'<b>' + esc(r.nivel || '') + '</b><span>' + (r.puntaje || 0) + '/100</span>' +
+'<b>' + esc(r.nivel || '') + '</b><span>' + (Number(r.puntaje) || 0) + '/100</span>' +
 '<span class="anascore-chev" id="anaScoreChev">&rsaquo;</span></div>';
-html += '<div class="anabarra" id="anaBarra"><i style="width:' + Math.max(2, Math.min(100, r.puntaje || 0)) + '%"></i></div>';
+html += '<div class="anabarra" id="anaBarra"><i style="width:' + Math.max(2, Math.min(100, Number(r.puntaje) || 0)) + '%"></i></div>';
 html += '<div class="anadesglose" id="anaDesglose" style="display:none">' + anaDesgloseHtml(r) + '</div>';
 
 // Numeros duros. "Posiciones efectivas" = 1/HHI: con que se sienten 12
@@ -125,12 +137,15 @@ var score = document.getElementById('anaScore');
 var desg = document.getElementById('anaDesglose');
 var chev = document.getElementById('anaScoreChev');
 if (score && desg) {
-var abrir = function () {
-var abierto = desg.style.display === 'none';
+var pintarDesglose = function (abierto) {
+anaDesgAbierto = abierto;
 desg.style.display = abierto ? '' : 'none';
 if (chev) chev.className = 'anascore-chev' + (abierto ? ' abierto' : '');
 score.title = abierto ? 'Tocar para ocultar el calculo' : 'Tocar para ver como se calcula';
 };
+var abrir = function () { pintarDesglose(desg.style.display === 'none'); };
+// El html nuevo nace cerrado: si estaba abierto, se reabre.
+if (anaDesgAbierto) pintarDesglose(true);
 score.onclick = abrir;
 // Con teclado tambien: el div hace de boton (role="button"), asi que tiene
 // que responder a Enter y espacio como uno.

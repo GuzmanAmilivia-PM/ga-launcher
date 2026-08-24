@@ -49,6 +49,17 @@ return (Math.pow(factor, 365 / dias) - 1) * 100;
 }
 function updateRangePct() {
 var el = document.getElementById('rangePct');
+// La etiqueta del periodo se escribe PRIMERO, antes de cualquier salida
+// temprana. Estaba al final y las dos salidas de abajo (serie vacia, base en
+// cero) la dejaban con el valor anterior: quedaba "en 5A" al lado de un
+// porcentaje vacio mientras regia 1S. Desde que el selector se esconde con el
+// grafico, esa etiqueta es lo UNICO que dice que periodo rige — mentir ahi es
+// exactamente lo que el cambio queria evitar. Auditoria del 23/08/2026.
+var elPer = document.getElementById('rangeNombre');
+if (elPer) {
+var r = RANGES.filter(function (x) { return x.dias === currentRangeDias; })[0];
+elPer.textContent = r ? ('en ' + r.key) : '';
+}
 var serie = filterSerie(currentRangeDias);
 if (!serie.length || !currentTotal) { el.textContent = ''; el.className = 'rangepct'; return; }
 var base = serie[0].valor;
@@ -59,13 +70,6 @@ var anual = pctAnualizado(pct, dias);
 el.textContent = signoPct(pct, 2) +
 (anual !== null ? ' · ' + signoPct(anual, 1) + ' anual' : '');
 el.className = 'rangepct ' + (pct >= 0 ? 'up' : 'down');
-// Al lado del total, el % solo NO dice de que periodo habla: el selector esta
-// mas abajo, en otra tarjeta. Se escribe la etiqueta del rango elegido.
-var elPer = document.getElementById('rangeNombre');
-if (elPer) {
-var r = RANGES.filter(function (x) { return x.dias === currentRangeDias; })[0];
-elPer.textContent = r ? ('en ' + r.key) : '';
-}
 }
 function getFilteredDataPoints(serie) {
   return serie.filter(function (p, i) {
@@ -162,7 +166,12 @@ function getFilteredDataPoints(serie) {
   function pintarBotonEvo() {
   var abierto = !evoPlegado();
   var mini = document.getElementById('evoMini');
-  if (mini) mini.style.display = abierto ? 'none' : '';
+  if (mini) {
+  mini.style.display = abierto ? 'none' : '';
+  mini.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+  }
+  var caja = document.getElementById('evoChartBox');
+  if (caja) caja.setAttribute('aria-expanded', abierto ? 'true' : 'false');
   // Los botones de periodo y el de pantalla completa viajan JUNTOS con el
   // grafico: plegado no se ven, que era el pedido. Un solo nodo para los dos,
   // asi no puede quedar uno visible y el otro no.
@@ -182,10 +191,28 @@ function getFilteredDataPoints(serie) {
   if (typeof ajustarAlturaDeck === 'function') ajustarAlturaDeck();
   }
   // El area del grafico ES el control, plegada y desplegada.
+  //
+  // Dos cuidados que costaron una auditoria (23/08/2026):
+  //  - un deslizamiento del carrusel que arranca sobre el grafico NO es un
+  //    clic (huboSwipe, en paneles.js): sin esto, deslizar hacia Dividendos
+  //    plegaba el grafico de paso y encima lo recordaba;
+  //  - un <div> con role="button" NO convierte Enter/Espacio en clic solo, eso
+  //    lo hace un <button> de verdad. Con la caja abierta y sin esto, quien usa
+  //    teclado o VoiceOver no tenia NINGUN control para volver a compactar: una
+  //    trampa con estado guardado, de la que no se sale reabriendo la app.
+  function _clicEvo() {
+  if (typeof huboSwipe !== 'undefined' && huboSwipe) return;
+  toggleEvo();
+  }
+  function _teclaEvo(e) {
+  if (!e || (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar')) return;
+  e.preventDefault();
+  toggleEvo();
+  }
   var _mini = document.getElementById('evoMini');
-  if (_mini) _mini.onclick = toggleEvo;
+  if (_mini) { _mini.onclick = _clicEvo; _mini.onkeydown = _teclaEvo; }
   var _caja = document.getElementById('evoChartBox');
-  if (_caja) _caja.onclick = toggleEvo;
+  if (_caja) { _caja.onclick = _clicEvo; _caja.onkeydown = _teclaEvo; }
   var _ampBtn = document.getElementById('evoAmpliarBtn');
   // stopPropagation: hoy el boton vive en la cabecera, fuera de la caja, pero
   // si alguna vez se mueve adentro un clic en el no debe plegar el grafico.
@@ -608,14 +635,6 @@ var SPARK_W = 80, SPARK_H = 32;
 // gradiente se pisan (el navegador usa el primero que encuentra) y el segundo
 // saldria pintado del color del primero — verde bajo una linea roja.
 var _sparkId = 0;
-// Un punto se dibuja cuando los tramos son largos; con tramos cortos serian
-// una mancha.
-//
-// El umbral se cuenta en PUNTOS, no en separacion. La primera version medía la
-// separacion en unidades del dibujo y habia que reajustarla cada vez que
-// cambiaba el tamano —de 300 a 120 el mismo umbral pasaba a significar otra
-// cosa—, asi que el numero no describia ninguna regla. Lo que importa es
-// simple: pocas lecturas se marcan, muchas no.
 // w/h opcionales: la tabla de posiciones usa el tamano chico de siempre, y la
 // mini de Evolucion pide uno ancho y bajo. Misma funcion para las dos — el
 // dibujo ya estaba probado y no tiene sentido tener dos.
@@ -629,9 +648,12 @@ var _sparkId = 0;
 // sea 7 puntos y 6 tramos rectos por semana. Se intento marcarlos con un
 // circulo para que el codo se leyera como dato y no como defecto. No funciono:
 // "saca los puntitos esos". Lo que SI resolvio el problema fue achicar el
-// dibujo — de 305px de ancho a 87, el tramo de una semana pasa de 50px a 16 y
-// el codo se disimula solo. Si algun dia vuelve a aparecer facetado, la palanca
-// es el TAMANO, no marcar los puntos: ya se probo y se descarto.
+// dibujo — de 305 unidades de ancho a 100 (EVO_W), el tramo de una semana pasa
+// de 50px a 16 y el codo se disimula solo. Si algun dia vuelve a aparecer
+// facetado, la palanca es el TAMANO, no marcar los puntos: ya se probo y se
+// descarto. (Decia "a 87", que es el ancho MEDIDO de la celda en pantalla, no
+// el del dibujo; con 87 la cuenta de al lado no cierra. Auditoria del
+// 23/08/2026.)
 function sparkSvg(serie, w, h, dicePct, opts) {
 if (!serie || serie.length < 2) return '';
 var o = opts || {};
