@@ -12,12 +12,25 @@ var _versionPintada = false;
 // La version del shell, leida del nombre del cache que el SW sirve. La misma
 // consulta estaba copiada en pintarSaludApp (config.js); ambos usan esta.
 // cb recibe 'v67' o null (sin soporte de caches, o sin cache ga-pwa-).
+// La version DEL PRODUCTO, la que le importa a una persona. Es distinta del
+// numero del cache (`CACHE` en sw.js), que es un contador de publicaciones: ese
+// tiene que subir en CADA publicacion —es lo que hace que el telefono no siga
+// sirviendo archivos viejos, y ya fallo una vez— asi que no puede ser tambien
+// el numero de version, o cada arreglo de una linea seria una version nueva.
+//
+// 1.01 desde el 24/08/2026: la primera version del MVP. La app hace sola el
+// trabajo de punta a punta —sincroniza los brokers, guarda el patrimonio de
+// cada dia, compara contra el S&P 500 y manda el informe de los lunes— y tiene
+// 824 pruebas atras.
+var VERSION_APP = '1.01';
 function versionShell(cb) {
-if (!window.caches || !caches.keys) { cb(null); return; }
+if (!window.caches || !caches.keys) { cb(VERSION_APP); return; }
 caches.keys().then(function (claves) {
 var c = claves.filter(function (k) { return k.indexOf('ga-pwa-') === 0; })[0];
-cb(c ? c.replace('ga-pwa-', '') : null);
-}).catch(function () { cb(null); });
+// Version del producto, y entre parentesis la publicacion: sirve para saber
+// si el telefono agarro la ultima sin tener que adivinar.
+cb(c ? (VERSION_APP + ' (' + c.replace('ga-pwa-', '') + ')') : VERSION_APP);
+}).catch(function () { cb(VERSION_APP); });
 }
 function pintarVersion() {
 var v = document.getElementById('mbVersion');
