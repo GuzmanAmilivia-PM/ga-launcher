@@ -755,7 +755,44 @@ return '<td><span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + av
 // posicion tambien en el desplegable de la fila.
 '<td class="holdpct col-pct">' + pctDisplay + '</td>';
 }
-function claseFila(idx) { return (idx >= HOLD_VISIBLE && !holdingsExpanded ? 'hidden-row ' : '') + 'asset-row'; }
+/**
+ * Qué se muestra en Principales posiciones (pedido de Guzmán, 24/08/2026):
+ *   - plegado: los ETFs;
+ *   - "Ver todas": los ETFs MÁS las 5 posiciones más grandes que no son ETF.
+ *
+ * Por qué no alcanza con "las primeras N filas", que es como estaba: el
+ * agrupado por tipo (ETFs primero, pedido del 22/08) es de PRESENTACIÓN, y
+ * contar posiciones sobre esa lista mezcla las dos cosas. El 24/08 la pantalla
+ * mostraba SMH —la más chica de las siete, 4,1% de la cartera— y escondía META
+ * (5,6%) y GOOG (4,4%), solo porque SMH es un ETF y los ETFs van arriba.
+ *
+ * Las 5 se eligen por VALOR, no por el orden en que vengan.
+ */
+var HOLD_NO_ETF = 5;
+function esEtf(h) { return tipoDe(h) === 'etf'; }
+function porValor(a, b) { return (Number(b.valor) || 0) - (Number(a.valor) || 0); }
+function repartoHoldings(list) {
+  var todos = (list || []).slice();
+  // Los DOS grupos se ordenan por valor acá y no se confía en el orden en que
+  // llegan: la tabla dice "principales posiciones", así que dentro de cada
+  // sección manda el peso. (El backend hoy los manda ordenados, pero eso es una
+  // coincidencia afortunada, no un contrato.)
+  var etfs = todos.filter(esEtf).sort(porValor);
+  var resto = todos.filter(function (h) { return !esEtf(h); })
+    .sort(porValor)
+    .slice(0, HOLD_NO_ETF);
+  // Sin ETFs, plegado no puede quedar vacío: se muestran las más grandes.
+  var plegados = etfs.length ? etfs : resto;
+  var ocultos = {};
+  etfs.concat(resto).forEach(function (h) {
+    if (plegados.indexOf(h) === -1) ocultos[String(h.symbol).toUpperCase()] = true;
+  });
+  return { lista: etfs.concat(resto), ocultos: ocultos };
+}
+function claseFila(h, ocultos) {
+  var oculta = !holdingsExpanded && ocultos[String(h.symbol).toUpperCase()];
+  return (oculta ? 'hidden-row ' : '') + 'asset-row';
+}
 function toggleHoldings() { try { holdingsExpanded = !holdingsExpanded; renderHoldings(lastHoldings); } catch (e) { var b = document.getElementById('holdMoreBtn'); if (b) b.textContent = 'ERR ' + (e && e.message); } }
 function renderHoldings(list) {
 var el = document.getElementById('holdingsList');
@@ -763,7 +800,11 @@ var btn = document.getElementById('holdMoreBtn');
 if (btn && !btn._wired) { btn._wired = true; btn.addEventListener('click', toggleHoldings); }
 lastHoldings = list || [];
 if (!list || !list.length) { holdFilas = []; holdCabezas = []; el.innerHTML = '<tr><td colspan="4" class="newsempty">Sin posiciones.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
-var lista = ordenarPorTipo(list);
+// Qué entra en la tabla y qué queda detrás del boton (ver repartoHoldings):
+// los ETFs siempre, y las 5 no-ETF mas grandes al expandir.
+var reparto = repartoHoldings(list);
+var ocultos = reparto.ocultos;
+var lista = ordenarPorTipo(reparto.lista);
 // Actualizacion EN EL LUGAR (R4): si la tabla ya muestra estos simbolos en
 // este orden, se refrescan las celdas de cada fila sin vaciar el tbody.
 // Vaciarlo en cada poll cerraba el detalle abierto (y recargaba su grafico
@@ -782,18 +823,27 @@ holdCabezas.push({ tr: sec, idx: idx });
 tipoPrev = t;
 }
 var tr = enLugar ? holdFilas[idx].tr : document.createElement('tr');
-tr.className = claseFila(idx);
+tr.className = claseFila(h, ocultos);
 tr.innerHTML = filaHoldingHtml(h);
 tr.onclick = function () { toggleDetalle(tr, h); };
 if (!enLugar) { el.appendChild(tr); holdFilas.push({ symbol: h.symbol, tr: tr }); }
 });
-// La cabecera de una seccion se esconde junto con TODAS sus filas: si su
-// primera fila quedo detras de "Ver todas", la seccion entera esta oculta.
-holdCabezas.forEach(function (c) {
-c.tr.className = 'holdsec' + ((c.idx >= HOLD_VISIBLE && !holdingsExpanded) ? ' hidden-row' : '');
+// La cabecera de una seccion se esconde junto con TODAS sus filas: si ninguna
+// de las suyas se ve, la seccion entera esta oculta. Se mira fila por fila y no
+// por el indice de la primera: con el reparto por tipo, una seccion puede
+// tener filas visibles y ocultas mezcladas.
+holdCabezas.forEach(function (c, i) {
+var desde = c.idx;
+var hasta = (holdCabezas[i + 1] ? holdCabezas[i + 1].idx : lista.length);
+var algunaVisible = false;
+for (var k = desde; k < hasta; k++) {
+  if (!claseFila(lista[k], ocultos).match(/hidden-row/)) { algunaVisible = true; break; }
+}
+c.tr.className = 'holdsec' + (algunaVisible ? '' : ' hidden-row');
 });
 if (btn) {
-if (lista.length > HOLD_VISIBLE) { btn.style.display = 'block'; btn.textContent = holdingsExpanded ? 'Ver menos' : ('Ver todas (' + lista.length + ')'); }
+var cuantasOcultas = lista.filter(function (h) { return ocultos[String(h.symbol).toUpperCase()]; }).length;
+if (cuantasOcultas) { btn.style.display = 'block'; btn.textContent = holdingsExpanded ? 'Ver menos' : ('Ver todas (' + lista.length + ')'); }
 else { btn.style.display = 'none'; }
 }
 }
