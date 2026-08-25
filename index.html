@@ -117,8 +117,10 @@ html[data-paleta="violeta"] .galogo-img { filter: hue-rotate(209deg) saturate(1.
 .fdot-grafito { background: linear-gradient(135deg,#101014,#24252e); }
 .fdot-nord { background: linear-gradient(135deg,#2e3440,#434c5e); }
 .fdot-bosque { background: linear-gradient(135deg,#0c1912,#1d3a29); }
-/* El botón de tema elegido se pinta con el ACENTO vivo, como todo lo activo */
-.tipobtn.active-tema { background: rgba(var(--gold-rgb),.16); border-color: var(--gold); color: var(--gold); }
+/* El control "activo" GENÉRICO (tema elegido, selector Por cuenta/Por tipo,
+   y cualquier otro .tipobar que no sea compra/venta) se pinta con el ACENTO
+   vivo — sigue a la paleta elegida, como todo lo activo de la app. */
+.tipobtn.active-acento { background: rgba(var(--gold-rgb),.16); border-color: var(--gold); color: var(--gold); }
 .menu-banner { margin-top: auto; display: flex; align-items: center; gap: 12px; background: var(--navy2); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; font-size: 13.5px; color: var(--muted); }
 .menu-banner b { color: var(--text); font-weight: 800; }
 .menu-banner .mb-logo { width: 28px; height: 28px; border-radius: 8px; flex: none; }
@@ -688,7 +690,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div class="card">
 <h2>Distribuci&oacute;n</h2>
 <div class="tipobar" style="margin:8px 0 12px">
-<button type="button" class="tipobtn active-compra" id="pieCuentaBtn">Por cuenta</button>
+<button type="button" class="tipobtn active-acento" id="pieCuentaBtn">Por cuenta</button>
 <button type="button" class="tipobtn" id="pieTipoBtn">Por tipo</button>
 </div>
 <div class="piewrap">

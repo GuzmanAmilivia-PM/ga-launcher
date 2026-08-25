@@ -131,8 +131,8 @@ _marcarDots('#mPaleta', 'data-paleta', paletaActual());
 _marcarDots('#mFondo', 'data-fondo', fondoActual());
 var osc = document.getElementById('temaOscuroBtn');
 var cla = document.getElementById('temaClaroBtn');
-if (osc) osc.classList.toggle('active-tema', !esTemaClaro());
-if (cla) cla.classList.toggle('active-tema', esTemaClaro());
+if (osc) osc.classList.toggle('active-acento', !esTemaClaro());
+if (cla) cla.classList.toggle('active-acento', esTemaClaro());
 }
 function _wireDots(grupo, attr, setter) {
 var dots = document.querySelectorAll(grupo + ' .pdot');

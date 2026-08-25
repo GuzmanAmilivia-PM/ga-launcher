@@ -1,15 +1,18 @@
 // Deck deslizable, cache local, dividendos y aportes
 // ---------- Torta: alternar por cuenta / por tipo ----------
+// active-acento, no active-compra: este selector no es un compra/venta y
+// usaba prestada la clase verde de Trades — salía SIEMPRE verde sin importar
+// la paleta elegida (reporte de Guzmán, 26/08/2026, con captura).
 document.getElementById('pieCuentaBtn').onclick = function () {
 pieModo = 'cuenta';
-this.classList.add('active-compra');
-document.getElementById('pieTipoBtn').classList.remove('active-compra');
+this.classList.add('active-acento');
+document.getElementById('pieTipoBtn').classList.remove('active-acento');
 renderPortafolio();
 };
 document.getElementById('pieTipoBtn').onclick = function () {
 pieModo = 'tipo';
-this.classList.add('active-compra');
-document.getElementById('pieCuentaBtn').classList.remove('active-compra');
+this.classList.add('active-acento');
+document.getElementById('pieCuentaBtn').classList.remove('active-acento');
 renderPortafolio();
 };
 
