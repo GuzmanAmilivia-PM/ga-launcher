@@ -749,8 +749,11 @@ for (var i = 0; i < imgs.length; i++) {
   if (img.complete && img.naturalWidth === 0) _sinLogo(img);
 }
 }
-function filaHoldingHtml(h) {
-var pctDisplay = (h.pct * 100).toFixed(1) + '%';
+// La celda de identidad (logo + simbolo + descripcion) se arma en UN solo
+// lugar: la usan la tarjeta del Inicio (aca abajo) y la pantalla Posiciones
+// (renderPosiciones, vistas.js). Devuelve el contenido, sin el <td>: cada
+// tabla pone el suyo.
+function celdaInstrumentoHtml(h) {
 var sym = String(h.symbol || '');
 var inic = sym.length <= 3 ? sym : sym.slice(0, 2);
 var logo = logoUrl(h);
@@ -762,7 +765,11 @@ var logo = logoUrl(h);
 var avatar = logo
   ? '<img src="' + esc(logo) + '" alt="" loading="lazy" class="holdlogo"><span class="holdinit" style="display:none">' + esc(inic) + '</span>'
   : esc(inic);
-return '<td><span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + avatar + '</span><span class="holdid"><span class="sym">' + esc(sym) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></span></span></td>' +
+return '<span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + avatar + '</span><span class="holdid"><span class="sym">' + esc(sym) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></span></span>';
+}
+function filaHoldingHtml(h) {
+var pctDisplay = (h.pct * 100).toFixed(1) + '%';
+return '<td>' + celdaInstrumentoHtml(h) + '</td>' +
 '<td class="col-spark">' + sparkDe(h) + '</td>' +
 '<td class="col-precio">' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
 // Pedido de Guzman (22/08/2026), en dos pasos: primero se saco el monto en

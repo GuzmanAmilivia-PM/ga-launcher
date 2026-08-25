@@ -242,6 +242,21 @@ body.appendChild(tr);
 // entera (antes, la única lista una-por-una era el detalle de cada cuenta).
 // Los datos son los del payload del Inicio (lastData.posiciones), que ya trae
 // precio medio, precio actual, valor y cambio del día: no se pide nada nuevo.
+//
+// El aspecto es el de la tarjeta del Inicio — la lista de mercado de
+// TradingView que Guzmán puso de referencia dos veces (18/08 y 25/08/2026:
+// "me gustaría que se vea así de bien... ves todo más rápido") —: logo,
+// símbolo grande con la descripción cortada en una línea, y números que no
+// se parten. Por eso las filas usan celdaInstrumentoHtml + engancharLogos
+// (graficos.js), las MISMAS piezas de esa tarjeta.
+// El valor va sin el "USD " adelante (la lista de TradingView tampoco lo
+// pone): con el prefijo, "USD 23.204" se partía en dos renglones en el ancho
+// del teléfono — captura de Guzmán del 25/08/2026. Sale de fmt() para
+// conservar el ojito de ocultar montos ('****').
+function valorPelado(v) {
+  var s = fmt(v);
+  return s.indexOf('USD ') === 0 ? s.slice(4) : s;
+}
 function renderPosiciones() {
   var body = document.getElementById('posBody');
   if (!body) return;
@@ -262,11 +277,12 @@ function renderPosiciones() {
       tipoPrev = t;
     }
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td><span class="sym">' + esc(h.symbol) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></td>' +
-      '<td>' + (Number(h.precioCompra) > 0 ? esc(fmtNum(h.precioCompra)) : '&mdash;') + '</td>' +
-      '<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
-      '<td>' + gananciaHtml(h) + fmt(h.valor) + '</td>';
+    tr.innerHTML = '<td>' + celdaInstrumentoHtml(h) + '</td>' +
+      '<td class="col-pc">' + (Number(h.precioCompra) > 0 ? esc(fmtNum(h.precioCompra)) : '&mdash;') + '</td>' +
+      '<td class="col-precio">' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
+      '<td class="col-valor">' + gananciaHtml(h) + valorPelado(h.valor) + '</td>';
     tr.className = 'asset-row';
+    engancharLogos(tr);
     tr.onclick = function () { toggleDetalle(tr, h); };
     body.appendChild(tr);
   });

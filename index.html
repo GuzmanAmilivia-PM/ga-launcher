@@ -196,6 +196,14 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 /* El precio es, junto al mini-grafico, el dato principal de esta fila desde
    que salieron el monto y la ganancia: va un punto mas grande que el resto. */
 .holdtable .col-precio { font-size: 18px; font-weight: 600; white-space: nowrap; }
+/* La pantalla Posiciones: mismas filas que la tarjeta del Inicio (por eso
+   comparte .holdtable) mas las dos columnas de estado de cuenta. TODO en
+   nowrap: "USD 23.204" partido en tres renglones era lo que afeaba la primera
+   version (captura de Guzman, 25/08/2026); el ancho lo cede la celda del
+   nombre (max-width:0), nunca los numeros. */
+.postable th { white-space: nowrap; }
+.postable .col-pc { white-space: nowrap; color: var(--muted); font-size: 14px; }
+.postable .col-valor { white-space: nowrap; font-size: 16.5px; font-weight: 700; }
 .spark { display: block; margin: 0 auto; opacity: .95; }
 /* El trazo toma el color del TEMA (el claro usa otro verde y otro rojo). */
 .spark polyline { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; stroke: var(--red); }
@@ -206,7 +214,7 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .spark { color: var(--red); }
 .spark.sube { color: var(--green); }
 .morebtn { position: relative; z-index: 5; display: none; width: 100%; margin-top: 10px; padding: 9px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid var(--border); color: var(--muted); font-size: 11.5px; font-weight: 700; cursor: pointer; }
-@media (max-width: 560px) { .col-pct { display: none; } .holdtable { font-size: 13.5px; } .holdtable td, .holdtable th { padding: 11px 5px; } .holdav { width: 34px; height: 34px; font-size: 11.5px; } .holdtable .sym { font-size: 17.5px; } .holdtable .col-precio { font-size: 20px; } .holdtable .daychg { font-size: 12.5px; } }
+@media (max-width: 560px) { .col-pct { display: none; } .holdtable { font-size: 13.5px; } .holdtable td, .holdtable th { padding: 11px 5px; } .holdav { width: 34px; height: 34px; font-size: 11.5px; } .holdtable .sym { font-size: 17.5px; } .holdtable .col-precio { font-size: 20px; } .holdtable .daychg { font-size: 12.5px; } .postable td, .postable th { padding-left: 4px; padding-right: 4px; } .postable .col-pc { font-size: 12.5px; } .postable .col-precio { font-size: 17px; } .postable .col-valor { font-size: 15.5px; } }
 
 /* --- Rango del gráfico + modal --- */
 .rangebar { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 0; scrollbar-width: none; }
@@ -635,8 +643,8 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <p class="viewtitle">Posiciones</p>
 <div class="card">
 <div style="overflow-x:auto">
-<table>
-<thead><tr><th>Symbol</th><th>P. compra</th><th>Precio</th><th>Valor</th></tr></thead>
+<table class="holdtable postable">
+<thead><tr><th>Instr.</th><th>Compra</th><th>Precio</th><th>Valor</th></tr></thead>
 <tbody id="posBody"></tbody>
 </table>
 </div>
