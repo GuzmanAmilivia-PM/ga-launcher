@@ -150,6 +150,7 @@ if (name === 'bnb') prepararBNB();
 if (name === 'cs') cargarEstadoCS();
 if (name === 'ia') prepararIA();
 if (name === 'seguridad') prepararSeguridad();
+if (name === 'noticias') cargarResultados();
 if (name === 'noticias' && !noticiasCargadas) {
 // La bandera se marca ANTES de pedir, no en el handler de exito: si no, cada
 // toque en la pestana mientras el pedido esta en vuelo disparaba OTRA llamada

@@ -72,10 +72,15 @@ return esTemaClaro()
 ? { tick: '#5d6c85', grid: 'rgba(20,40,80,.08)', pieBorder: '#ffffff' }
 : { tick: '#90a0b8', grid: 'rgba(255,255,255,.05)', pieBorder: '#0d1420' };
 }
+// El control vive en el PANEL LATERAL como un solo boton que alterna (pedido
+// de Guzman, 25/08/2026: Configuracion quedo para configurar APIs). El icono
+// muestra A DONDE vas: la luna en tema claro ("tocame y oscurezco"), el sol
+// en tema oscuro. La preferencia se guarda igual que siempre (ga_tema, que el
+// snippet inline del <head> lee al arrancar — ese snippet NO se toca: esta
+// fijado por hash en la politica de contenido).
 function pintarTemaBtns() {
-var claro = esTemaClaro();
-document.getElementById('temaOscuroBtn').className = 'tipobtn' + (claro ? '' : ' active-compra');
-document.getElementById('temaClaroBtn').className = 'tipobtn' + (claro ? ' active-compra' : '');
+var b = document.getElementById('temaToggleBtn');
+if (b) b.innerHTML = esTemaClaro() ? '&#127769;' : '&#9728;&#65039;';
 }
 function setTema(claro) {
 document.documentElement.classList.toggle('light', claro);
@@ -84,8 +89,7 @@ pintarTemaBtns();
 if (lastData) render(lastData);
 if (lastAcc && lastAccData) renderAccount(lastAcc, lastAccData);
 }
-document.getElementById('temaOscuroBtn').onclick = function () { setTema(false); };
-document.getElementById('temaClaroBtn').onclick = function () { setTema(true); };
+document.getElementById('temaToggleBtn').onclick = function () { setTema(!esTemaClaro()); };
 pintarTemaBtns();
 
 // ---------- Configuración: plataformas ----------

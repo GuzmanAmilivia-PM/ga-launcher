@@ -355,3 +355,60 @@ body.appendChild(c);
 });
 }
 
+
+// ---------- Resultados de las empresas (V11) ----------
+// El calendario lo arma el backend una vez por dia (cron + Finnhub) y aca
+// solo se pinta: que empresa reporta y cuando (ESTIMACION hasta que la
+// empresa confirme), y que reporto contra que se esperaba. Los limites se
+// dicen (regla U2): cubre acciones de EE.UU.; ETFs y cripto no reportan.
+var resultadosCargados = false;
+function fechaResultado(ymd) {
+var d = new Date(String(ymd) + 'T12:00:00');
+if (isNaN(d.getTime())) return String(ymd);
+var dias = ['dom', 'lun', 'mar', 'mi\u00e9', 'jue', 'vie', 's\u00e1b'];
+return dias[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth() + 1);
+}
+function usd(n) { return 'US$ ' + String(n).replace('.', ','); }
+function renderResultados(data) {
+var el = document.getElementById('resultadosBody');
+if (!el) return;
+var card = '<span class="newssym">Resultados de tus empresas</span>';
+if (!data || !data.hay) {
+card += '<p class="newsempty">Sin datos del calendario todav&iacute;a: se actualiza cada ma&ntilde;ana con la sincronizaci&oacute;n.</p>';
+el.innerHTML = '<div class="card">' + card + '</div>';
+return;
+}
+var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+var pasados = [], porVenir = [];
+(data.eventos || []).forEach(function (e) {
+var d = new Date(String(e.fecha) + 'T12:00:00');
+if (isNaN(d.getTime())) return;
+if (e.epsReal !== null || e.revReal !== null) pasados.push(e);
+else if (d.getTime() >= hoy.getTime()) porVenir.push(e);
+});
+if (!pasados.length && !porVenir.length) {
+card += '<p class="newsempty">Ninguna de tus empresas reporta en las pr&oacute;ximas dos semanas.</p>';
+}
+pasados.forEach(function (e) {
+var partes = [];
+if (e.epsReal !== null) partes.push('EPS ' + usd(e.epsReal) + (e.epsEstimado !== null ? ' contra ' + usd(e.epsEstimado) + ' esperado' : ''));
+if (e.revReal !== null) partes.push('factur\u00f3 ' + usd(Math.round(e.revReal / 1e6)) + ' M' + (e.revEstimado !== null ? ' contra ' + usd(Math.round(e.revEstimado / 1e6)) + ' M' : ''));
+card += '<div class="newsmove"><span><b>' + esc(e.symbol) + '</b> report&oacute; el ' + esc(fechaResultado(e.fecha)) + ': ' + esc(partes.join(' · ')) + '</span></div>';
+});
+porVenir.forEach(function (e) {
+var linea = '<b>' + esc(e.symbol) + '</b> reporta el ' + esc(fechaResultado(e.fecha)) + (e.hora ? ', ' + esc(e.hora) : '');
+if (e.epsEstimado !== null) linea += ' — se espera EPS ' + esc(usd(e.epsEstimado));
+linea += ' <span class="newsmeta">(estimaci&oacute;n)</span>';
+card += '<div class="newsmove"><span>' + linea + '</span></div>';
+});
+if (data.fueraDeCobertura && data.fueraDeCobertura.length) {
+card += '<p class="newsempty">Sin cobertura (no cotizan en EE.UU.): ' + esc(data.fueraDeCobertura.join(', ')) + '. Los ETFs y la cripto no reportan resultados.</p>';
+}
+el.innerHTML = '<div class="card">' + card + '</div>';
+}
+function cargarResultados() {
+if (resultadosCargados) return;
+resultadosCargados = true;
+google.script.run.withSuccessHandler(function (d) { renderResultados(d); })
+.withFailureHandler(function () { resultadosCargados = false; }).getResultados();
+}

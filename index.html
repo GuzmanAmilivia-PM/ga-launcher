@@ -70,8 +70,11 @@ body { font-family: 'Manrope', -apple-system, "Segoe UI", Roboto, Arial, sans-se
 /* --- Drawer (menú hamburguesa) --- */
 .menupanel { position: fixed; inset: 0; z-index: 80; background: var(--navy); transform: translateX(-103%); transition: transform .25s ease; overflow-y: auto; padding: calc(8px + env(safe-area-inset-top, 0px)) 18px calc(22px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; }
 .menupanel.open { transform: translateX(0); }
-.menu-top { padding: 6px 0 2px; }
+.menu-top { padding: 6px 0 2px; display: flex; justify-content: space-between; align-items: center; }
 .menu-back { background: none; border: none; color: var(--text); font-size: 23px; padding: 6px 12px 6px 0; cursor: pointer; line-height: 1; }
+/* El alternador de tema vive ACA, no en Configuracion (pedido de Guzman,
+   25/08/2026: esa pantalla quedo para configurar APIs). Un toque alterna. */
+.menu-tema { background: none; border: 1px solid var(--border); border-radius: 50%; width: 38px; height: 38px; font-size: 17px; cursor: pointer; line-height: 1; display: flex; align-items: center; justify-content: center; }
 .menu-profile { display: flex; align-items: center; gap: 14px; padding: 10px 2px 24px; }
 .menu-avatar { width: 58px; height: 58px; border-radius: 16px; flex: none; }
 .menu-name { font-size: 19px; font-weight: 800; margin: 0 0 7px; }
@@ -472,7 +475,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 </div>
 
 <div class="menupanel" id="menuPanel">
-<div class="menu-top"><button class="menu-back" id="menuBack" aria-label="Cerrar men&uacute;">&larr;</button></div>
+<div class="menu-top"><button class="menu-back" id="menuBack" aria-label="Cerrar men&uacute;">&larr;</button><button class="menu-tema" id="temaToggleBtn" aria-label="Alternar tema claro u oscuro">&#127769;</button></div>
 <div class="menu-profile">
 <span class="menu-avatar galogo-img"></span>
 <div>
@@ -651,13 +654,6 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div id="view-config" style="display:none">
 <span class="backlink" id="cfgBack">&larr; Volver</span>
 <p class="viewtitle">Configuraci&oacute;n</p>
-<div class="card">
-<h2>Apariencia</h2>
-<div class="tipobar">
-<button type="button" class="tipobtn" id="temaOscuroBtn">&#127769; Oscuro</button>
-<button type="button" class="tipobtn" id="temaClaroBtn">&#9728;&#65039; Claro</button>
-</div>
-</div>
 <div class="card">
 <h2>Plataformas</h2>
 <div id="platList"><p class="loadingtxt">Cargando...</p></div>
@@ -902,6 +898,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 <div id="view-noticias" style="display:none">
 <p class="viewtitle">Noticias</p>
 <p class="subtotal" style="margin:-8px 0 14px">Titulares de medios financieros serios sobre tus posiciones m&aacute;s grandes</p>
+<div id="resultadosBody"></div>
 <div id="noticiasBody"><p class="loadingtxt">Cargando...</p></div>
 </div>
 
