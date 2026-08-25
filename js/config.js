@@ -247,3 +247,31 @@ btn._busy = false;
 out.innerHTML = '<p class="newsempty">' + esc(msgErr(err, 'El diagnóstico')) + '</p>';
 }).getSalud();
 };
+
+// ---------- Configuración: la clave de Finnhub ----------
+// (Fase 2, paso 3: la puerta de entrada. El backend PRUEBA la clave contra
+// Finnhub antes de guardarla — aca solo se pega y se muestra el resultado.
+// Va a alimentar los precios y el calendario de resultados cuando existan.)
+var fhConfigurada = null;
+function cargarEstadoFinnhub() {
+google.script.run.withSuccessHandler(function (st) {
+fhConfigurada = !!(st && st.configurada);
+var t = document.getElementById('fhEstadoTxt');
+if (t) t.innerHTML = fhConfigurada
+? '&#10003; Clave configurada. Va a alimentar los precios y el calendario de resultados de las empresas.'
+: 'Sin configurar. Entr&aacute; a <b>finnhub.io</b> con tu cuenta, copi&aacute; la "API Key" y pegala ac&aacute;. Antes de guardarla se prueba contra Finnhub; se guarda en tu servidor privado de Cloudflare, nunca en esta p&aacute;gina.';
+}).withFailureHandler(function () {}).estadoFinnhub();
+}
+document.getElementById('fhKeyGuardar').onclick = function () {
+var inp = document.getElementById('fhKey');
+// guardarConBoton vive en brokers.js (el conductor unico de credenciales);
+// se referencia recien al tocar el boton, cuando ya cargo todo.
+guardarConBoton({
+btn: this, inputs: [inp], resId: 'fhKeyResultado',
+sujeto: 'La clave de Finnhub', exito: 'Clave verificada y guardada.',
+alOk: cargarEstadoFinnhub,
+pedir: function (ok, fail) {
+google.script.run.withSuccessHandler(ok).withFailureHandler(fail).guardarClaveFinnhub({ apiKey: inp.value });
+}
+});
+};

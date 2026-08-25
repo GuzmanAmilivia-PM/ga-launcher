@@ -142,7 +142,7 @@ if (name === 'config') {
 pintarSaludApp();
 if (Date.now() - configUltimaCarga > CONFIG_REFRESCO_MS) {
 configUltimaCarga = Date.now();
-cargarPlataformas(); cargarEstadoIA(); cargarBackups();
+cargarPlataformas(); cargarEstadoIA(); cargarEstadoFinnhub(); cargarBackups();
 }
 }
 if (name === 'ibkr') cargarEstadoIBKR();
