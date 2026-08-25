@@ -581,10 +581,6 @@ function toggleDetalle(tr, pos) {
   detalleAbierto = { tr: tr, det: det };
 }
 // ---------- Principales posiciones (Inicio) ----------
-// Cuantas filas se ven sin tocar "Ver todas". CINCO desde el 24/08/2026 (pedido
-// de Guzman); el backend manda 7, asi que el boton sigue teniendo algo que
-// mostrar.
-var HOLD_VISIBLE = 5;
 var holdingsExpanded = false;
 var lastHoldings = [];
 // Las filas pintadas ({symbol, tr}) y las cabeceras de seccion ({tr, idx de
@@ -736,13 +732,35 @@ function _sinLogo(img) {
 img.style.display = 'none';
 if (img.nextElementSibling) img.nextElementSibling.style.display = 'flex';
 }
+// Engancha el fallback de cada logo recien pintado. Va por JS y no por un
+// atributo `onerror` en el HTML porque la politica de contenido no permite
+// codigo inline: con el atributo, el navegador lo BLOQUEA y el circulo queda
+// vacio. Se llama despues de escribir cada tabla.
+function engancharLogos(contenedor) {
+if (!contenedor || !contenedor.querySelectorAll) return;
+var imgs = contenedor.querySelectorAll('img.holdlogo');
+for (var i = 0; i < imgs.length; i++) {
+  var img = imgs[i];
+  if (img._enganchado) continue;
+  img._enganchado = true;
+  img.onerror = function () { _sinLogo(this); };
+  // Un logo que ya fallo antes de que llegaramos a engancharlo (viene del
+  // cache del navegador) no vuelve a disparar onerror: se mira el estado.
+  if (img.complete && img.naturalWidth === 0) _sinLogo(img);
+}
+}
 function filaHoldingHtml(h) {
 var pctDisplay = (h.pct * 100).toFixed(1) + '%';
 var sym = String(h.symbol || '');
 var inic = sym.length <= 3 ? sym : sym.slice(0, 2);
 var logo = logoUrl(h);
+// El `onerror` NO va inline: la politica de contenido de la app no permite
+// codigo dentro del HTML (script-src sin unsafe-inline), asi que ese handler
+// nunca corria y un logo que no existe dejaba el circulo VACIO en vez de caer a
+// las iniciales. Se engancha desde JS, en engancharLogos(). Auditoria del
+// 24/08/2026.
 var avatar = logo
-  ? '<img src="' + esc(logo) + '" alt="" loading="lazy" onerror="_sinLogo(this)"><span class="holdinit" style="display:none">' + esc(inic) + '</span>'
+  ? '<img src="' + esc(logo) + '" alt="" loading="lazy" class="holdlogo"><span class="holdinit" style="display:none">' + esc(inic) + '</span>'
   : esc(inic);
 return '<td><span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + avatar + '</span><span class="holdid"><span class="sym">' + esc(sym) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></span></span></td>' +
 '<td class="col-spark">' + sparkDe(h) + '</td>' +
@@ -755,19 +773,12 @@ return '<td><span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + av
 // posicion tambien en el desplegable de la fila.
 '<td class="holdpct col-pct">' + pctDisplay + '</td>';
 }
-/**
- * Qué se muestra en Principales posiciones (pedido de Guzmán, 24/08/2026):
- *   - plegado: los ETFs;
- *   - "Ver todas": los ETFs MÁS las 5 posiciones más grandes que no son ETF.
- *
- * Por qué no alcanza con "las primeras N filas", que es como estaba: el
- * agrupado por tipo (ETFs primero, pedido del 22/08) es de PRESENTACIÓN, y
- * contar posiciones sobre esa lista mezcla las dos cosas. El 24/08 la pantalla
- * mostraba SMH —la más chica de las siete, 4,1% de la cartera— y escondía META
- * (5,6%) y GOOG (4,4%), solo porque SMH es un ETF y los ETFs van arriba.
- *
- * Las 5 se eligen por VALOR, no por el orden en que vengan.
- */
+// ---------- Reparto de Principales posiciones ----------
+// (Este encabezado es el marcador de fin de bloque de test-posiciones.js. Antes
+// el marcador era la línea `var HOLD_ETFS = 3;`, o sea que el VALOR era parte
+// del delimitador: mutar el tope para probar la cobertura no ponía asserts en
+// rojo, mataba el arnés entero con "no se encontró el bloque" — y una
+// verificación que aborta no verifica nada. Auditoría del 24/08/2026.)
 var HOLD_ETFS = 3;
 var HOLD_ACCIONES = 5;
 function porValor(a, b) { return (Number(b.valor) || 0) - (Number(a.valor) || 0); }
@@ -840,21 +851,22 @@ tipoPrev = t;
 var tr = enLugar ? holdFilas[idx].tr : document.createElement('tr');
 tr.className = claseFila(h, ocultos);
 tr.innerHTML = filaHoldingHtml(h);
+engancharLogos(tr);
 tr.onclick = function () { toggleDetalle(tr, h); };
 if (!enLugar) { el.appendChild(tr); holdFilas.push({ symbol: h.symbol, tr: tr }); }
 });
-// La cabecera de una seccion se esconde junto con TODAS sus filas: si ninguna
-// de las suyas se ve, la seccion entera esta oculta. Se mira fila por fila y no
-// por el indice de la primera: con el reparto por tipo, una seccion puede
-// tener filas visibles y ocultas mezcladas.
-holdCabezas.forEach(function (c, i) {
-var desde = c.idx;
-var hasta = (holdCabezas[i + 1] ? holdCabezas[i + 1].idx : lista.length);
-var algunaVisible = false;
-for (var k = desde; k < hasta; k++) {
-  if (!claseFila(lista[k], ocultos).match(/hidden-row/)) { algunaVisible = true; break; }
-}
-c.tr.className = 'holdsec' + (algunaVisible ? '' : ' hidden-row');
+// La cabecera de una seccion se esconde junto con sus filas: una cabecera
+// sobre cero filas es un titulo sobre nada.
+//
+// Alcanza con mirar la PRIMERA fila de la seccion porque el reparto las hace
+// homogeneas: los ETFs se ven todos o —plegada— se ven todos, y las acciones
+// se esconden todas juntas. Nunca hay una seccion mezclada. Eso es una
+// PROPIEDAD DEL REPARTO, no de este bucle, asi que el arnes la verifica
+// aparte: si algun dia el reparto deja una seccion a medias, esa prueba avisa
+// y hay que volver acá. Auditoria del 24/08/2026.
+holdCabezas.forEach(function (c) {
+var primeraOculta = claseFila(lista[c.idx], ocultos).indexOf('hidden-row') !== -1;
+c.tr.className = 'holdsec' + (primeraOculta ? ' hidden-row' : '');
 });
 if (btn) {
 var cuantasOcultas = lista.filter(function (h) { return ocultos[String(h.symbol).toUpperCase()]; }).length;

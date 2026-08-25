@@ -12,25 +12,44 @@ var _versionPintada = false;
 // La version del shell, leida del nombre del cache que el SW sirve. La misma
 // consulta estaba copiada en pintarSaludApp (config.js); ambos usan esta.
 // cb recibe 'v67' o null (sin soporte de caches, o sin cache ga-pwa-).
-// La version DEL PRODUCTO, la que le importa a una persona. Es distinta del
-// numero del cache (`CACHE` en sw.js), que es un contador de publicaciones: ese
-// tiene que subir en CADA publicacion —es lo que hace que el telefono no siga
-// sirviendo archivos viejos, y ya fallo una vez— asi que no puede ser tambien
-// el numero de version, o cada arreglo de una linea seria una version nueva.
+// La version es GENERACION.FUNCION.PUBLICACION — hoy 1.0.107 (pedido de Guzman,
+// 24/08/2026: la nomenclatura de tres numeros que usan las apps). Cada uno dice
+// una cosa distinta y se mueve por un motivo distinto:
 //
-// 1.01 desde el 24/08/2026: la primera version del MVP. La app hace sola el
-// trabajo de punta a punta —sincroniza los brokers, guarda el patrimonio de
-// cada dia, compara contra el S&P 500 y manda el informe de los lunes— y tiene
-// 824 pruebas atras.
-var VERSION_APP = '1.01';
+//   1  GENERACION. A mano, cambia solo en un hito. El 1 marca la primera
+//      version del MVP: la app hace sola el trabajo de punta a punta
+//      —sincroniza los brokers, guarda el patrimonio de cada dia, compara
+//      contra el S&P 500 y manda el informe de los lunes—. El 2 seria salir de
+//      la planilla de Google.
+//   0  FUNCION. A mano, sube cuando entra algo NUEVO de verdad (una pantalla,
+//      una capacidad), no cuando se arregla algo. Arranca en 0: esta es la
+//      primera.
+// 107  PUBLICACION. NO se escribe aca: se LEE del nombre del cache (`CACHE` en
+//      sw.js), que ya sube en cada publicacion porque es lo que evita que el
+//      telefono siga sirviendo archivos viejos.
+//
+// Que la ultima se lea y no se escriba es a proposito: el ritual de publicar
+// sigue siendo UN solo numero para tocar, y las partes no pueden quedar
+// desincronizadas. Un numero escrito a mano en dos lugares es exactamente la
+// clase de cosa que queda vieja sin que nadie se entere.
+var VERSION_GENERACION = '1';
+var VERSION_FUNCION = '0';
+// El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
+// justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
+// de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre
+// el codigo fuente, y con eso se podia romper el formato (mostrar `1.107`, o
+// dejar el numero clavado) sin que ninguna prueba se pusiera en rojo.
+// Auditoria del 24/08/2026.
+function versionTexto(nombreCache) {
+var base = VERSION_GENERACION + '.' + VERSION_FUNCION;
+var pub = String(nombreCache || '').replace('ga-pwa-v', '').replace('ga-pwa-', '');
+return pub ? (base + '.' + pub) : base;
+}
 function versionShell(cb) {
-if (!window.caches || !caches.keys) { cb(VERSION_APP); return; }
+if (!window.caches || !caches.keys) { cb(versionTexto(null)); return; }
 caches.keys().then(function (claves) {
-var c = claves.filter(function (k) { return k.indexOf('ga-pwa-') === 0; })[0];
-// Version del producto, y entre parentesis la publicacion: sirve para saber
-// si el telefono agarro la ultima sin tener que adivinar.
-cb(c ? (VERSION_APP + ' (' + c.replace('ga-pwa-', '') + ')') : VERSION_APP);
-}).catch(function () { cb(VERSION_APP); });
+cb(versionTexto(claves.filter(function (k) { return k.indexOf('ga-pwa-') === 0; })[0]));
+}).catch(function () { cb(versionTexto(null)); });
 }
 function pintarVersion() {
 var v = document.getElementById('mbVersion');
