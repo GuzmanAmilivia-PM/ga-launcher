@@ -67,70 +67,84 @@ resEl.innerHTML = '<div class="tmsg err">Error: ' + esc(err.message) + '</div>';
 
 // ---------- Tema (oscuro / claro) ----------
 function esTemaClaro() { return document.documentElement.classList.contains('light'); }
+// pieBorder acompaña a la tonalidad elegida (leerVarCss, nucleo.js): con el
+// navy clavado, los bordes de la torta delataban el Marino bajo Grafito/Nord.
 function temaChart() {
 return esTemaClaro()
-? { tick: '#5d6c85', grid: 'rgba(20,40,80,.08)', pieBorder: '#ffffff' }
-: { tick: '#90a0b8', grid: 'rgba(255,255,255,.05)', pieBorder: '#0d1420' };
+? { tick: '#5d6c85', grid: 'rgba(20,40,80,.08)', pieBorder: leerVarCss('--navy2', '#ffffff') }
+: { tick: '#90a0b8', grid: 'rgba(255,255,255,.05)', pieBorder: leerVarCss('--navy', '#0d1420') };
 }
-// El control vive en el PANEL LATERAL como un solo boton que alterna (pedido
-// de Guzman, 25/08/2026: Configuracion quedo para configurar APIs). El icono
-// muestra A DONDE vas: la luna en tema claro ("tocame y oscurezco"), el sol
-// en tema oscuro. La preferencia se guarda igual que siempre (ga_tema, que el
-// snippet inline del <head> lee al arrancar — ese snippet NO se toca: esta
-// fijado por hash en la politica de contenido).
-function pintarTemaBtns() {
-var b = document.getElementById('temaToggleBtn');
-if (b) b.innerHTML = esTemaClaro() ? '&#127769;' : '&#9728;&#65039;';
-}
+// El control vivió en el panel lateral (v111-v114); desde el 25/08/2026 son
+// los dos botones de la página Configuración (view-diseno), junto con el
+// acento y la tonalidad. La preferencia se guarda igual que siempre (ga_tema,
+// que el snippet inline del <head> lee al arrancar — ese snippet NO se toca:
+// está fijado por hash en la política de contenido).
 function setTema(claro) {
 document.documentElement.classList.toggle('light', claro);
 try { localStorage.setItem('ga_tema', claro ? 'claro' : 'oscuro'); } catch (e) {}
-pintarTemaBtns();
+pintarDiseno();
 if (lastData) render(lastData);
 if (lastAcc && lastAccData) renderAccount(lastAcc, lastAccData);
 }
-document.getElementById('temaToggleBtn').onclick = function () { setTema(!esTemaClaro()); };
-pintarTemaBtns();
 
-// ---------- Diseño: paleta de acento ----------
-// Cuatro combinaciones prearmadas (pedido de Guzmán, 25/08/2026: "un icono
-// para elegir entre diferentes combinaciones de colores"). La paleta cambia
-// SOLO el acento —la familia --gold* del CSS— vía el atributo data-paleta del
-// <html>; los colores viven en el CSS y acá solo se elige cuál rige. Convive
-// con el tema claro/oscuro: cada paleta tiene su par claro en el CSS.
-// Se guarda en ga_paleta y nucleo.js la aplica al arrancar, antes de pintar.
+// ---------- Configuración (diseño): tema, acento y tonalidad ----------
+// La página Configuración (view-diseno; la de APIs pasó a llamarse Keys el
+// 25/08/2026) junta las tres elecciones de aspecto:
+//   - Tema claro/oscuro (clase light + ga_tema);
+//   - Color de acento (data-paleta + ga_paleta): la familia --gold*;
+//   - Tonalidad de fondo (data-fondo + ga_fondo): la familia --navy*/texto.
+// Acento y tonalidad son ORTOGONALES (tocan variables distintas): cualquier
+// combinación es válida, y cada una tiene su par claro en el CSS. Los colores
+// viven en el CSS; acá solo se elige cuál rige. nucleo.js aplica los dos
+// atributos al arrancar, antes de pintar.
 var PALETAS = ['', 'oceano', 'esmeralda', 'violeta'];
-function paletaActual() {
-var p = document.documentElement.getAttribute('data-paleta') || '';
-return PALETAS.indexOf(p) === -1 ? '' : p;
+var FONDOS = ['', 'grafito', 'nord', 'bosque'];
+function _eleccion(attr, lista) {
+var v = document.documentElement.getAttribute(attr) || '';
+return lista.indexOf(v) === -1 ? '' : v;
 }
-function setPaleta(p) {
-if (PALETAS.indexOf(p) === -1) p = '';
-if (p) document.documentElement.setAttribute('data-paleta', p);
-else document.documentElement.removeAttribute('data-paleta');
-try { if (p) localStorage.setItem('ga_paleta', p); else localStorage.removeItem('ga_paleta'); } catch (e) {}
-pintarPaleta();
-// Los gráficos pintan el acento por canvas: se repintan igual que al cambiar
-// de tema, para que la línea de Evolución y la torta tomen el color nuevo.
+function paletaActual() { return _eleccion('data-paleta', PALETAS); }
+function fondoActual() { return _eleccion('data-fondo', FONDOS); }
+function _setEleccion(attr, clave, lista, v) {
+if (lista.indexOf(v) === -1) v = '';
+if (v) document.documentElement.setAttribute(attr, v);
+else document.documentElement.removeAttribute(attr);
+try { if (v) localStorage.setItem(clave, v); else localStorage.removeItem(clave); } catch (e) {}
+pintarDiseno();
+// Los gráficos pintan sus colores por canvas: se repintan igual que al
+// cambiar de tema, para que la línea, la torta y los bordes tomen lo nuevo.
 if (lastData) render(lastData);
 if (lastAcc && lastAccData) renderAccount(lastAcc, lastAccData);
 }
-function pintarPaleta() {
-var dots = document.querySelectorAll('#mPaleta .pdot');
-var actual = paletaActual();
+function setPaleta(p) { _setEleccion('data-paleta', 'ga_paleta', PALETAS, p); }
+function setFondo(f) { _setEleccion('data-fondo', 'ga_fondo', FONDOS, f); }
+function _marcarDots(grupo, attr, actual) {
+var dots = document.querySelectorAll(grupo + ' .pdot');
 for (var i = 0; i < dots.length; i++) {
-var es = (dots[i].getAttribute('data-paleta') || '') === actual;
+var es = (dots[i].getAttribute(attr) || '') === actual;
 dots[i].classList.toggle('sel', es);
 dots[i].setAttribute('aria-pressed', es ? 'true' : 'false');
 }
 }
-(function () {
-var dots = document.querySelectorAll('#mPaleta .pdot');
-for (var i = 0; i < dots.length; i++) {
-(function (d) { d.onclick = function () { setPaleta(d.getAttribute('data-paleta') || ''); }; })(dots[i]);
+function pintarDiseno() {
+_marcarDots('#mPaleta', 'data-paleta', paletaActual());
+_marcarDots('#mFondo', 'data-fondo', fondoActual());
+var osc = document.getElementById('temaOscuroBtn');
+var cla = document.getElementById('temaClaroBtn');
+if (osc) osc.classList.toggle('active-tema', !esTemaClaro());
+if (cla) cla.classList.toggle('active-tema', esTemaClaro());
 }
-pintarPaleta();
-})();
+function _wireDots(grupo, attr, setter) {
+var dots = document.querySelectorAll(grupo + ' .pdot');
+for (var i = 0; i < dots.length; i++) {
+(function (d) { d.onclick = function () { setter(d.getAttribute(attr) || ''); }; })(dots[i]);
+}
+}
+_wireDots('#mPaleta', 'data-paleta', setPaleta);
+_wireDots('#mFondo', 'data-fondo', setFondo);
+document.getElementById('temaOscuroBtn').onclick = function () { setTema(false); };
+document.getElementById('temaClaroBtn').onclick = function () { setTema(true); };
+pintarDiseno();
 
 // ---------- Configuración: plataformas ----------
 var platModo = 'agregar';

@@ -1,13 +1,16 @@
 // API (shim google.script.run), pantalla de clave, helpers, errorEnVista
 
-// La paleta de acento elegida en Diseño (panel lateral) se aplica ACA, lo
-// antes posible: este es el primer archivo y los scripts van al final del
-// body, así que a efectos prácticos corre antes del primer pintado. No se
-// suma al snippet inline del tema porque ese está fijado por hash en la
-// política de contenido y no se toca. La validación vive en setPaleta
-// (config.js): un valor viejo que ya no exista no matchea ningún CSS y
-// simplemente rige el dorado.
-try { var paletaGuardada = localStorage.getItem('ga_paleta'); if (paletaGuardada) document.documentElement.setAttribute('data-paleta', paletaGuardada); } catch (e) {}
+// El acento (ga_paleta) y la tonalidad de fondo (ga_fondo) elegidos en la
+// página Configuración se aplican ACA, lo antes posible: este es el primer
+// archivo y los scripts van al final del body, así que a efectos prácticos
+// corre antes del primer pintado. No se suman al snippet inline del tema
+// porque ese está fijado por hash en la política de contenido y no se toca.
+// La validación vive en config.js: un valor viejo que ya no exista no
+// matchea ningún CSS y simplemente rigen el dorado y el Marino.
+try {
+  var paletaGuardada = localStorage.getItem('ga_paleta'); if (paletaGuardada) document.documentElement.setAttribute('data-paleta', paletaGuardada);
+  var fondoGuardado = localStorage.getItem('ga_fondo'); if (fondoGuardado) document.documentElement.setAttribute('data-fondo', fondoGuardado);
+} catch (e) {}
 
 // ===== API (Cloudflare Workers como backend, autenticado por clave) =====
 // El backend vive en Cloudflare Workers desde el 20/08/2026 (Fase 1 de la
@@ -225,23 +228,18 @@ var ACCOUNTS = [
 { key: 'ITAU', nombre: 'Itau Assets' }
 ];
 var PIE_COLORS = ['#d4af37', '#5b8def', '#22c55e', '#a78bfa', '#38bdf8', '#f59e0b', '#f43f5e'];
-// El acento de la paleta activa, leído de la variable CSS viva: los gráficos
-// se dibujan por canvas y no heredan var(--gold) solos. Si no se puede leer
-// (arnés, navegador raro), cae al dorado de siempre.
-function colorAcento() {
+// Colores del diseño leídos de la variable CSS viva: los gráficos se dibujan
+// por canvas y no heredan var() solos. Si no se puede leer (arnés, navegador
+// raro), cada uno cae a su valor de siempre.
+function leerVarCss(nombre, fallback) {
   try {
-    var v = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim();
+    var v = getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
     if (v) return v;
   } catch (e) {}
-  return '#d4af37';
+  return fallback;
 }
-function acentoRgba(alpha) {
-  try {
-    var v = getComputedStyle(document.documentElement).getPropertyValue('--gold-rgb').trim();
-    if (v) return 'rgba(' + v + ',' + alpha + ')';
-  } catch (e) {}
-  return 'rgba(212,175,55,' + alpha + ')';
-}
+function colorAcento() { return leerVarCss('--gold', '#d4af37'); }
+function acentoRgba(alpha) { return 'rgba(' + leerVarCss('--gold-rgb', '212,175,55') + ',' + alpha + ')'; }
 // Los colores de tortas y series con el acento VIVO en el primer lugar: con
 // el dorado clavado de PIE_COLORS, la torta seguía dorada con cualquier
 // paleta. Se llama al pintar (no una vez) para que el cambio de paleta se

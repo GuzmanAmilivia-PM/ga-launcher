@@ -20,10 +20,10 @@
 //      —sincroniza los brokers, guarda el patrimonio de cada dia, compara
 //      contra el S&P 500 y manda el informe de los lunes—. El 2 seria salir de
 //      la planilla de Google.
-//   2  FUNCION. A mano, sube cuando entra algo NUEVO de verdad (una pantalla,
+//   3  FUNCION. A mano, sube cuando entra algo NUEVO de verdad (una pantalla,
 //      una capacidad), no cuando se arregla algo. Arrancó en 0; el 1 fue la
-//      pantalla de Posiciones y el 2 el Diseño con paletas de acento (ambos
-//      el 25/08/2026).
+//      pantalla de Posiciones, el 2 las paletas de acento, y el 3 la página
+//      Configuración con las tonalidades de fondo (todo el 25/08/2026).
 // 107  PUBLICACION. NO se escribe aca: se LEE del nombre del cache (`CACHE` en
 //      sw.js), que ya sube en cada publicacion porque es lo que evita que el
 //      telefono siga sirviendo archivos viejos.
@@ -33,7 +33,7 @@
 // desincronizadas. Un numero escrito a mano en dos lugares es exactamente la
 // clase de cosa que queda vieja sin que nadie se entere.
 var VERSION_GENERACION = '1';
-var VERSION_FUNCION = '2';
+var VERSION_FUNCION = '3';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre
@@ -103,13 +103,17 @@ document.getElementById('menuPanel').classList.toggle('open', open);
 document.getElementById('logoBtn').onclick = function () { toggleMenu(true); };
 document.getElementById('menuBack').onclick = function () { toggleMenu(false); };
 document.getElementById('mIA').onclick = function () { toggleMenu(false); setView('ia'); };
+// Ojo con los nombres desde el 25/08/2026: el tile "Keys" abre view-config
+// (APIs y claves, la ex Configuración) y el tile "Configuración" abre
+// view-diseno (tema, acento y tonalidad).
 document.getElementById('mConfig').onclick = function () { toggleMenu(false); setView('config'); };
+document.getElementById('mDiseno').onclick = function () { toggleMenu(false); setView('diseno'); };
 document.getElementById('mSeguridad').onclick = function () { toggleMenu(false); setView('seguridad'); };
 document.getElementById('mTrans').onclick = function () { toggleMenu(false); setView('trade'); };
 document.getElementById('mRefrescar').onclick = function () { sincronizarTodo(); };
 
 // ---------- Navegación (barra inferior) ----------
-var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'posiciones', 'config', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb', 'cs'];
+var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'posiciones', 'config', 'diseno', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb', 'cs'];
 // La barra no cambia nunca: se consulta el DOM una sola vez, no en cada setView.
 var NAVTABS = document.querySelectorAll('.navtab');
 var currentView = 'inicio';
@@ -138,6 +142,8 @@ b.classList.toggle('active', b.getAttribute('data-view') === navName);
 });
 if (name === 'portafolio') { renderPortafolio(); if (!anaCargado) cargarAnalisis(false); }
 if (name === 'posiciones') renderPosiciones();
+// Refresca qué está marcado (tema/acento/tonalidad) por si algo cambió.
+if (name === 'diseno') pintarDiseno();
 // Configuracion dispara 3 llamadas al backend (~1,5 s cada una): dentro de la
 // sesion se refrescan como mucho cada 5 min. Guardar algo sigue llamando
 // cargarPlataformas()/cargarEstadoIA() directo, asi lo editado se ve al toque.
