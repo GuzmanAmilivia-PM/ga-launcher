@@ -20,9 +20,10 @@
 //      —sincroniza los brokers, guarda el patrimonio de cada dia, compara
 //      contra el S&P 500 y manda el informe de los lunes—. El 2 seria salir de
 //      la planilla de Google.
-//   1  FUNCION. A mano, sube cuando entra algo NUEVO de verdad (una pantalla,
-//      una capacidad), no cuando se arregla algo. Arrancó en 0; el 1 es la
-//      pantalla de Posiciones (25/08/2026).
+//   2  FUNCION. A mano, sube cuando entra algo NUEVO de verdad (una pantalla,
+//      una capacidad), no cuando se arregla algo. Arrancó en 0; el 1 fue la
+//      pantalla de Posiciones y el 2 el Diseño con paletas de acento (ambos
+//      el 25/08/2026).
 // 107  PUBLICACION. NO se escribe aca: se LEE del nombre del cache (`CACHE` en
 //      sw.js), que ya sube en cada publicacion porque es lo que evita que el
 //      telefono siga sirviendo archivos viejos.
@@ -32,7 +33,7 @@
 // desincronizadas. Un numero escrito a mano en dos lugares es exactamente la
 // clase de cosa que queda vieja sin que nadie se entere.
 var VERSION_GENERACION = '1';
-var VERSION_FUNCION = '1';
+var VERSION_FUNCION = '2';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre
@@ -346,7 +347,8 @@ pieChartInstance = new Chart(document.getElementById('pieChart'), {
 type: 'doughnut',
 data: {
 labels: items.map(function (c) { return c.label; }),
-datasets: [{ data: items.map(function (c) { return c.valor; }), backgroundColor: PIE_COLORS.slice(0, items.length), borderColor: temaChart().pieBorder, borderWidth: 3 }]
+// coloresPie() y no PIE_COLORS: el primer color sigue a la paleta de Diseño.
+datasets: [{ data: items.map(function (c) { return c.valor; }), backgroundColor: coloresPie().slice(0, items.length), borderColor: temaChart().pieBorder, borderWidth: 3 }]
 },
 options: { cutout: '62%', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
 });
@@ -356,7 +358,7 @@ leg.innerHTML = '';
 items.forEach(function (c, i) {
 var row = document.createElement('div');
 row.className = 'pierow' + (c.acc ? ' clickable' : '');
-row.innerHTML = '<span class="lname"><span class="dot" style="background:' + PIE_COLORS[i % PIE_COLORS.length] + '"></span>' + esc(c.label) + '</span>' +
+row.innerHTML = '<span class="lname"><span class="dot" style="background:' + coloresPie()[i % PIE_COLORS.length] + '"></span>' + esc(c.label) + '</span>' +
 '<span class="lpct">' + (total ? ((c.valor / total) * 100).toFixed(1) : '0') + '%' + (c.acc ? '<span class="chev">&rsaquo;</span>' : '') + '</span>';
 if (c.acc) row.onclick = function () { showAccount(c.acc, 'portafolio'); };
 leg.appendChild(row);

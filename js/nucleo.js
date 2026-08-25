@@ -1,4 +1,14 @@
 // API (shim google.script.run), pantalla de clave, helpers, errorEnVista
+
+// La paleta de acento elegida en Diseño (panel lateral) se aplica ACA, lo
+// antes posible: este es el primer archivo y los scripts van al final del
+// body, así que a efectos prácticos corre antes del primer pintado. No se
+// suma al snippet inline del tema porque ese está fijado por hash en la
+// política de contenido y no se toca. La validación vive en setPaleta
+// (config.js): un valor viejo que ya no exista no matchea ningún CSS y
+// simplemente rige el dorado.
+try { var paletaGuardada = localStorage.getItem('ga_paleta'); if (paletaGuardada) document.documentElement.setAttribute('data-paleta', paletaGuardada); } catch (e) {}
+
 // ===== API (Cloudflare Workers como backend, autenticado por clave) =====
 // El backend vive en Cloudflare Workers desde el 20/08/2026 (Fase 1 de la
 // migracion: el codigo se mudo, los datos siguen en la MISMA Google Sheet).
@@ -215,6 +225,28 @@ var ACCOUNTS = [
 { key: 'ITAU', nombre: 'Itau Assets' }
 ];
 var PIE_COLORS = ['#d4af37', '#5b8def', '#22c55e', '#a78bfa', '#38bdf8', '#f59e0b', '#f43f5e'];
+// El acento de la paleta activa, leído de la variable CSS viva: los gráficos
+// se dibujan por canvas y no heredan var(--gold) solos. Si no se puede leer
+// (arnés, navegador raro), cae al dorado de siempre.
+function colorAcento() {
+  try {
+    var v = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim();
+    if (v) return v;
+  } catch (e) {}
+  return '#d4af37';
+}
+function acentoRgba(alpha) {
+  try {
+    var v = getComputedStyle(document.documentElement).getPropertyValue('--gold-rgb').trim();
+    if (v) return 'rgba(' + v + ',' + alpha + ')';
+  } catch (e) {}
+  return 'rgba(212,175,55,' + alpha + ')';
+}
+// Los colores de tortas y series con el acento VIVO en el primer lugar: con
+// el dorado clavado de PIE_COLORS, la torta seguía dorada con cualquier
+// paleta. Se llama al pintar (no una vez) para que el cambio de paleta se
+// vea sin recargar.
+function coloresPie() { var c = PIE_COLORS.slice(); c[0] = colorAcento(); return c; }
 var RANGES = [
 { key: '1S', dias: 7 },
 { key: '1M', dias: 30 },

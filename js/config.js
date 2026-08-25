@@ -92,6 +92,46 @@ if (lastAcc && lastAccData) renderAccount(lastAcc, lastAccData);
 document.getElementById('temaToggleBtn').onclick = function () { setTema(!esTemaClaro()); };
 pintarTemaBtns();
 
+// ---------- Diseño: paleta de acento ----------
+// Cuatro combinaciones prearmadas (pedido de Guzmán, 25/08/2026: "un icono
+// para elegir entre diferentes combinaciones de colores"). La paleta cambia
+// SOLO el acento —la familia --gold* del CSS— vía el atributo data-paleta del
+// <html>; los colores viven en el CSS y acá solo se elige cuál rige. Convive
+// con el tema claro/oscuro: cada paleta tiene su par claro en el CSS.
+// Se guarda en ga_paleta y nucleo.js la aplica al arrancar, antes de pintar.
+var PALETAS = ['', 'oceano', 'esmeralda', 'violeta'];
+function paletaActual() {
+var p = document.documentElement.getAttribute('data-paleta') || '';
+return PALETAS.indexOf(p) === -1 ? '' : p;
+}
+function setPaleta(p) {
+if (PALETAS.indexOf(p) === -1) p = '';
+if (p) document.documentElement.setAttribute('data-paleta', p);
+else document.documentElement.removeAttribute('data-paleta');
+try { if (p) localStorage.setItem('ga_paleta', p); else localStorage.removeItem('ga_paleta'); } catch (e) {}
+pintarPaleta();
+// Los gráficos pintan el acento por canvas: se repintan igual que al cambiar
+// de tema, para que la línea de Evolución y la torta tomen el color nuevo.
+if (lastData) render(lastData);
+if (lastAcc && lastAccData) renderAccount(lastAcc, lastAccData);
+}
+function pintarPaleta() {
+var dots = document.querySelectorAll('#mPaleta .pdot');
+var actual = paletaActual();
+for (var i = 0; i < dots.length; i++) {
+var es = (dots[i].getAttribute('data-paleta') || '') === actual;
+dots[i].classList.toggle('sel', es);
+dots[i].setAttribute('aria-pressed', es ? 'true' : 'false');
+}
+}
+(function () {
+var dots = document.querySelectorAll('#mPaleta .pdot');
+for (var i = 0; i < dots.length; i++) {
+(function (d) { d.onclick = function () { setPaleta(d.getAttribute('data-paleta') || ''); }; })(dots[i]);
+}
+pintarPaleta();
+})();
+
 // ---------- Configuración: plataformas ----------
 var platModo = 'agregar';
 function platsMsg(html, esOk) {

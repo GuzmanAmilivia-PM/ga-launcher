@@ -276,7 +276,7 @@ var brokers = Object.keys(r.porBroker || {});
 brokersBox.innerHTML = brokers.length ? brokers.map(function (b, i) {
 var pb = r.porBroker[b];
 var tot = Math.round((pb.cobrado + pb.proximo) * 100) / 100;
-return '<div class="apostat"><span><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:' + PIE_COLORS[i % PIE_COLORS.length] + '"></span>' + esc(nombrePlataforma(b)) + '<span class="desc" style="margin-left:8px">cobrado ' + esc(fmtUsd(pb.cobrado)) + ' &middot; a cobrar ' + esc(fmtUsd(pb.proximo)) + '</span></span><b>' + esc(fmtUsd(tot)) + '</b></div>';
+return '<div class="apostat"><span><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:' + coloresPie()[i % PIE_COLORS.length] + '"></span>' + esc(nombrePlataforma(b)) + '<span class="desc" style="margin-left:8px">cobrado ' + esc(fmtUsd(pb.cobrado)) + ' &middot; a cobrar ' + esc(fmtUsd(pb.proximo)) + '</span></span><b>' + esc(fmtUsd(tot)) + '</b></div>';
 }).join('') : '<p class="newsempty">Sin datos por broker todav&iacute;a.</p>';
 var t = temaChart();
 if (divChartBigInstance) divChartBigInstance.destroy();
@@ -289,7 +289,7 @@ var pb = r.porBroker[b];
 return {
 label: nombrePlataforma(b),
 data: pb.meses.map(function (mm) { return Math.round((mm.cobrado + mm.proximo) * 100) / 100; }),
-backgroundColor: PIE_COLORS[i % PIE_COLORS.length],
+backgroundColor: coloresPie()[i % PIE_COLORS.length],
 stack: 'b',
 borderRadius: 3
 };

@@ -98,7 +98,9 @@ function getFilteredDataPoints(serie) {
   if (prev) prev.destroy();
   return new Chart(document.getElementById(canvasId), {
   type: 'line',
-  data: { datasets: [{ data: dataPoints, borderColor: '#d4af37', backgroundColor: 'rgba(212,175,55,0.12)', fill: true, tension: 0.3, pointRadius: 0 }] },
+  // El acento se lee VIVO (colorAcento, nucleo.js): con el hexadecimal
+  // clavado, la línea de Evolución seguía dorada con cualquier paleta.
+  data: { datasets: [{ data: dataPoints, borderColor: colorAcento(), backgroundColor: acentoRgba(0.12), fill: true, tension: 0.3, pointRadius: 0 }] },
   options: buildChartOptions(dataPoints)
   });
   }
