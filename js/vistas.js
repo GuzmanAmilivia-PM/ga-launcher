@@ -8,7 +8,6 @@
 // sw.js era una fuente doble de verdad, y la que manda es la del sw (si subis
 // solo la del index, el sw sigue sirviendo el index viejo y no se publica
 // nada). Asi el badge no puede mentir: muestra el shell que estas corriendo.
-var _versionPintada = false;
 // La version del shell, leida del nombre del cache que el SW sirve. La misma
 // consulta estaba copiada en pintarSaludApp (config.js); ambos usan esta.
 // cb recibe 'v67' o null (sin soporte de caches, o sin cache ga-pwa-).
@@ -45,21 +44,41 @@ var base = VERSION_GENERACION + '.' + VERSION_FUNCION;
 var pub = String(nombreCache || '').replace('ga-pwa-v', '').replace('ga-pwa-', '');
 return pub ? (base + '.' + pub) : base;
 }
+// De todos los caches `ga-pwa-*` vivos se elige el de numero MAS ALTO, no el
+// primero que devuelve caches.keys(): ese orden es de CREACION, asi que entre
+// que el service worker nuevo instala su cache y borra el viejo, el primero es
+// el VIEJO. Si ese borrado quedara a medias, la app mostraria para siempre un
+// numero anterior al que de verdad esta corriendo, justo cuando mirar la
+// version es lo que sirve para entender que pasa. Auditoria del 25/08/2026.
+// El numero se lee igual que en versionTexto, a proposito: si algun dia cambia
+// el prefijo del cache, las dos se rompen juntas y de forma visible, en vez de
+// que una siga eligiendo bien y la otra pinte cualquier cosa.
+function numeroDeCache(k) {
+var n = parseInt(String(k || '').replace('ga-pwa-v', '').replace('ga-pwa-', ''), 10);
+return isNaN(n) ? -1 : n;
+}
 function versionShell(cb) {
 if (!window.caches || !caches.keys) { cb(versionTexto(null)); return; }
 caches.keys().then(function (claves) {
-cb(versionTexto(claves.filter(function (k) { return k.indexOf('ga-pwa-') === 0; })[0]));
+var mios = claves.filter(function (k) { return k.indexOf('ga-pwa-') === 0; })
+.sort(function (a, b) { return numeroDeCache(b) - numeroDeCache(a); });
+cb(versionTexto(mios[0]));
 }).catch(function () { cb(versionTexto(null)); });
 }
 function pintarVersion() {
 var v = document.getElementById('mbVersion');
 if (!v) return;
-// La version no cambia dentro de una sesion (una actualizacion del SW pide
-// recargar): consultar caches.keys() en cada poll era gasto puro.
-if (_versionPintada) return;
+// NO se cachea el resultado. Antes se pintaba UNA sola vez por sesion con la
+// premisa de que "una actualizacion del SW pide recargar"; esa premisa es
+// FALSA: sw.js usa skipWaiting() + clients.claim(), asi que el cache puede
+// cambiar de nombre con la pagina abierta. Cacheando pasaban dos cosas: si el
+// badge se pintaba antes de que el cache existiera quedaba clavado en `1.0`
+// —que no parece un error, parece una version— por el resto de la sesion, y el
+// menu podia decir una version distinta de la de Diagnostico, que nunca cacheo.
+// Volver a consultar es leer un Map en memoria, no pedir red. Auditoria del
+// 25/08/2026.
 versionShell(function (ver) {
 v.textContent = ver || '—';
-if (ver) _versionPintada = true;
 });
 }
 function pintarBadges(estado) {

@@ -214,10 +214,19 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
    izquierda, dibujo al medio, % a la derecha), apenas mas grande. La celda del
    dibujo es la elastica; las otras dos se quedan con lo que piden. */
 .totalrow { display: flex; align-items: center; gap: 12px; }
-.totalrow .tr-val { min-width: 0; flex: 0 1 auto; }
+/* `flex: 0 0 auto` y NADA de min-width:0. Con `0 1 auto` + `min-width:0` la
+   celda se encogia por debajo de su contenido, pero `.total` es `nowrap`: el
+   numero no se achica, se DERRAMA sobre el mini-grafico de al lado. Tapaba ~29%
+   del dibujo en el telefono de Guzman y hasta 68% en pantallas de 320px. No
+   habia desborde horizontal de la pagina, asi que la unica medicion que se le
+   habia hecho daba verde: medía la propiedad equivocada. Auditoria 25/08/2026. */
+.totalrow .tr-val { flex: 0 0 auto; }
 .totalrow .tr-pct { flex: 0 1 auto; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
 .totalrow .tr-pct .totalpct-per { margin-top: 1px; }
-.evomini { cursor: pointer; flex: 1 1 auto; min-width: 54px; }
+/* El piso baja de 54 a 40: ahora que la celda del numero no se encoge, es el
+   dibujo el que tiene que ceder en pantallas angostas. Con 54 el renglon se
+   pasaba de ancho a 320px y el % de la derecha quedaba recortado. */
+.evomini { cursor: pointer; flex: 1 1 auto; min-width: 40px; }
 .evomini svg { width: 100%; height: 40px; display: block; }
 .evomini-vacio { color: var(--muted); font-size: 11px; }
 /* Los controles del grafico: solo con el grafico abierto (ver el html). */

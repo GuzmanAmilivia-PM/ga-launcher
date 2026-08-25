@@ -781,14 +781,23 @@ return '<td><span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + av
 // verificación que aborta no verifica nada. Auditoría del 24/08/2026.)
 var HOLD_ETFS = 3;
 var HOLD_ACCIONES = 5;
-function porValor(a, b) { return (Number(b.valor) || 0) - (Number(a.valor) || 0); }
+// El valor llega como número del Worker, pero el orden de esta tarjeta es
+// justo lo que ya falló una vez (el caso SMH), así que no se confía: un valor
+// que no se pueda leer como número vale 0 y queda ÚLTIMO, en vez de empatar
+// con todos y dejar el orden librado a quién llegó primero.
+function numeroValor(v) {
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  var n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.,-]/g, '').replace(/\.(?=\d{3}\b)/g, '').replace(',', '.'));
+  return isFinite(n) ? n : 0;
+}
+function porValor(a, b) { return numeroValor(b.valor) - numeroValor(a.valor); }
 function _masGrandes(list, tipo, cuantos) {
   return list.filter(function (h) { return tipoDe(h) === tipo; }).sort(porValor).slice(0, cuantos);
 }
 /**
  * Qué muestra la tarjeta (pedido de Guzmán, 24/08/2026, en dos pasos):
  *   - plegada: sus 3 ETFs más grandes;
- *   - "Ver todas": esos 3 ETFs más sus 5 acciones más grandes. Nada más.
+ *   - "Ver más": esos 3 ETFs más sus 5 acciones más grandes. Nada más.
  *
  * Los dos números son fijos a propósito: la tarjeta mide siempre lo mismo. Con
  * "todos los ETFs" alcanzó con que el backend mandara más posiciones para que
@@ -800,8 +809,16 @@ function _masGrandes(list, tipo, cuantos) {
  * chica de todas, 4,1% de la cartera— y escondía META (5,6%) y GOOG (4,4%),
  * solo porque SMH es un ETF y los ETFs van arriba.
  *
- * La cripto NO entra en esta tarjeta: las cinco son acciones. Se ve entera en
- * Portafolio, que es la lista completa.
+ * NI CRIPTO NI CASH entran acá (decisión de Guzmán, 25/08/2026, confirmada
+ * cuando se le preguntó). Queda excluido por partida doble y a propósito: el
+ * Worker ya saca el cash del payload (`_esPosicionCash`) y este reparto elige
+ * SOLO entre 'etf' y 'accion', así que un cash que se le escapara al backend
+ * tampoco entraría. Ojo con el comentario que había acá antes, que decía que la
+ * cripto "se ve entera en Portafolio": ERA FALSO. Portafolio es una torta con
+ * su leyenda, no una lista de posiciones; la única pantalla que las lista una
+ * por una es el detalle de cada cuenta. O sea que la cripto no se ve en
+ * ninguna lista de Inicio, y eso es lo que Guzmán quiere. Se deja escrito para
+ * que nadie lo "arregle" apoyándose en una salida que no existe.
  */
 function repartoHoldings(list) {
   var todos = (list || []).slice();
@@ -809,17 +826,32 @@ function repartoHoldings(list) {
   var acciones = _masGrandes(todos, 'accion', HOLD_ACCIONES);
   // Sin ETFs, plegada no puede quedar vacía: se muestran las acciones.
   var plegados = etfs.length ? etfs : acciones;
-  var ocultos = {};
-  etfs.concat(acciones).forEach(function (h) {
-    if (plegados.indexOf(h) === -1) ocultos[String(h.symbol).toUpperCase()] = true;
-  });
-  return { lista: etfs.concat(acciones), ocultos: ocultos };
+  // Los visibles se llevan POR REFERENCIA, no por símbolo. Cuando esto era un
+  // mapa indexado por `symbol`, dos posiciones con el mismo símbolo (una dentro
+  // del recorte y otra fuera) marcaban la misma clave y escondían las dos —y
+  // con varias posiciones sin símbolo, todas caían en la clave "UNDEFINED" y la
+  // tabla plegada quedaba SIN UNA SOLA FILA, solo el botón. Hoy el Worker
+  // fusiona por símbolo, así que no se dispara; el modo de falla era
+  // desproporcionado y esto además es más simple. Auditoría del 25/08/2026.
+  return { lista: etfs.concat(acciones), visibles: plegados };
 }
-function claseFila(h, ocultos) {
-  var oculta = !holdingsExpanded && ocultos[String(h.symbol).toUpperCase()];
+// `ordenarPorTipo` reordena pero conserva los mismos objetos, así que comparar
+// por referencia sigue siendo válido después de ordenar.
+function claseFila(h, visibles) {
+  var oculta = !holdingsExpanded && visibles.indexOf(h) === -1;
   return (oculta ? 'hidden-row ' : '') + 'asset-row';
 }
-function toggleHoldings() { try { holdingsExpanded = !holdingsExpanded; renderHoldings(lastHoldings); } catch (e) { var b = document.getElementById('holdMoreBtn'); if (b) b.textContent = 'ERR ' + (e && e.message); } }
+// Si expandir falla, el botón vuelve a su texto normal y el detalle queda en la
+// consola: antes escribía `ERR <mensaje de excepción>` ENCIMA del botón, que le
+// deja al usuario un texto que no significa nada y además rompe el control.
+function toggleHoldings() {
+  try { holdingsExpanded = !holdingsExpanded; renderHoldings(lastHoldings); }
+  catch (e) {
+    if (window.console && console.error) console.error('toggleHoldings', e);
+    var b = document.getElementById('holdMoreBtn');
+    if (b) b.textContent = holdingsExpanded ? 'Ver menos' : 'Ver más';
+  }
+}
 function renderHoldings(list) {
 var el = document.getElementById('holdingsList');
 var btn = document.getElementById('holdMoreBtn');
@@ -829,8 +861,14 @@ if (!list || !list.length) { holdFilas = []; holdCabezas = []; el.innerHTML = '<
 // Qué entra en la tabla y qué queda detrás del boton (ver repartoHoldings):
 // los ETFs siempre, y las 5 no-ETF mas grandes al expandir.
 var reparto = repartoHoldings(list);
-var ocultos = reparto.ocultos;
+var visibles = reparto.visibles;
 var lista = ordenarPorTipo(reparto.lista);
+// El corte de "sin posiciones" se repite DESPUES del reparto. Si la cartera
+// trajera solo cripto y/o cash, arriba pasa (la lista no está vacía) pero el
+// reparto sí queda vacío, y la tarjeta terminaba siendo un rectángulo en blanco
+// bajo el título, sin el mensaje que existe justo para eso. Auditoría del
+// 25/08/2026.
+if (!lista.length) { holdFilas = []; holdCabezas = []; el.innerHTML = '<tr><td colspan="4" class="newsempty">Sin posiciones.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
 // Actualizacion EN EL LUGAR (R4): si la tabla ya muestra estos simbolos en
 // este orden, se refrescan las celdas de cada fila sin vaciar el tbody.
 // Vaciarlo en cada poll cerraba el detalle abierto (y recargaba su grafico
@@ -849,7 +887,7 @@ holdCabezas.push({ tr: sec, idx: idx });
 tipoPrev = t;
 }
 var tr = enLugar ? holdFilas[idx].tr : document.createElement('tr');
-tr.className = claseFila(h, ocultos);
+tr.className = claseFila(h, visibles);
 tr.innerHTML = filaHoldingHtml(h);
 engancharLogos(tr);
 tr.onclick = function () { toggleDetalle(tr, h); };
@@ -865,12 +903,18 @@ if (!enLugar) { el.appendChild(tr); holdFilas.push({ symbol: h.symbol, tr: tr })
 // aparte: si algun dia el reparto deja una seccion a medias, esa prueba avisa
 // y hay que volver acá. Auditoria del 24/08/2026.
 holdCabezas.forEach(function (c) {
-var primeraOculta = claseFila(lista[c.idx], ocultos).indexOf('hidden-row') !== -1;
+var primeraOculta = claseFila(lista[c.idx], visibles).indexOf('hidden-row') !== -1;
 c.tr.className = 'holdsec' + (primeraOculta ? ' hidden-row' : '');
 });
 if (btn) {
-var cuantasOcultas = lista.filter(function (h) { return ocultos[String(h.symbol).toUpperCase()]; }).length;
-if (cuantasOcultas) { btn.style.display = 'block'; btn.textContent = holdingsExpanded ? 'Ver menos' : ('Ver todas (' + lista.length + ')'); }
+// El botón dice "Ver más", sin número. Antes decía `Ver todas (N)`, y las dos
+// mitades mentían: no son TODAS (la cripto y el cash nunca entran, y de las
+// acciones solo van las 5 más grandes) y N era el tamaño del recorte, no el de
+// la cartera — con 12 posiciones el botón anunciaba 8. Un número al lado de la
+// palabra "todas" es exactamente el número inventado que este proyecto decidió
+// no mostrar. Texto elegido por Guzmán el 25/08/2026.
+var cuantasOcultas = lista.length - visibles.length;
+if (cuantasOcultas > 0) { btn.style.display = 'block'; btn.textContent = holdingsExpanded ? 'Ver menos' : 'Ver más'; }
 else { btn.style.display = 'none'; }
 }
 }
