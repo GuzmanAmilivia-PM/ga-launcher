@@ -674,8 +674,12 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 </div>
 
 <!-- ============ PORTAFOLIO ============ -->
+<!-- Las cuatro pestañas de la barra de abajo van SIN titulo de pagina
+     (pedido de Guzman, 26/08/2026: "ya se que estoy en portafolio... info de
+     mas que consume espacio"). La pestaña encendida ya dice donde estas; el
+     .viewtitle queda solo en las paginas SECUNDARIAS, donde la barra no te
+     ubica. -->
 <div id="view-portafolio" style="display:none">
-<p class="viewtitle">Portafolio</p>
 <div class="card">
 <h2>Distribuci&oacute;n</h2>
 <div class="tipobar" style="margin:8px 0 12px">
@@ -768,7 +772,6 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 
 <!-- ============ LIQUIDEZ (depositar / retirar) ============ -->
 <div id="view-cash" style="display:none">
-<p class="viewtitle">Banking</p>
 <p class="lbl">Cash total</p>
 <p class="total" id="cashTotal" style="font-size:clamp(24px,7vw,34px)">&mdash;</p>
 <div class="cashbtns">
@@ -976,7 +979,6 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 
 <!-- ============ TRADE ============ -->
 <div id="view-trade" style="display:none">
-<p class="viewtitle">Trades</p>
 <details class="card manualop" id="tManual">
 <summary>Registrar uno a mano<span class="opshint">los de los brokers entran solos</span></summary>
 <div class="tradeform">
@@ -1040,8 +1042,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 
 <!-- ============ NOTICIAS ============ -->
 <div id="view-noticias" style="display:none">
-<p class="viewtitle">Noticias</p>
-<p class="subtotal" style="margin:-8px 0 14px">Titulares de medios financieros serios sobre tus posiciones m&aacute;s grandes</p>
+<p class="subtotal" style="margin:0 0 14px">Titulares de medios financieros serios sobre tus posiciones m&aacute;s grandes</p>
 <div id="resultadosBody"></div>
 <div id="noticiasBody"><p class="loadingtxt">Cargando...</p></div>
 </div>
