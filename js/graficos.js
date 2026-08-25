@@ -815,10 +815,10 @@ function _masGrandes(list, tipo, cuantos) {
  * SOLO entre 'etf' y 'accion', así que un cash que se le escapara al backend
  * tampoco entraría. Ojo con el comentario que había acá antes, que decía que la
  * cripto "se ve entera en Portafolio": ERA FALSO. Portafolio es una torta con
- * su leyenda, no una lista de posiciones; la única pantalla que las lista una
- * por una es el detalle de cada cuenta. O sea que la cripto no se ve en
- * ninguna lista de Inicio, y eso es lo que Guzmán quiere. Se deja escrito para
- * que nadie lo "arregle" apoyándose en una salida que no existe.
+ * su leyenda, no una lista de posiciones. Desde el 25/08/2026 la cartera entera
+ * (cripto incluida, cash no) se lista en la pantalla Posiciones, que se abre
+ * tocando el título de esta tarjeta (renderPosiciones, vistas.js) — esta
+ * tarjeta del Inicio sigue siendo SOLO el recorte 3 ETFs + 5 acciones.
  */
 function repartoHoldings(list) {
   var todos = (list || []).slice();

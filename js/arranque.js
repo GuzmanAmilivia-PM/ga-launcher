@@ -129,6 +129,10 @@ if (data.extras) aplicarExtras(data.extras);
 if (typeof ajustarAlturaDeck === 'function') ajustarAlturaDeck();
 actualizarSymbols();
 if (document.getElementById('view-portafolio').style.display !== 'none') renderPortafolio();
+// La lista completa de Posiciones se repinta igual que Portafolio: solo si
+// está a la vista (el poll de 60 s trae precios nuevos y la tabla los muestra).
+var vPos = document.getElementById('view-posiciones');
+if (vPos && vPos.style.display !== 'none') renderPosiciones();
 bnbAutoSync();
   } catch(e) {
     document.getElementById('total').textContent = '—';

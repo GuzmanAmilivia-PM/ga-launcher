@@ -11,7 +11,7 @@
 // La version del shell, leida del nombre del cache que el SW sirve. La misma
 // consulta estaba copiada en pintarSaludApp (config.js); ambos usan esta.
 // cb recibe 'v67' o null (sin soporte de caches, o sin cache ga-pwa-).
-// La version es GENERACION.FUNCION.PUBLICACION — hoy 1.0.107 (pedido de Guzman,
+// La version es GENERACION.FUNCION.PUBLICACION (pedido de Guzman,
 // 24/08/2026: la nomenclatura de tres numeros que usan las apps). Cada uno dice
 // una cosa distinta y se mueve por un motivo distinto:
 //
@@ -20,9 +20,9 @@
 //      —sincroniza los brokers, guarda el patrimonio de cada dia, compara
 //      contra el S&P 500 y manda el informe de los lunes—. El 2 seria salir de
 //      la planilla de Google.
-//   0  FUNCION. A mano, sube cuando entra algo NUEVO de verdad (una pantalla,
-//      una capacidad), no cuando se arregla algo. Arranca en 0: esta es la
-//      primera.
+//   1  FUNCION. A mano, sube cuando entra algo NUEVO de verdad (una pantalla,
+//      una capacidad), no cuando se arregla algo. Arrancó en 0; el 1 es la
+//      pantalla de Posiciones (25/08/2026).
 // 107  PUBLICACION. NO se escribe aca: se LEE del nombre del cache (`CACHE` en
 //      sw.js), que ya sube en cada publicacion porque es lo que evita que el
 //      telefono siga sirviendo archivos viejos.
@@ -32,7 +32,7 @@
 // desincronizadas. Un numero escrito a mano en dos lugares es exactamente la
 // clase de cosa que queda vieja sin que nadie se entere.
 var VERSION_GENERACION = '1';
-var VERSION_FUNCION = '0';
+var VERSION_FUNCION = '1';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre
@@ -108,7 +108,7 @@ document.getElementById('mTrans').onclick = function () { toggleMenu(false); set
 document.getElementById('mRefrescar').onclick = function () { sincronizarTodo(); };
 
 // ---------- Navegación (barra inferior) ----------
-var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'config', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb', 'cs'];
+var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'posiciones', 'config', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb', 'cs'];
 // La barra no cambia nunca: se consulta el DOM una sola vez, no en cada setView.
 var NAVTABS = document.querySelectorAll('.navtab');
 var currentView = 'inicio';
@@ -129,11 +129,14 @@ el.classList.add('view-entra');
 el.style.display = 'none';
 }
 });
-var navName = (name === 'account') ? accountReturnView : name;
+// Posiciones se abre desde el título del Inicio, así que en la barra sigue
+// encendida la pestaña Inicio — mismo criterio que account con su vista origen.
+var navName = (name === 'account') ? accountReturnView : (name === 'posiciones' ? 'inicio' : name);
 NAVTABS.forEach(function (b) {
 b.classList.toggle('active', b.getAttribute('data-view') === navName);
 });
 if (name === 'portafolio') { renderPortafolio(); if (!anaCargado) cargarAnalisis(false); }
+if (name === 'posiciones') renderPosiciones();
 // Configuracion dispara 3 llamadas al backend (~1,5 s cada una): dentro de la
 // sesion se refrescan como mucho cada 5 min. Guardar algo sigue llamando
 // cargarPlataformas()/cargarEstadoIA() directo, asi lo editado se ve al toque.
@@ -228,6 +231,56 @@ tr.onclick = function () { toggleDetalle(tr, { symbol: h.symbol, precioCompra: h
 body.appendChild(tr);
 });
 }
+
+// ---------- Posiciones (la lista completa, desde el Inicio) ----------
+// Pedido de Guzmán (25/08/2026): el título de la tarjeta del Inicio dice
+// "Posiciones" y al tocarlo se abre esta pantalla con TODAS las posiciones,
+// mismas columnas que el detalle de cuenta (P. compra / Precio / Valor).
+// Sin cash: la fila de un banco no es una posición, y USDT ES cash ("que usdt
+// es cash") — el Worker ya los marca `tipo: 'cash'`, acá solo se filtra.
+// La cripto SÍ entra: desde hoy esta es la pantalla que lista la cartera
+// entera (antes, la única lista una-por-una era el detalle de cada cuenta).
+// Los datos son los del payload del Inicio (lastData.posiciones), que ya trae
+// precio medio, precio actual, valor y cambio del día: no se pide nada nuevo.
+function renderPosiciones() {
+  var body = document.getElementById('posBody');
+  if (!body) return;
+  var lista = ((lastData && lastData.posiciones) || []).filter(function (p) { return tipoDe(p) !== 'cash'; });
+  body.innerHTML = '';
+  if (!lista.length) { body.innerHTML = '<tr><td colspan="4" class="newsempty">Sin posiciones.</td></tr>'; return; }
+  // Mismo orden que la tarjeta del Inicio: secciones ETFs → Acciones → Cripto,
+  // y adentro de cada una por valor descendente (así ya viene del Worker).
+  lista = ordenarPorTipo(lista);
+  var tipoPrev = null;
+  lista.forEach(function (h) {
+    var t = tipoDe(h);
+    if (t !== tipoPrev) {
+      var sec = document.createElement('tr');
+      sec.className = 'holdsec';
+      sec.innerHTML = '<td colspan="4">' + esc((typeof TIPO_LABELS !== 'undefined' && TIPO_LABELS[t]) || t) + '</td>';
+      body.appendChild(sec);
+      tipoPrev = t;
+    }
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td><span class="sym">' + esc(h.symbol) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></td>' +
+      '<td>' + (Number(h.precioCompra) > 0 ? esc(fmtNum(h.precioCompra)) : '&mdash;') + '</td>' +
+      '<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
+      '<td>' + gananciaHtml(h) + fmt(h.valor) + '</td>';
+    tr.className = 'asset-row';
+    tr.onclick = function () { toggleDetalle(tr, h); };
+    body.appendChild(tr);
+  });
+}
+document.getElementById('posBack').onclick = function () { setView('inicio'); };
+// El título es un h2 con role="button" (la política de contenido no permite
+// onclick inline): click y teclado, como cualquier control de verdad.
+(function () {
+  var t = document.getElementById('posTitulo');
+  if (!t) return;
+  function abrir() { setView('posiciones'); }
+  t.addEventListener('click', abrir);
+  t.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(); } });
+})();
 
 // ---------- Portafolio (torta + desglose) ----------
 var pieChartInstance = null;

@@ -141,6 +141,10 @@ body { font-family: 'Manrope', -apple-system, "Segoe UI", Roboto, Arial, sans-se
 .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 14px; font-weight: 700; }
 .cardhead { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .cardhead h2 { margin: 0; }
+/* Título de card que navega (el "Posiciones" del Inicio): mismo estilo que
+   cualquier h2, más el cursor y la flechita dorada que avisan que se toca. */
+.h2link { cursor: pointer; }
+.h2link .chev { color: var(--gold); font-weight: 800; margin-left: 2px; }
 .grid2 { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 16px; }
 @media (max-width: 760px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
 .row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
@@ -567,7 +571,7 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 </div>
 </div>
 <div class="card">
-<h2>Principales posiciones</h2>
+<h2 id="posTitulo" class="h2link" role="button" tabindex="0" title="Ver todas las posiciones">Posiciones <span class="chev">&#8250;</span></h2>
 <div style="overflow-x:auto"><table class="holdtable"><thead><tr><th>Instr.</th><th class="col-spark">Mes</th><th>Precio</th><th class="col-pct">%</th></tr></thead><tbody id="holdingsList"></tbody></table></div>
 <button id="holdMoreBtn" class="morebtn">Ver todas</button>
 </div>
@@ -622,6 +626,20 @@ html.light .tconfirm { background: rgba(184,144,31,.08); border-color: rgba(184,
 </table>
 </div>
 <div id="accError"></div>
+</div>
+</div>
+
+<!-- ============ POSICIONES (la lista completa, desde el Inicio) ============ -->
+<div id="view-posiciones" style="display:none">
+<span class="backlink" id="posBack">&larr; Volver</span>
+<p class="viewtitle">Posiciones</p>
+<div class="card">
+<div style="overflow-x:auto">
+<table>
+<thead><tr><th>Symbol</th><th>P. compra</th><th>Precio</th><th>Valor</th></tr></thead>
+<tbody id="posBody"></tbody>
+</table>
+</div>
 </div>
 </div>
 
