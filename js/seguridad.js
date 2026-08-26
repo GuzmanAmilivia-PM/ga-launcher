@@ -44,11 +44,11 @@ return navigator.credentials.get(opts);
 // decia lo mismo, imposible de diagnosticar desde el celular).
 function bioErrTxt(err, haySalida) {
 var n = (err && err.name) ? err.name : '';
-var extra = haySalida ? ' Us\u00e1 la clave.' : ' Si sigue fallando, toc\u00e1 "No puedo entrar".';
-if (n === 'NotAllowedError') return 'Cancelado o sin respuesta del sensor.' + extra;
-if (n === 'InvalidStateError') return 'Esta credencial ya no existe en el dispositivo.' + extra;
-if (n === 'NotSupportedError' || n === 'SecurityError' || n === 'AbortError') return 'La biometr\u00eda no est\u00e1 disponible ac\u00e1 (' + n + ').' + extra;
-return 'No se pudo verificar' + (n ? ' (' + n + ')' : '') + '.' + extra;
+var extra = haySalida ? ' Use the passcode.' : ' If it keeps failing, tap "I can\u2019t get in".';
+if (n === 'NotAllowedError') return 'Canceled or no response from the sensor.' + extra;
+if (n === 'InvalidStateError') return 'This credential no longer exists on the device.' + extra;
+if (n === 'NotSupportedError' || n === 'SecurityError' || n === 'AbortError') return 'Biometrics is not available here (' + n + ').' + extra;
+return 'Could not verify' + (n ? ' (' + n + ')' : '') + '.' + extra;
 }
 function segMsg(id, txt, esOk) {
 document.getElementById(id).innerHTML = txt ? '<div class="tmsg ' + (esOk ? 'ok' : 'err') + '">' + txt + '</div>' : '';
@@ -56,42 +56,42 @@ document.getElementById(id).innerHTML = txt ? '<div class="tmsg ' + (esOk ? 'ok'
 function prepararSeguridad() {
 var s = secLeer();
 var partes = [];
-if (s.bio) partes.push('biometr\u00eda');
-if (s.pin) partes.push('clave');
+if (s.bio) partes.push('biometrics');
+if (s.pin) partes.push('passcode');
 document.getElementById('segEstado').textContent = partes.length
-? 'Bloqueo activado con ' + partes.join(' y ') + '. Se pide cada vez que abr\u00eds la app en este dispositivo.'
-: 'Sin bloqueo: la app abre directo. Activ\u00e1 la biometr\u00eda o una clave.';
+? 'Lock enabled with ' + partes.join(' and ') + '. It\u2019s requested every time you open the app on this device.'
+: 'No lock: the app opens directly. Enable biometrics or a passcode.';
 document.getElementById('segPinQuitar').style.display = s.pin ? '' : 'none';
-document.getElementById('segPinBtn').textContent = s.pin ? 'Cambiar clave' : 'Guardar clave';
+document.getElementById('segPinBtn').textContent = s.pin ? 'Change passcode' : 'Save passcode';
 segMsg('segBioMsg', ''); segMsg('segPinMsg', '');
 var bioBtn = document.getElementById('segBioBtn');
-if (s.bio) { bioBtn.textContent = 'Desactivar biometr\u00eda'; bioBtn.disabled = false; }
+if (s.bio) { bioBtn.textContent = 'Disable biometrics'; bioBtn.disabled = false; }
 else {
-bioBtn.textContent = 'Activar biometr\u00eda'; bioBtn.disabled = true;
+bioBtn.textContent = 'Enable biometrics'; bioBtn.disabled = true;
 bioDisponible().then(function (dispo) {
 if (dispo) bioBtn.disabled = false;
-else bioBtn.textContent = 'Biometr\u00eda no disponible ac\u00e1';
+else bioBtn.textContent = 'Biometrics not available here';
 });
 }
 }
 document.getElementById('segBack').onclick = function () { setView('inicio'); };
 document.getElementById('segBioBtn').onclick = function () {
 var s = secLeer(), btn = this;
-if (s.bio) { delete s.bio; secGuardar(s); prepararSeguridad(); segMsg('segBioMsg', '&#10003; Biometr\u00eda desactivada.', true); return; }
+if (s.bio) { delete s.bio; secGuardar(s); prepararSeguridad(); segMsg('segBioMsg', '&#10003; Biometrics disabled.', true); return; }
 btn.disabled = true;
 bioRegistrar().then(function (cred) {
 s.bio = b64u(cred.rawId);
 secGuardar(s); prepararSeguridad();
-segMsg('segBioMsg', '&#10003; Listo: la app va a pedir tu biometr\u00eda al abrir.', true);
+segMsg('segBioMsg', '&#10003; Done: the app will ask for your biometrics when opening.', true);
 }).catch(function () {
 btn.disabled = false;
-segMsg('segBioMsg', 'No se pudo activar. Prob\u00e1 de nuevo.', false);
+segMsg('segBioMsg', 'Could not enable it. Try again.', false);
 });
 };
 document.getElementById('segPinBtn').onclick = function () {
 var p1 = document.getElementById('segPin1').value, p2 = document.getElementById('segPin2').value;
-if (!/^[0-9]{4,8}$/.test(p1)) { segMsg('segPinMsg', 'La clave debe tener de 4 a 8 d\u00edgitos.', false); return; }
-if (p1 !== p2) { segMsg('segPinMsg', 'Las claves no coinciden.', false); return; }
+if (!/^[0-9]{4,8}$/.test(p1)) { segMsg('segPinMsg', 'The passcode must be 4 to 8 digits.', false); return; }
+if (p1 !== p2) { segMsg('segPinMsg', 'The passcodes don\u2019t match.', false); return; }
 var btn = this;
 btn.disabled = true;
 hashPin(p1).then(function (h) {
@@ -99,12 +99,12 @@ var s = secLeer(); s.pin = h; secGuardar(s);
 btn.disabled = false;
 document.getElementById('segPin1').value = ''; document.getElementById('segPin2').value = '';
 prepararSeguridad();
-segMsg('segPinMsg', '&#10003; Clave guardada.', true);
-}).catch(function () { btn.disabled = false; segMsg('segPinMsg', 'No se pudo guardar la clave.', false); });
+segMsg('segPinMsg', '&#10003; Passcode saved.', true);
+}).catch(function () { btn.disabled = false; segMsg('segPinMsg', 'Could not save the passcode.', false); });
 };
 document.getElementById('segPinQuitar').onclick = function () {
 var s = secLeer(); delete s.pin; secGuardar(s); prepararSeguridad();
-segMsg('segPinMsg', '&#10003; Clave quitada.', true);
+segMsg('segPinMsg', '&#10003; Passcode removed.', true);
 };
 // Pide el desbloqueo (Face ID o clave). Se llama al cargar Y al volver del
 // segundo plano tras un rato: antes esto era un IIFE que corria UNA sola vez,
@@ -135,7 +135,7 @@ var modoBio = !!s.bio; // el modo activo, tambien frena el tap-para-Face-ID
 function pintarModo() {
 elBio.style.display = modoBio ? '' : 'none';
 elPin.style.display = modoBio ? 'none' : '';
-elModo.textContent = modoBio ? 'Usar la clave' : 'Usar Face ID';
+elModo.textContent = modoBio ? 'Use the passcode' : 'Use Face ID';
 elModo.style.display = (s.bio && s.pin && (fallos > 0 || !modoBio)) ? '' : 'none';
 document.getElementById('secErr').textContent = '';
 if (!modoBio) { try { document.getElementById('secPinInput').focus(); } catch (e) {} }
@@ -145,7 +145,7 @@ pintarModo();
 // La salida de emergencia se muestra SIEMPRE que haya bloqueo: con solo
 // biometria y el sensor fallando, antes no quedaba forma de entrar.
 var olv = document.getElementById('secOlvide');
-var olvTxt = s.pin ? 'Olvid\u00e9 mi clave' : 'No puedo entrar';
+var olvTxt = s.pin ? 'I forgot my passcode' : 'I can\u2019t get in';
 olv.textContent = olvTxt;
 olv.style.display = '';
 function abrir() {
@@ -176,13 +176,13 @@ var t0 = Date.now();
 var err = document.getElementById('secErr');
 if (!auto) err.textContent = '';
 var btn = document.getElementById('secBioGo');
-if (!auto) btn.textContent = 'Verificando...';
+if (!auto) btn.textContent = 'Verifying...';
 return bioVerificar(s.bio).then(function () {
 // Un intento abortado por el boton puede responder tarde: se ignora entero
 // (su exito o su error son de una peticion que ya no existe para el user).
 if (mio !== bioIntento) return;
 bioEnCurso = false;
-btn.textContent = 'Desbloquear con Face ID';
+btn.textContent = 'Unlock with Face ID';
 abrir();
 }).catch(function (e) {
 if (mio !== bioIntento) return;
@@ -190,7 +190,7 @@ bioEnCurso = false;
 // Si el intento automatico se rechaza es, casi siempre, porque iOS pide un
 // gesto: se invita a tocar en vez de mostrar un error, y NO cuenta como
 // fallo (el sensor ni llego a mirarlo).
-btn.textContent = auto ? 'Desbloquear con Face ID' : 'Reintentar';
+btn.textContent = auto ? 'Unlock with Face ID' : 'Retry';
 if (auto) {
 // NotAllowedError en un intento AUTOMATICO suele ser "el sistema pidio un
 // gesto". Se ANOTA para que las proximas aperturas no pierdan el ciclo \u2014 es
@@ -215,7 +215,7 @@ fallos++;
 if (s.pin && fallos >= FALLOS_PARA_CLAVE) {
 modoBio = false;
 pintarModo();
-err.textContent = 'No te reconoci\u00f3 ' + fallos + ' veces. Entr\u00e1 con tu clave.';
+err.textContent = 'Didn\u2019t recognize you ' + fallos + ' times. Enter with your passcode.';
 return;
 }
 pintarModo();
@@ -227,7 +227,7 @@ if (!dispo) {
 // Sin sensor en este navegador: si hay clave, cambiar de modo SOLO (no
 // tiene sentido mostrar un boton de Face ID que no puede funcionar).
 if (s.pin) { modoBio = false; pintarModo(); return; }
-document.getElementById('secErr').textContent = 'La biometr\u00eda no est\u00e1 disponible en este navegador. Toc\u00e1 "No puedo entrar".';
+document.getElementById('secErr').textContent = 'Biometrics is not available in this browser. Tap "I can\u2019t get in".';
 return;
 }
 // Arranque directo con la biometria, sin tocar el boton — DONDE SE PUEDA.
@@ -260,7 +260,7 @@ var v = document.getElementById('secPinInput').value;
 if (!v) return;
 hashPin(v).then(function (h) {
 if (h === s.pin) abrir();
-else { document.getElementById('secPinInput').value = ''; document.getElementById('secErr').textContent = 'Clave incorrecta.'; }
+else { document.getElementById('secPinInput').value = ''; document.getElementById('secErr').textContent = 'Incorrect passcode.'; }
 });
 };
 if (!_listenersDelBloqueo) {
@@ -269,7 +269,7 @@ document.getElementById('secPinInput').addEventListener('keydown', function (e) 
 }
 document.getElementById('secOlvide').onclick = function () {
 var l = document.getElementById('secOlvide');
-confirmarDosToques(l, 'Se borra el bloqueo y vas a tener que poner de nuevo la clave de la API. \u00bfSeguro?', olvTxt, 6000, function () {
+confirmarDosToques(l, 'This clears the lock and you\u2019ll have to enter the API passcode again. Sure?', olvTxt, 6000, function () {
 // Fallar CERRADO del todo: tambien la clave de Binance y TODOS los caches
 // con el portafolio (GA_CACHES, en paneles.js — la lista unica evita que un
 // cache nuevo quede vivo). Re-pegar la clave cuesta un minuto; dejarla, un riesgo.

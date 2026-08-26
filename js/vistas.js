@@ -20,10 +20,11 @@
 //      —sincroniza los brokers, guarda el patrimonio de cada dia, compara
 //      contra el S&P 500 y manda el informe de los lunes—. El 2 seria salir de
 //      la planilla de Google.
-//   3  FUNCION. A mano, sube cuando entra algo NUEVO de verdad (una pantalla,
+//   4  FUNCION. A mano, sube cuando entra algo NUEVO de verdad (una pantalla,
 //      una capacidad), no cuando se arregla algo. Arrancó en 0; el 1 fue la
-//      pantalla de Posiciones, el 2 las paletas de acento, y el 3 la página
-//      Configuración con las tonalidades de fondo (todo el 25/08/2026).
+//      pantalla de Posiciones, el 2 las paletas de acento, el 3 la página
+//      Configuración con las tonalidades de fondo (todo el 25/08/2026), y el
+//      4 la interfaz entera pasada a inglés (26/08/2026).
 // 107  PUBLICACION. NO se escribe aca: se LEE del nombre del cache (`CACHE` en
 //      sw.js), que ya sube en cada publicacion porque es lo que evita que el
 //      telefono siga sirviendo archivos viejos.
@@ -33,7 +34,7 @@
 // desincronizadas. Un numero escrito a mano en dos lugares es exactamente la
 // clase de cosa que queda vieja sin que nadie se entere.
 var VERSION_GENERACION = '1';
-var VERSION_FUNCION = '3';
+var VERSION_FUNCION = '4';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre
@@ -88,13 +89,13 @@ var e = document.getElementById('mbEstado');
 if (!e) return;
 if (estado === 'ok') {
 e.className = 'mbadge green';
-e.innerHTML = '&#10003; Sincronizado';
+e.innerHTML = '&#10003; Synced';
 } else if (estado === 'cache') {
 e.className = 'mbadge gold';
-e.innerHTML = 'Datos guardados';
+e.innerHTML = 'Cached data';
 } else {
 e.className = 'mbadge gold';
-e.innerHTML = '&#9888; Sin conexi&oacute;n';
+e.innerHTML = '&#9888; No connection';
 }
 }
 function toggleMenu(open) {
@@ -191,7 +192,7 @@ var enCache = !!(lastAcc && lastAcc.key === acc.key && lastAccData);
 if (enCache) {
 renderAccount(acc, lastAccData);
 } else {
-document.getElementById('accTotal').textContent = 'Cargando...';
+document.getElementById('accTotal').textContent = 'Loading...';
 document.getElementById('accLiq').textContent = '';
 document.getElementById('accBody').innerHTML = '';
 }
@@ -218,7 +219,7 @@ return null;
 function renderAccount(acc, data) {
 lastAcc = acc; lastAccData = data;
 document.getElementById('accTotal').textContent = fmt(data.total);
-document.getElementById('accLiq').textContent = 'Cash en la cuenta: ' + fmt(data.liquidez);
+document.getElementById('accLiq').textContent = 'Cash in account: ' + fmt(data.liquidez);
 var body = document.getElementById('accBody');
 body.innerHTML = '';
 // Podada a 4 columnas (pedido de Guzman, 18/08/2026): precio medio de
@@ -269,7 +270,7 @@ function renderPosiciones() {
   if (!body) return;
   var lista = ((lastData && lastData.posiciones) || []).filter(function (p) { return tipoDe(p) !== 'cash'; });
   body.innerHTML = '';
-  if (!lista.length) { body.innerHTML = '<tr><td colspan="4" class="newsempty">Sin posiciones.</td></tr>'; return; }
+  if (!lista.length) { body.innerHTML = '<tr><td colspan="4" class="newsempty">No positions.</td></tr>'; return; }
   // Mismo orden que la tarjeta del Inicio: secciones ETFs → Acciones → Cripto,
   // y adentro de cada una por valor descendente (así ya viene del Worker).
   lista = ordenarPorTipo(lista);
@@ -315,7 +316,7 @@ if (ACCOUNTS[i].nombre.toLowerCase() === n) return ACCOUNTS[i];
 return null;
 }
 var pieModo = 'cuenta';
-var TIPO_LABELS = { accion: 'Acciones', etf: 'ETFs', cripto: 'Cripto', cash: 'Cash' };
+var TIPO_LABELS = { accion: 'Stocks', etf: 'ETFs', cripto: 'Crypto', cash: 'Cash' };
 // Items de la torta según el modo: por cuenta (con click al detalle) o por
 // tipo de activo (agrupando las posiciones; el resto no posicionado va a Cash).
 function itemsPie() {

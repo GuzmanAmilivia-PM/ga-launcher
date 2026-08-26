@@ -42,7 +42,7 @@ function actualizarMonto() {
 var f = leerForm();
 var el = document.getElementById('tMonto');
 if (isFinite(f.qty) && f.qty > 0 && isFinite(f.precio) && f.precio > 0) {
-el.textContent = 'USD ' + (Math.round(f.qty * f.precio * 100) / 100).toLocaleString('es-UY');
+el.textContent = 'USD ' + (Math.round(f.qty * f.precio * 100) / 100).toLocaleString('en-US');
 } else { el.textContent = '—'; }
 }
 ['tQty', 'tPrecio'].forEach(function (id) {
@@ -59,9 +59,9 @@ if (pos && pos.precioActual && !precioEl.value) precioEl.value = pos.precioActua
 
 function validarForm(f) {
 var errs = [];
-if (!f.symbol || !/^[A-Z0-9.\-]{1,12}$/.test(f.symbol)) errs.push('Ticker inválido.');
-if (!isFinite(f.qty) || f.qty <= 0) errs.push('Cantidad inválida.');
-if (!isFinite(f.precio) || f.precio <= 0) errs.push('Precio inválido.');
+if (!f.symbol || !/^[A-Z0-9.\-]{1,12}$/.test(f.symbol)) errs.push('Invalid ticker.');
+if (!isFinite(f.qty) || f.qty <= 0) errs.push('Invalid quantity.');
+if (!isFinite(f.precio) || f.precio <= 0) errs.push('Invalid price.');
 return errs;
 }
 function mostrarResultado(html, esOk) {
@@ -75,8 +75,8 @@ if (errs.length) { mostrarResultado(esc(errs.join(' ')), false); return; }
 var nombre = nombrePlataforma(ACCOUNTS.filter(function (a) { return a.key === f.cuenta; })[0].nombre);
 var monto = Math.round(f.qty * f.precio * 100) / 100;
 document.getElementById('tConfirmTxt').innerHTML =
-'<b>' + (f.tipo === 'compra' ? 'COMPRA' : 'VENTA') + '</b>: ' + esc(f.qty) + ' &times; <b>' + esc(f.symbol) + '</b> a USD ' + esc(f.precio) +
-' = <b>USD ' + esc(monto.toLocaleString('es-UY')) + '</b><br>en ' + esc(nombre) + '. Se actualiza la Google Sheet (cantidad, precio promedio y cash).';
+'<b>' + (f.tipo === 'compra' ? 'BUY' : 'SELL') + '</b>: ' + esc(f.qty) + ' &times; <b>' + esc(f.symbol) + '</b> at USD ' + esc(f.precio) +
+' = <b>USD ' + esc(monto.toLocaleString('en-US')) + '</b><br>in ' + esc(nombre) + '. This updates the Google Sheet (quantity, average price and cash).';
 document.getElementById('tConfirmWrap').style.display = '';
 this.style.display = 'none';
 };
@@ -88,13 +88,13 @@ document.getElementById('tCancelar').onclick = cerrarConfirm;
 document.getElementById('tConfirmar').onclick = function () {
 var f = leerForm();
 var btn = this;
-btn.disabled = true; btn.textContent = 'Registrando...';
+btn.disabled = true; btn.textContent = 'Recording...';
 google.script.run.withSuccessHandler(function (res) {
-btn.disabled = false; btn.textContent = 'Confirmar y registrar';
+btn.disabled = false; btn.textContent = 'Confirm and log';
 cerrarConfirm();
 if (res && res.ok) {
 var r = res.resumen;
-var html = '&#10003; Registrado: ' + esc(r.tipo) + ' ' + esc(r.qty) + ' ' + esc(r.symbol) + ' a USD ' + esc(r.precio) + ' en ' + esc(r.cuenta) + '.';
+var html = '&#10003; Logged: ' + (r.tipo === 'compra' ? 'buy' : 'sell') + ' ' + esc(r.qty) + ' ' + esc(r.symbol) + ' at USD ' + esc(r.precio) + ' in ' + esc(r.cuenta) + '.';
 (res.mensajes || []).forEach(function (m) { html += '<br>&#9888; ' + esc(m); });
 mostrarResultado(html, true);
 document.getElementById('tSymbol').value = '';
@@ -105,10 +105,10 @@ document.getElementById('tManual').open = false;
 loadData();
 cargarOperaciones(true);
 } else {
-mostrarResultado(esc((res && res.mensajes || ['Error desconocido.']).join(' ')), false);
+mostrarResultado(esc((res && res.mensajes || ['Unknown error.']).join(' ')), false);
 }
 }).withFailureHandler(function (err) {
-btn.disabled = false; btn.textContent = 'Confirmar y registrar';
+btn.disabled = false; btn.textContent = 'Confirm and log';
 cerrarConfirm();
 mostrarResultado('Error: ' + esc(err.message), false);
 }).registrarOperacion(f);
@@ -121,14 +121,14 @@ var opsRango = 'ytd', opsTipo = 'todas', opsTicker = 'todos', lastOps = null;
 // t = lo que dice la pantallita de opciones; c = lo que entra en el boton
 // (en un telefono de 375 px el boton mide ~87: "Desde el inicio" se cortaba).
 var OPS_RANGOS = [
-{ v: 'ytd', t: 'Este año', c: 'Este año' },
-{ v: '3m', t: 'Últimos 3 meses', c: '3 meses' },
-{ v: 'todo', t: 'Desde el inicio', c: 'Todo' }
+{ v: 'ytd', t: 'This year', c: 'This year' },
+{ v: '3m', t: 'Last 3 months', c: '3 months' },
+{ v: 'todo', t: 'Since inception', c: 'All' }
 ];
 var OPS_TIPOS = [
-{ v: 'todas', t: 'Todos' },
-{ v: 'compra', t: 'Compras' },
-{ v: 'venta', t: 'Ventas' }
+{ v: 'todas', t: 'All' },
+{ v: 'compra', t: 'Buys' },
+{ v: 'venta', t: 'Sells' }
 ];
 
 function opsIso(d) {
@@ -163,7 +163,7 @@ if (o.symbol && !vistos[o.symbol]) { vistos[o.symbol] = true; symbols.push(o.sym
 });
 symbols.sort();
 _opsTickersDe = lastOps;
-_opsTickersCache = [{ v: 'todos', t: 'Todos' }].concat(symbols.map(function (s) { return { v: s, t: s }; }));
+_opsTickersCache = [{ v: 'todos', t: 'All' }].concat(symbols.map(function (s) { return { v: s, t: s }; }));
 return _opsTickersCache;
 }
 function opsTexto(opciones, valor) {
@@ -199,10 +199,10 @@ document.getElementById('opsPicker').style.display = 'flex';
 document.getElementById('opsPickerClose').onclick = cerrarPicker;
 document.getElementById('opsPicker').onclick = function (e) { if (e.target === this) cerrarPicker(); };
 document.getElementById('opsFiltroRango').onclick = function () {
-abrirPicker('Período', OPS_RANGOS, opsRango, function (v) { opsRango = v; });
+abrirPicker('Period', OPS_RANGOS, opsRango, function (v) { opsRango = v; });
 };
 document.getElementById('opsFiltroTipo').onclick = function () {
-abrirPicker('Tipo', OPS_TIPOS, opsTipo, function (v) { opsTipo = v; });
+abrirPicker('Type', OPS_TIPOS, opsTipo, function (v) { opsTipo = v; });
 };
 document.getElementById('opsFiltroTicker').onclick = function () {
 abrirPicker('Ticker', opsTickers(), opsTicker, function (v) { opsTicker = v; });
@@ -217,7 +217,7 @@ cargarConCache({
 clave: 'ga_cache_ops',
 avisoId: 'opsCacheAviso',
 bodyId: 'opsBody',
-cargando: 'Leyendo tus compras y ventas...',
+cargando: 'Reading your buys and sells...',
 forzar: !!forzar,
 limpiar: function () {
 document.getElementById('opsResumen').innerHTML = '';
@@ -263,29 +263,29 @@ if (o.tipo === 'compra') compras += Number(o.monto) || 0; else ventas += Number(
 resumenEl.className = 'opsresumen';
 resumenEl.innerHTML =
 '<div><span>Trades</span><b>' + lista.length + '</b></div>' +
-'<div><span>Compras</span><b class="up">' + esc(opsMonto(compras)) + '</b></div>' +
-'<div><span>Ventas</span><b class="down">' + esc(opsMonto(ventas)) + '</b></div>';
+'<div><span>Buys</span><b class="up">' + esc(opsMonto(compras)) + '</b></div>' +
+'<div><span>Sells</span><b class="down">' + esc(opsMonto(ventas)) + '</b></div>';
 
 if (!lista.length) {
 body.innerHTML = todas.length
-? '<div class="vacio"><span class="vic">&#128269;</span><b>Nada con estos filtros</b>Prob&aacute; con otro per&iacute;odo, otro tipo u otro ticker.</div>'
-: '<div class="vacio"><span class="vic">&#128200;</span><b>Sin trades todav&iacute;a</b>Tus compras y ventas van a aparecer ac&aacute;.</div>';
+? '<div class="vacio"><span class="vic">&#128269;</span><b>Nothing with these filters</b>Try another period, type, or ticker.</div>'
+: '<div class="vacio"><span class="vic">&#128200;</span><b>No trades yet</b>Your buys and sells will show up here.</div>';
 } else {
 body.innerHTML = '';
 lista.forEach(function (o) {
 var esCompra = o.tipo === 'compra';
 var d = document.createElement('div');
 d.className = 'txrow';
-d.innerHTML = '<span><b class="' + (esCompra ? 'up' : 'down') + '">' + (esCompra ? 'COMPRA' : 'VENTA') + '</b> ' + esc(o.qty) + ' &times; <b>' + esc(o.symbol) + '</b>' +
+d.innerHTML = '<span><b class="' + (esCompra ? 'up' : 'down') + '">' + (esCompra ? 'BUY' : 'SELL') + '</b> ' + esc(o.qty) + ' &times; <b>' + esc(o.symbol) + '</b>' +
 '<span class="txmeta">' + esc(nombrePlataforma(o.cuenta)) + ' &middot; ' + esc(opsFechaTxt(o.fecha)) +
-(o.origen === 'manual' ? '<span class="opstag">a mano</span>' : '') + '</span></span>' +
-'<span>' + esc(opsMonto(o.monto)) + '<span class="txmeta">a ' + esc(o.precio) + '</span></span>';
+(o.origen === 'manual' ? '<span class="opstag">manual</span>' : '') + '</span></span>' +
+'<span>' + esc(opsMonto(o.monto)) + '<span class="txmeta">at ' + esc(o.precio) + '</span></span>';
 body.appendChild(d);
 });
 }
 
 var avisos = (r.avisos || []).slice();
-if (r.recortadas) avisos.push('Se muestran los 500 trades mas recientes.');
+if (r.recortadas) avisos.push('Showing the 500 most recent trades.');
 if (avisos.length) {
 avisosEl.innerHTML = avisos.map(function (a) {
 return '<p class="newsempty">&#9888; ' + esc(a) + '</p>';
@@ -299,9 +299,9 @@ if (!pubDate) return '';
 var d = new Date(pubDate);
 if (isNaN(d.getTime())) return '';
 var diffH = Math.round((Date.now() - d.getTime()) / 3600000);
-if (diffH < 1) return 'hace un momento';
-if (diffH < 24) return 'hace ' + diffH + 'h';
-return 'hace ' + Math.round(diffH / 24) + 'd';
+if (diffH < 1) return 'just now';
+if (diffH < 24) return diffH + 'h ago';
+return Math.round(diffH / 24) + 'd ago';
 }
 function newsItemsHtml(noticias) {
 var html = '';
@@ -315,16 +315,16 @@ function renderNoticias(data) {
 var body = document.getElementById('noticiasBody');
 body.innerHTML = '';
 if (!data || (Array.isArray(data) && !data.length)) {
-body.innerHTML = '<div class="vacio"><span class="vic">&#128240;</span><b>Sin novedades por ahora</b>Cuando haya titulares sobre tus posiciones, van a aparecer ac&aacute;.</div>';
+body.innerHTML = '<div class="vacio"><span class="vic">&#128240;</span><b>No news for now</b>When there are headlines about your positions, they will show up here.</div>';
 return;
 }
 
 // 1) Movimientos bruscos (±3% o más en 24h), siempre arriba.
 var card = document.createElement('div');
 card.className = 'card';
-var html = '<span class="newssym">Movimientos bruscos (24h)</span>';
+var html = '<span class="newssym">Sharp moves (24h)</span>';
 if (!data.bruscos || !data.bruscos.length) {
-html += '<p class="newsempty">Ninguna posición se movió &plusmn;3% en las últimas 24hs.</p>';
+html += '<p class="newsempty">No position moved &plusmn;3% in the last 24h.</p>';
 } else {
 data.bruscos.forEach(function (b) {
 var up = Number(b.cambio) >= 0;
@@ -339,8 +339,8 @@ body.appendChild(card);
 // 2) Mercado USA (S&P 500 / Nasdaq).
 card = document.createElement('div');
 card.className = 'card';
-html = '<span class="newssym">Mercado USA — S&amp;P 500 &middot; Nasdaq</span>';
-html += (data.mercado && data.mercado.length) ? newsItemsHtml(data.mercado) : '<p class="newsempty">Sin noticias de medios serios por ahora.</p>';
+html = '<span class="newssym">US Market — S&amp;P 500 &middot; Nasdaq</span>';
+html += (data.mercado && data.mercado.length) ? newsItemsHtml(data.mercado) : '<p class="newsempty">No news from serious media outlets for now.</p>';
 card.innerHTML = html;
 body.appendChild(card);
 
@@ -349,7 +349,7 @@ body.appendChild(card);
 var c = document.createElement('div');
 c.className = 'card';
 var h = '<span class="newssym">' + esc(item.symbol) + (item.nombre ? ' — ' + esc(item.nombre) : '') + '</span>';
-h += (item.noticias && item.noticias.length) ? newsItemsHtml(item.noticias) : '<p class="newsempty">Sin noticias de medios serios por ahora.</p>';
+h += (item.noticias && item.noticias.length) ? newsItemsHtml(item.noticias) : '<p class="newsempty">No news from serious media outlets for now.</p>';
 c.innerHTML = h;
 body.appendChild(c);
 });
@@ -365,16 +365,16 @@ var resultadosCargados = false;
 function fechaResultado(ymd) {
 var d = new Date(String(ymd) + 'T12:00:00');
 if (isNaN(d.getTime())) return String(ymd);
-var dias = ['dom', 'lun', 'mar', 'mi\u00e9', 'jue', 'vie', 's\u00e1b'];
+var dias = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 return dias[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth() + 1);
 }
-function usd(n) { return 'US$ ' + String(n).replace('.', ','); }
+function usd(n) { return 'US$ ' + String(n); }
 function renderResultados(data) {
 var el = document.getElementById('resultadosBody');
 if (!el) return;
-var card = '<span class="newssym">Resultados de tus empresas</span>';
+var card = '<span class="newssym">Your companies&rsquo; earnings</span>';
 if (!data || !data.hay) {
-card += '<p class="newsempty">Sin datos del calendario todav&iacute;a: se actualiza cada ma&ntilde;ana con la sincronizaci&oacute;n.</p>';
+card += '<p class="newsempty">No calendar data yet: it updates every morning with the sync.</p>';
 el.innerHTML = '<div class="card">' + card + '</div>';
 return;
 }
@@ -387,22 +387,22 @@ if (e.epsReal !== null || e.revReal !== null) pasados.push(e);
 else if (d.getTime() >= hoy.getTime()) porVenir.push(e);
 });
 if (!pasados.length && !porVenir.length) {
-card += '<p class="newsempty">Ninguna de tus empresas reporta en las pr&oacute;ximas dos semanas.</p>';
+card += '<p class="newsempty">None of your companies report in the next two weeks.</p>';
 }
 pasados.forEach(function (e) {
 var partes = [];
-if (e.epsReal !== null) partes.push('EPS ' + usd(e.epsReal) + (e.epsEstimado !== null ? ' contra ' + usd(e.epsEstimado) + ' esperado' : ''));
-if (e.revReal !== null) partes.push('factur\u00f3 ' + usd(Math.round(e.revReal / 1e6)) + ' M' + (e.revEstimado !== null ? ' contra ' + usd(Math.round(e.revEstimado / 1e6)) + ' M' : ''));
-card += '<div class="newsmove"><span><b>' + esc(e.symbol) + '</b> report&oacute; el ' + esc(fechaResultado(e.fecha)) + ': ' + esc(partes.join(' · ')) + '</span></div>';
+if (e.epsReal !== null) partes.push('EPS ' + usd(e.epsReal) + (e.epsEstimado !== null ? ' vs ' + usd(e.epsEstimado) + ' expected' : ''));
+if (e.revReal !== null) partes.push('revenue ' + usd(Math.round(e.revReal / 1e6)) + 'M' + (e.revEstimado !== null ? ' vs ' + usd(Math.round(e.revEstimado / 1e6)) + 'M' : ''));
+card += '<div class="newsmove"><span><b>' + esc(e.symbol) + '</b> reported on ' + esc(fechaResultado(e.fecha)) + ': ' + esc(partes.join(' · ')) + '</span></div>';
 });
 porVenir.forEach(function (e) {
-var linea = '<b>' + esc(e.symbol) + '</b> reporta el ' + esc(fechaResultado(e.fecha)) + (e.hora ? ', ' + esc(e.hora) : '');
-if (e.epsEstimado !== null) linea += ' — se espera EPS ' + esc(usd(e.epsEstimado));
-linea += ' <span class="newsmeta">(estimaci&oacute;n)</span>';
+var linea = '<b>' + esc(e.symbol) + '</b> reports on ' + esc(fechaResultado(e.fecha)) + (e.hora ? ', ' + esc(e.hora) : '');
+if (e.epsEstimado !== null) linea += ' — EPS expected ' + esc(usd(e.epsEstimado));
+linea += ' <span class="newsmeta">(estimated)</span>';
 card += '<div class="newsmove"><span>' + linea + '</span></div>';
 });
 if (data.fueraDeCobertura && data.fueraDeCobertura.length) {
-card += '<p class="newsempty">Sin cobertura (no cotizan en EE.UU.): ' + esc(data.fueraDeCobertura.join(', ')) + '. Los ETFs y la cripto no reportan resultados.</p>';
+card += '<p class="newsempty">No coverage (not listed in the US): ' + esc(data.fueraDeCobertura.join(', ')) + '. ETFs and crypto do not report earnings.</p>';
 }
 el.innerHTML = '<div class="card">' + card + '</div>';
 }

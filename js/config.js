@@ -3,7 +3,7 @@
 var cashTipo = 'deposito';
 function abrirCashPanel(tipo) {
 cashTipo = tipo;
-document.getElementById('cashTitle').textContent = (tipo === 'deposito' ? 'Depositar' : 'Retirar') + ' cash';
+document.getElementById('cashTitle').textContent = (tipo === 'deposito' ? 'Deposit' : 'Withdraw') + ' cash';
 document.getElementById('cashResultado').innerHTML = '';
 var panel = document.getElementById('cashPanel');
 panel.style.display = '';
@@ -44,23 +44,23 @@ document.getElementById('cashConfirmar').onclick = function () {
 var monto = parseFloat(document.getElementById('cashMonto').value);
 var resEl = document.getElementById('cashResultado');
 if (!isFinite(monto) || monto <= 0) {
-resEl.innerHTML = '<div class="tmsg err">Monto inv&aacute;lido.</div>';
+resEl.innerHTML = '<div class="tmsg err">Invalid amount.</div>';
 return;
 }
 var btn = this;
-btn.disabled = true; btn.textContent = 'Registrando...';
+btn.disabled = true; btn.textContent = 'Recording...';
 google.script.run.withSuccessHandler(function (res) {
-btn.disabled = false; btn.textContent = 'Confirmar';
+btn.disabled = false; btn.textContent = 'Confirm';
 if (res && res.ok) {
 var r = res.resumen;
-resEl.innerHTML = '<div class="tmsg ok">&#10003; ' + (r.tipo === 'deposito' ? 'Dep&oacute;sito' : 'Retiro') + ' de ' + esc(mask('USD ' + r.monto)) + ' en ' + esc(r.cuenta) + ' registrado.</div>';
+resEl.innerHTML = '<div class="tmsg ok">&#10003; ' + (r.tipo === 'deposito' ? 'Deposit' : 'Withdrawal') + ' of ' + esc(mask('USD ' + r.monto)) + ' in ' + esc(r.cuenta) + ' logged.</div>';
 document.getElementById('cashMonto').value = '';
 loadData();
 } else {
-resEl.innerHTML = '<div class="tmsg err">' + esc((res && res.mensajes || ['Error desconocido.']).join(' ')) + '</div>';
+resEl.innerHTML = '<div class="tmsg err">' + esc((res && res.mensajes || ['Unknown error.']).join(' ')) + '</div>';
 }
 }).withFailureHandler(function (err) {
-btn.disabled = false; btn.textContent = 'Confirmar';
+btn.disabled = false; btn.textContent = 'Confirm';
 resEl.innerHTML = '<div class="tmsg err">Error: ' + esc(err.message) + '</div>';
 }).registrarMovimientoCash({ cuenta: document.getElementById('cashCuenta').value, tipo: cashTipo, monto: monto });
 };
@@ -165,29 +165,29 @@ var esCS = /charles schwab/i.test(pl.nombre);
 var row = document.createElement('div');
 row.className = 'platrow';
 row.innerHTML = '<span>' + esc(nombrePlataforma(pl.nombre)) +
-'<span class="platmeta">' + fmt(pl.valor) + ((esIB || esCS) ? ' &middot; conexi&oacute;n autom&aacute;tica' : (esBNB ? ' &middot; saldos en vivo' : (pl.gestionada ? ' &middot; con hoja de posiciones' : ' &middot; manual'))) + '</span></span>' +
+'<span class="platmeta">' + fmt(pl.valor) + ((esIB || esCS) ? ' &middot; automatic connection' : (esBNB ? ' &middot; live balances' : (pl.gestionada ? ' &middot; has a positions sheet' : ' &middot; manual'))) + '</span></span>' +
 '<span class="platbtns"></span>';
 var btns = row.querySelector('.platbtns');
 // Plataformas con pantalla de conexi\u00f3n propia: la fila entera navega ah\u00ed.
 var vistaConexion = esIB ? 'ibkr' : (esBNB ? 'bnb' : (esCS ? 'cs' : null));
 if (vistaConexion) {
 var bc = document.createElement('button');
-bc.innerHTML = 'Conexi&oacute;n &rsaquo;';
+bc.innerHTML = 'Connection &rsaquo;';
 bc.onclick = function (ev) { ev.stopPropagation(); setView(vistaConexion); };
 btns.appendChild(bc);
 row.style.cursor = 'pointer';
 row.onclick = function () { setView(vistaConexion); };
 }
 var be = document.createElement('button');
-be.textContent = 'Editar';
+be.textContent = 'Edit';
 be.onclick = function (ev) { ev.stopPropagation(); abrirPlatForm(pl); };
 btns.appendChild(be);
 if (!pl.gestionada) {
 var bq = document.createElement('button');
-bq.textContent = 'Quitar';
+bq.textContent = 'Remove';
 bq.onclick = function (ev) {
 ev.stopPropagation();
-confirmarDosToques(bq, '\u00bfSeguro?', 'Quitar', 3000, function () {
+confirmarDosToques(bq, 'Sure?', 'Remove', 3000, function () {
 google.script.run.withSuccessHandler(function (res) {
 platsMsg(esc(((res && res.mensajes) || []).join(' ')), res && res.ok);
 cargarPlataformas(); loadData();
@@ -221,7 +221,7 @@ var runner = google.script.run.withSuccessHandler(function (res) {
 btn.disabled = false;
 if (res && res.ok) {
 document.getElementById('platForm').style.display = 'none';
-platsMsg('&#10003; Guardado. ' + esc((res.mensajes || []).join(' ')), true);
+platsMsg('&#10003; Saved. ' + esc((res.mensajes || []).join(' ')), true);
 cargarPlataformas(); loadData();
 } else {
 platsMsg(esc(((res && res.mensajes) || ['Error']).join(' ')), false);
@@ -241,23 +241,23 @@ return '<div class="row"><span>' + etiqueta + '</span><span' + color + '>' + val
 }
 function edadCache(clave) {
 var c = cacheLeer(clave);
-if (!c || !c.t) return 'sin datos';
+if (!c || !c.t) return 'no data';
 var min = Math.round((Date.now() - c.t) / 60000);
-return min < 1 ? 'hace <1 min' : min < 60 ? 'hace ' + min + ' min' : 'hace ' + Math.round(min / 60) + ' h';
+return min < 1 ? '<1 min ago' : min < 60 ? min + ' min ago' : Math.round(min / 60) + ' h ago';
 }
 function pintarSaludApp() {
 var el = document.getElementById('saludApp');
 if (!el) return;
 var html = '';
 var sw = navigator.serviceWorker && navigator.serviceWorker.controller;
-html += filaSalud('Modo offline', sw ? 'activo' : 'inactivo', !!sw);
-html += filaSalud('Datos del portafolio', edadCache('ga_cache_data'));
-html += filaSalud('Dividendos guardados', edadCache('ga_cache_div'));
-html += filaSalud('Binance en este tel&eacute;fono', bnbConfig() ? 'configurado' : 'sin configurar');
-html += filaSalud('Bloqueo de seguridad', (function () { try { var s = JSON.parse(localStorage.getItem('ga_sec') || '{}'); return (s.pin || s.bio) ? 'activado' : 'desactivado'; } catch (e) { return '?'; } })());
+html += filaSalud('Offline mode', sw ? 'active' : 'inactive', !!sw);
+html += filaSalud('Portfolio data', edadCache('ga_cache_data'));
+html += filaSalud('Saved dividends', edadCache('ga_cache_div'));
+html += filaSalud('Binance on this phone', bnbConfig() ? 'configured' : 'not configured');
+html += filaSalud('Security lock', (function () { try { var s = JSON.parse(localStorage.getItem('ga_sec') || '{}'); return (s.pin || s.bio) ? 'enabled' : 'disabled'; } catch (e) { return '?'; } })());
 el.innerHTML = html;
 versionShell(function (ver) {
-el.innerHTML = filaSalud('Versi&oacute;n de la app', ver || '?') + el.innerHTML;
+el.innerHTML = filaSalud('App version', ver || '?') + el.innerHTML;
 });
 }
 function fechaSalud(iso) {
@@ -268,26 +268,26 @@ document.getElementById('saludBtn').onclick = function () {
 var btn = this, out = document.getElementById('saludServidor');
 if (btn._busy) return;
 btn._busy = true;
-out.innerHTML = '<p class="loadingtxt">Consultando el servidor...</p>';
+out.innerHTML = '<p class="loadingtxt">Checking the server...</p>';
 google.script.run.withSuccessHandler(function (s) {
 btn._busy = false;
-if (!s || !s.ok) { out.innerHTML = '<p class="newsempty">El servidor no respondi&oacute; bien.</p>'; return; }
+if (!s || !s.ok) { out.innerHTML = '<p class="newsempty">The server did not respond correctly.</p>'; return; }
 var html = '';
-html += filaSalud('Hora del servidor', esc(fechaSalud(s.ahora)));
-html += filaSalud('Sincronizaci&oacute;n autom&aacute;tica (8:00)', s.triggerDiario === null ? 'sin dato' : (s.triggerDiario ? 'programada' : 'NO existe'), s.triggerDiario !== false);
+html += filaSalud('Server time', esc(fechaSalud(s.ahora)));
+html += filaSalud('Automatic sync (8:00)', s.triggerDiario === null ? 'no data' : (s.triggerDiario ? 'scheduled' : 'does NOT exist'), s.triggerDiario !== false);
 function broker(nombre, b) {
-if (!b.configurada) return filaSalud(nombre, 'sin conectar');
-if (!b.ultimaSync) return filaSalud(nombre, 'conectado, nunca sincroniz&oacute;');
+if (!b.configurada) return filaSalud(nombre, 'not connected');
+if (!b.ultimaSync) return filaSalud(nombre, 'connected, never synced');
 return filaSalud(nombre, (b.ultimaSync.ok ? '&#10003; ' : '&#9888; ') + esc(fechaSalud(b.ultimaSync.cuando)), b.ultimaSync.ok);
 }
 html += broker('IBKR', s.brokers.ibkr);
 html += broker('Schwab', s.brokers.schwab);
-html += filaSalud('Dividendos de IBKR', s.brokers.ibkr.actividad ? 'configurados' : 'sin configurar');
-html += filaSalud('IA Insights', s.iaConfigurada ? 'configurada' : 'sin configurar');
+html += filaSalud('IBKR dividends', s.brokers.ibkr.actividad ? 'configured' : 'not configured');
+html += filaSalud('AI Insights', s.iaConfigurada ? 'configured' : 'not configured');
 if (s.historico && !s.historico.error) {
-html += filaSalud('Hist&oacute;rico', s.historico.filas + ' d&iacute;as, &uacute;ltimo: ' + esc(s.historico.ultimaFecha));
+html += filaSalud('History', s.historico.filas + ' days, latest: ' + esc(s.historico.ultimaFecha));
 } else {
-html += filaSalud('Hist&oacute;rico', esc((s.historico && s.historico.error) || '?'), false);
+html += filaSalud('History', esc((s.historico && s.historico.error) || '?'), false);
 }
 // Lo que la lectura del resumen no encontro (bloque de cuentas, fila del
 // total, fila de Liquidez). Esta pantalla es "¿esta bien mi planilla?" y era
@@ -295,14 +295,14 @@ html += filaSalud('Hist&oacute;rico', esc((s.historico && s.historico.error) || 
 // viene vacia y no se dibuja nada: un aviso que aparece siempre es ruido.
 // Auditoria del 23/08/2026.
 var avs = (s.avisosResumen && s.avisosResumen.length) ? s.avisosResumen : null;
-html += filaSalud('Hoja "resumen"', avs ? (avs.length + ' aviso(s)') : '&#10003; sin avisos', !avs);
+html += filaSalud('The "resumen" sheet', avs ? (avs.length + ' notice(s)') : '&#10003; no notices', !avs);
 if (avs) {
 avs.forEach(function (a) { html += '<p class="newsempty" style="margin:2px 0 0">' + esc(a) + '</p>'; });
 }
 out.innerHTML = html;
 }).withFailureHandler(function (err) {
 btn._busy = false;
-out.innerHTML = '<p class="newsempty">' + esc(msgErr(err, 'El diagnóstico')) + '</p>';
+out.innerHTML = '<p class="newsempty">' + esc(msgErr(err, 'Diagnostics')) + '</p>';
 }).getSalud();
 };
 
@@ -316,8 +316,8 @@ google.script.run.withSuccessHandler(function (st) {
 fhConfigurada = !!(st && st.configurada);
 var t = document.getElementById('fhEstadoTxt');
 if (t) t.innerHTML = fhConfigurada
-? '&#10003; Clave configurada. Va a alimentar los precios y el calendario de resultados de las empresas.'
-: 'Sin configurar. Entr&aacute; a <b>finnhub.io</b> con tu cuenta, copi&aacute; la "API Key" y pegala ac&aacute;. Antes de guardarla se prueba contra Finnhub; se guarda en tu servidor privado de Cloudflare, nunca en esta p&aacute;gina.';
+? '&#10003; Key configured. It will feed prices and the earnings calendar.'
+: 'Not configured. Go to <b>finnhub.io</b> with your account, copy the "API Key" and paste it here. Before saving it, it&rsquo;s tested against Finnhub; it&rsquo;s saved on your private Cloudflare server, never on this page.';
 }).withFailureHandler(function () {}).estadoFinnhub();
 }
 document.getElementById('fhKeyGuardar').onclick = function () {
@@ -326,7 +326,7 @@ var inp = document.getElementById('fhKey');
 // se referencia recien al tocar el boton, cuando ya cargo todo.
 guardarConBoton({
 btn: this, inputs: [inp], resId: 'fhKeyResultado',
-sujeto: 'La clave de Finnhub', exito: 'Clave verificada y guardada.',
+sujeto: 'The Finnhub key', exito: 'Key verified and saved.',
 alOk: cargarEstadoFinnhub,
 pedir: function (ok, fail) {
 google.script.run.withSuccessHandler(ok).withFailureHandler(fail).guardarClaveFinnhub({ apiKey: inp.value });

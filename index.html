@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <!-- Politica de contenido. Lo importante es connect-src: aunque algun script
@@ -148,12 +148,22 @@ html[data-paleta="violeta"] .galogo-img { filter: hue-rotate(209deg) saturate(1.
 .total { font-size: clamp(22px, 7vw, 30px); font-weight: 800; margin: 0; letter-spacing: -.02em; white-space: nowrap; line-height: 1.1; }
 .subtotal { font-size: 14.5px; color: var(--muted); margin: 6px 0 0; }
 .subtotal b { color: var(--text); font-weight: 700; }
-/* De titulo grande (22px) a etiqueta discreta (pedido de Guzman, 26/08/2026:
-   "en mayuscula... o en el color del tono elegido pero medio transparente que
-   no se distinga mucho y mucho mas pequeño"). Va con el ACENTO al 50%: sigue
-   a la paleta elegida y no compite con el contenido. Solo lo llevan las
-   paginas secundarias; las pestañas de la barra no tienen titulo. */
-.viewtitle { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .09em; color: rgba(var(--gold-rgb), .5); margin: 0 0 12px; }
+/* De titulo grande (22px) a etiqueta discreta, en dos pasos el mismo dia
+   (26/08/2026). Primero "chico, mayuscula, con el acento medio transparente";
+   despues Guzman pidio que TODOS los titulos y subtitulos (este + .card h2)
+   compartan un solo estilo, y que el color sea el de la TONALIDAD —no el
+   acento—: var(--muted) ya cambia con Marino/Grafito/Nord/Bosque, asi que
+   "traslucido con el color de la tonalidad" es re-atenuarlo con color-mix.
+   Solo lo llevan las paginas secundarias y las tarjetas; las pestañas de la
+   barra no tienen titulo. */
+.viewtitle, .card h2, .pagesub { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: color-mix(in srgb, var(--muted) 78%, transparent); margin: 0 0 12px; }
+/* .pagesub: la leyenda descriptiva bajo el título de una página secundaria
+   (IBKR, Binance, Charles Schwab, Buscar, Noticias, IA, Seguridad). Antes era
+   .subtotal (14.5px, sin mayúscula) y competía con el título de arriba; ahora
+   comparte su mismo estilo apagado — no se pierde la info (el disclaimer de
+   IA, el aviso de solo lectura), pero deja de llamar la atención. .subtotal
+   sigue existiendo para datos reales (el cash de una cuenta) e instrucciones
+   de formulario, que no son decorativas y necesitan su tamaño de siempre. */
 .rangepct { font-size: 13px; font-weight: 700; margin-left: 8px; }
 /* El tamano grande es solo el de la fila del total (v100), no el del ano de
    Dividendos/Aportes, que comparten esta clase. Auditoria del 23/08/2026. */
@@ -177,7 +187,11 @@ html[data-paleta="violeta"] .galogo-img { filter: hue-rotate(209deg) saturate(1.
 
 /* --- Cards y tablas --- */
 .card { background: var(--navy2); border: 1px solid var(--border); border-radius: 18px; padding: 18px; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.18); min-width: 0; }
-.card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 14px; font-weight: 700; }
+/* .card h2 comparte estilo con .viewtitle (definido arriba, junto a
+   .subtotal): mismo tamaño chico, mayúscula, traslúcido con el color de la
+   tonalidad — pedido de Guzmán, 26/08/2026. El TÍTULO es .viewtitle (arriba
+   de la página); el SUBTÍTULO es este h2 (arriba de cada tarjeta, ej.
+   "Distribución", "Análisis de la cartera"). */
 .cardhead { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .cardhead h2 { margin: 0; }
 /* Título de card que navega (el "Posiciones" del Inicio): mismo estilo que
@@ -547,20 +561,20 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div class="splash-mark" role="img" aria-label="GA"></div>
 <div class="splash-sub splash-brand">GUZMANA</div>
 <div id="splashLock" style="display:none">
-<button class="bigbtn" id="secBioGo" style="display:none;margin-top:22px">Desbloquear con Face ID</button>
+<button class="bigbtn" id="secBioGo" style="display:none;margin-top:22px">Unlock with Face ID</button>
 <div id="secPinWrap" style="display:none">
-<input id="secPinInput" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="Clave">
-<button class="bigbtn" id="secPinGo">Entrar</button>
+<input id="secPinInput" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="Passcode">
+<button class="bigbtn" id="secPinGo">Enter</button>
 </div>
-<p class="seclink" id="secModo" style="display:none">Usar la clave</p>
+<p class="seclink" id="secModo" style="display:none">Use the passcode</p>
 <p class="err" id="secErr"></p>
-<p class="seclink" id="secOlvide" style="display:none">Olvid&eacute; mi clave</p>
+<p class="seclink" id="secOlvide" style="display:none">I forgot my passcode</p>
 </div>
 <div id="splashToken" style="display:none">
-<p class="subtotal" style="margin-top:22px">Clave de acceso de la app</p>
-<p class="seclink" style="text-decoration:none;cursor:default;margin-top:6px">No es el bloqueo del tel&eacute;fono: es la clave que conecta con tus datos.</p>
-<input id="lockInput" type="password" autocomplete="current-password" placeholder="Clave">
-<button class="bigbtn" id="lockBtn">Entrar</button>
+<p class="subtotal" style="margin-top:22px">App access passcode</p>
+<p class="seclink" style="text-decoration:none;cursor:default;margin-top:6px">This isn&rsquo;t your phone&rsquo;s lock screen &mdash; it&rsquo;s the passcode that connects to your data.</p>
+<input id="lockInput" type="password" autocomplete="current-password" placeholder="Passcode">
+<button class="bigbtn" id="lockBtn">Enter</button>
 <p class="err" id="lockErr"></p>
 </div>
 </div>
@@ -569,7 +583,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div class="menupanel" id="menuPanel">
 <!-- El alternador de tema vivio aca arriba (v111-v114); el 25/08/2026 Guzman
      pidio juntarlo con paleta y tonalidad en la pagina Configuracion. -->
-<div class="menu-top"><button class="menu-back" id="menuBack" aria-label="Cerrar men&uacute;">&larr;</button></div>
+<div class="menu-top"><button class="menu-back" id="menuBack" aria-label="Close menu">&larr;</button></div>
 <div class="menu-profile">
 <span class="menu-avatar galogo-img"></span>
 <div>
@@ -578,19 +592,19 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 </div>
 </div>
 <div class="menu-grid">
-<button class="mtile" id="mIA"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M12 3.5 13.8 9 19.5 11 13.8 13 12 18.5 10.2 13 4.5 11 10.2 9z"/><path d="M18.5 16.5 19.2 18.6 21.3 19.3 19.2 20 18.5 22.1 17.8 20 15.7 19.3 17.8 18.6z"/></svg></span>IA Insights</button>
-<button class="mtile" id="mRefrescar"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.7 3.5v3.8h-3.8"/></svg></span><span id="mRefrescarTxt">Sincronizar</span></button>
-<a class="mtile" href="https://docs.google.com/spreadsheets/d/145R-cxu6zK6o7A1ht2R8mNypEacmeSmQQzzDPwy5tjg/edit" target="_blank" rel="noopener"><span class="mtile-ic"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-13"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></svg></span>Data base</a>
+<button class="mtile" id="mIA"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M12 3.5 13.8 9 19.5 11 13.8 13 12 18.5 10.2 13 4.5 11 10.2 9z"/><path d="M18.5 16.5 19.2 18.6 21.3 19.3 19.2 20 18.5 22.1 17.8 20 15.7 19.3 17.8 18.6z"/></svg></span>AI Insights</button>
+<button class="mtile" id="mRefrescar"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.7 3.5v3.8h-3.8"/></svg></span><span id="mRefrescarTxt">Sync</span></button>
+<a class="mtile" href="https://docs.google.com/spreadsheets/d/145R-cxu6zK6o7A1ht2R8mNypEacmeSmQQzzDPwy5tjg/edit" target="_blank" rel="noopener"><span class="mtile-ic"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-13"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></svg></span>Database</a>
 <!-- La D1 de Cloudflare (ga-portfolio). Es la base en ENSAYO de la Fase 2:
      la app sigue leyendo la planilla hasta el corte (FUENTE_DATOS=planilla),
      por eso este acceso se llama "test". Pide login de Cloudflare con la
      cuenta guzman.aramos@gmail.com. La URL lleva la CUENTA y la BASE
      explicitas (de wrangler whoami / d1 list): la forma ?to=/:account/...
      le daba "no existe" a Guzman el 25/08/2026. -->
-<a class="mtile" href="https://dash.cloudflare.com/f4c2536ebeb1a3c6e4ccc234554c2e41/workers/d1/databases/6b35aa74-13d4-412c-8452-ef1b664d2b20" target="_blank" rel="noopener"><span class="mtile-ic"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-13"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/><path d="M9.5 18.2h5M12 16v4.4"/></svg></span>Data base test</a>
-<button class="mtile" id="mDiseno"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M4 7.5h16M4 12h16M4 16.5h16"/><circle cx="9.5" cy="7.5" r="2.2"/><circle cx="15" cy="12" r="2.2"/><circle cx="8" cy="16.5" r="2.2"/></svg></span>Configuraci&oacute;n</button>
+<a class="mtile" href="https://dash.cloudflare.com/f4c2536ebeb1a3c6e4ccc234554c2e41/workers/d1/databases/6b35aa74-13d4-412c-8452-ef1b664d2b20" target="_blank" rel="noopener"><span class="mtile-ic"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-13"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/><path d="M9.5 18.2h5M12 16v4.4"/></svg></span>Database (test)</a>
+<button class="mtile" id="mDiseno"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M4 7.5h16M4 12h16M4 16.5h16"/><circle cx="9.5" cy="7.5" r="2.2"/><circle cx="15" cy="12" r="2.2"/><circle cx="8" cy="16.5" r="2.2"/></svg></span>Settings</button>
 <button class="mtile" id="mConfig"><span class="mtile-ic"><svg viewBox="0 0 24 24"><circle cx="8.5" cy="8.5" r="4"/><path d="M11.3 11.3 20 20M16.5 16.5l2-2M14 19l2-2"/></svg></span>Keys</button>
-<button class="mtile" id="mSeguridad"><span class="mtile-ic"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg></span>Seguridad</button>
+<button class="mtile" id="mSeguridad"><span class="mtile-ic"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg></span>Security</button>
 <button class="mtile" id="mTrans"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M6 3.5h12V20.5l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9 8.5h6M9 12h6M9 15.5h4"/></svg></span>Trades</button>
 </div>
 <div class="menu-banner"><span class="mb-logo galogo-img"></span><span><b>GA</b> platforms</span><span class="mb-go">&rsaquo;</span></div>
@@ -599,13 +613,13 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div class="mainarea">
 
 <div class="apphead">
-<button class="galogo-sm galogo-img" id="logoBtn" aria-label="Abrir men&uacute;"></button>
-<button class="searchbtn" id="searchBtn" aria-label="Buscar ticker"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.4-4.4"/></svg></button>
+<button class="galogo-sm galogo-img" id="logoBtn" aria-label="Open menu"></button>
+<button class="searchbtn" id="searchBtn" aria-label="Search ticker"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.4-4.4"/></svg></button>
 </div>
 
 <!-- ============ INICIO ============ -->
 <div id="view-inicio">
-<div id="updateAviso" style="display:none"><div class="tmsg ok" style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span>Hay una versi&oacute;n nueva de la app.</span><button class="ghostbtn" id="updateBtn" style="width:auto;margin:0;padding:6px 14px">Actualizar</button></div></div>
+<div id="updateAviso" style="display:none"><div class="tmsg ok" style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span>There&rsquo;s a new version of the app.</span><button class="ghostbtn" id="updateBtn" style="width:auto;margin:0;padding:6px 14px">Update</button></div></div>
 <div id="syncAviso" style="display:none"></div>
 <div id="autoAviso" style="display:none"></div>
 <div class="grid2">
@@ -620,62 +634,62 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div class="sweeppanel">
 <div class="totalrow">
 <div class="tr-val">
-<p class="lbl">Valor total <button class="eyebtn" id="eyeBtn" aria-label="Ocultar montos"></button></p>
+<p class="lbl">Total value <button class="eyebtn" id="eyeBtn" aria-label="Hide amounts"></button></p>
 <p class="total" id="total">&mdash;</p>
 </div>
-<div class="evomini" id="evoMini" role="button" tabindex="0" title="Tocar para ver el gr&aacute;fico"></div>
+<div class="evomini" id="evoMini" role="button" tabindex="0" title="Tap to see the chart"></div>
 <div class="tr-pct"><span class="rangepct" id="rangePct"></span><span class="totalpct-per" id="rangeNombre"></span></div>
 </div>
-<div class="chartbox" id="evoChartBox" role="button" tabindex="0" style="display:none" title="Tocar para compactar"><canvas id="lineChart"></canvas></div>
+<div class="chartbox" id="evoChartBox" role="button" tabindex="0" style="display:none" title="Tap to collapse"><canvas id="lineChart"></canvas></div>
 <!-- Elegir el periodo ocupaba una franja entera arriba, siempre, para algo que
      casi nunca se toca (23/08/2026: "ocupa mucho espacio, que no aparezcan
      cuando no expando la grafica"). Baja debajo del dibujo y solo se ve con el
      grafico abierto. Plegado igual se sabe que periodo rige: el % de la fila
      dice "en 1S", "en YTD". -->
 <div class="evocontrols" id="evoControls" style="display:none">
-<div class="rangebar" id="rangeBar"></div><button class="expandbtn" id="evoAmpliarBtn" title="Pantalla completa">&#9974;</button>
+<div class="rangebar" id="rangeBar"></div><button class="expandbtn" id="evoAmpliarBtn" title="Full screen">&#9974;</button>
 </div>
 <p class="cashline"><span>Cash</span><b id="liquidezVal">&mdash;</b><span id="liquidezPct">&mdash;</span></p>
 </div>
 <div class="sweeppanel">
 <div class="cardhead">
-<h2>Dividendos <span class="rangepct" id="divAnio"></span></h2>
-<div style="display:flex;gap:4px"><button class="expandbtn" id="divRefreshBtn" title="Actualizar">&#8635;</button><button class="expandbtn" id="divExpandBtn" title="Ampliar">&#9974;</button></div>
+<h2>Dividends <span class="rangepct" id="divAnio"></span></h2>
+<div style="display:flex;gap:4px"><button class="expandbtn" id="divRefreshBtn" title="Refresh">&#8635;</button><button class="expandbtn" id="divExpandBtn" title="Expand">&#9974;</button></div>
 </div>
 <div id="divStats" style="display:none">
-<p class="lbl">Estimado del a&ntilde;o</p>
+<p class="lbl">Estimated this year</p>
 <p class="divbig" id="divTotalAnio">&mdash;</p>
 <p class="divavg" id="divPromedio"></p>
 </div>
 <div class="chartbox" id="divChartBox" style="display:none"><canvas id="divChart"></canvas></div>
-<p class="newsempty" id="divHint" style="display:none;font-size:11.5px;margin:8px 0 0">Toc&aacute; una barra para ver el detalle del mes &middot; barras grises = a cobrar (estimado)</p>
+<p class="newsempty" id="divHint" style="display:none;font-size:11.5px;margin:8px 0 0">Tap a bar to see the month&rsquo;s detail &middot; gray bars = upcoming (estimated)</p>
 <div id="divDetalle"></div>
 <div id="divCacheAviso" style="display:none"></div>
-<div id="divBody"><p class="loadingtxt">Desliz&aacute; para cargar...</p></div>
+<div id="divBody"><p class="loadingtxt">Swipe to load...</p></div>
 </div>
 <div class="sweeppanel">
 <div class="cardhead">
-<h2>Aportes del a&ntilde;o <span class="rangepct" id="apoAnio"></span></h2>
+<h2>Contributions this year <span class="rangepct" id="apoAnio"></span></h2>
 </div>
 <div id="apoCacheAviso" style="display:none"></div>
-<div id="apoBody"><p class="loadingtxt">Desliz&aacute; para cargar...</p></div>
+<div id="apoBody"><p class="loadingtxt">Swipe to load...</p></div>
 </div>
 </div>
 </div>
 <div class="sweepdots">
-<button class="sdot active" data-sw="0" aria-label="Evoluci&oacute;n"></button>
-<button class="sdot" data-sw="1" aria-label="Dividendos"></button>
-<button class="sdot" data-sw="2" aria-label="Aportes"></button>
+<button class="sdot active" data-sw="0" aria-label="Performance"></button>
+<button class="sdot" data-sw="1" aria-label="Dividends"></button>
+<button class="sdot" data-sw="2" aria-label="Contributions"></button>
 </div>
 </div>
 <div class="card">
-<h2 id="posTitulo" class="h2link" role="button" tabindex="0" title="Ver todas las posiciones">Posiciones <span class="chev">&#8250;</span></h2>
-<div style="overflow-x:auto"><table class="holdtable"><thead><tr><th>Instr.</th><th class="col-spark">Mes</th><th>Precio</th><th class="col-pct">%</th></tr></thead><tbody id="holdingsList"></tbody></table></div>
-<button id="holdMoreBtn" class="morebtn">Ver todas</button>
+<h2 id="posTitulo" class="h2link" role="button" tabindex="0" title="See all positions">Positions <span class="chev">&#8250;</span></h2>
+<div style="overflow-x:auto"><table class="holdtable"><thead><tr><th>Instr.</th><th class="col-spark">Month</th><th>Price</th><th class="col-pct">%</th></tr></thead><tbody id="holdingsList"></tbody></table></div>
+<button id="holdMoreBtn" class="morebtn">See all</button>
 </div>
 </div>
 <div class="card">
-<h2>Detalle por cuenta</h2>
+<h2>Account detail</h2>
 <div id="cuentasList"></div>
 </div>
 </div>
@@ -688,10 +702,10 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
      ubica. -->
 <div id="view-portafolio" style="display:none">
 <div class="card">
-<h2>Distribuci&oacute;n</h2>
+<h2>Allocation</h2>
 <div class="tipobar" style="margin:8px 0 12px">
-<button type="button" class="tipobtn active-acento" id="pieCuentaBtn">Por cuenta</button>
-<button type="button" class="tipobtn" id="pieTipoBtn">Por tipo</button>
+<button type="button" class="tipobtn active-acento" id="pieCuentaBtn">Custodian</button>
+<button type="button" class="tipobtn" id="pieTipoBtn">Class</button>
 </div>
 <div class="piewrap">
 <div class="pieholder"><canvas id="pieChart"></canvas></div>
@@ -699,31 +713,31 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 </div>
 </div>
 <div class="card" id="anualCard" style="display:none">
-<h2>Este a&ntilde;o vs el mercado</h2>
+<h2>This year vs. the market</h2>
 <div id="anualBody"></div>
 </div>
 <div class="card">
-<div class="cardtop"><h2>An&aacute;lisis de la cartera</h2><button class="expandbtn" id="anaRefreshBtn" title="Actualizar">&#8635;</button></div>
+<div class="cardtop"><h2>Portfolio analysis</h2><button class="expandbtn" id="anaRefreshBtn" title="Refresh">&#8635;</button></div>
 <div id="anaCacheAviso" style="display:none"></div>
-<div id="anaBody"><p class="loadingtxt">Analizando tu cartera...</p></div>
+<div id="anaBody"><p class="loadingtxt">Analyzing your portfolio...</p></div>
 </div>
 <div class="card">
-<h2>Rendimiento por mes</h2>
+<h2>Monthly performance</h2>
 <div id="mapaCalor"></div>
-<p class="capnota">Cierre de cada mes contra el anterior, sobre el patrimonio total: un aporte o retiro grande cuenta como movimiento del mes.</p>
+<p class="capnota">Each month&rsquo;s close against the previous one, on total net worth: a large contribution or withdrawal counts as movement for the month.</p>
 </div>
 </div>
 
 <!-- ============ CUENTA (detalle) ============ -->
 <div id="view-account" style="display:none">
 <span class="backlink" id="accBack">&larr; Volver</span>
-<p class="lbl" id="accTitle">Cuenta</p>
+<p class="lbl" id="accTitle">Account</p>
 <p class="total" id="accTotal" style="font-size:clamp(26px,8vw,38px)">&mdash;</p>
 <p class="subtotal" id="accLiq"></p>
 <div class="card" style="margin-top:16px">
 <div style="overflow-x:auto">
 <table>
-<thead><tr><th>Symbol</th><th>P. compra</th><th>Precio</th><th>Valor</th></tr></thead>
+<thead><tr><th>Symbol</th><th>Buy price</th><th>Price</th><th>Value</th></tr></thead>
 <tbody id="accBody"></tbody>
 </table>
 </div>
@@ -734,11 +748,11 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <!-- ============ POSICIONES (la lista completa, desde el Inicio) ============ -->
 <div id="view-posiciones" style="display:none">
 <span class="backlink" id="posBack">&larr; Volver</span>
-<p class="viewtitle">Posiciones</p>
+<p class="viewtitle">Positions</p>
 <div class="card">
 <div style="overflow-x:auto">
 <table class="holdtable postable">
-<thead><tr><th>Instr.</th><th>Compra</th><th>Precio</th><th>Valor</th></tr></thead>
+<thead><tr><th>Instr.</th><th>Buy</th><th>Price</th><th>Value</th></tr></thead>
 <tbody id="posBody"></tbody>
 </table>
 </div>
@@ -747,56 +761,56 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 
 <!-- ============ CONFIGURACIÓN (diseño: tema + acento + tonalidad) ============ -->
 <div id="view-diseno" style="display:none">
-<p class="viewtitle">Configuraci&oacute;n</p>
+<p class="viewtitle">Settings</p>
 <div class="card">
-<h2>Tema</h2>
+<h2>Theme</h2>
 <div class="tipobar">
-<button type="button" class="tipobtn" id="temaOscuroBtn">&#127769; Oscuro</button>
-<button type="button" class="tipobtn" id="temaClaroBtn">&#9728;&#65039; Claro</button>
+<button type="button" class="tipobtn" id="temaOscuroBtn">&#127769; Dark</button>
+<button type="button" class="tipobtn" id="temaClaroBtn">&#9728;&#65039; Light</button>
 </div>
 </div>
 <div class="card">
-<h2>Color de acento</h2>
-<div class="mpaleta" id="mPaleta" role="group" aria-label="Color de acento">
-<button type="button" class="pdot pdot-dorado" data-paleta="" aria-label="Dorado"></button>
-<button type="button" class="pdot pdot-oceano" data-paleta="oceano" aria-label="Oc&eacute;ano"></button>
-<button type="button" class="pdot pdot-esmeralda" data-paleta="esmeralda" aria-label="Esmeralda"></button>
-<button type="button" class="pdot pdot-violeta" data-paleta="violeta" aria-label="Violeta"></button>
+<h2>Accent color</h2>
+<div class="mpaleta" id="mPaleta" role="group" aria-label="Accent color">
+<button type="button" class="pdot pdot-dorado" data-paleta="" aria-label="Gold"></button>
+<button type="button" class="pdot pdot-oceano" data-paleta="oceano" aria-label="Ocean"></button>
+<button type="button" class="pdot pdot-esmeralda" data-paleta="esmeralda" aria-label="Emerald"></button>
+<button type="button" class="pdot pdot-violeta" data-paleta="violeta" aria-label="Violet"></button>
 </div>
-<p class="capnota">Pinta botones, t&iacute;tulos, gr&aacute;ficos y detalles. Combina con cualquier tema y tonalidad.</p>
+<p class="capnota">Colors buttons, titles, charts and details. Combines with any theme and tonality.</p>
 </div>
 <div class="card">
-<h2>Tonalidad</h2>
-<div class="mpaleta" id="mFondo" role="group" aria-label="Tonalidad de fondo">
-<button type="button" class="pdot fdot-marino" data-fondo="" aria-label="Marino"></button>
-<button type="button" class="pdot fdot-grafito" data-fondo="grafito" aria-label="Grafito"></button>
-<button type="button" class="pdot fdot-nord" data-fondo="nord" aria-label="N&oacute;rdico"></button>
-<button type="button" class="pdot fdot-bosque" data-fondo="bosque" aria-label="Bosque"></button>
+<h2>Tonality</h2>
+<div class="mpaleta" id="mFondo" role="group" aria-label="Background tonality">
+<button type="button" class="pdot fdot-marino" data-fondo="" aria-label="Navy"></button>
+<button type="button" class="pdot fdot-grafito" data-fondo="grafito" aria-label="Graphite"></button>
+<button type="button" class="pdot fdot-nord" data-fondo="nord" aria-label="Nordic"></button>
+<button type="button" class="pdot fdot-bosque" data-fondo="bosque" aria-label="Forest"></button>
 </div>
-<p class="capnota">El fondo de toda la app. Cada tonalidad tiene su versi&oacute;n oscura y clara, seg&uacute;n el tema.</p>
+<p class="capnota">The background of the whole app. Each tonality has a dark and a light version, depending on the theme.</p>
 </div>
 </div>
 
 <!-- ============ LIQUIDEZ (depositar / retirar) ============ -->
 <div id="view-cash" style="display:none">
-<p class="lbl">Cash total</p>
+<p class="lbl">Total cash</p>
 <p class="total" id="cashTotal" style="font-size:clamp(24px,7vw,34px)">&mdash;</p>
 <div class="cashbtns">
-<button class="pillbtn ghost" id="btnRetirar">Retirar</button>
-<button class="pillbtn goldpill" id="btnDepositar">Depositar</button>
+<button class="pillbtn ghost" id="btnRetirar">Withdraw</button>
+<button class="pillbtn goldpill" id="btnDepositar">Deposit</button>
 </div>
 <div class="card tradeform" id="cashPanel" style="display:none;margin-top:14px">
-<h2 id="cashTitle">Depositar cash</h2>
-<label for="cashCuenta">Cuenta</label>
+<h2 id="cashTitle">Deposit cash</h2>
+<label for="cashCuenta">Account</label>
 <select id="cashCuenta"></select>
-<label for="cashMonto">Monto (USD)</label>
+<label for="cashMonto">Amount (USD)</label>
 <input id="cashMonto" type="number" inputmode="decimal" step="any" min="0" placeholder="0.00">
-<button class="bigbtn" id="cashConfirmar">Confirmar</button>
-<button class="ghostbtn" id="cashCancelar">Cancelar</button>
+<button class="bigbtn" id="cashConfirmar">Confirm</button>
+<button class="ghostbtn" id="cashCancelar">Cancel</button>
 <div id="cashResultado"></div>
 </div>
 <div class="card" style="margin-top:16px">
-<h2>Cash por cuenta</h2>
+<h2>Cash by account</h2>
 <div id="cashList"></div>
 </div>
 </div>
@@ -809,51 +823,51 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
      diseño (view-diseno: tema, acento y tonalidad). -->
 <p class="viewtitle">Keys</p>
 <div class="card">
-<h2>Plataformas</h2>
-<div id="platList"><p class="loadingtxt">Cargando...</p></div>
-<button class="ghostbtn" id="platNuevaBtn">+ Agregar plataforma</button>
+<h2>Platforms</h2>
+<div id="platList"><p class="loadingtxt">Loading...</p></div>
+<button class="ghostbtn" id="platNuevaBtn">+ Add platform</button>
 <div id="platForm" class="tradeform" style="display:none">
-<label for="pNombre">Nombre</label>
-<input id="pNombre" autocomplete="off" placeholder="Nombre de la plataforma">
-<label for="pValor">Valor (USD)</label>
+<label for="pNombre">Name</label>
+<input id="pNombre" autocomplete="off" placeholder="Platform name">
+<label for="pValor">Value (USD)</label>
 <input id="pValor" type="number" inputmode="decimal" step="any" min="0" placeholder="0">
-<label for="pLiquido">Cash (USD) &middot; dejalo vac&iacute;o si toda la cuenta es cash</label>
+<label for="pLiquido">Cash (USD) &middot; leave empty if the whole account is cash</label>
 <input id="pLiquido" type="number" inputmode="decimal" step="any" min="0" placeholder="">
-<button class="bigbtn" id="platGuardar">Guardar</button>
-<button class="ghostbtn" id="platCancelar">Cancelar</button>
+<button class="bigbtn" id="platGuardar">Save</button>
+<button class="ghostbtn" id="platCancelar">Cancel</button>
 </div>
 <div id="platResultado"></div>
 </div>
 <div class="card">
-<h2>Diagn&oacute;stico</h2>
-<p class="newsempty">El estado real de la app y del servidor. Si algo anda raro, una captura de esta tarjeta dice todo.</p>
+<h2>Diagnostics</h2>
+<p class="newsempty">The real status of the app and the server. If something looks off, a screenshot of this card says it all.</p>
 <div id="saludApp"></div>
-<button class="ghostbtn" id="saludBtn">Revisar el servidor</button>
+<button class="ghostbtn" id="saludBtn">Check the server</button>
 <div id="saludServidor"></div>
 </div>
 <div class="card">
-<h2>Deshacer</h2>
-<p class="newsempty">Antes de cada sincronizaci&oacute;n autom&aacute;tica y de cada operaci&oacute;n, se guarda una copia de la hoja. Ac&aacute; pod&eacute;s volver atr&aacute;s si algo qued&oacute; mal.</p>
-<div id="bakList"><p class="loadingtxt">Cargando...</p></div>
+<h2>Undo</h2>
+<p class="newsempty">Before every automatic sync and every operation, a copy of the sheet is saved. You can roll back here if something went wrong.</p>
+<div id="bakList"><p class="loadingtxt">Loading...</p></div>
 <div id="bakResultado"></div>
 </div>
 <div class="card">
-<h2>IA Insights</h2>
-<p class="newsempty" id="iaEstadoTxt">Comprobando configuraci&oacute;n...</p>
+<h2>AI Insights</h2>
+<p class="newsempty" id="iaEstadoTxt">Checking configuration...</p>
 <div class="tradeform" style="margin-top:10px">
-<label for="iaKey">Clave de la API de Anthropic</label>
+<label for="iaKey">Anthropic API key</label>
 <input id="iaKey" type="password" autocomplete="off" placeholder="sk-ant-...">
-<button class="bigbtn" id="iaKeyGuardar">Guardar clave</button>
+<button class="bigbtn" id="iaKeyGuardar">Save key</button>
 <div id="iaKeyResultado"></div>
 </div>
 </div>
 <div class="card">
 <h2>Finnhub</h2>
-<p class="newsempty" id="fhEstadoTxt">Comprobando configuraci&oacute;n...</p>
+<p class="newsempty" id="fhEstadoTxt">Checking configuration...</p>
 <div class="tradeform" style="margin-top:10px">
-<label for="fhKey">Clave de la API de Finnhub</label>
-<input id="fhKey" type="password" autocomplete="off" placeholder="la API Key de finnhub.io">
-<button class="bigbtn" id="fhKeyGuardar">Guardar clave</button>
+<label for="fhKey">Finnhub API key</label>
+<input id="fhKey" type="password" autocomplete="off" placeholder="your finnhub.io API key">
+<button class="bigbtn" id="fhKeyGuardar">Save key</button>
 <div id="fhKeyResultado"></div>
 </div>
 </div>
@@ -863,41 +877,41 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div id="view-ibkr" style="display:none">
 <span class="backlink" id="ibkrBack">&larr; Volver</span>
 <p class="viewtitle">IBKR</p>
-<p class="subtotal" style="margin:-8px 0 14px">Interactive Brokers &middot; conexi&oacute;n de solo lectura</p>
+<p class="pagesub">Interactive Brokers &middot; read-only connection</p>
 <div class="card">
-<h2>Estado</h2>
-<p class="newsempty" id="ibkrEstadoTxt">Comprobando configuraci&oacute;n...</p>
+<h2>Status</h2>
+<p class="newsempty" id="ibkrEstadoTxt">Checking configuration...</p>
 </div>
 <div class="card" id="ibkrSyncCard" style="display:none">
-<h2>Sincronizaci&oacute;n</h2>
+<h2>Sync</h2>
 <div id="ibkrSyncWrap" style="display:none">
-<button class="bigbtn" id="ibkrVerCambios">Comparar con IBKR</button>
+<button class="bigbtn" id="ibkrVerCambios">Compare with IBKR</button>
 <div id="ibkrCambios"></div>
-<button class="bigbtn" id="ibkrAplicar" style="display:none">Aplicar estos cambios</button>
+<button class="bigbtn" id="ibkrAplicar" style="display:none">Apply these changes</button>
 <div id="ibkrSyncResultado"></div>
 </div>
 </div>
 <div class="card">
-<h2>Conexi&oacute;n</h2>
+<h2>Connection</h2>
 <details class="confighelp">
-<summary>&iquest;C&oacute;mo consigo el token y el Query ID?</summary>
+<summary>How do I get the token and Query ID?</summary>
 <ol>
-<li>Entr&aacute; al <b>Portal de Cliente</b> de IBKR (interactivebrokers.com).</li>
-<li>Men&uacute; <b>Rendimiento e informes &rarr; Consultas Flex</b> (Performance &amp; Reports &rarr; Flex Queries).</li>
-<li>En <b>Actividad</b> (Activity Flex Query) toc&aacute; el <b>+</b>: nombre <i>posiciones</i>, formato <b>XML</b>, per&iacute;odo <b>&Uacute;ltimo d&iacute;a h&aacute;bil</b>. En las secciones marc&aacute; <b>Open Positions</b> (opci&oacute;n Summary, seleccion&aacute; todos los campos) y <b>Cash Report</b> (todos los campos). Guard&aacute; y anot&aacute; el <b>Query ID</b> (n&uacute;mero corto que queda junto al nombre).</li>
-<li>En la misma pantalla: <b>Servicio web Flex</b> (Flex Web Service Configuration, el engranaje) &rarr; activalo y gener&aacute; el <b>token</b> (n&uacute;mero largo). Vencimiento: 1 a&ntilde;o.</li>
-<li>Peg&aacute; los dos ac&aacute; abajo. Este acceso es de solo lectura: no permite operar ni mover plata.</li>
-<li><b>Para los dividendos y las operaciones (opcional):</b> cre&aacute; una SEGUNDA Flex Query con el <b>+</b>: nombre <i>actividad</i>, formato XML, per&iacute;odo <b>&Uacute;ltimos 365 d&iacute;as</b>, y marc&aacute; las secciones <b>Cash Transactions</b> (transacciones de efectivo, todos los campos), <b>Open Dividend Accruals</b> (dividendos devengados abiertos, todos los campos) y <b>Trades</b> (operaciones, todos los campos: de ah&iacute; salen tus compras y ventas). Su Query ID va en el campo "actividad" de ac&aacute; abajo.</li>
+<li>Go to the <b>Client Portal</b> on IBKR (interactivebrokers.com).</li>
+<li>Menu <b>Performance &amp; Reports &rarr; Flex Queries</b>.</li>
+<li>Under <b>Activity Flex Query</b> tap <b>+</b>: name <i>positions</i>, format <b>XML</b>, period <b>Last business day</b>. In the sections check <b>Open Positions</b> (Summary option, select all fields) and <b>Cash Report</b> (all fields). Save it and note the <b>Query ID</b> (the short number next to the name).</li>
+<li>On the same screen: <b>Flex Web Service Configuration</b> (the gear icon) &rarr; enable it and generate the <b>token</b> (a long number). Expires in 1 year.</li>
+<li>Paste both below. This access is read-only: it can&rsquo;t place trades or move money.</li>
+<li><b>For dividends and trades (optional):</b> create a SECOND Flex Query with <b>+</b>: name <i>activity</i>, format XML, period <b>Last 365 days</b>, and check <b>Cash Transactions</b> (all fields), <b>Open Dividend Accruals</b> (all fields) and <b>Trades</b> (all fields &mdash; this is where your buys and sells come from). Its Query ID goes in the &ldquo;activity&rdquo; field below.</li>
 </ol>
 </details>
 <div class="tradeform" style="margin-top:10px">
-<label for="ibkrToken">Token del Flex Web Service</label>
-<input id="ibkrToken" type="password" autocomplete="off" inputmode="numeric" placeholder="N&uacute;mero largo">
-<label for="ibkrQuery">Query ID de la Flex Query</label>
-<input id="ibkrQuery" autocomplete="off" inputmode="numeric" placeholder="N&uacute;mero corto (ej. 123456)">
-<label for="ibkrQueryAct">Query ID de actividad (opcional &middot; para dividendos)</label>
-<input id="ibkrQueryAct" autocomplete="off" inputmode="numeric" placeholder="Segunda Flex Query, ver pasos arriba">
-<button class="bigbtn" id="ibkrGuardar">Guardar conexi&oacute;n</button>
+<label for="ibkrToken">Flex Web Service token</label>
+<input id="ibkrToken" type="password" autocomplete="off" inputmode="numeric" placeholder="Long number">
+<label for="ibkrQuery">Flex Query ID</label>
+<input id="ibkrQuery" autocomplete="off" inputmode="numeric" placeholder="Short number (e.g. 123456)">
+<label for="ibkrQueryAct">Activity Query ID (optional &middot; for dividends)</label>
+<input id="ibkrQueryAct" autocomplete="off" inputmode="numeric" placeholder="Second Flex Query, see steps above">
+<button class="bigbtn" id="ibkrGuardar">Save connection</button>
 <div id="ibkrKeyResultado"></div>
 </div>
 </div>
@@ -907,28 +921,28 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div id="view-bnb" style="display:none">
 <span class="backlink" id="bnbBack">&larr; Volver</span>
 <p class="viewtitle">Binance</p>
-<p class="subtotal" style="margin:-8px 0 14px">Saldos le&iacute;dos en vivo desde tu tel&eacute;fono &middot; clave de solo lectura</p>
+<p class="pagesub">Balances read live from your phone &middot; read-only key</p>
 <div class="card">
-<h2>Estado</h2>
+<h2>Status</h2>
 <p class="newsempty" id="bnbEstadoTxt">...</p>
 </div>
 <div class="card" id="bnbSyncCard" style="display:none">
-<h2>Sincronizaci&oacute;n</h2>
-<button class="bigbtn" id="bnbVerCambios">Comparar con Binance</button>
+<h2>Sync</h2>
+<button class="bigbtn" id="bnbVerCambios">Compare with Binance</button>
 <div id="bnbCambios"></div>
-<button class="bigbtn" id="bnbAplicar" style="display:none">Aplicar estos cambios</button>
+<button class="bigbtn" id="bnbAplicar" style="display:none">Apply these changes</button>
 <div id="bnbSyncResultado"></div>
 </div>
 <div class="card">
-<h2>Conexi&oacute;n</h2>
+<h2>Connection</h2>
 <details class="confighelp">
-<summary>&iquest;C&oacute;mo creo la clave de solo lectura?</summary>
+<summary>How do I create the read-only key?</summary>
 <ol>
-<li>En la app de Binance: perfil &rarr; <b>Cuenta</b> &rarr; <b>Gesti&oacute;n de API</b>.</li>
-<li><b>Crear API</b> &rarr; "Generada por el sistema" &rarr; nombre <i>GA Tracker</i>.</li>
-<li>En permisos dej&aacute; marcado SOLO <b>Habilitar lectura</b>. Nada de trading ni retiros: la clave no podr&aacute; operar jam&aacute;s.</li>
-<li>Copi&aacute; la <b>API Key</b> y la <b>Secret Key</b> (la secreta se muestra una sola vez) y pegalas ac&aacute;.</li>
-<li>Quedan guardadas &uacute;nicamente en este tel&eacute;fono, protegidas por el bloqueo de la app. Nunca viajan a un servidor propio.</li>
+<li>In the Binance app: profile &rarr; <b>Account</b> &rarr; <b>API Management</b>.</li>
+<li><b>Create API</b> &rarr; &ldquo;System generated&rdquo; &rarr; name <i>GA Tracker</i>.</li>
+<li>Under permissions, leave ONLY <b>Enable Reading</b> checked. No trading or withdrawals: the key will never be able to trade.</li>
+<li>Copy the <b>API Key</b> and the <b>Secret Key</b> (the secret is shown only once) and paste them here.</li>
+<li>They&rsquo;re saved only on this phone, protected by the app lock. They never travel to any server of ours.</li>
 </ol>
 </details>
 <div class="tradeform" style="margin-top:10px">
@@ -936,8 +950,8 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <input id="bnbKey" type="password" autocomplete="off" placeholder="API Key">
 <label for="bnbSecret">Secret Key</label>
 <input id="bnbSecret" type="password" autocomplete="off" placeholder="Secret Key">
-<button class="bigbtn" id="bnbGuardar">Guardar en este dispositivo</button>
-<button class="ghostbtn" id="bnbBorrar" style="display:none">Borrar la clave de este dispositivo</button>
+<button class="bigbtn" id="bnbGuardar">Save on this device</button>
+<button class="ghostbtn" id="bnbBorrar" style="display:none">Delete the key from this device</button>
 <div id="bnbKeyResultado"></div>
 </div>
 </div>
@@ -947,38 +961,38 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div id="view-cs" style="display:none">
 <span class="backlink" id="csBack">&larr; Volver</span>
 <p class="viewtitle">Charles Schwab</p>
-<p class="subtotal" style="margin:-8px 0 14px">Conexi&oacute;n autom&aacute;tica de solo lectura v&iacute;a SnapTrade</p>
+<p class="pagesub">Automatic read-only connection via SnapTrade</p>
 <div class="card">
-<h2>Estado</h2>
-<p class="newsempty" id="csEstadoTxt">Comprobando configuraci&oacute;n...</p>
-<button class="ghostbtn" id="csConectar" style="display:none">Conectar cuenta Schwab</button>
+<h2>Status</h2>
+<p class="newsempty" id="csEstadoTxt">Checking configuration...</p>
+<button class="ghostbtn" id="csConectar" style="display:none">Connect Schwab account</button>
 <div id="csConectarResultado"></div>
 </div>
 <div class="card" id="csSyncCard" style="display:none">
-<h2>Sincronizaci&oacute;n</h2>
-<button class="bigbtn" id="csVerCambios">Comparar con Schwab</button>
+<h2>Sync</h2>
+<button class="bigbtn" id="csVerCambios">Compare with Schwab</button>
 <div id="csCambios"></div>
-<button class="bigbtn" id="csAplicar" style="display:none">Aplicar estos cambios</button>
+<button class="bigbtn" id="csAplicar" style="display:none">Apply these changes</button>
 <div id="csSyncResultado"></div>
 </div>
 <div class="card">
-<h2>Conexi&oacute;n</h2>
+<h2>Connection</h2>
 <details class="confighelp">
-<summary>&iquest;C&oacute;mo consigo las credenciales de SnapTrade?</summary>
+<summary>How do I get my SnapTrade credentials?</summary>
 <ol>
-<li>Cre&aacute; una cuenta gratis en <b>snaptrade.com</b> (bot&oacute;n Sign up / Get started). SnapTrade es el intermediario oficial que mantiene la conexi&oacute;n con Schwab sin que haya que reloguearse cada semana.</li>
-<li>En el panel (dashboard), busc&aacute; las <b>API credentials</b>: un <b>clientId</b> y una <b>consumerKey</b>.</li>
-<li>Pegalas ac&aacute; abajo y guard&aacute;.</li>
-<li>Despu&eacute;s toc&aacute; <b>"Conectar cuenta Schwab"</b>: se abre el portal seguro de SnapTrade donde entr&aacute;s con TU usuario de Schwab, una sola vez. Tus credenciales de Schwab las ve solo Schwab, nunca esta app.</li>
-<li>La conexi&oacute;n es de <b>solo lectura</b>: nadie puede operar ni mover plata con ella.</li>
+<li>Create a free account at <b>snaptrade.com</b> (Sign up / Get started button). SnapTrade is the official intermediary that keeps the Schwab connection alive without having to log back in every week.</li>
+<li>In the dashboard, find the <b>API credentials</b>: a <b>clientId</b> and a <b>consumerKey</b>.</li>
+<li>Paste them below and save.</li>
+<li>Then tap <b>&ldquo;Connect Schwab account&rdquo;</b>: SnapTrade&rsquo;s secure portal opens, where you log in with YOUR Schwab user, just once. Only Schwab ever sees your Schwab credentials, never this app.</li>
+<li>The connection is <b>read-only</b>: no one can trade or move money with it.</li>
 </ol>
 </details>
 <div class="tradeform" style="margin-top:10px">
-<label for="csClientId">clientId de SnapTrade</label>
+<label for="csClientId">SnapTrade clientId</label>
 <input id="csClientId" autocomplete="off" placeholder="clientId">
-<label for="csConsumerKey">consumerKey de SnapTrade</label>
+<label for="csConsumerKey">SnapTrade consumerKey</label>
 <input id="csConsumerKey" type="password" autocomplete="off" placeholder="consumerKey">
-<button class="bigbtn" id="csGuardar">Guardar credenciales</button>
+<button class="bigbtn" id="csGuardar">Save credentials</button>
 <div id="csKeyResultado"></div>
 </div>
 </div>
@@ -987,41 +1001,41 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <!-- ============ TRADE ============ -->
 <div id="view-trade" style="display:none">
 <details class="card manualop" id="tManual">
-<summary>Registrar uno a mano<span class="opshint">los de los brokers entran solos</span></summary>
+<summary>Log one manually<span class="opshint">broker trades come in automatically</span></summary>
 <div class="tradeform">
 <div class="tipobar">
-<button type="button" class="tipobtn active-compra" id="btnCompra">COMPRA</button>
-<button type="button" class="tipobtn" id="btnVenta">VENTA</button>
+<button type="button" class="tipobtn active-compra" id="btnCompra">BUY</button>
+<button type="button" class="tipobtn" id="btnVenta">SELL</button>
 </div>
-<label for="tCuenta">Cuenta</label>
+<label for="tCuenta">Account</label>
 <select id="tCuenta"></select>
 <label for="tSymbol">Ticker</label>
 <input id="tSymbol" list="symbolsList" placeholder="VOO, BTC, MSFT..." autocomplete="off" autocapitalize="characters">
 <datalist id="symbolsList"></datalist>
-<label for="tQty">Cantidad</label>
+<label for="tQty">Quantity</label>
 <input id="tQty" type="number" inputmode="decimal" step="any" min="0" placeholder="0">
-<label for="tPrecio">Precio (USD al que operaste)</label>
+<label for="tPrecio">Price (USD you traded at)</label>
 <input id="tPrecio" type="number" inputmode="decimal" step="any" min="0" placeholder="0.00">
-<p class="tmonto">Monto: <b id="tMonto">&mdash;</b></p>
-<button class="bigbtn" id="tRevisar">Revisar operaci&oacute;n</button>
+<p class="tmonto">Amount: <b id="tMonto">&mdash;</b></p>
+<button class="bigbtn" id="tRevisar">Review trade</button>
 <div id="tConfirmWrap" style="display:none">
 <div class="tconfirm" id="tConfirmTxt"></div>
-<button class="bigbtn" id="tConfirmar">Confirmar y registrar</button>
-<button class="ghostbtn" id="tCancelar">Cancelar</button>
+<button class="bigbtn" id="tConfirmar">Confirm and log</button>
+<button class="ghostbtn" id="tCancelar">Cancel</button>
 </div>
 <div id="tResultado"></div>
 </div>
 </details>
 <div class="card">
 <div class="opsfiltros">
-<button type="button" class="filtrobtn" id="opsFiltroRango"><span>Per&iacute;odo</span><b>Este a&ntilde;o</b></button>
-<button type="button" class="filtrobtn" id="opsFiltroTipo"><span>Tipo</span><b>Todos</b></button>
-<button type="button" class="filtrobtn" id="opsFiltroTicker"><span>Ticker</span><b>Todos</b></button>
-<button class="expandbtn" id="opsRefreshBtn" title="Actualizar">&#8635;</button>
+<button type="button" class="filtrobtn" id="opsFiltroRango"><span>Period</span><b>This year</b></button>
+<button type="button" class="filtrobtn" id="opsFiltroTipo"><span>Type</span><b>All</b></button>
+<button type="button" class="filtrobtn" id="opsFiltroTicker"><span>Ticker</span><b>All</b></button>
+<button class="expandbtn" id="opsRefreshBtn" title="Refresh">&#8635;</button>
 </div>
 <div id="opsCacheAviso" style="display:none"></div>
 <div id="opsResumen"></div>
-<div id="opsBody"><div class="vacio"><span class="vic">&#128200;</span><b>Sin trades todav&iacute;a</b>Tus compras y ventas van a aparecer ac&aacute;.</div></div>
+<div id="opsBody"><div class="vacio"><span class="vic">&#128200;</span><b>No trades yet</b>Your buys and sells will show up here.</div></div>
 <div id="opsAvisos"></div>
 </div>
 </div>
@@ -1037,36 +1051,36 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <!-- ============ BUSCAR (lupa) ============ -->
 <div id="view-buscar" style="display:none">
 <span class="backlink" id="busBack">&larr; Volver</span>
-<p class="viewtitle">Buscar activo</p>
-<p class="subtotal" style="margin:-8px 0 14px">Cualquier acci&oacute;n, ETF o cripto, est&eacute; o no en tu portafolio</p>
+<p class="viewtitle">Search asset</p>
+<p class="pagesub">Any stock, ETF or crypto, whether or not it is in your portfolio</p>
 <div class="card tradeform" style="margin-top:0">
 <label for="busInput">Ticker</label>
 <input id="busInput" placeholder="AAPL, MSFT, VOO, BTC..." autocomplete="off" autocapitalize="characters">
-<button class="bigbtn" id="busGo">Buscar</button>
+<button class="bigbtn" id="busGo">Search</button>
 </div>
 <div id="busResultado"></div>
 </div>
 
 <!-- ============ NOTICIAS ============ -->
 <div id="view-noticias" style="display:none">
-<p class="subtotal" style="margin:0 0 14px">Titulares de medios financieros serios sobre tus posiciones m&aacute;s grandes</p>
+<p class="pagesub">Serious financial media headlines about your largest positions</p>
 <div id="resultadosBody"></div>
-<div id="noticiasBody"><p class="loadingtxt">Cargando...</p></div>
+<div id="noticiasBody"><p class="loadingtxt">Loading...</p></div>
 </div>
 
 <!-- ============ IA INSIGHTS ============ -->
 <div id="view-ia" style="display:none">
 <span class="backlink" id="iaBack">&larr; Volver</span>
-<p class="viewtitle">IA Insights</p>
-<p class="subtotal" style="margin:-8px 0 14px">An&aacute;lisis informativo generado con Claude &middot; no es asesoramiento financiero</p>
+<p class="viewtitle">AI Insights</p>
+<p class="pagesub">Informational analysis generated with Claude &middot; not financial advice</p>
 <div class="card" id="iaKeyAviso" style="display:none">
-<h2>Falta un paso</h2>
-<p class="newsempty">Para usar IA Insights ten&eacute;s que cargar tu clave de Anthropic en Configuraci&oacute;n.</p>
-<button class="ghostbtn" id="iaIrConfig">Ir a Configuraci&oacute;n</button>
+<h2>One step missing</h2>
+<p class="newsempty">To use AI Insights you need to add your Anthropic key in Keys.</p>
+<button class="ghostbtn" id="iaIrConfig">Go to Keys</button>
 </div>
 <div class="card">
-<h2>Eleg&iacute; un activo para analizar</h2>
-<div id="iaList"><p class="loadingtxt">Cargando...</p></div>
+<h2>Choose an asset to analyze</h2>
+<div id="iaList"><p class="loadingtxt">Loading...</p></div>
 </div>
 <div id="iaResultado"></div>
 </div>
@@ -1074,26 +1088,26 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <!-- ============ SEGURIDAD ============ -->
 <div id="view-seguridad" style="display:none">
 <span class="backlink" id="segBack">&larr; Volver</span>
-<p class="viewtitle">Seguridad</p>
-<p class="subtotal" style="margin:-8px 0 14px">Bloqueo al abrir la app en este dispositivo</p>
+<p class="viewtitle">Security</p>
+<p class="pagesub">Lock when opening the app on this device</p>
 <div class="card">
-<h2>Estado</h2>
+<h2>Status</h2>
 <p class="newsempty" id="segEstado">...</p>
 </div>
 <div class="card">
-<h2>Biometr&iacute;a</h2>
-<p class="newsempty">Face ID, Touch ID o huella, seg&uacute;n el dispositivo.</p>
-<button class="bigbtn" id="segBioBtn" style="margin-top:12px">Activar biometr&iacute;a</button>
+<h2>Biometrics</h2>
+<p class="newsempty">Face ID, Touch ID, or fingerprint, depending on the device.</p>
+<button class="bigbtn" id="segBioBtn" style="margin-top:12px">Enable biometrics</button>
 <div id="segBioMsg"></div>
 </div>
 <div class="card tradeform">
-<h2>Clave num&eacute;rica</h2>
-<label for="segPin1">Nueva clave (4 a 8 d&iacute;gitos)</label>
+<h2>Numeric passcode</h2>
+<label for="segPin1">New passcode (4 to 8 digits)</label>
 <input id="segPin1" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="&bull;&bull;&bull;&bull;">
-<label for="segPin2">Repetila</label>
+<label for="segPin2">Repeat it</label>
 <input id="segPin2" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="&bull;&bull;&bull;&bull;">
-<button class="bigbtn" id="segPinBtn">Guardar clave</button>
-<button class="ghostbtn" id="segPinQuitar" style="display:none">Quitar clave</button>
+<button class="bigbtn" id="segPinBtn">Save passcode</button>
+<button class="ghostbtn" id="segPinQuitar" style="display:none">Remove passcode</button>
 <div id="segPinMsg"></div>
 </div>
 </div>
@@ -1121,7 +1135,7 @@ Trades</button>
 
 <div class="chartmodal" id="chartModal" style="display:none">
 <div class="chartmodal-inner">
-<div class="chartmodal-top"><h2 style="margin:0">Evoluci&oacute;n</h2><button class="chartmodal-close" id="chartModalClose">&times;</button></div>
+<div class="chartmodal-top"><h2 style="margin:0">Performance</h2><button class="chartmodal-close" id="chartModalClose">&times;</button></div>
 <div class="rangebar" id="rangeBarBig" style="margin-bottom:14px"></div>
 <div class="chartbox chartbox-big"><canvas id="lineChartBig"></canvas></div>
 </div>
@@ -1130,11 +1144,11 @@ Trades</button>
 <!-- Dividendos ampliados: desglose por broker -->
 <div class="chartmodal" id="divModal" style="display:none">
 <div class="chartmodal-inner" style="max-height:92vh;overflow-y:auto">
-<div class="chartmodal-top"><h2 style="margin:0">Dividendos <span class="rangepct" id="divModalAnio"></span></h2><button class="chartmodal-close" id="divModalClose">&times;</button></div>
+<div class="chartmodal-top"><h2 style="margin:0">Dividends <span class="rangepct" id="divModalAnio"></span></h2><button class="chartmodal-close" id="divModalClose">&times;</button></div>
 <p class="divavg" id="divModalTotales"></p>
 <div id="divModalBrokers"></div>
 <div class="chartbox chartbox-big" style="margin-top:12px"><canvas id="divChartBig"></canvas></div>
-<p class="newsempty" style="font-size:11.5px;margin:8px 0 0">Un color por app &middot; toc&aacute; una barra para ver el detalle del mes</p>
+<p class="newsempty" style="font-size:11.5px;margin:8px 0 0">One color per app &middot; tap a bar to see the month&rsquo;s detail</p>
 <div id="divModalDetalle"></div>
 </div>
 </div>

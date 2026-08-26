@@ -87,7 +87,7 @@ function getFilteredDataPoints(serie) {
   maintainAspectRatio: false,
   plugins: { legend: { display: false } },
   scales: {
-  x: { type: 'linear', min: xMin, max: xMax, bounds: 'data', ticks: { color: TC.tick, maxTicksLimit: 6, callback: function (value) { return new Date(value).toLocaleDateString('es-UY', { day: '2-digit', month: 'short' }); } }, grid: { color: TC.grid } },
+  x: { type: 'linear', min: xMin, max: xMax, bounds: 'data', ticks: { color: TC.tick, maxTicksLimit: 6, callback: function (value) { return new Date(value).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }); } }, grid: { color: TC.grid } },
   y: { ticks: { color: TC.tick, callback: function (v) { return montosOcultos ? '' : v; } }, grid: { color: TC.grid } }
   }
   };
@@ -162,8 +162,8 @@ function getFilteredDataPoints(serie) {
     m.push(vals[vals.length - 1]);
     vals = m;
   }
-  el.innerHTML = sparkSvg(vals, EVO_W, EVO_H, 'en el periodo', { area: true }) ||
-    '<span class="evomini-vacio">Sin datos todav&iacute;a</span>';
+  el.innerHTML = sparkSvg(vals, EVO_W, EVO_H, 'over the period', { area: true }) ||
+    '<span class="evomini-vacio">No data yet</span>';
   }
   function pintarBotonEvo() {
   var abierto = !evoPlegado();
@@ -539,11 +539,11 @@ function crearTvWidget(container, symbol) {
     colorTheme: (esTemaClaro() ? 'light' : 'dark'), isTransparent: true, autosize: false
   };
   var fr = document.createElement('iframe');
-  fr.src = 'https://s.tradingview.com/embed-widget/mini-symbol-overview/?locale=es#' +
+  fr.src = 'https://s.tradingview.com/embed-widget/mini-symbol-overview/?locale=en#' +
     encodeURIComponent(JSON.stringify(cfg));
   fr.setAttribute('scrolling', 'no');
   fr.setAttribute('frameborder', '0');
-  fr.setAttribute('title', 'Gráfico de ' + symbol);
+  fr.setAttribute('title', 'Chart for ' + symbol);
   // Sin allow-forms/allow-modals/allow-top-navigation: el widget solo dibuja.
   fr.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
   fr.setAttribute('referrerpolicy', 'origin');
@@ -564,11 +564,11 @@ function toggleDetalle(tr, pos) {
   var base = (pos.base !== undefined && pos.base !== null) ? Number(pos.base) : (tienePm && Number(pos.qty) ? pm * Number(pos.qty) : null);
   var pa = Number(pos.precioActual);
   var html = '<div class="detgrid">' +
-    '<span><span class="detlbl">Precio medio</span><b>' + (tienePm ? esc(fmtNum(pm)) : '&mdash;') + '</b></span>' +
-    '<span><span class="detlbl">Base de coste</span><b>' + (base ? fmt(base) : '&mdash;') + '</b></span>';
+    '<span><span class="detlbl">Average price</span><b>' + (tienePm ? esc(fmtNum(pm)) : '&mdash;') + '</b></span>' +
+    '<span><span class="detlbl">Cost basis</span><b>' + (base ? fmt(base) : '&mdash;') + '</b></span>';
   if (tienePm && isFinite(pa) && pa > 0) {
     var res = (pa / pm - 1) * 100;
-    html += '<span><span class="detlbl">Resultado</span><b class="' + (res >= 0 ? 'up' : 'down') + '">' + signoPct(res, 1) + '</b></span>';
+    html += '<span><span class="detlbl">Result</span><b class="' + (res >= 0 ? 'up' : 'down') + '">' + signoPct(res, 1) + '</b></span>';
   }
   html += '</div><div class="tvwrap"></div>';
   td.innerHTML = html;
@@ -680,7 +680,7 @@ var sube = serie[serie.length - 1] >= serie[0];
 var pct = serie[0] ? ((serie[serie.length - 1] / serie[0] - 1) * 100) : 0;
 // El texto para lectores de pantalla no es adorno: la columna se llama "Mes" y
 // sin esto anuncia siete celdas VACIAS — promete un dato y no lo entrega.
-var dicho = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '% ' + (dicePct || 'en el mes');
+var dicho = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '% ' + (dicePct || 'this month');
 // El relleno baja hasta el borde de abajo (H), no hasta H-pad: apoyado en el
 // piso de la tarjeta parece un area, flotando 2px parece un error.
 var relleno = '';
@@ -858,7 +858,7 @@ function toggleHoldings() {
   catch (e) {
     if (window.console && console.error) console.error('toggleHoldings', e);
     var b = document.getElementById('holdMoreBtn');
-    if (b) b.textContent = holdingsExpanded ? 'Ver menos' : 'Ver más';
+    if (b) b.textContent = holdingsExpanded ? 'See less' : 'See more';
   }
 }
 function renderHoldings(list) {
@@ -866,7 +866,7 @@ var el = document.getElementById('holdingsList');
 var btn = document.getElementById('holdMoreBtn');
 if (btn && !btn._wired) { btn._wired = true; btn.addEventListener('click', toggleHoldings); }
 lastHoldings = list || [];
-if (!list || !list.length) { holdFilas = []; holdCabezas = []; el.innerHTML = '<tr><td colspan="4" class="newsempty">Sin posiciones.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
+if (!list || !list.length) { holdFilas = []; holdCabezas = []; el.innerHTML = '<tr><td colspan="4" class="newsempty">No positions.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
 // Qué entra en la tabla y qué queda detrás del boton (ver repartoHoldings):
 // los ETFs siempre, y las 5 no-ETF mas grandes al expandir.
 var reparto = repartoHoldings(list);
@@ -877,7 +877,7 @@ var lista = ordenarPorTipo(reparto.lista);
 // reparto sí queda vacío, y la tarjeta terminaba siendo un rectángulo en blanco
 // bajo el título, sin el mensaje que existe justo para eso. Auditoría del
 // 25/08/2026.
-if (!lista.length) { holdFilas = []; holdCabezas = []; el.innerHTML = '<tr><td colspan="4" class="newsempty">Sin posiciones.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
+if (!lista.length) { holdFilas = []; holdCabezas = []; el.innerHTML = '<tr><td colspan="4" class="newsempty">No positions.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
 // Actualizacion EN EL LUGAR (R4): si la tabla ya muestra estos simbolos en
 // este orden, se refrescan las celdas de cada fila sin vaciar el tbody.
 // Vaciarlo en cada poll cerraba el detalle abierto (y recargaba su grafico
@@ -923,7 +923,7 @@ if (btn) {
 // palabra "todas" es exactamente el número inventado que este proyecto decidió
 // no mostrar. Texto elegido por Guzmán el 25/08/2026.
 var cuantasOcultas = lista.length - visibles.length;
-if (cuantasOcultas > 0) { btn.style.display = 'block'; btn.textContent = holdingsExpanded ? 'Ver menos' : 'Ver más'; }
+if (cuantasOcultas > 0) { btn.style.display = 'block'; btn.textContent = holdingsExpanded ? 'See less' : 'See more'; }
 else { btn.style.display = 'none'; }
 }
 }
@@ -958,7 +958,7 @@ porAnio[anio][mes] = Math.round((cierres[k] / prev - 1) * 10000) / 10000;
 return Object.keys(porAnio).map(Number).sort(function (a, b) { return b - a; })
 .map(function (a) { return { anio: a, meses: porAnio[a] }; });
 }
-var MC_MESES = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+var MC_MESES = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 function celdaCalor(pct) {
 if (pct === null || pct === undefined) return '<span class="mc-celda mc-vacia"></span>';
 var v = pct * 100;
@@ -988,9 +988,9 @@ var dif = (c.idxPct !== null && isFinite(c.idxPct)) ? (c.pct - c.idxPct) : null;
 
 var h = '<div class="caprow">';
 h += '<div><p class="lbl">Tu cartera</p>' + pct(c.pct) + '</div>';
-h += '<div><p class="lbl">' + esc(c.idxNombre || 'Índice') + '</p>' + pct(c.idxPct) + '</div>';
+h += '<div><p class="lbl">' + esc(c.idxNombre || 'Index') + '</p>' + pct(c.idxPct) + '</div>';
 if (dif !== null) {
-h += '<div><p class="lbl">Diferencia</p><p class="capval ' + (dif >= 0 ? 'up' : 'down') + '">' +
+h += '<div><p class="lbl">Difference</p><p class="capval ' + (dif >= 0 ? 'up' : 'down') + '">' +
 signoPct(dif, 1) + '</p></div>';
 }
 h += '</div>';
@@ -1001,10 +1001,10 @@ h += '</div>';
 // una fecha de cierre de año "30/12 12:00" solo estorba.
 var dDesde = new Date(c.desde);
 var desdeTxt = ('0' + dDesde.getDate()).slice(-2) + '/' + ('0' + (dDesde.getMonth() + 1)).slice(-2) + '/' + dDesde.getFullYear();
-h += '<p class="capnota">Del ' + desdeTxt + ' a hoy. Es el rendimiento de tus ' +
-'inversiones <b>descontando lo que aportaste</b>: tu patrimonio subi&oacute; ' +
-signoPct(c.bruto, 1) + ', pero ' + esc(fmtUsdEnt(c.aportes)) + ' de eso los pusiste vos, no los ganaste. ' +
-(c.idxPct !== null ? 'El &iacute;ndice no paga dividendos y tus cuentas s&iacute;.' : '') + '</p>';
+h += '<p class="capnota">From ' + desdeTxt + ' to today. This is the return on your ' +
+'investments <b>net of what you contributed</b>: your net worth went up ' +
+signoPct(c.bruto, 1) + ', but ' + esc(fmtUsdEnt(c.aportes)) + ' of that you put in yourself, you didn&rsquo;t earn it. ' +
+(c.idxPct !== null ? 'The index doesn&rsquo;t pay dividends and your accounts do.' : '') + '</p>';
 el.innerHTML = h;
 }
 
@@ -1012,7 +1012,7 @@ function renderMapaCalor() {
 var el = document.getElementById('mapaCalor');
 if (!el) return;
 var filas = mapaCalorMensual(fullSerie || []);
-if (!filas.length) { el.innerHTML = '<p class="newsempty">Con un mes m&aacute;s de historia aparece el primer mes.</p>'; return; }
+if (!filas.length) { el.innerHTML = '<p class="newsempty">With one more month of history, the first month will appear.</p>'; return; }
 var html = '<div class="mc-fila mc-head"><span class="mc-anio"></span>' +
 MC_MESES.map(function (m) { return '<span class="mc-celda">' + m + '</span>'; }).join('') + '</div>';
 filas.forEach(function (f) {

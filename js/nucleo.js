@@ -80,8 +80,8 @@ function esAborto(e) {
   var m = String((e && e.message) || e || '');
   return n === 'AbortError' || /abort/i.test(m);
 }
-var MSJ_SIN_RED = 'Sin conexión. Proba de nuevo cuando tengas señal.';
-var MSJ_TARDO = 'El servidor tardó demasiado. Proba de nuevo en un minuto.';
+var MSJ_SIN_RED = 'No connection. Try again once you have signal.';
+var MSJ_TARDO = 'The server took too long. Try again in a minute.';
 
 function apiCall(fn, args) {
   var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -101,8 +101,8 @@ function apiCall(fn, args) {
         try { return JSON.parse(t); }
         catch (e) {
           throw new Error(r.ok
-            ? 'El servidor respondio algo inesperado. Proba de nuevo en un minuto.'
-            : 'El servidor no responde (error ' + r.status + '). Proba de nuevo en un minuto.');
+            ? 'The server sent back something unexpected. Try again in a minute.'
+            : 'The server is not responding (error ' + r.status + '). Try again in a minute.');
         }
       });
     })
@@ -111,8 +111,8 @@ function apiCall(fn, args) {
         // Este mensaje aparece cuando la clave GUARDADA dejo de servir (se
         // roto). Decirlo con todas las letras: se confundia con el bloqueo del
         // telefono y parecia que la biometria no habia funcionado.
-        mostrarLock('La clave guardada ya no sirve: el servidor la rechaza. Ingres\u00e1 la nueva.');
-        var eAuth = new Error('La clave de la app vencio: volve a ingresarla.');
+        mostrarLock('The saved passcode no longer works: the server rejected it. Enter the new one.');
+        var eAuth = new Error('The app passcode expired: enter it again.');
         eAuth.auth = true;
         throw eAuth;
       }
@@ -120,9 +120,9 @@ function apiCall(fn, args) {
       // etiqueta interna. 'demasiados_pedidos' es el freno por IP que se puso
       // el 21/08; sin esto la pantalla decia literalmente "demasiados_pedidos".
       var TRADUCIDOS = {
-        demasiados_pedidos: 'Demasiados pedidos seguidos. Esperá un minuto y proba de nuevo.',
-        cuerpo_grande: 'El pedido era demasiado grande.',
-        origen: 'El servidor no aceptó el origen de este pedido.'
+        demasiados_pedidos: 'Too many requests in a row. Wait a minute and try again.',
+        cuerpo_grande: 'The request was too large.',
+        origen: 'The server did not accept the origin of this request.'
       };
       if (j && j.error && TRADUCIDOS[j.error]) throw new Error(TRADUCIDOS[j.error]);
       if (j && j.error) throw new Error(j.message || j.error);
@@ -267,8 +267,8 @@ var el = document.getElementById(idContenedor);
 if (!el) return;
 // Pasa por msgErr para traducir el backend sin desplegar; sin eso, estas
 // cuatro vistas mostraban el cruptico "unknown_fn".
-var msg = err ? msgErr(err, 'Esta pantalla') : ('No se pudieron cargar ' + que + '.');
-el.innerHTML = '<p class="newsempty">' + esc(msg) + '<br>Volv&eacute; a entrar para reintentar.</p>';
+var msg = err ? msgErr(err, 'This screen') : ('Could not load ' + que + '.');
+el.innerHTML = '<p class="newsempty">' + esc(msg) + '<br>Come back in to retry.</p>';
 }
 var noticiasCargadas = false;
 var opsCargadas = false;
@@ -324,24 +324,25 @@ el.textContent = fmt(_ultimoTotalPintado);
 function fmt(n) {
 if (montosOcultos) return '****';
 if (n === null || n === undefined || isNaN(n)) return '\u2014';
-return 'USD ' + Math.round(n).toLocaleString('es-UY');
+return 'USD ' + Math.round(n).toLocaleString('en-US');
 }
 function fmtNum(n) {
 if (n === null || n === undefined || n === '') return '\u2014';
-// Era el UNICO numero de toda la app sin pasar por es-UY (miles con punto,
-// decimales con coma) \u2014 fmt/fmtUsd/fmtUsdEnt ya lo hacian. Un precio de
-// 1763.76 salia con el punto y la coma de JS al reves de como se lee ahi:
-// "1763.76" en vez de "1.763,76". Pedido de Guzman (22/08/2026): "en
-// TradingView se ve un poco mejor los numeros".
-return (typeof n === 'number') ? (Math.round(n * 100) / 100).toLocaleString('es-UY') : n;
+// Era el UNICO numero de toda la app sin pasar por toLocaleString (miles sin
+// separador) \u2014 fmt/fmtUsd/fmtUsdEnt ya lo hacian. Un precio de 1763.76
+// salia pelado en vez de con el separador de miles. Pedido de Guzman
+// (22/08/2026): "en TradingView se ve un poco mejor los numeros". Locale
+// 'en-US' desde el 26/08/2026 (formato ingles: coma en los miles, punto en
+// los decimales), junto con el resto de la app.
+return (typeof n === 'number') ? (Math.round(n * 100) / 100).toLocaleString('en-US') : n;
 }
 // Montos de los paneles (dividendos/aportes), con el ojito de privacidad ya
 // aplicado. La misma cadena mask('US$ ' + ...) estaba repetida 15 veces en
-// paneles.js. fmtUsd: 2 decimales; fmtUsdEnt: redondeado, con miles es-UY.
+// paneles.js. fmtUsd: 2 decimales; fmtUsdEnt: redondeado, con miles (en-US).
 // La etiqueta difiere A PROPOSITO: el patrimonio y los trades dicen "USD"
 // (fmt/opsMonto), los paneles de ingresos "US$" (auditoria 19/08/2026).
 function fmtUsd(n) { return mask('US$ ' + (Number(n) || 0).toFixed(2)); }
-function fmtUsdEnt(n) { return mask('US$ ' + Math.round(Number(n) || 0).toLocaleString('es-UY')); }
+function fmtUsdEnt(n) { return mask('US$ ' + Math.round(Number(n) || 0).toLocaleString('en-US')); }
 // fmtPctRaw y chipClass se fueron el 18/08/2026: su unico llamador era la
 // tabla del detalle de cuenta, que se podo a los mismos helpers del Inicio
 // (daychgHtml/gananciaHtml en graficos.js).

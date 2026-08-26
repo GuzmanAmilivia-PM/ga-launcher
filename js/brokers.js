@@ -12,12 +12,12 @@ var m = (err && err.message) ? err.message : String(err);
 // media app. La traduccion vive en nucleo.js para que sea la misma en todos lados.
 if (typeof esErrorDeRed === 'function' && esErrorDeRed(err)) return MSJ_SIN_RED;
 if (m.indexOf('unknown_fn') === -1) return m;
-return (sujeto ? sujeto + ' se activa' : 'Se activa') +
-' con la próxima actualización del servidor. Avisale a Claude que despliegue el backend.';
+return (sujeto ? sujeto + ' will be active' : 'This will be active') +
+' with the server\u2019s next update. Ask Claude to deploy the backend.';
 }
 // El mismo mensaje, pero para una respuesta {ok:false, mensajes:[...]}.
 function msgBackend(r) {
-return ((r && r.mensajes) || ['no se pudo sincronizar']).join(' ');
+return ((r && r.mensajes) || ['could not sync']).join(' ');
 }
 // Cualquier sincronizacion en curso bloquea a las demas.
 function syncEnCurso() {
@@ -33,30 +33,30 @@ return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + ' ' + p2(d.getHours()) + '
 // formato (fechaSalud, sin detalle) a proposito.
 function ultimaSyncHtml(u) {
 if (!u || !u.cuando) return '';
-return '<br>&Uacute;ltima sincronizaci&oacute;n: ' + (u.ok ? '' : '&#9888; ') + esc(fechaCortaMs(u.cuando)) + ' &middot; ' + esc(u.detalle || '');
+return '<br>Last sync: ' + (u.ok ? '' : '&#9888; ') + esc(fechaCortaMs(u.cuando)) + ' &middot; ' + esc(u.detalle || '');
 }
 function cargarEstadoIBKR() {
 var t = document.getElementById('ibkrEstadoTxt');
-t.innerHTML = 'Comprobando configuraci&oacute;n...';
+t.innerHTML = 'Checking configuration...';
 google.script.run.withSuccessHandler(function (st) {
 var wrap = document.getElementById('ibkrSyncWrap');
 var syncCard = document.getElementById('ibkrSyncCard');
 if (syncCard) syncCard.style.display = (st && st.configurada) ? '' : 'none';
 if (st && st.configurada) {
-var html = '&#10003; Conectado a IBKR. La hoja IB se actualiza sola una vez por d&iacute;a (~8:00).';
+var html = '&#10003; Connected to IBKR. The IB sheet updates itself once a day (~8:00).';
 html += ultimaSyncHtml(st.ultimaSync);
-if (st.triggerDiario === false) html += '<br>&#9888; La sincronizaci&oacute;n diaria autom&aacute;tica no est&aacute; activa: volv&eacute; a guardar la conexi&oacute;n.';
+if (st.triggerDiario === false) html += '<br>&#9888; The automatic daily sync is not active: save the connection again.';
 html += st.actividadConfigurada
-? '<br>&#10003; Dividendos de IBKR incluidos (consulta de actividad configurada).'
-: '<br>Dividendos de IBKR: sin configurar &mdash; cre&aacute; la segunda Flex Query (paso 6 de la ayuda) y guard&aacute; su Query ID abajo.';
+? '<br>&#10003; IBKR dividends included (activity query configured).'
+: '<br>IBKR dividends: not configured &mdash; create the second Flex Query (step 6 of the help) and save its Query ID below.';
 t.innerHTML = html;
 wrap.style.display = '';
 } else {
-t.innerHTML = 'Sin configurar. Gener&aacute; el token en el portal de IBKR (pasos ac&aacute; abajo) y pegalo: se guarda en tu servidor privado de Cloudflare, nunca en esta p&aacute;gina. El acceso es de solo lectura.';
+t.innerHTML = 'Not configured. Generate the token in the IBKR portal (steps below) and paste it: it&rsquo;s saved on your private Cloudflare server, never on this page. This access is read-only.';
 wrap.style.display = 'none';
 }
 }).withFailureHandler(function (err) {
-t.innerHTML = esc(msgErr(err, 'La conexión IBKR'));
+t.innerHTML = esc(msgErr(err, 'The IBKR connection'));
 }).estadoIBKR();
 }
 // ---------- Guardar credenciales (conductor unico) ----------
@@ -86,7 +86,7 @@ document.getElementById('ibkrGuardar').onclick = function () {
 var tk = document.getElementById('ibkrToken'), q = document.getElementById('ibkrQuery'), qa = document.getElementById('ibkrQueryAct');
 guardarConBoton({
 btn: this, inputs: [tk, q, qa], resId: 'ibkrKeyResultado',
-sujeto: 'La conexión IBKR', exito: 'Conexi&oacute;n guardada.',
+sujeto: 'The IBKR connection', exito: 'Connection saved.',
 alOk: cargarEstadoIBKR,
 pedir: function (ok, fail) {
 google.script.run.withSuccessHandler(ok).withFailureHandler(fail).guardarConfigIBKR({ token: tk.value, queryId: q.value, queryActId: qa.value });
@@ -98,7 +98,7 @@ google.script.run.withSuccessHandler(ok).withFailureHandler(fail).guardarConfigI
 // comparacion y sabe que los cierres son reales, este confirm manda forzar.
 function confirmarParcial(parcial, quien) {
 if (!parcial) return false;
-return window.confirm('Varias posiciones quedarían en CERO.\n\nSi vendiste todo eso, está bien. Si no, el reporte de ' + quien + ' vino incompleto y conviene no aplicar.\n\n¿Aplicar igual?');
+return window.confirm('Several positions would end up at ZERO.\n\nIf you sold all of that, it\u2019s fine. If not, the ' + quien + ' report came in incomplete and you probably shouldn\u2019t apply it.\n\nApply anyway?');
 }
 // Las tres pantallas de sincronizacion (IBKR, Binance, Schwab) eran tres
 // copias del mismo flujo: candado, spinner, lista de cambios, aviso parcial,
@@ -130,16 +130,16 @@ return;
 }
 var html = '';
 if (!r.cambios.length) {
-html = '<p class="newsempty" style="margin-top:10px">&#10003; La hoja ' + cfg.hoja + ' ya coincide con ' + cfg.broker + ' (' + esc(cfg.total(r)) + ' ' + cfg.unidad + '). Nada para cambiar.</p>';
+html = '<p class="newsempty" style="margin-top:10px">&#10003; The ' + cfg.hoja + ' sheet already matches ' + cfg.broker + ' (' + esc(cfg.total(r)) + ' ' + cfg.unidad + '). Nothing to change.</p>';
 } else {
-html = '<p class="subtotal" style="margin:12px 0 6px">' + (dryRun ? 'Cambios detectados (todav&iacute;a no se aplic&oacute; nada):' : 'Cambios aplicados:') + '</p>';
+html = '<p class="subtotal" style="margin:12px 0 6px">' + (dryRun ? 'Changes detected (nothing applied yet):' : 'Changes applied:') + '</p>';
 r.cambios.forEach(function (c) {
 var txt;
-if (c.tipo === 'qty') txt = '<span class="sym">' + esc(c.symbol) + '</span> cantidad ' + esc(c.antes) + ' &rarr; ' + esc(c.despues);
-else if (c.tipo === 'cerrada') txt = '<span class="sym">' + esc(c.symbol) + '</span> ' + cfg.cerradaTxt + ' &rarr; queda en 0';
-else if (c.tipo === 'nueva') txt = '<span class="sym">' + esc(c.symbol) + '</span> nueva &middot; ' + esc(c.despues) + (c.descripcion ? ' &middot; ' + esc(c.descripcion) : '');
+if (c.tipo === 'qty') txt = '<span class="sym">' + esc(c.symbol) + '</span> quantity ' + esc(c.antes) + ' &rarr; ' + esc(c.despues);
+else if (c.tipo === 'cerrada') txt = '<span class="sym">' + esc(c.symbol) + '</span> ' + cfg.cerradaTxt + ' &rarr; now at 0';
+else if (c.tipo === 'nueva') txt = '<span class="sym">' + esc(c.symbol) + '</span> new &middot; ' + esc(c.despues) + (c.descripcion ? ' &middot; ' + esc(c.descripcion) : '');
 else if (c.tipo === 'cash') txt = '<span class="sym">CASH</span> ' + esc(c.antes) + ' &rarr; ' + esc(c.despues);
-else if (c.tipo === 'costo') txt = '<span class="sym">' + esc(c.symbol) + '</span> precio compra ' + (c.antes ? esc(c.antes) : '&mdash;') + ' &rarr; ' + esc(c.despues);
+else if (c.tipo === 'costo') txt = '<span class="sym">' + esc(c.symbol) + '</span> buy price ' + (c.antes ? esc(c.antes) : '&mdash;') + ' &rarr; ' + esc(c.despues);
 else txt = esc(c.tipo + ' ' + (c.symbol || ''));
 html += '<div class="row"><span>' + txt + '</span></div>';
 });
@@ -153,7 +153,7 @@ btnAplicar.style.display = r.cambios.length ? '' : 'none';
 } else {
 parcial = false;
 btnAplicar.style.display = 'none';
-if (r.cambios.length) resEl.innerHTML = '<div class="tmsg ok">&#10003; Listo. La hoja ' + cfg.hoja + ' qued&oacute; igual que tu cuenta de ' + cfg.broker + '.</div>';
+if (r.cambios.length) resEl.innerHTML = '<div class="tmsg ok">&#10003; Done. The ' + cfg.hoja + ' sheet now matches your ' + cfg.broker + ' account.</div>';
 cfg.alAplicar();
 loadData();
 }
@@ -166,11 +166,11 @@ return correr;
 }
 var ibkrSyncEnCurso = false;
 pantallaSync({
-pref: 'ibkr', hoja: 'IB', broker: 'IBKR', unidad: 'posiciones',
-sujeto: 'La conexión IBKR',
-cargandoDry: 'Consultando IBKR... puede tardar medio minuto (el reporte se genera al momento).',
-cargandoApply: 'Aplicando cambios en la hoja IB...',
-cerradaTxt: 'cerrada en IBKR',
+pref: 'ibkr', hoja: 'IB', broker: 'IBKR', unidad: 'positions',
+sujeto: 'The IBKR connection',
+cargandoDry: 'Checking IBKR... this can take half a minute (the report is generated on the spot).',
+cargandoApply: 'Applying changes to the IB sheet...',
+cerradaTxt: 'closed at IBKR',
 total: function (r) { return r.posicionesBroker; },
 lock: function (v) { ibkrSyncEnCurso = v; },
 alAplicar: function () { cargarEstadoIBKR(); },
@@ -195,10 +195,10 @@ var t = document.getElementById('bnbEstadoTxt');
 document.getElementById('bnbSyncCard').style.display = cfg ? '' : 'none';
 document.getElementById('bnbBorrar').style.display = cfg ? '' : 'none';
 var html = cfg
-? '&#10003; Clave guardada en este dispositivo. Los saldos se leen directo de Binance desde tu tel&eacute;fono y se sincronizan solos al abrir la app (como mucho cada 30 min); la clave solo puede leer, nunca operar ni retirar.'
-: 'Sin conectar. Cre&aacute; una clave API de <b>solo lectura</b> en la app de Binance (pasos m&aacute;s abajo) y guardala ac&aacute;: queda &uacute;nicamente en este tel&eacute;fono.';
+? '&#10003; Key saved on this device. Balances are read directly from Binance on your phone and sync automatically when the app opens (at most every 30 min); the key can only read, never trade or withdraw.'
+: 'Not connected. Create a <b>read-only</b> API key in the Binance app (steps further below) and save it here: it stays only on this phone.';
 var u = null; try { u = localStorage.getItem('ga_bnb_ultima'); } catch (e) {}
-if (cfg && u) html += '<br>&Uacute;ltima sincronizaci&oacute;n aplicada: ' + esc(u);
+if (cfg && u) html += '<br>Last sync applied: ' + esc(u);
 t.innerHTML = html;
 }
 document.getElementById('bnbGuardar').onclick = function () {
@@ -206,18 +206,18 @@ var k = document.getElementById('bnbKey').value.trim();
 var s = document.getElementById('bnbSecret').value.trim();
 var res = document.getElementById('bnbKeyResultado');
 if (k.length < 10 || s.length < 10) {
-res.innerHTML = '<div class="tmsg err">Peg&aacute; la API Key y la Secret Key completas.</div>';
+res.innerHTML = '<div class="tmsg err">Paste the full API Key and Secret Key.</div>';
 return;
 }
 try { localStorage.setItem('ga_bnb', JSON.stringify({ key: k, secret: s })); } catch (e) {}
 document.getElementById('bnbKey').value = '';
 document.getElementById('bnbSecret').value = '';
-res.innerHTML = '<div class="tmsg ok">&#10003; Clave guardada en el dispositivo.</div>';
+res.innerHTML = '<div class="tmsg ok">&#10003; Key saved on the device.</div>';
 prepararBNB();
 };
 document.getElementById('bnbBorrar').onclick = function () {
 try { localStorage.removeItem('ga_bnb'); localStorage.removeItem('ga_bnb_ultima'); } catch (e) {}
-document.getElementById('bnbKeyResultado').innerHTML = '<div class="tmsg ok">Clave borrada de este dispositivo.</div>';
+document.getElementById('bnbKeyResultado').innerHTML = '<div class="tmsg ok">Key deleted from this device.</div>';
 prepararBNB();
 };
 document.getElementById('bnbBack').onclick = function () { setView('config'); };
@@ -234,7 +234,7 @@ return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ('0' 
 // Lee los saldos spot con una petición firmada de account.status.
 function bnbLeerSaldos(cb, fail) {
 var cfg = bnbConfig();
-if (!cfg) { fail(new Error('Falta guardar la clave API de Binance.')); return; }
+if (!cfg) { fail(new Error('The Binance API key needs to be saved first.')); return; }
 var ws = null, done = false;
 function terminar(err, saldos) {
 if (done) return;
@@ -243,9 +243,9 @@ clearTimeout(timer);
 try { if (ws) ws.close(); } catch (e) {}
 if (err) fail(err); else cb(saldos);
 }
-var timer = setTimeout(function () { terminar(new Error('Binance no respondió (se agotó el tiempo). Probá de nuevo.')); }, 15000);
+var timer = setTimeout(function () { terminar(new Error('Binance did not respond (timed out). Try again.')); }, 15000);
 try { ws = new WebSocket('wss://ws-api.binance.com/ws-api/v3'); } catch (e) { terminar(e); return; }
-ws.onerror = function () { terminar(new Error('No pude conectar con Binance. Revisá tu conexión a internet.')); };
+ws.onerror = function () { terminar(new Error('Could not connect to Binance. Check your internet connection.')); };
 ws.onopen = function () {
 var ts = Date.now();
 // Los parámetros van ordenados alfabéticamente en la firma.
@@ -268,10 +268,10 @@ terminar(null, saldos);
 return;
 }
 var code = j.error && j.error.code;
-var msg = (j.error && j.error.msg) ? j.error.msg : ('Binance respondió con error (' + (j.status || '?') + ').');
-if (code === -2015 || code === -2014) msg = 'Binance rechazó la clave API: revisá que esté bien pegada y con el permiso de lectura activo.';
-if (code === -1022) msg = 'La firma no validó: revisá la Secret Key (borrala y pegala de nuevo).';
-if (code === -1021) msg = 'La hora del teléfono difiere de la de Binance: activá fecha y hora automáticas.';
+var msg = (j.error && j.error.msg) ? j.error.msg : ('Binance responded with an error (' + (j.status || '?') + ').');
+if (code === -2015 || code === -2014) msg = 'Binance rejected the API key: check it was pasted correctly and has read permission enabled.';
+if (code === -1022) msg = 'The signature did not validate: check the Secret Key (delete it and paste it again).';
+if (code === -1021) msg = 'Your phone\u2019s clock differs from Binance\u2019s: enable automatic date and time.';
 terminar(new Error(msg));
 };
 }
@@ -287,11 +287,11 @@ function bnbLock(v) { bnbEnCurso = v; }
 // pantalla ANTES le faltaba: solo avisaba y dejaba aplicar igual.
 var bnbSaldosLeidos = null;
 pantallaSync({
-pref: 'bnb', hoja: 'BNB', broker: 'Binance', unidad: 'saldos',
-sujeto: 'La sincronización con Binance',
-cargandoDry: 'Leyendo tus saldos reales de Binance...',
-cargandoApply: 'Aplicando en la hoja BNB...',
-cerradaTxt: 'sin saldo en Binance',
+pref: 'bnb', hoja: 'BNB', broker: 'Binance', unidad: 'balances',
+sujeto: 'The sync with Binance',
+cargandoDry: 'Reading your real Binance balances...',
+cargandoApply: 'Applying to the BNB sheet...',
+cerradaTxt: 'no balance on Binance',
 total: function (r) { return r.saldosBinance; },
 lock: bnbLock,
 alEmpezarDry: function () { bnbSaldosLeidos = null; },
@@ -304,7 +304,7 @@ var cerradas = r.cambios.filter(function (c) { return c.tipo === 'cerrada'; }).l
 // El umbral es EL MISMO que frena la sync automatica (BNB_CERRADAS_FRENO,
 // sincronizar.js — corre en runtime, el orden de carga no molesta).
 if (cerradas < BNB_CERRADAS_FRENO) return '';
-return '<p class="newsempty">&#9888; Varias posiciones aparecen sin saldo. Ojo: la clave solo ve la billetera <b>spot</b>; si ten&eacute;s fondos en Binance Earn u otra billetera, NO apliques y avisale a Claude.</p>';
+return '<p class="newsempty">&#9888; Several positions show no balance. Careful: the key only sees the <b>spot</b> wallet; if you have funds in Binance Earn or another wallet, do NOT apply and ask Claude.</p>';
 },
 ejecutar: function (dryRun, forzar, ok, fail) {
 if (dryRun) {
@@ -322,37 +322,37 @@ google.script.run.withSuccessHandler(ok).withFailureHandler(fail).sincronizarBNB
 // ---------- Charles Schwab: conexión automática vía SnapTrade ----------
 function cargarEstadoCS() {
 var t = document.getElementById('csEstadoTxt');
-t.innerHTML = 'Comprobando configuraci&oacute;n...';
+t.innerHTML = 'Checking configuration...';
 document.getElementById('csConectarResultado').innerHTML = '';
 google.script.run.withSuccessHandler(function (st) {
 var sync = document.getElementById('csSyncCard');
 var btnCon = document.getElementById('csConectar');
 if (!st || !st.configurada) {
-t.innerHTML = 'Sin configurar. Cre&aacute; tu cuenta gratis en <b>snaptrade.com</b>, copi&aacute; el clientId y la consumerKey del panel (pasos ac&aacute; abajo) y guardalas: van a tu servidor privado de Cloudflare, nunca a esta p&aacute;gina.';
+t.innerHTML = 'Not configured. Create a free account at <b>snaptrade.com</b>, copy the clientId and consumerKey from the dashboard (steps below) and save them: they go to your private Cloudflare server, never to this page.';
 sync.style.display = 'none';
 btnCon.style.display = 'none';
 return;
 }
 if (!st.conectada) {
-t.innerHTML = 'Credenciales guardadas &#10003;. Falta el &uacute;ltimo paso: conectar tu cuenta de Schwab (una sola vez).' + (st.errorCuentas ? '<br>&#9888; ' + esc(st.errorCuentas) : '');
+t.innerHTML = 'Credentials saved &#10003;. One last step is missing: connect your Schwab account (just once).' + (st.errorCuentas ? '<br>&#9888; ' + esc(st.errorCuentas) : '');
 sync.style.display = 'none';
 btnCon.style.display = '';
 return;
 }
-var html = '&#10003; Conectado a Schwab v&iacute;a SnapTrade (' + esc((st.cuentas || []).join(', ') || 'cuenta conectada') + '). La hoja CS se actualiza sola una vez por d&iacute;a (~8:00).';
+var html = '&#10003; Connected to Schwab via SnapTrade (' + esc((st.cuentas || []).join(', ') || 'connected account') + '). The CS sheet updates itself once a day (~8:00).';
 html += ultimaSyncHtml(st.ultimaSync);
 t.innerHTML = html;
 sync.style.display = '';
 btnCon.style.display = 'none';
 }).withFailureHandler(function (err) {
-t.innerHTML = esc(msgErr(err, 'La conexión con Schwab'));
+t.innerHTML = esc(msgErr(err, 'The Schwab connection'));
 }).estadoCS();
 }
 document.getElementById('csGuardar').onclick = function () {
 var ci = document.getElementById('csClientId'), ck = document.getElementById('csConsumerKey');
 guardarConBoton({
 btn: this, inputs: [ci, ck], resId: 'csKeyResultado',
-sujeto: 'La conexión con Schwab', exito: 'Credenciales guardadas. Ahora toc&aacute; "Conectar cuenta Schwab".',
+sujeto: 'The Schwab connection', exito: 'Credentials saved. Now tap "Connect Schwab account".',
 alOk: cargarEstadoCS,
 pedir: function (ok, fail) {
 google.script.run.withSuccessHandler(ok).withFailureHandler(fail).guardarConfigCS({ clientId: ci.value, consumerKey: ck.value });
@@ -362,29 +362,29 @@ google.script.run.withSuccessHandler(ok).withFailureHandler(fail).guardarConfigC
 document.getElementById('csConectar').onclick = function () {
 var btn = this, res = document.getElementById('csConectarResultado');
 btn.disabled = true;
-res.innerHTML = '<p class="loadingtxt">Generando el link seguro de conexi&oacute;n...</p>';
+res.innerHTML = '<p class="loadingtxt">Generating the secure connection link...</p>';
 google.script.run.withSuccessHandler(function (r) {
 btn.disabled = false;
 if (r && r.ok && r.url) {
-res.innerHTML = '<div class="tmsg ok">Se abri&oacute; el portal de SnapTrade en otra pesta&ntilde;a: entr&aacute; con tu usuario de Schwab y autoriz&aacute; la lectura. Cuando termines, volv&eacute; ac&aacute; y reabr&iacute; esta pantalla.</div>';
+res.innerHTML = '<div class="tmsg ok">The SnapTrade portal opened in another tab: log in with your Schwab user and authorize read access. When you\u2019re done, come back here and reopen this screen.</div>';
 try { window.open(safeUrl(r.url), '_blank'); } catch (e) {
-res.innerHTML = '<div class="tmsg err">No pude abrir la pesta&ntilde;a. Copi&aacute; el link a mano: ' + esc(r.url) + '</div>';
+res.innerHTML = '<div class="tmsg err">Could not open the tab. Copy the link manually: ' + esc(r.url) + '</div>';
 }
 } else {
 res.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Error']).join(' ')) + '</div>';
 }
 }).withFailureHandler(function (err) {
 btn.disabled = false;
-res.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, 'La conexión con Schwab')) + '</div>';
+res.innerHTML = '<div class="tmsg err">' + esc(msgErr(err, 'The Schwab connection')) + '</div>';
 }).portalCS();
 };
 var csEnCurso = false;
 pantallaSync({
-pref: 'cs', hoja: 'CS', broker: 'Schwab', unidad: 'posiciones',
-sujeto: 'La conexión con Schwab',
-cargandoDry: 'Consultando tus posiciones de Schwab...',
-cargandoApply: 'Aplicando cambios en la hoja CS...',
-cerradaTxt: 'cerrada en Schwab',
+pref: 'cs', hoja: 'CS', broker: 'Schwab', unidad: 'positions',
+sujeto: 'The Schwab connection',
+cargandoDry: 'Checking your Schwab positions...',
+cargandoApply: 'Applying changes to the CS sheet...',
+cerradaTxt: 'closed at Schwab',
 total: function (r) { return r.posicionesBroker; },
 lock: function (v) { csEnCurso = v; },
 alAplicar: function () { cargarEstadoCS(); },

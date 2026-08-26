@@ -4,8 +4,8 @@
 // dejar la marca de "ultima". Antes estaba escrito dos veces (auto y menu) y el
 // umbral de posiciones en cero tenia dos redacciones distintas.
 var BNB_CERRADAS_FRENO = 2;
-var BNB_AVISO_EARN = 'Binance: varias posiciones aparecen sin saldo (&iquest;fondos en Earn?). ' +
-'No se aplic&oacute; nada &mdash; revisalo en Configuraci&oacute;n &rarr; Plataformas &rarr; Binance.';
+var BNB_AVISO_EARN = 'Binance: several positions show no balance (funds in Earn?). ' +
+'Nothing was applied &mdash; check it in Keys &rarr; Platforms &rarr; Binance.';
 function bnbSincronizar(cb) {
 var alOk = cb.alOk || function () {};
 var alError = cb.alError || function () {};
@@ -22,11 +22,11 @@ fin();
 if (!r2 || !r2.ok) { alError(msgBackend(r2)); return; }
 try { localStorage.setItem('ga_bnb_ultima', fechaCortaMs(Date.now())); } catch (e) {}
 alOk(r2);
-}).withFailureHandler(function (err) { fin(); alError(msgErr(err, 'La sincronización con Binance')); })
+}).withFailureHandler(function (err) { fin(); alError(msgErr(err, 'The sync with Binance')); })
 .sincronizarBNB({ balances: saldos, dryRun: false });
-}).withFailureHandler(function (err) { fin(); alError(msgErr(err, 'La sincronización con Binance')); })
+}).withFailureHandler(function (err) { fin(); alError(msgErr(err, 'The sync with Binance')); })
 .sincronizarBNB({ balances: saldos, dryRun: true });
-}, function () { fin(); alError('no se pudieron leer los saldos desde el tel&eacute;fono.'); });
+}, function () { fin(); alError('could not read balances from the phone.'); });
 }
 function bnbAutoSync() {
 if (!bnbConfig() || !getApiToken() || syncEnCurso()) return;
@@ -39,7 +39,7 @@ alOk: function (r) {
 var n = (r.cambios || []).length;
 if (!n) return; // sin cambios: no vale la pena molestar
 loadData();
-avisoInicio('&#10003; Binance sincronizado: ' + n + ' cambio' + (n === 1 ? '' : 's') + ' aplicado' + (n === 1 ? '' : 's') + '.', true);
+avisoInicio('&#10003; Binance synced: ' + n + ' change' + (n === 1 ? '' : 's') + ' applied.', true);
 },
 // La sync automatica es silenciosa salvo el caso de Earn, que es el unico
 // que pide una decision del usuario.
@@ -65,7 +65,7 @@ var lineas = [], huboError = false;
 function paso(n) { txt.textContent = n; }
 function ok(nombre, r) {
 var n = ((r && r.cambios) || []).length;
-lineas.push('&#10003; ' + nombre + ': ' + (n ? n + ' cambio' + (n === 1 ? '' : 's') : 'sin cambios'));
+lineas.push('&#10003; ' + nombre + ': ' + (n ? n + ' change' + (n === 1 ? '' : 's') : 'no changes'));
 }
 function error(nombre, msg) {
 huboError = true;
@@ -73,7 +73,7 @@ lineas.push('&#9888; ' + nombre + ': ' + esc(msg));
 }
 function terminar() {
 syncTodoEnCurso = false;
-txt.textContent = 'Sincronizar';
+txt.textContent = 'Sync';
 toggleMenu(false);
 loadData();
 if (lineas.length) avisoInicio(lineas.join('<br>'), !huboError);
@@ -81,7 +81,7 @@ if (lineas.length) avisoInicio(lineas.join('<br>'), !huboError);
 // Un paso de broker: saltea si no esta configurado, anota el resultado y
 // sigue con el siguiente pase lo que pase.
 function paso1Broker(cfg, sig) {
-paso('Sincronizando ' + cfg.nombre + '...');
+paso('Syncing ' + cfg.nombre + '...');
 google.script.run.withSuccessHandler(function (r) {
 if (r && r.sinConfig) { sig(); return; }
 if (!r || !r.ok) error(cfg.nombre, msgBackend(r));
@@ -93,15 +93,15 @@ sig();
 })[cfg.fn]({ dryRun: false });
 }
 function precios() {
-paso('Refrescando precios...');
+paso('Refreshing prices...');
 google.script.run.withSuccessHandler(terminar).withFailureHandler(function () {
-error('Precios', 'no se pudieron refrescar.');
+error('Precios', 'could not refresh.');
 terminar();
 }).refrescarPrecios();
 }
 function binance() {
 if (!bnbConfig()) { precios(); return; }
-paso('Sincronizando Binance...');
+paso('Syncing Binance...');
 bnbSincronizar({
 alOk: function (r) { ok('Binance', r); precios(); },
 alError: function (msg) { error('Binance', msg); precios(); }
@@ -127,14 +127,14 @@ var bakEnCurso = false;
 function cargarBackups() {
 var cont = document.getElementById('bakList');
 if (!cont) return;
-cont.innerHTML = '<p class="loadingtxt">Cargando...</p>';
+cont.innerHTML = '<p class="loadingtxt">Loading...</p>';
 google.script.run.withSuccessHandler(function (r) {
 if (!r || !r.ok) { errorEnVista('bakList', null, 'las copias'); return; }
-if (!r.backups.length) { cont.innerHTML = '<div class="vacio"><span class="vic">&#128190;</span><b>Sin copias todav&iacute;a</b>Se guardan solas antes de cada sincronizaci&oacute;n u operaci&oacute;n.</div>'; return; }
+if (!r.backups.length) { cont.innerHTML = '<div class="vacio"><span class="vic">&#128190;</span><b>No backups yet</b>They save automatically before each sync or operation.</div>'; return; }
 cont.innerHTML = r.backups.map(function (b) {
 return '<div class="row"><span>' + esc(nombrePlataforma(b.hoja)) +
 '<br><span class="newsempty">' + esc(fechaSalud(b.cuando)) + (b.motivo ? ' &middot; ' + esc(b.motivo) : '') + '</span></span>' +
-'<button class="ghostbtn bakBtn" data-hoja="' + esc(b.hoja) + '" data-cuando="' + esc(b.cuando) + '" style="width:auto;padding:6px 12px;margin:0">Volver a esto</button></div>';
+'<button class="ghostbtn bakBtn" data-hoja="' + esc(b.hoja) + '" data-cuando="' + esc(b.cuando) + '" style="width:auto;padding:6px 12px;margin:0">Revert to this</button></div>';
 }).join('');
 Array.prototype.forEach.call(cont.querySelectorAll('.bakBtn'), function (btn) {
 btn.onclick = function () { restaurarHoja(btn.getAttribute('data-hoja'), btn.getAttribute('data-cuando')); };
@@ -145,22 +145,22 @@ errorEnVista('bakList', err, 'las copias');
 }
 function restaurarHoja(hoja, cuando) {
 if (bakEnCurso) return;
-if (!window.confirm('La hoja ' + hoja + ' va a volver a como estaba en esa copia.\n\nLo que haya ahora se guarda igual, asi que esto tambien se puede deshacer.\n\n¿Seguimos?')) return;
+if (!window.confirm('The ' + hoja + ' sheet will go back to how it was in that backup.\n\nWhat\u2019s there now gets saved too, so this can also be undone.\n\nContinue?')) return;
 bakEnCurso = true;
 var res = document.getElementById('bakResultado');
-res.innerHTML = '<p class="loadingtxt">Restaurando ' + esc(hoja) + '...</p>';
+res.innerHTML = '<p class="loadingtxt">Restoring ' + esc(hoja) + '...</p>';
 google.script.run.withSuccessHandler(function (r) {
 bakEnCurso = false;
 if (!r || !r.ok) {
-res.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['No se pudo restaurar.']).join(' ')) + '</div>';
+res.innerHTML = '<div class="tmsg err">' + esc(((r && r.mensajes) || ['Could not restore.']).join(' ')) + '</div>';
 return;
 }
-res.innerHTML = '<div class="tmsg ok">&#10003; ' + esc((r.mensajes || ['Listo.']).join(' ')) + '</div>';
+res.innerHTML = '<div class="tmsg ok">&#10003; ' + esc((r.mensajes || ['Done.']).join(' ')) + '</div>';
 cargarBackups();
 loadData();
 }).withFailureHandler(function (err) {
 bakEnCurso = false;
-res.innerHTML = '<div class="tmsg err">' + esc(err && err.message ? err.message : 'No se pudo restaurar.') + '</div>';
+res.innerHTML = '<div class="tmsg err">' + esc(err && err.message ? err.message : 'Could not restore.') + '</div>';
 }).restaurarBackup({ hoja: hoja, cuando: cuando || '' });
 }
 

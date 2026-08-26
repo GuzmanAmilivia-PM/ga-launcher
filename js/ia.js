@@ -6,8 +6,8 @@ google.script.run.withSuccessHandler(function (st) {
 iaConfigurada = !!(st && st.configurada);
 var t = document.getElementById('iaEstadoTxt');
 if (t) t.innerHTML = iaConfigurada
-? '&#10003; Clave configurada. Los an&aacute;lisis se generan con Claude (claude-opus-5) y se guardan 6 horas.'
-: 'Sin configurar. Cre&aacute; una clave de API en <b>console.anthropic.com</b> y pegala ac&aacute;. Se guarda en tu servidor privado de Cloudflare, nunca en esta p&aacute;gina.';
+? '&#10003; Key configured. Analyses are generated with Claude (claude-opus-5) and saved for 6 hours.'
+: 'Not configured. Create an API key at <b>console.anthropic.com</b> and paste it here. It\u2019s saved on your private Cloudflare server, never on this page.';
 var aviso = document.getElementById('iaKeyAviso');
 if (aviso) aviso.style.display = iaConfigurada ? 'none' : '';
 }).withFailureHandler(function () {}).estadoIA();
@@ -17,7 +17,7 @@ var inp = document.getElementById('iaKey');
 // guardarConBoton vive en brokers.js (el conductor unico de credenciales).
 guardarConBoton({
 btn: this, inputs: [inp], resId: 'iaKeyResultado',
-sujeto: 'La clave de IA', exito: 'Clave guardada.',
+sujeto: 'The AI key', exito: 'Key saved.',
 alOk: cargarEstadoIA,
 pedir: function (ok, fail) {
 google.script.run.withSuccessHandler(ok).withFailureHandler(fail).guardarClaveIA({ apiKey: inp.value });
@@ -32,7 +32,7 @@ else document.getElementById('iaKeyAviso').style.display = iaConfigurada ? 'none
 var el = document.getElementById('iaList');
 el.innerHTML = '';
 var lista = ((lastData && lastData.posiciones) || []).filter(function (p) { return p.symbol !== 'USDT'; });
-if (!lista.length) { el.innerHTML = '<p class="newsempty">Todav&iacute;a no hay posiciones cargadas.</p>'; return; }
+if (!lista.length) { el.innerHTML = '<p class="newsempty">No positions loaded yet.</p>'; return; }
 lista.forEach(function (p) {
 var row = document.createElement('div');
 row.className = 'row clickable';
@@ -45,7 +45,7 @@ function analizarIA(symbol, forzar) {
 if (iaCargando) return;
 iaCargando = true;
 var out = document.getElementById('iaResultado');
-out.innerHTML = '<div class="card"><h2>' + esc(symbol) + '</h2><p class="loadingtxt">Claude est&aacute; analizando ' + esc(symbol) + '... puede tardar hasta un minuto.</p></div>';
+out.innerHTML = '<div class="card"><h2>' + esc(symbol) + '</h2><p class="loadingtxt">Claude is analyzing ' + esc(symbol) + '... this can take up to a minute.</p></div>';
 out.scrollIntoView({ behavior: 'smooth', block: 'start' });
 google.script.run.withSuccessHandler(function (r) {
 iaCargando = false;
@@ -64,21 +64,21 @@ out.innerHTML = '<div class="card"><h2>' + esc(symbol) + '</h2><p class="newsemp
 }
 function fichaIAHtml(r) {
 var a = r.analisis || {};
-var h = '<div class="card"><h2>' + esc(r.symbol) + ' &middot; ficha IA</h2>';
-h += '<p class="ia-meta">Generado ' + esc(r.generado || '') + ' hs &middot; ' + esc(r.modelo || '') + '</p>';
+var h = '<div class="card"><h2>' + esc(r.symbol) + ' &middot; AI profile</h2>';
+h += '<p class="ia-meta">Generated ' + esc(r.generado || '') + ' &middot; ' + esc(r.modelo || '') + '</p>';
 if (a.resumen) h += '<p class="ia-p">' + esc(a.resumen) + '</p>';
 if (a.indicadores && a.indicadores.length) {
-h += '<div style="overflow-x:auto"><table class="holdtable"><thead><tr><th>Indicador</th><th>Valor</th><th>Lectura</th></tr></thead><tbody>';
+h += '<div style="overflow-x:auto"><table class="holdtable"><thead><tr><th>Indicator</th><th>Value</th><th>Reading</th></tr></thead><tbody>';
 a.indicadores.forEach(function (i) {
 h += '<tr><td>' + esc(i.nombre) + '</td><td><b>' + esc(i.valor) + '</b></td><td class="ia-coment">' + esc(i.comentario) + '</td></tr>';
 });
 h += '</tbody></table></div>';
 }
-if (a.fortalezas && a.fortalezas.length) h += '<h3 class="ia-h pos">Fortalezas</h3><ul class="ia-ul">' + a.fortalezas.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>';
-if (a.riesgos && a.riesgos.length) h += '<h3 class="ia-h neg">Riesgos</h3><ul class="ia-ul">' + a.riesgos.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>';
-if (a.proyeccion) h += '<h3 class="ia-h">Proyecci&oacute;n de crecimiento</h3><p class="ia-p">' + esc(a.proyeccion) + '</p>';
-h += '<p class="ia-nota">' + esc((a.nota ? a.nota + ' ' : '')) + 'Contenido informativo generado por IA: no es una recomendaci&oacute;n de compra o venta ni asesoramiento financiero.</p>';
-h += '<button class="ghostbtn" id="iaRegen">Actualizar an&aacute;lisis</button></div>';
+if (a.fortalezas && a.fortalezas.length) h += '<h3 class="ia-h pos">Strengths</h3><ul class="ia-ul">' + a.fortalezas.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>';
+if (a.riesgos && a.riesgos.length) h += '<h3 class="ia-h neg">Risks</h3><ul class="ia-ul">' + a.riesgos.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>';
+if (a.proyeccion) h += '<h3 class="ia-h">Growth outlook</h3><p class="ia-p">' + esc(a.proyeccion) + '</p>';
+h += '<p class="ia-nota">' + esc((a.nota ? a.nota + ' ' : '')) + 'Informational content generated by AI: not a buy or sell recommendation, nor financial advice.</p>';
+h += '<button class="ghostbtn" id="iaRegen">Refresh analysis</button></div>';
 return h;
 }
 

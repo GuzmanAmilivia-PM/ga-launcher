@@ -70,7 +70,7 @@ if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) sweepGo(sweepIdx + (
 }, { passive: true });
 })();
 
-var MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Set', 'Oct', 'Nov', 'Dic'];
+var MESES_CORTOS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 // Cache local de los paneles lentos (dividendos y aportes): consultar los
 // brokers tarda varios segundos, asi que se pinta al instante lo ultimo visto
 // y se refresca por atras. Mismo criterio que pintarCache() en el arranque.
@@ -90,8 +90,8 @@ try { localStorage.setItem(clave, JSON.stringify({ t: Date.now(), data: data }))
 function marcaActualizando(id, cuando, cola) {
 var el = document.getElementById(id);
 if (!el) return;
-el.innerHTML = '<p class="newsempty">Datos del ' + fechaCortaMs(cuando) +
-' &middot; ' + (cola || 'actualizando...') + '</p>';
+el.innerHTML = '<p class="newsempty">Data from ' + fechaCortaMs(cuando) +
+' &middot; ' + (cola || 'updating...') + '</p>';
 el.style.display = '';
 }
 function limpiarMarca(id) {
@@ -122,10 +122,10 @@ ajustarAlturaDeck();
 }, function (err) {
 limpiarMarca(cfg.avisoId);
 // Con datos ya pintados, un fallo de red no borra la pantalla.
-if (cache) { marcaActualizando(cfg.avisoId, cache.t, 'no se pudo actualizar'); return; }
+if (cache) { marcaActualizando(cfg.avisoId, cache.t, 'could not update'); return; }
 if (cfg.alFallar) cfg.alFallar();
 document.getElementById(cfg.bodyId).innerHTML =
-'<p class="newsempty">' + esc(msgErr(err, 'Esta pantalla')) + '</p>';
+'<p class="newsempty">' + esc(msgErr(err, 'This screen')) + '</p>';
 ajustarAlturaDeck();
 });
 }
@@ -169,7 +169,7 @@ cargarConCache({
 clave: 'ga_cache_div',
 avisoId: 'divCacheAviso',
 bodyId: 'divBody',
-cargando: 'Leyendo los dividendos de tus brokers...',
+cargando: 'Reading dividends from your brokers...',
 forzar: !!forzar,
 limpiar: function () {
 ['divStats', 'divChartBox', 'divHint'].forEach(function (id) { document.getElementById(id).style.display = 'none'; });
@@ -200,8 +200,8 @@ var prom = Math.round(totalAnio / 12 * 100) / 100;
 document.getElementById('divStats').style.display = '';
 document.getElementById('divTotalAnio').textContent = fmtUsd(totalAnio);
 document.getElementById('divPromedio').innerHTML =
-'Promedio mensual: <b>' + esc(fmtUsd(prom)) + '</b><br>' +
-'Cobrado: ' + esc(fmtUsd(r.totalCobrado)) + ' &middot; A cobrar: ' + esc(fmtUsd(r.totalProximo));
+'Monthly average: <b>' + esc(fmtUsd(prom)) + '</b><br>' +
+'Received: ' + esc(fmtUsd(r.totalCobrado)) + ' &middot; Upcoming: ' + esc(fmtUsd(r.totalProximo));
 document.getElementById('divChartBox').style.display = '';
 document.getElementById('divHint').style.display = '';
 var cobrados = (r.meses || []).map(function (m) { return m.cobrado || 0; });
@@ -213,9 +213,9 @@ type: 'bar',
 data: {
 labels: MESES_CORTOS,
 datasets: [
-{ label: 'Cobrado', data: cobrados, backgroundColor: '#5b8def', stack: 'd', borderRadius: 3 },
-{ label: 'A cobrar', data: proximos, backgroundColor: 'rgba(144,160,184,.45)', stack: 'd', borderRadius: 3 },
-{ label: 'Promedio', type: 'line', data: MESES_CORTOS.map(function () { return prom; }), borderColor: '#38bdf8', borderWidth: 1.5, pointRadius: 0 }
+{ label: 'Received', data: cobrados, backgroundColor: '#5b8def', stack: 'd', borderRadius: 3 },
+{ label: 'Upcoming', data: proximos, backgroundColor: 'rgba(144,160,184,.45)', stack: 'd', borderRadius: 3 },
+{ label: 'Average', type: 'line', data: MESES_CORTOS.map(function () { return prom; }), borderColor: '#38bdf8', borderWidth: 1.5, pointRadius: 0 }
 ]
 },
 options: {
@@ -244,12 +244,12 @@ return;
 box.setAttribute('data-mes', String(mes));
 var det = (divDatos && divDatos.detalle && divDatos.detalle[mes]) || [];
 var filas = det.map(function (d) {
-var etiqueta = d.estado === 'proximo' ? (d.estimado ? ' <span class="desc">~ estimado</span>' : ' <span class="desc">a pagar</span>') : '';
+var etiqueta = d.estado === 'proximo' ? (d.estimado ? ' <span class="desc">~ estimated</span>' : ' <span class="desc">upcoming</span>') : '';
 // nombrePlataforma como en el modal: antes "Interactive Brokers" no se
 // acortaba a IBKR en el panel chico (inconsistencia cazada en E6).
 return esc(nombrePlataforma(d.broker)) + ' &middot; <span class="sym">' + esc(d.symbol || 'CASH') + '</span> &middot; ' + esc(fmtUsd(d.monto)) + etiqueta;
 }).join('<br>');
-box.innerHTML = '<div class="divdetbox"><b>' + MESES_CORTOS[mes - 1] + ' ' + esc((divDatos && divDatos.anio) || '') + '</b><br>' + (filas || '<span class="desc">Sin movimientos ese mes</span>') + '</div>';
+box.innerHTML = '<div class="divdetbox"><b>' + MESES_CORTOS[mes - 1] + ' ' + esc((divDatos && divDatos.anio) || '') + '</b><br>' + (filas || '<span class="desc">No activity that month</span>') + '</div>';
 ajustarAlturaDeck();
 }
 document.getElementById('divRefreshBtn').onclick = function () { cargarDividendos(true); };
@@ -269,18 +269,18 @@ document.getElementById('divModalDetalle').removeAttribute('data-mes');
 function renderDivModal() {
 if (document.getElementById('divModal').style.display === 'none') return;
 var brokersBox = document.getElementById('divModalBrokers');
-if (!divDatos) { brokersBox.innerHTML = '<p class="loadingtxt">Leyendo los dividendos...</p>'; return; }
+if (!divDatos) { brokersBox.innerHTML = '<p class="loadingtxt">Reading dividends...</p>'; return; }
 var r = divDatos;
 document.getElementById('divModalAnio').textContent = r.anio;
 var totalAnio = Math.round(((r.totalCobrado || 0) + (r.totalProximo || 0)) * 100) / 100;
 document.getElementById('divModalTotales').innerHTML =
-'Estimado del a&ntilde;o: <b>' + esc(fmtUsd(totalAnio)) + '</b> &middot; Cobrado: ' + esc(fmtUsd(r.totalCobrado)) + ' &middot; A cobrar: ' + esc(fmtUsd(r.totalProximo));
+'Estimated this year: <b>' + esc(fmtUsd(totalAnio)) + '</b> &middot; Received: ' + esc(fmtUsd(r.totalCobrado)) + ' &middot; Upcoming: ' + esc(fmtUsd(r.totalProximo));
 var brokers = Object.keys(r.porBroker || {});
 brokersBox.innerHTML = brokers.length ? brokers.map(function (b, i) {
 var pb = r.porBroker[b];
 var tot = Math.round((pb.cobrado + pb.proximo) * 100) / 100;
-return '<div class="apostat"><span><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:' + coloresPie()[i % PIE_COLORS.length] + '"></span>' + esc(nombrePlataforma(b)) + '<span class="desc" style="margin-left:8px">cobrado ' + esc(fmtUsd(pb.cobrado)) + ' &middot; a cobrar ' + esc(fmtUsd(pb.proximo)) + '</span></span><b>' + esc(fmtUsd(tot)) + '</b></div>';
-}).join('') : '<p class="newsempty">Sin datos por broker todav&iacute;a.</p>';
+return '<div class="apostat"><span><span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:' + coloresPie()[i % PIE_COLORS.length] + '"></span>' + esc(nombrePlataforma(b)) + '<span class="desc" style="margin-left:8px">received ' + esc(fmtUsd(pb.cobrado)) + ' &middot; upcoming ' + esc(fmtUsd(pb.proximo)) + '</span></span><b>' + esc(fmtUsd(tot)) + '</b></div>';
+}).join('') : '<p class="newsempty">No data by broker yet.</p>';
 var t = temaChart();
 if (divChartBigInstance) divChartBigInstance.destroy();
 divChartBigInstance = new Chart(document.getElementById('divChartBig'), {
@@ -320,10 +320,10 @@ return;
 box.setAttribute('data-mes', String(mes));
 var det = (divDatos && divDatos.detalle && divDatos.detalle[mes]) || [];
 var filas = det.map(function (d) {
-var etiqueta = d.estado === 'proximo' ? (d.estimado ? ' <span class="desc">~ estimado</span>' : ' <span class="desc">a pagar</span>') : '';
+var etiqueta = d.estado === 'proximo' ? (d.estimado ? ' <span class="desc">~ estimated</span>' : ' <span class="desc">upcoming</span>') : '';
 return esc(nombrePlataforma(d.broker)) + ' &middot; <span class="sym">' + esc(d.symbol || 'CASH') + '</span> &middot; ' + esc(fmtUsd(d.monto)) + etiqueta;
 }).join('<br>');
-box.innerHTML = '<div class="divdetbox"><b>' + MESES_CORTOS[mes - 1] + ' ' + esc((divDatos && divDatos.anio) || '') + '</b><br>' + (filas || '<span class="desc">Sin movimientos ese mes</span>') + '</div>';
+box.innerHTML = '<div class="divdetbox"><b>' + MESES_CORTOS[mes - 1] + ' ' + esc((divDatos && divDatos.anio) || '') + '</b><br>' + (filas || '<span class="desc">No activity that month</span>') + '</div>';
 }
 document.getElementById('divExpandBtn').onclick = abrirDivModal;
 document.getElementById('divModalClose').onclick = cerrarDivModal;
@@ -334,7 +334,7 @@ cargarConCache({
 clave: 'ga_cache_apo',
 avisoId: 'apoCacheAviso',
 bodyId: 'apoBody',
-cargando: 'Calculando los aportes del a&ntilde;o...',
+cargando: 'Calculating this year\u2019s contributions...',
 forzar: !!forzar,
 render: renderAportes,
 alFallar: function () { apoCargado = false; },
@@ -360,9 +360,9 @@ try { aplicarAportes(r); } catch (e) {}
 // sola en cuanto llegan.
 try { if (typeof renderAnual === 'function') renderAnual(); } catch (e) {}
 var html = '';
-html += '<div class="apostat"><span>Entr&oacute; a tus apps</span><b>' + esc(fmtUsdEnt(r.aportes)) + '</b></div>';
-html += '<div class="apostat"><span>Sali&oacute; de tus apps</span><b>' + esc(fmtUsdEnt(r.retiros)) + '</b></div>';
-html += '<div class="apostat"><span>Neto del a&ntilde;o</span><b>' + esc(fmtUsdEnt(r.neto)) + '</b></div>';
+html += '<div class="apostat"><span>Went into your apps</span><b>' + esc(fmtUsdEnt(r.aportes)) + '</b></div>';
+html += '<div class="apostat"><span>Came out of your apps</span><b>' + esc(fmtUsdEnt(r.retiros)) + '</b></div>';
+html += '<div class="apostat"><span>Net this year</span><b>' + esc(fmtUsdEnt(r.neto)) + '</b></div>';
 // OJO — ac&aacute; NO va "rendimiento = total &minus; inicio &minus; neto". Ese
 // numero se mostro y era FALSO (reporte de Guzman, 17/08/2026): una
 // transferencia de Itau/BTG (que estan DENTRO del total) hacia IBKR cuenta
@@ -386,10 +386,10 @@ function htmlComparacion() {
 var c;
 try { c = comparacionGrupo(); } catch (e) { return ''; }
 if (!c) return '';
-var h = '<p class="lbl" style="margin-top:14px">' + esc(c.nombre || 'Cuentas con aportes conocidos') + '</p>';
+var h = '<p class="lbl" style="margin-top:14px">' + esc(c.nombre || 'Accounts with known contributions') + '</p>';
 if (c.pocos) {
 // Un guion sin explicacion no sirve: hay que decir que esto recien arranca.
-h += '<p class="capnota">El rendimiento se mide solo sobre tus apps de inversi&oacute;n (los bancos no rinden, son capital), y esa historia empez&oacute; a guardarse hoy. Con un d&iacute;a m&aacute;s aparece el primer n&uacute;mero.</p>';
+h += '<p class="capnota">Return is measured only over your investment apps (banks don\u2019t earn a return, they\u2019re capital), and that history started being saved today. With one more day the first number will appear.</p>';
 return h;
 }
 function pct(v, esNum) {
@@ -399,15 +399,15 @@ return '<p class="capval ' + (v >= 0 ? 'up' : 'down') + '">' + signoPct(v, 1) + 
 // El rendimiento en plata: lo que las apps valen hoy menos su capital (el
 // valor con el que arrancó la medición más lo que entró después).
 var rendUsd = Math.round(c.valor - c.capital);
-h += '<div class="apostat"><span>Rendimiento</span><b class="' + (rendUsd >= 0 ? 'up' : 'down') + '">' + esc(mask((rendUsd >= 0 ? '+' : '') + 'US$ ' + rendUsd.toLocaleString('es-UY'))) + '</b></div>';
+h += '<div class="apostat"><span>Return</span><b class="' + (rendUsd >= 0 ? 'up' : 'down') + '">' + esc(mask((rendUsd >= 0 ? '+' : '') + 'US$ ' + rendUsd.toLocaleString('en-US'))) + '</b></div>';
 h += '<div class="caprow">';
-h += '<div><p class="lbl">Rindi&oacute;</p>' + pct(c.pct) + '</div>';
-h += '<div><p class="lbl">La cartera</p>' + pct(c.twrPct) + '</div>';
-h += '<div><p class="lbl">' + esc(c.idxNombre || 'Índice') + '</p>' + pct(c.idxPct) + '</div>';
+h += '<div><p class="lbl">Returned</p>' + pct(c.pct) + '</div>';
+h += '<div><p class="lbl">The portfolio</p>' + pct(c.twrPct) + '</div>';
+h += '<div><p class="lbl">' + esc(c.idxNombre || 'Index') + '</p>' + pct(c.idxPct) + '</div>';
 h += '</div>';
-h += '<p class="capnota">Desde el ' + fechaCortaMs(c.desde) + ', sobre ' +
-esc(fmtUsdEnt(c.capital)) + ' de capital. &quot;Rindi&oacute;&quot; es TU resultado (tu plata, tus fechas de aporte); &quot;la cartera&quot; es c&oacute;mo rindieron las inversiones sin el efecto de ese timing. Los bancos (Ita&uacute;, BTG) no entran: no rinden, y pasarles plata a las apps cuenta como aporte, no como ganancia.' +
-(c.idxPct !== null ? ' El &iacute;ndice no paga dividendos y tus cuentas s&iacute;.' : '') + '</p>';
+h += '<p class="capnota">Since ' + fechaCortaMs(c.desde) + ', over ' +
+esc(fmtUsdEnt(c.capital)) + ' of capital. \u201cReturned\u201d is YOUR result (your money, your contribution dates); \u201cthe portfolio\u201d is how the investments performed without the effect of that timing. The banks (Ita\u00fa, BTG) are not included: they don\u2019t earn a return, and moving money from them into the apps counts as a contribution, not a gain.' +
+(c.idxPct !== null ? ' The index doesn\u2019t pay dividends and your accounts do.' : '') + '</p>';
 return h;
 }
 

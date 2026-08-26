@@ -23,26 +23,26 @@ function fichaBuscarHtml(r) {
 var chip = '';
 if (r.cambioDia !== null && r.cambioDia !== undefined && isFinite(Number(r.cambioDia))) {
 var v = Number(r.cambioDia);
-chip = '<span class="bus-chip ' + (v >= 0 ? 'up' : 'down') + '">' + signoPct(v, 2) + ' ' + (r.cripto ? '(24h)' : 'hoy') + '</span>';
+chip = '<span class="bus-chip ' + (v >= 0 ? 'up' : 'down') + '">' + signoPct(v, 2) + ' ' + (r.cripto ? '(24h)' : 'today') + '</span>';
 }
 var h = '<div class="card"><div class="bus-head"><span><span class="sym" style="font-size:18px">' + esc(r.symbol) + '</span><span class="desc">' + esc(r.nombre || '') + '</span></span>' + chip + '</div>';
 h += '<p class="bus-precio">USD ' + esc(fmtNum(r.precio)) + '</p>';
 h += '<div class="tvwrap" id="busTv"></div>';
 var filas = '';
-if (r.pe !== null && r.pe !== undefined) filas += busFila('P/E (precio / ganancia)', esc(fmtNum(r.pe)));
-if (r.eps !== null && r.eps !== undefined) filas += busFila('EPS (ganancia por acci&oacute;n)', esc(fmtNum(r.eps)));
+if (r.pe !== null && r.pe !== undefined) filas += busFila('P/E (price / earnings)', esc(fmtNum(r.pe)));
+if (r.eps !== null && r.eps !== undefined) filas += busFila('EPS (earnings per share)', esc(fmtNum(r.eps)));
 if (r.marketcap !== null && r.marketcap !== undefined) filas += busFila('Market cap', esc(fmtBig(r.marketcap)));
 if (r.high52 !== null && r.high52 !== undefined && r.low52 !== null && r.low52 !== undefined) {
-filas += busFila('Rango 52 semanas', esc(fmtNum(r.low52)) + ' &ndash; ' + esc(fmtNum(r.high52)));
+filas += busFila('52-week range', esc(fmtNum(r.low52)) + ' &ndash; ' + esc(fmtNum(r.high52)));
 }
-if (r.beta !== null && r.beta !== undefined) filas += busFila('Beta (volatilidad vs mercado)', esc(fmtNum(r.beta)));
+if (r.beta !== null && r.beta !== undefined) filas += busFila('Beta (volatility vs market)', esc(fmtNum(r.beta)));
 if (r.cripto && r.minDia !== null && r.minDia !== undefined && r.maxDia) {
-filas += busFila('Rango 24 h', esc(fmtNum(r.minDia)) + ' &ndash; ' + esc(fmtNum(r.maxDia)));
+filas += busFila('24h range', esc(fmtNum(r.minDia)) + ' &ndash; ' + esc(fmtNum(r.maxDia)));
 }
 if (filas) h += '<div style="overflow-x:auto;margin-top:12px"><table class="holdtable"><tbody>' + filas + '</tbody></table></div>';
 if (r.enCartera) {
 var ec = r.enCartera;
-h += '<p class="tmonto" style="margin-top:14px">&#10003; Ya lo ten&eacute;s en cartera: <b>' + esc(fmtNum(ec.qty)) + '</b> unidades (' + fmt(ec.valor) + (ec.precioCompra ? ', comprado a ' + esc(fmtNum(ec.precioCompra)) : '') + ')</p>';
+h += '<p class="tmonto" style="margin-top:14px">&#10003; You already hold this: <b>' + esc(fmtNum(ec.qty)) + '</b> units (' + fmt(ec.valor) + (ec.precioCompra ? ', bought at ' + esc(fmtNum(ec.precioCompra)) : '') + ')</p>';
 }
 h += '</div>';
 return h;
@@ -51,14 +51,14 @@ function buscarActivo() {
 var q = document.getElementById('busInput').value.trim().toUpperCase();
 var out = document.getElementById('busResultado');
 if (!q) return;
-if (!/^[A-Z0-9.\-:]{1,15}$/.test(q)) { out.innerHTML = '<div class="tmsg err">Ticker inv&aacute;lido.</div>'; return; }
+if (!/^[A-Z0-9.\-:]{1,15}$/.test(q)) { out.innerHTML = '<div class="tmsg err">Invalid ticker.</div>'; return; }
 var btn = document.getElementById('busGo');
 btn.disabled = true;
-out.innerHTML = '<div class="card"><p class="loadingtxt">Buscando ' + esc(q) + '... si es la primera vez puede tardar unos segundos.</p></div>';
+out.innerHTML = '<div class="card"><p class="loadingtxt">Searching ' + esc(q) + '... if it\u2019s the first time, this can take a few seconds.</p></div>';
 google.script.run.withSuccessHandler(function (r) {
 btn.disabled = false;
 if (!r || !r.ok) {
-out.innerHTML = '<div class="card"><p class="newsempty">' + esc(((r && r.mensajes) || ['No se encontró.']).join(' ')) + '</p></div>';
+out.innerHTML = '<div class="card"><p class="newsempty">' + esc(((r && r.mensajes) || ['Not found.']).join(' ')) + '</p></div>';
 return;
 }
 out.innerHTML = fichaBuscarHtml(r);
@@ -68,7 +68,7 @@ if (tvEl) crearTvWidget(tvEl, r.cripto ? ('BINANCE:' + r.symbol + 'USDT') : r.sy
 btn.disabled = false;
 // La traduccion de unknown_fn vive en msgErr (brokers.js): era el quinto
 // traductor copiado a mano y ya habia divergido del resto.
-out.innerHTML = '<div class="card"><p class="newsempty">' + esc(msgErr(err, 'El buscador')) + '</p></div>';
+out.innerHTML = '<div class="card"><p class="newsempty">' + esc(msgErr(err, 'The search')) + '</p></div>';
 }).buscarTicker({ symbol: q });
 }
 document.getElementById('busGo').onclick = buscarActivo;

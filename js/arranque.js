@@ -119,7 +119,7 @@ renderEvoMini();
 // expandir despues tiraba otra excepcion, esa sin try alrededor.
 // Auditoria del 23/08/2026.
 var cb = document.getElementById('evoMini');
-if (cb) cb.innerHTML = '<span class="evomini-vacio">No se pudo dibujar el gr&aacute;fico.</span>';
+if (cb) cb.innerHTML = '<span class="evomini-vacio">Could not draw the chart.</span>';
 }
 aplicarSparks(data);
 renderHoldings(data.topHoldings);
@@ -136,7 +136,7 @@ if (vPos && vPos.style.display !== 'none') renderPosiciones();
 bnbAutoSync();
   } catch(e) {
     document.getElementById('total').textContent = '—';
-    avisoInicio('&#9888; No se pudo pintar la pantalla. Cerrá y abrí la app; si sigue, mandá captura del Diagnóstico.');
+    avisoInicio('&#9888; The screen could not be rendered. Close and reopen the app; if it keeps happening, send a screenshot of Diagnostics.');
     try { console.error('render:', e); } catch (e2) {}
   } }
   // El poll de 60 s pide el payload SIN la serie histórica ({lite:true}): la
@@ -179,7 +179,7 @@ bnbAutoSync();
       // Con datos ya pintados (del caché), un fallo de red no rompe la vista:
       // se avisa y quedan los últimos datos guardados.
       pintarBadges('error');
-      if (lastData) { avisoInicio('&#9888; Sin conexi&oacute;n con el servidor: mostrando los &uacute;ltimos datos guardados.'); return; }
+      if (lastData) { avisoInicio('&#9888; No connection to the server: showing the last saved data.'); return; }
       var t=document.getElementById('total'); if(t){ t.textContent='ERR: '+err.message; }
     }).withSuccessHandler(function(data){
       if (!data) return;
@@ -204,7 +204,7 @@ bnbAutoSync();
         }
       }
       var av = document.getElementById('autoAviso');
-      if (av && av.innerHTML.indexOf('Sin conexi') !== -1) { av.style.display='none'; av.innerHTML=''; }
+      if (av && av.innerHTML.indexOf('No connection') !== -1) { av.style.display='none'; av.innerHTML=''; }
       pintarBadges('ok');
       // Si nada cambió, no se toca el DOM: el poll dejaba de lado la batería,
       // parpadeaba la pantalla y cerraba el gráfico de TradingView que

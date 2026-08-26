@@ -18,7 +18,7 @@ cargarConCache({
 clave: 'ga_cache_ana',
 avisoId: 'anaCacheAviso',
 bodyId: 'anaBody',
-cargando: 'Analizando tu cartera...',
+cargando: 'Analyzing your portfolio...',
 forzar: !!forzar,
 render: renderAnalisis,
 alFallar: function () { anaCargado = false; },
@@ -54,13 +54,13 @@ var chequeos = r.chequeos || [];
 // cuenta: se dice que no esta.
 var tieneRestas = chequeos.length > 0 && chequeos.every(function (q) { return typeof q.resta === 'number'; });
 if (!tieneRestas) {
-return '<p class="anadesg-nota">El detalle del c&aacute;lculo llega con el an&aacute;lisis actualizado. ' +
-'Tocá el bot&oacute;n de actualizar de esta tarjeta.</p>';
+return '<p class="anadesg-nota">Calculation detail comes with the updated analysis. ' +
+'Tap this card\u2019s refresh button.</p>';
 }
-var h = "<p class=\"anadesg-tit\">C&oacute;mo se llega a " + pj + "</p>";
-h += '<div class="anadesg-fila base"><span>Punto de partida</span><b>' + base + '</b></div>';
-h += '<p class="anadesg-nota">Toda cartera arranca en ' + base + '. Cada chequeo que no da bien descuenta: ' +
-'<b>&minus;20</b> si es un riesgo, <b>&minus;10</b> si merece atenci&oacute;n, <b>0</b> si est&aacute; bien.</p>';
+var h = "<p class=\"anadesg-tit\">How we get to " + pj + "</p>";
+h += '<div class="anadesg-fila base"><span>Starting point</span><b>' + base + '</b></div>';
+h += '<p class="anadesg-nota">Every portfolio starts at ' + base + '. Each check that doesn\u2019t come out well subtracts: ' +
+'<b>&minus;20</b> if it\u2019s a risk, <b>&minus;10</b> if it deserves attention, <b>0</b> if it\u2019s fine.</p>';
 chequeos.forEach(function (q) {
 var signo = q.resta > 0 ? ('&minus;' + q.resta) : '0';
 h += '<div class="anadesg-fila ' + esc(q.estado) + '">' +
@@ -74,11 +74,11 @@ h += '<div class="anadesg-fila total"><span>Total</span><b>' + total + '/100</b>
 // Si la cuenta no cerrara, decirlo es mejor que mostrar dos numeros distintos
 // sin explicacion. No deberia pasar nunca: el backend lo verifica con un test.
 if (total !== pj) {
-h += '<p class="anadesg-nota">Ojo: el puntaje de arriba dice ' + pj + ' y esta cuenta da ' + total + '. ' +
-'Es un error nuestro, no de tus datos.</p>';
+h += '<p class="anadesg-nota">Heads up: the score above says ' + pj + ' and this math gives ' + total + '. ' +
+'This is our mistake, not a problem with your data.</p>';
 }
-h += '<p class="anadesg-nota">Esto mide c&oacute;mo est&aacute; <b>armada</b> la cartera (concentraci&oacute;n, ' +
-'reparto, colch&oacute;n de cash), no cu&aacute;nto rindi&oacute;. No es una recomendaci&oacute;n de compra ni de venta.</p>';
+h += '<p class="anadesg-nota">This measures how the portfolio is <b>built</b> (concentration, ' +
+'allocation, cash cushion), not how much it returned. It is not a buy or sell recommendation.</p>';
 return h;
 }
 
@@ -97,7 +97,7 @@ var html = '';
 // chequeo flojo descuenta. El descuento de cada uno lo manda el backend
 // (`resta`), NO se recalcula aca — dos copias de la misma regla terminan
 // divergiendo, que es la leccion de los tickers de las hojas ocultas.
-html += '<div class="anascore" id="anaScore" role="button" tabindex="0" title="Tocar para ver como se calcula">' +
+html += '<div class="anascore" id="anaScore" role="button" tabindex="0" title="Tap to see how it\u2019s calculated">' +
 '<b>' + esc(r.nivel || '') + '</b><span>' + (Number(r.puntaje) || 0) + '/100</span>' +
 '<span class="anascore-chev" id="anaScoreChev">&rsaquo;</span></div>';
 html += '<div class="anabarra" id="anaBarra"><i style="width:' + Math.max(2, Math.min(100, Number(r.puntaje) || 0)) + '%"></i></div>';
@@ -106,10 +106,10 @@ html += '<div class="anadesglose" id="anaDesglose" style="display:none">' + anaD
 // Numeros duros. "Posiciones efectivas" = 1/HHI: con que se sienten 12
 // posiciones si una pesa el 60% (respuesta: con 2).
 html += '<div class="anagrid">' +
-'<div class="anacelda"><span>Posiciones</span><b>' + (c.posiciones || 0) + '</b><em>equivalen a ' + (c.efectivas || 0).toFixed(1) + ' parejas</em></div>' +
-'<div class="anacelda"><span>Top 5</span><b>' + esc(anaPct(c.top5, 1)) + '</b><em>de lo invertido</em></div>' +
-'<div class="anacelda"><span>Volatilidad</span><b>' + esc(anaPct(rie.volAnual, 1)) + '</b><em>' + (rie.volAnual === null ? 'sin historial suficiente' : 'anualizada') + '</em></div>' +
-'<div class="anacelda"><span>Peor caída</span><b>' + esc(anaPct(rie.drawdown, 1)) + '</b><em>' + (rie.drawdown === null ? '—' : 'desde su punto más alto') + '</em></div>' +
+'<div class="anacelda"><span>Positions</span><b>' + (c.posiciones || 0) + '</b><em>equivalent to ' + (c.efectivas || 0).toFixed(1) + ' pairs</em></div>' +
+'<div class="anacelda"><span>Top 5</span><b>' + esc(anaPct(c.top5, 1)) + '</b><em>of what\u2019s invested</em></div>' +
+'<div class="anacelda"><span>Volatility</span><b>' + esc(anaPct(rie.volAnual, 1)) + '</b><em>' + (rie.volAnual === null ? 'not enough history' : 'annualized') + '</em></div>' +
+'<div class="anacelda"><span>Worst drawdown</span><b>' + esc(anaPct(rie.drawdown, 1)) + '</b><em>' + (rie.drawdown === null ? '—' : 'from its highest point') + '</em></div>' +
 '</div>';
 
 // El reparto por tipo, por plataforma y por posicion NO se dibuja aca
@@ -119,15 +119,15 @@ html += '<div class="anagrid">' +
 
 // Chequeos: el corazon de la pantalla. Cada uno dice como esta ese aspecto y
 // por que, en criollo.
-html += '<p class="anasub">Chequeos</p>';
+html += '<p class="anasub">Checks</p>';
 (r.chequeos || []).forEach(function (q) {
 html += '<div class="anachk ' + esc(q.estado) + '"><i class="luz"></i><div><b>' + esc(q.titulo) + '</b><em>' + esc(q.detalle) + '</em></div></div>';
 });
 
 if (rie.drawdown && rie.drawdownDesde) {
-html += '<p class="newsempty" style="margin-top:10px">La peor caída fue entre el ' + esc(anaFecha(rie.drawdownDesde)) + ' y el ' + esc(anaFecha(rie.drawdownHasta)) + '.</p>';
+html += '<p class="newsempty" style="margin-top:10px">The worst drawdown was between ' + esc(anaFecha(rie.drawdownDesde)) + ' and ' + esc(anaFecha(rie.drawdownHasta)) + '.</p>';
 }
-html += '<p class="newsempty" style="margin-top:6px">Es una descripción de cómo está armada tu cartera, no una recomendación de compra o venta.</p>';
+html += '<p class="newsempty" style="margin-top:6px">This is a description of how your portfolio is built, not a buy or sell recommendation.</p>';
 
 body.innerHTML = html;
 
@@ -141,7 +141,7 @@ var pintarDesglose = function (abierto) {
 anaDesgAbierto = abierto;
 desg.style.display = abierto ? '' : 'none';
 if (chev) chev.className = 'anascore-chev' + (abierto ? ' abierto' : '');
-score.title = abierto ? 'Tocar para ocultar el calculo' : 'Tocar para ver como se calcula';
+score.title = abierto ? 'Tap to hide the calculation' : 'Tap to see how it\u2019s calculated';
 };
 var abrir = function () { pintarDesglose(desg.style.display === 'none'); };
 // El html nuevo nace cerrado: si estaba abierto, se reabre.
