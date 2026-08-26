@@ -446,6 +446,22 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .anachk b { display: block; font-weight: 700; }
 .anachk em { color: var(--muted); font-style: normal; line-height: 1.45; }
 html.light .anabarra { background: rgba(20,40,80,.08); }
+/* Analysis por perfil (26/08/2026): la tarjeta resumen, la pagina de detalle
+   y el test de perfil. Nada de hexadecimales de acento/fondo: familias vivas. */
+.anaperfil { font-size: 11.5px; color: var(--muted); margin: 0 0 12px; line-height: 1.45; }
+.anaperfil b { color: var(--gold); }
+#anaTitulo { cursor: pointer; display: flex; align-items: center; gap: 4px; }
+.anxfila { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 7px 0; font-size: 12.5px; }
+.anxfila span { font-weight: 600; }
+.anxfila b { font-variant-numeric: tabular-nums; font-weight: 700; }
+.anxfila .pista { grid-column: 1 / -1; height: 5px; border-radius: 4px; background: rgba(255,255,255,.08); overflow: hidden; }
+.anxfila .pista i { display: block; height: 100%; border-radius: 4px; background: var(--gold); }
+html.light .anxfila .pista { background: rgba(20,40,80,.08); }
+.anxq { margin: 12px 0 0; }
+.anxq > p { margin: 0 0 6px; font-size: 12.5px; font-weight: 700; }
+.anxopts { display: flex; flex-direction: column; gap: 6px; }
+.anxopts .tipobtn { flex: none; text-align: left; font-size: 12.5px; font-weight: 600; padding: 10px 12px; }
+.anxacciones { display: flex; gap: 8px; margin-top: 12px; }
 .opsresumen { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; font-size: 12.5px; }
 .opsresumen span { display: block; color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; }
 .opsresumen b { font-size: 14px; font-weight: 700; }
@@ -717,7 +733,10 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div id="anualBody"></div>
 </div>
 <div class="card">
-<div class="cardtop"><h2>Portfolio analysis</h2><button class="expandbtn" id="anaRefreshBtn" title="Refresh">&#8635;</button></div>
+<!-- Desde el 26/08/2026 esta tarjeta es el RESUMEN: el titulo (role=button,
+     la politica de contenido no permite onclick inline) abre la pagina
+     Analysis, donde viven el perfil, el test y el detalle completo. -->
+<div class="cardtop"><h2 id="anaTitulo" role="button" tabindex="0" title="Open the full analysis">Portfolio analysis <span class="anascore-chev">&rsaquo;</span></h2><button class="expandbtn" id="anaRefreshBtn" title="Refresh">&#8635;</button></div>
 <div id="anaCacheAviso" style="display:none"></div>
 <div id="anaBody"><p class="loadingtxt">Analyzing your portfolio...</p></div>
 </div>
@@ -730,7 +749,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 
 <!-- ============ CUENTA (detalle) ============ -->
 <div id="view-account" style="display:none">
-<span class="backlink" id="accBack">&larr; Volver</span>
+<span class="backlink" id="accBack">&larr; Back</span>
 <p class="lbl" id="accTitle">Account</p>
 <p class="total" id="accTotal" style="font-size:clamp(26px,8vw,38px)">&mdash;</p>
 <p class="subtotal" id="accLiq"></p>
@@ -747,7 +766,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 
 <!-- ============ POSICIONES (la lista completa, desde el Inicio) ============ -->
 <div id="view-posiciones" style="display:none">
-<span class="backlink" id="posBack">&larr; Volver</span>
+<span class="backlink" id="posBack">&larr; Back</span>
 <p class="viewtitle">Positions</p>
 <div class="card">
 <div style="overflow-x:auto">
@@ -756,6 +775,20 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <tbody id="posBody"></tbody>
 </table>
 </div>
+</div>
+</div>
+
+<!-- ============ ANALYSIS (el analisis por perfil, desde Portfolio) ============ -->
+<div id="view-analisis" style="display:none">
+<span class="backlink" id="anxBack">&larr; Back</span>
+<p class="viewtitle">Portfolio analysis</p>
+<div class="card">
+<h2>Investor profile</h2>
+<div id="anxPerfilBody"><p class="loadingtxt">Loading...</p></div>
+</div>
+<div class="card">
+<div class="cardtop"><h2>Against your profile</h2><button class="expandbtn" id="anxRefreshBtn" title="Refresh">&#8635;</button></div>
+<div id="anxBody"><p class="loadingtxt">Analyzing your portfolio...</p></div>
 </div>
 </div>
 

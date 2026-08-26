@@ -34,7 +34,9 @@
 // desincronizadas. Un numero escrito a mano en dos lugares es exactamente la
 // clase de cosa que queda vieja sin que nadie se entere.
 var VERSION_GENERACION = '1';
-var VERSION_FUNCION = '4';
+// El 5: el analisis por perfil de inversor, con su pagina Analysis y el test
+// (26/08/2026). El 4 fue la interfaz entera en ingles.
+var VERSION_FUNCION = '5';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre
@@ -114,7 +116,7 @@ document.getElementById('mTrans').onclick = function () { toggleMenu(false); set
 document.getElementById('mRefrescar').onclick = function () { sincronizarTodo(); };
 
 // ---------- Navegación (barra inferior) ----------
-var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'posiciones', 'config', 'diseno', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb', 'cs'];
+var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'posiciones', 'analisis', 'config', 'diseno', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb', 'cs'];
 // La barra no cambia nunca: se consulta el DOM una sola vez, no en cada setView.
 var NAVTABS = document.querySelectorAll('.navtab');
 var currentView = 'inicio';
@@ -137,12 +139,15 @@ el.style.display = 'none';
 });
 // Posiciones se abre desde el título del Inicio, así que en la barra sigue
 // encendida la pestaña Inicio — mismo criterio que account con su vista origen.
-var navName = (name === 'account') ? accountReturnView : (name === 'posiciones' ? 'inicio' : name);
+// Analysis se abre desde la tarjeta de Portfolio: misma regla, queda Portfolio.
+var navName = (name === 'account') ? accountReturnView
+: (name === 'posiciones' ? 'inicio' : (name === 'analisis' ? 'portafolio' : name));
 NAVTABS.forEach(function (b) {
 b.classList.toggle('active', b.getAttribute('data-view') === navName);
 });
 if (name === 'portafolio') { renderPortafolio(); if (!anaCargado) cargarAnalisis(false); }
 if (name === 'posiciones') renderPosiciones();
+if (name === 'analisis') cargarAnalisisDetalle(false);
 // Refresca qué está marcado (tema/acento/tonalidad) por si algo cambió.
 if (name === 'diseno') pintarDiseno();
 // Configuracion dispara 3 llamadas al backend (~1,5 s cada una): dentro de la
