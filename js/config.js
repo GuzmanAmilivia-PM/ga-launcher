@@ -64,6 +64,33 @@ btn.disabled = false; btn.textContent = 'Confirm';
 resEl.innerHTML = '<div class="tmsg err">Error: ' + esc(err.message) + '</div>';
 }).registrarMovimientoCash({ cuenta: document.getElementById('cashCuenta').value, tipo: cashTipo, monto: monto });
 };
+// Banking se abre desde el menu lateral desde el 27/08/2026: gana su volver.
+document.getElementById('cashBack').onclick = function () { setView('inicio'); };
+
+// ---------- El atajo DEPOSIT del Inicio (27/08/2026) ----------
+// Un toque muestra los dos bancos; elegir uno abre el formulario de cash de
+// siempre (esta misma logica), ya en modo deposito y con la cuenta puesta.
+// No hay backend nuevo: es la puerta de entrada, no otra caja.
+document.getElementById('btnDepositHome').onclick = function () {
+var p = document.getElementById('depositPick');
+p.style.display = (p.style.display === 'none') ? '' : 'none';
+};
+function depositarEnBanco(patron) {
+document.getElementById('depositPick').style.display = 'none';
+setView('cash');
+abrirCashPanel('deposito');
+// La cuenta se busca por nombre y no por indice: ITAU es fija (ACCOUNTS)
+// pero BTG es una plataforma que entra al selector recien con el payload
+// (buildCashForm). Si todavia no cargo, el selector queda como esta y se
+// elige a mano — el formulario ya esta abierto igual.
+var sel = document.getElementById('cashCuenta');
+for (var i = 0; i < sel.options.length; i++) {
+var o = sel.options[i];
+if (patron.test(o.value) || patron.test(o.textContent)) { sel.value = o.value; break; }
+}
+}
+document.getElementById('depBtg').onclick = function () { depositarEnBanco(/btg/i); };
+document.getElementById('depItau').onclick = function () { depositarEnBanco(/ita/i); };
 
 // ---------- Tema (oscuro / claro) ----------
 function esTemaClaro() { return document.documentElement.classList.contains('light'); }

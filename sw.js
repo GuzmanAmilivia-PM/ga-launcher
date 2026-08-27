@@ -1,7 +1,7 @@
 // Service worker: cachea el "cascarón" de la app para carga instantánea.
 // Los datos (POST a la API) nunca se cachean.
-var CACHE = 'ga-pwa-v123';
-var ASSETS = ['./', './index.html',   './js/gagraf.js', './js/analisis.js', './js/arranque.js', './js/brokers.js', './js/buscador.js', './js/config.js', './js/graficos.js', './js/ia.js', './js/nucleo.js', './js/paneles.js', './js/seguridad.js', './js/sincronizar.js', './js/trade.js', './js/vistas.js',
+var CACHE = 'ga-pwa-v124';
+var ASSETS = ['./', './index.html',   './js/gagraf.js', './js/analisis.js', './js/arranque.js', './js/brokers.js', './js/buscador.js', './js/config.js', './js/graficos.js', './js/ia.js', './js/nucleo.js', './js/paneles.js', './js/seguridad.js', './js/sincronizar.js', './js/trade.js', './js/vistas.js', './js/watchlist.js',
   './fonts/manrope.woff2', './fonts/montserrat-500.woff2',
   './apple-touch-icon.png', './icon-512.png', './favicon.png', './manifest.json'];
 
@@ -13,6 +13,32 @@ self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (keys) {
     return Promise.all(keys.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); }));
   }).then(function () { return self.clients.claim(); }));
+});
+
+// --- Web Push (27/08/2026): las alertas de precio de la watchlist ---
+// El Worker manda el payload cifrado (aes128gcm) y aca solo se muestra. En
+// iOS es OBLIGATORIO mostrar una notificacion por cada push recibido: un
+// push "silencioso" hace que Safari revoque la suscripcion.
+self.addEventListener('push', function (e) {
+  var d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) {}
+  e.waitUntil(self.registration.showNotification(d.titulo || 'GA Portfolio', {
+    body: d.cuerpo || '',
+    icon: './icon-512.png',
+    badge: './favicon.png',
+    tag: d.tag || 'ga-alerta',
+    data: { url: d.url || './' }
+  }));
+});
+
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (ws) {
+    for (var i = 0; i < ws.length; i++) {
+      if ('focus' in ws[i]) return ws[i].focus();
+    }
+    return self.clients.openWindow('./');
+  }));
 });
 
 self.addEventListener('fetch', function (e) {

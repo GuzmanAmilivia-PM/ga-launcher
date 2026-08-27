@@ -36,10 +36,10 @@
 // desincronizadas. Un numero escrito a mano en dos lugares es exactamente la
 // clase de cosa que queda vieja sin que nadie se entere.
 var VERSION_GENERACION = '1';
-// El 6: los indicadores fundamentales al abrir una posicion, con el multiplo
-// que le toca a cada tipo de activo y su mediana historica (26/08/2026). El 5
-// fue el analisis por perfil de inversor con su pagina Analysis.
-var VERSION_FUNCION = '6';
+// El 7: la Watchlist con alertas de precio y notificaciones push
+// (27/08/2026) — pestana nueva en la barra, Banking mudado al menu lateral.
+// El 6 fueron los indicadores fundamentales del detalle de cada posicion.
+var VERSION_FUNCION = '7';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre
@@ -116,10 +116,13 @@ document.getElementById('mConfig').onclick = function () { toggleMenu(false); se
 document.getElementById('mDiseno').onclick = function () { toggleMenu(false); setView('diseno'); };
 document.getElementById('mSeguridad').onclick = function () { toggleMenu(false); setView('seguridad'); };
 document.getElementById('mTrans').onclick = function () { toggleMenu(false); setView('trade'); };
+// Banking vive en el menu desde el 27/08/2026: su lugar en la barra de abajo
+// lo ocupa la Watchlist. La vista es la misma de siempre (view-cash).
+document.getElementById('mCash').onclick = function () { toggleMenu(false); setView('cash'); };
 document.getElementById('mRefrescar').onclick = function () { sincronizarTodo(); };
 
 // ---------- Navegación (barra inferior) ----------
-var VIEWS = ['inicio', 'portafolio', 'cash', 'trade', 'noticias', 'account', 'posiciones', 'analisis', 'config', 'diseno', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb', 'cs'];
+var VIEWS = ['inicio', 'portafolio', 'cash', 'watchlist', 'trade', 'noticias', 'account', 'posiciones', 'analisis', 'config', 'diseno', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb', 'cs'];
 // La barra no cambia nunca: se consulta el DOM una sola vez, no en cada setView.
 var NAVTABS = document.querySelectorAll('.navtab');
 var currentView = 'inicio';
@@ -164,6 +167,7 @@ configUltimaCarga = Date.now();
 cargarPlataformas(); cargarEstadoIA(); cargarEstadoFinnhub(); cargarBackups();
 }
 }
+if (name === 'watchlist') cargarWatchlist(false);
 if (name === 'ibkr') cargarEstadoIBKR();
 if (name === 'bnb') prepararBNB();
 if (name === 'cs') cargarEstadoCS();

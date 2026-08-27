@@ -44,8 +44,33 @@ if (r.enCartera) {
 var ec = r.enCartera;
 h += '<p class="tmonto" style="margin-top:14px">&#10003; You already hold this: <b>' + esc(fmtNum(ec.qty)) + '</b> units (' + fmt(ec.valor) + (ec.precioCompra ? ', bought at ' + esc(fmtNum(ec.precioCompra)) : '') + ')</p>';
 }
+// El "+" a la watchlist (27/08/2026). wlTiene vive en watchlist.js (carga
+// despues de este archivo, pero esto corre recien al pintar un resultado).
+if (typeof wlTiene === 'function' && wlTiene(r.symbol)) {
+h += '<button class="ghostbtn" disabled style="margin-top:12px">&#10003; In watchlist</button>';
+} else {
+h += '<button class="ghostbtn" id="busAddWatch" style="margin-top:12px">+ Add to watchlist</button>';
+}
 h += '</div>';
 return h;
+}
+function engancharAddWatch(r) {
+var btn = document.getElementById('busAddWatch');
+if (!btn) return;
+btn.onclick = function () {
+btn.disabled = true; btn.textContent = 'Adding...';
+google.script.run.withSuccessHandler(function (res) {
+if (res && res.ok) {
+btn.textContent = '✓ In watchlist';
+// La proxima visita a la pestana pinta el cache y refresca por atras.
+cargarWatchlist(true);
+} else {
+btn.disabled = false; btn.textContent = '+ Add to watchlist';
+}
+}).withFailureHandler(function (err) {
+btn.disabled = false; btn.textContent = '+ Add to watchlist';
+}).agregarWatchlist({ symbol: r.symbol, nombre: r.nombre || '' });
+};
 }
 function buscarActivo() {
 var q = document.getElementById('busInput').value.trim().toUpperCase();
@@ -62,6 +87,7 @@ out.innerHTML = '<div class="card"><p class="newsempty">' + esc(((r && r.mensaje
 return;
 }
 out.innerHTML = fichaBuscarHtml(r);
+engancharAddWatch(r);
 var tvEl = document.getElementById('busTv');
 if (tvEl) crearTvWidget(tvEl, r.cripto ? ('BINANCE:' + r.symbol + 'USDT') : r.symbol);
 }).withFailureHandler(function (err) {
