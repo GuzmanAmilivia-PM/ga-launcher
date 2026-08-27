@@ -570,7 +570,7 @@ function toggleDetalle(tr, pos) {
     var res = (pa / pm - 1) * 100;
     html += '<span><span class="detlbl">Result</span><b class="' + (res >= 0 ? 'up' : 'down') + '">' + signoPct(res, 1) + '</b></span>';
   }
-  html += '</div><div class="tvwrap"></div>';
+  html += '</div><div class="detfund"></div><div class="tvwrap"></div>';
   td.innerHTML = html;
   det.appendChild(td);
   tr.parentNode.insertBefore(det, tr.nextSibling);
@@ -581,6 +581,79 @@ function toggleDetalle(tr, pos) {
     td.querySelector('.tvwrap').style.display = 'none';
   }
   detalleAbierto = { tr: tr, det: det };
+  cargarFundamentales(symU, td.querySelector('.detfund'));
+}
+
+// ---------- Indicadores del detalle (V14) ----------
+// Los numeros duros de la posicion, con el multiplo que le corresponde a su
+// tipo de activo y comparado contra SU PROPIA mediana historica. El backend
+// (fn 'fundamentales') decide QUE indicadores tienen sentido para cada clase
+// y manda los textos resueltos: aca solo se pinta.
+//
+// Cache en memoria por simbolo: el detalle se abre y se cierra todo el tiempo
+// y los fundamentales no cambian en una sesion. El backend ademas cachea 6 h.
+var fundCache = {};
+function cargarFundamentales(symbol, caja) {
+  if (!symbol || !caja) return;
+  if (fundCache[symbol]) { pintarFundamentales(fundCache[symbol], caja); return; }
+  caja.innerHTML = '<p class="detfund-cargando">Loading indicators...</p>';
+  google.script.run.withSuccessHandler(function (r) {
+    if (r) fundCache[symbol] = r;
+    // El detalle pudo cerrarse mientras el pedido viajaba: sin este chequeo
+    // se escribiria sobre un nodo que ya no esta en la pagina.
+    if (caja.parentNode) pintarFundamentales(r, caja);
+  }).withFailureHandler(function (err) {
+    if (caja.parentNode) caja.innerHTML = '<p class="detfund-cargando">' + esc(msgErr(err, 'The indicators')) + '</p>';
+  }).getFundamentales({ symbol: symbol });
+}
+
+function pintarFundamentales(r, caja) {
+  if (!r) { caja.innerHTML = ''; return; }
+  var h = '';
+  if (r.ok === false) {
+    // Un simbolo sin cobertura no es un error de la app: se dice y punto.
+    h = '<p class="detfund-cargando">' + esc(msgBackend(r)) + '</p>';
+    caja.innerHTML = h;
+    return;
+  }
+  var ind = r.indicadores || [];
+  if (ind.length) {
+    h += '<div class="detfund-tabla">';
+    ind.forEach(function (i) {
+      h += '<div class="detfund-fila"><span>' + esc(i.nombre) + '</span><b>' + esc(i.valor) + '</b>' +
+        (i.contexto ? '<em>' + esc(i.contexto) + '</em>' : '') + '</div>';
+    });
+    h += '</div>';
+  }
+  var e = r.estimaciones || {};
+  var pr = e.proximoReporte;
+  if (e.forwardPE || pr || e.consenso) {
+    h += '<p class="detfund-tit">Looking forward</p><div class="detfund-tabla">';
+    if (e.forwardPE) {
+      h += '<div class="detfund-fila"><span>Forward P/E</span><b>' + esc(e.forwardPE) + '</b>' +
+        (e.forwardPEG ? '<em>forward PEG ' + esc(e.forwardPEG) + '</em>' : '') + '</div>';
+    }
+    if (pr) {
+      var det = [];
+      if (pr.epsEstimado) det.push('EPS ' + pr.epsEstimado + ' expected');
+      if (pr.ventasEstimadas) det.push('revenue ' + pr.ventasEstimadas);
+      h += '<div class="detfund-fila"><span>Next earnings</span><b>' + esc(pr.fecha) +
+        (pr.cuando ? ' <em style="display:inline">(' + esc(pr.cuando) + ')</em>' : '') + '</b>' +
+        (det.length ? '<em>' + esc(det.join(' · ')) + '</em>' : '') + '</div>';
+    }
+    if (e.consenso) {
+      var c = e.consenso;
+      h += '<div class="detfund-fila"><span>Analyst consensus</span><b>' + c.compra + ' buy · ' + c.mantener + ' hold · ' + c.venta + ' sell</b>' +
+        '<em>what other analysts publish, not a suggestion from this app</em></div>';
+    }
+    h += '</div>';
+  }
+  (r.notas || []).forEach(function (n) {
+    h += '<p class="detfund-nota">' + esc(n) + '</p>';
+  });
+  caja.innerHTML = h;
+  // El panel cambio de alto: la tarjeta que lo contiene tiene que seguirlo.
+  if (typeof ajustarAlturaDeck === 'function') ajustarAlturaDeck();
 }
 // ---------- Principales posiciones (Inicio) ----------
 var holdingsExpanded = false;

@@ -20,11 +20,13 @@
 //      —sincroniza los brokers, guarda el patrimonio de cada dia, compara
 //      contra el S&P 500 y manda el informe de los lunes—. El 2 seria salir de
 //      la planilla de Google.
-//   4  FUNCION. A mano, sube cuando entra algo NUEVO de verdad (una pantalla,
+//   6  FUNCION. A mano, sube cuando entra algo NUEVO de verdad (una pantalla,
 //      una capacidad), no cuando se arregla algo. Arrancó en 0; el 1 fue la
 //      pantalla de Posiciones, el 2 las paletas de acento, el 3 la página
-//      Configuración con las tonalidades de fondo (todo el 25/08/2026), y el
-//      4 la interfaz entera pasada a inglés (26/08/2026).
+//      Configuración con las tonalidades de fondo (todo el 25/08/2026), el
+//      4 la interfaz entera pasada a inglés, el 5 el análisis por perfil de
+//      inversor con su pantalla Analysis, y el 6 los indicadores del detalle
+//      de cada posición (los tres el 26/08/2026).
 // 107  PUBLICACION. NO se escribe aca: se LEE del nombre del cache (`CACHE` en
 //      sw.js), que ya sube en cada publicacion porque es lo que evita que el
 //      telefono siga sirviendo archivos viejos.
@@ -34,9 +36,10 @@
 // desincronizadas. Un numero escrito a mano en dos lugares es exactamente la
 // clase de cosa que queda vieja sin que nadie se entere.
 var VERSION_GENERACION = '1';
-// El 5: el analisis por perfil de inversor, con su pagina Analysis y el test
-// (26/08/2026). El 4 fue la interfaz entera en ingles.
-var VERSION_FUNCION = '5';
+// El 6: los indicadores fundamentales al abrir una posicion, con el multiplo
+// que le toca a cada tipo de activo y su mediana historica (26/08/2026). El 5
+// fue el analisis por perfil de inversor con su pagina Analysis.
+var VERSION_FUNCION = '6';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre
