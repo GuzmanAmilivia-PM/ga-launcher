@@ -374,10 +374,34 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
    lleva dos botones (campana y quitar) y un formulario plegable abajo. La
    campana usa el acento cuando la alerta esta ARMADA y el verde cuando ya
    se disparo — el mismo lenguaje de color del resto de la app. */
-.wlrow { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+/* La fila se ve LIMPIA, como una de Posiciones (pedido de Guzman, 27/08/2026
+   noche: "que no aparezca el + ni la x... que se vea como las principales
+   posiciones"). Las dos acciones viven debajo y se revelan deslizando el
+   dedo, el gesto de Mail que puso de referencia.
+   touch-action: pan-y deja pasar el scroll vertical de la pagina y nos deja
+   quedarnos con el horizontal; sin eso el navegador se come el gesto. */
+.wlrow { position: relative; overflow: hidden; border-bottom: 1px solid var(--border); touch-action: pan-y; }
 .wlrow:last-child { border-bottom: none; }
+/* El contenido tiene fondo OPACO propio: es lo que tapa las acciones cuando
+   la fila esta cerrada (van debajo, no escondidas con display:none, asi
+   siguen existiendo para un lector de pantalla). */
+.wl-desliza { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 10px 0; background: var(--navy2); transition: transform .22s ease; will-change: transform; }
+.wlrow.arrastrando .wl-desliza { transition: none; }
+.wl-acciones { position: absolute; top: 0; right: 0; bottom: 0; display: flex; }
+.wl-accion { border: none; font-family: inherit; font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; width: 74px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; -webkit-tap-highlight-color: transparent; }
+.wl-accion svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.wl-accion:active { filter: brightness(.85); }
+.wl-accion.alerta { background: linear-gradient(135deg, var(--gold), var(--gold2)); color: var(--on-gold); }
+.wl-accion.quitar { background: var(--red); color: #fff; }
 .wl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .wl-main .desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* La identidad (logo + simbolo + descripcion) es la MISMA pieza que usan la
+   tarjeta del Inicio y la pantalla Posiciones — celdaInstrumentoHtml. Acá
+   solo se le da el ancho flexible que en aquellas le da su <td>. */
+.wlrow .holdcell { flex: 1; min-width: 0; }
+.wlrow .holdid { min-width: 0; }
+.wlrow .sym { font-size: 16px; font-weight: 800; }
+.wlrow .desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* El mini-grafico del mes, el mismo de la tarjeta de Posiciones (pedido de
    Guzman, 27/08/2026 noche). flex: 0 0 auto para que NO se estire ni se
    aplaste: quien cede ancho en esta fila es el nombre, que ya se corta con
@@ -934,7 +958,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div class="cardhead"><h2>Watchlist</h2><button class="expandbtn" id="wlRefreshBtn" title="Refresh">&#8635;</button></div>
 <div id="wlAviso"></div>
 <div id="wlBody"><p class="loadingtxt">Loading...</p></div>
-<p class="newsempty" style="margin-top:10px">Add tickers from the search (magnifier &rarr; +). The + on a row sets a price alert.</p>
+<p class="newsempty" style="margin-top:10px">Add tickers from the search (magnifier &rarr; +). Swipe a row to set a price alert or remove it.</p>
 </div>
 <div class="card">
 <h2>Notifications</h2>

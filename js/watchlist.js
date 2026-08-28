@@ -58,10 +58,9 @@ function cargarWatchlist(forzar) {
 }
 document.getElementById('wlRefreshBtn').onclick = function () { cargarWatchlist(true); };
 
-// El boton de la alerta es un "+" y no una campana (pedido de Guzman,
-// 27/08/2026 noche). Lo que dice si HAY alerta no es el icono sino su color
-// —acento si esta armada, verde si ya sono— mas el objetivo escrito bajo el
-// precio; el "+" queda como "sumale algo a este simbolo".
+// Los iconos de las dos acciones, que viven DEBAJO de la fila y aparecen al
+// deslizarla (pedido de Guzman, 27/08/2026 noche: la fila se ve limpia, como
+// una de Posiciones; las acciones salen con el dedo, como en Mail).
 var WL_MAS_SVG = '<svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg>';
 var WL_X_SVG = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 
@@ -75,6 +74,10 @@ function renderWatchlist(data) {
   wlData = data;
   var body = document.getElementById('wlBody');
   document.getElementById('wlAviso').innerHTML = '';
+  // Las filas se rehacen: la que estuviera deslizada ya no existe, y dejar la
+  // referencia viva haria que la proxima apertura intente cerrar un huerfano.
+  wlFilaAbierta = null;
+  wlFormEl = null;
   body.innerHTML = '';
   var items = data.items || [];
   if (!items.length) {
@@ -96,19 +99,123 @@ function renderWatchlist(data) {
     // —lo que el proveedor no cubre— la celda queda vacia y no se inventa.
     var spark = (it.spark && it.spark.length > 1 && typeof sparkSvg === 'function')
       ? sparkSvg(it.spark, 64, 28) : '';
-    fila.innerHTML = '<div class="wl-main"><span class="sym">' + esc(it.symbol) + '</span>' +
-      '<span class="desc">' + esc(it.nombre || '') + '</span></div>' +
+    // La identidad sale de celdaInstrumentoHtml (graficos.js): el MISMO logo,
+    // simbolo y descripcion de la tarjeta del Inicio y de Posiciones. Se reusa
+    // la pieza en vez de copiarla, para que las tres no puedan divergir.
+    var identidad = (typeof celdaInstrumentoHtml === 'function')
+      ? celdaInstrumentoHtml(it)
+      : '<span class="holdcell"><span class="holdid"><span class="sym">' + esc(it.symbol) +
+        '</span><span class="desc">' + esc(it.nombre || '') + '</span></span></span>';
+    fila.innerHTML = '<div class="wl-desliza">' + identidad +
       '<div class="wl-spark">' + spark + '</div>' +
       '<div class="wl-precio"><b>' + (it.precio !== null && it.precio !== undefined ? esc(fmtNum(it.precio)) : '&mdash;') + '</b>' +
-      wlChip(it.cambioPct) + objetivo + '</div>' +
-      '<button class="wl-btn' + (it.alerta ? (it.alerta.disparada ? ' disparada' : ' armada') : '') + '" title="Price alert">' + WL_MAS_SVG + '</button>' +
-      '<button class="wl-btn" title="Remove">' + WL_X_SVG + '</button>';
-    var botones = fila.querySelectorAll('.wl-btn');
-    botones[0].onclick = function () { wlToggleForm(it, fila); };
-    botones[1].onclick = function () { wlQuitar(it.symbol, botones[1]); };
+      wlChip(it.cambioPct) + objetivo + '</div></div>' +
+      '<div class="wl-acciones">' +
+      '<button class="wl-accion alerta" aria-label="Price alert for ' + esc(it.symbol) + '">' + WL_MAS_SVG + 'Alert</button>' +
+      '<button class="wl-accion quitar" aria-label="Remove ' + esc(it.symbol) + ' from the watchlist">' + WL_X_SVG + 'Remove</button>' +
+      '</div>';
+    if (typeof engancharLogos === 'function') engancharLogos(fila);
+    var accAlerta = fila.querySelector('.wl-accion.alerta');
+    var accQuitar = fila.querySelector('.wl-accion.quitar');
+    accAlerta.onclick = function () { wlCerrarFilas(); wlToggleForm(it, fila); };
+    accQuitar.onclick = function () { wlQuitar(it.symbol, accQuitar); };
+    wlEngancharDeslizar(fila);
     body.appendChild(fila);
   });
   pintarEstadoPush();
+}
+
+// ---------- Deslizar una fila para ver sus acciones ----------
+// El gesto de Mail (referencia de Guzman): la fila se ve limpia y las dos
+// acciones estan debajo, a la derecha. Tres decisiones:
+//
+// 1. ABRE EN CUALQUIER DIRECCION. Guzman lo pidio como "deslizo a la derecha";
+//    el patron de iOS revela las acciones deslizando a la IZQUIERDA. En vez de
+//    adivinar cual quiso, con la fila cerrada cualquier arrastre horizontal la
+//    abre — el panel siempre sale del mismo lado, asi que no hay ambiguedad de
+//    que va a pasar. Ya abierta, arrastrar hacia la derecha la cierra.
+// 2. LA DIRECCION SE DECIDE UNA VEZ, en los primeros pixeles: si el dedo va
+//    mas vertical que horizontal, el gesto es de la pagina y no se toca. Sin
+//    ese candado, bajar la lista con el pulgar abriria filas sin querer.
+// 3. SOLO UNA ABIERTA. Abrir una cierra la otra, y un toque en el contenido
+//    de una fila abierta la cierra en vez de disparar nada.
+var wlFilaAbierta = null;
+
+function wlCerrarFilas(salvo) {
+  if (wlFilaAbierta && wlFilaAbierta !== salvo && wlFilaAbierta._cerrar) wlFilaAbierta._cerrar();
+}
+
+function wlEngancharDeslizar(fila) {
+  var contenido = fila.querySelector('.wl-desliza');
+  var acciones = fila.querySelector('.wl-acciones');
+  if (!contenido || !acciones) return;
+  var abierto = false, ancho = 0, x0 = 0, y0 = 0, dx = 0, arrastrando = false, decidido = false;
+
+  function poner(px) { contenido.style.transform = 'translateX(' + px + 'px)'; }
+  function abrir() {
+    wlCerrarFilas(fila);
+    abierto = true; wlFilaAbierta = fila;
+    poner(-anchoAcciones());
+  }
+  function cerrar() {
+    abierto = false;
+    if (wlFilaAbierta === fila) wlFilaAbierta = null;
+    poner(0);
+  }
+  function anchoAcciones() {
+    // Se mide en el momento: depende del ancho real del panel, que a su vez
+    // depende del tamano de letra del sistema.
+    ancho = acciones.offsetWidth || 148;
+    return ancho;
+  }
+  fila._cerrar = cerrar;
+
+  fila.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    x0 = e.clientX; y0 = e.clientY; dx = 0;
+    arrastrando = false; decidido = false;
+    anchoAcciones();
+  });
+
+  fila.addEventListener('pointermove', function (e) {
+    if (decidido && !arrastrando) return;
+    dx = e.clientX - x0;
+    var dy = e.clientY - y0;
+    if (!decidido) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      decidido = true;
+      arrastrando = Math.abs(dx) > Math.abs(dy);
+      if (!arrastrando) return;                 // el gesto es de la pagina
+      fila.classList.add('arrastrando');
+      try { fila.setPointerCapture(e.pointerId); } catch (err) {}
+    }
+    // Cerrada: cualquier direccion la va abriendo. Abierta: solo se cierra
+    // arrastrando hacia la derecha.
+    var px = abierto ? Math.min(0, -ancho + Math.max(0, dx)) : -Math.min(Math.abs(dx), ancho);
+    poner(px);
+  });
+
+  function soltar() {
+    if (!arrastrando) {
+      // Un toque limpio sobre una fila abierta la cierra (y no dispara nada).
+      if (abierto && decidido === false) cerrar();
+      return;
+    }
+    fila.classList.remove('arrastrando');
+    arrastrando = false;
+    var mitad = ancho / 2;
+    if (abierto) { if (dx > mitad) cerrar(); else abrir(); }
+    else if (Math.abs(dx) > mitad) abrir();
+    else cerrar();
+  }
+  fila.addEventListener('pointerup', soltar);
+  fila.addEventListener('pointercancel', function () {
+    fila.classList.remove('arrastrando');
+    arrastrando = false;
+    if (abierto) abrir(); else cerrar();
+  });
+  // Un toque en el contenido de una fila abierta la cierra.
+  contenido.addEventListener('click', function () { if (abierto && !arrastrando) cerrar(); });
 }
 
 function wlQuitar(symbol, btn) {
