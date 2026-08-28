@@ -9,6 +9,16 @@
      la PWA consulta desde el telefono. Los dos dominios de Apps Script se
      sacaron el 22/08/2026, al apagar ese backend: eran dos destinos de
      exfiltracion que ya no cumplian ninguna funcion.
+     img-src lleva TRES servidores de logos, y cada uno esta por algo:
+     assets.parqet.com (acciones/ETF, por ticker), cdn.jsdelivr.net (cripto) y
+     desde el 27/08/2026 *.finnhub.io — el logo OFICIAL que el backend guarda
+     por simbolo. Ese tercero entro porque el servicio por ticker mostraba
+     para SPCX (SpaceX) el logo de la gestora que uso ese ticker antes: un
+     logo ajeno se lee como si fuera el de la empresa. Va con COMODIN de
+     subdominio a proposito: esa url la elige el proveedor en cada respuesta
+     (hoy static2), asi que clavar el subdominio de hoy es una rotura callada
+     esperando el dia que lo cambie. Si se agrega otra fuente de logos, va ACA
+     o las imagenes se bloquean en silencio.
      script-src SIN 'unsafe-inline' (desde v39): todo el codigo vive en js/*.js
      y el unico inline es el snippet del tema, permitido por su hash sha256.
      OJO: si se EDITA ese snippet hay que recalcular el hash o el tema deja de
@@ -18,7 +28,7 @@
   script-src 'self' 'sha256-eCEv2Xtk/d4etq+pER4EYyojYMTusYCys+IfxZyAxE0=';
   style-src 'self' 'unsafe-inline';
   font-src 'self' data:;
-  img-src 'self' data: https://assets.parqet.com https://cdn.jsdelivr.net;
+  img-src 'self' data: https://assets.parqet.com https://cdn.jsdelivr.net https://*.finnhub.io;
   connect-src 'self' https://ga-portfolio-worker.ga-portfolio.workers.dev wss://ws-api.binance.com;
   frame-src https://s.tradingview.com https://www.tradingview.com;
   worker-src 'self';

@@ -798,6 +798,12 @@ return sparkSvg(s);
 function logoUrl(h) {
 var sym = String(h.symbol || '').toUpperCase();
 if (tipoDe(h) === 'cash') return null;
+// Un logo declarado por el backend GANA sobre el servicio por ticker
+// (27/08/2026). El servicio acierta en la mayoria, pero busca por ticker y un
+// ticker se REUSA: para SPCX (SpaceX, que salio a bolsa el 12/06/2026)
+// devolvia el logo de la gestora que lo tenia antes — un logo ajeno al lado
+// de un simbolo se lee como si fuera el suyo.
+if (h.logo) return h.logo;
 if (tipoDe(h) === 'cripto') return 'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@master/128/color/' + sym.toLowerCase() + '.png';
 return 'https://assets.parqet.com/logos/symbol/' + encodeURIComponent(sym);
 }
