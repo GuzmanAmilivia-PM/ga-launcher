@@ -64,7 +64,20 @@ document.getElementById('wlRefreshBtn').onclick = function () { cargarWatchlist(
 var WL_MAS_SVG = '<svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg>';
 var WL_X_SVG = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 
-function wlChip(pct) {
+// Debajo del precio va el % del dia... o, cuando ese precio NO es el de ahora,
+// una marca que lo dice (27/08/2026). Guzman reporto que "a veces no aparece
+// el valor": el proveedor de precios frena por IP compartida y dejaba la fila
+// con un guion. Ahora se muestra el ultimo precio conocido, pero presentarlo
+// como si fuera el actual seria mentir — de ahi la etiqueta.
+function wlChip(it) {
+  var pct = it.cambioPct;
+  if (it.enVivo === false && it.precio !== null && it.precio !== undefined) {
+    // `precioDe` es la fecha del cierre ('2026-08-27') o 'ultimo'. Se muestra
+    // corto: "at close" cuando es un cierre con fecha, "last" cuando es el
+    // ultimo precio que llegamos a ver.
+    var esFecha = /^\d{4}-\d{2}-\d{2}$/.test(String(it.precioDe || ''));
+    return '<span class="wl-viejo">' + (esFecha ? 'at close' : 'last known') + '</span>';
+  }
   if (pct === null || pct === undefined || !isFinite(Number(pct))) return '';
   var v = Number(pct);
   return '<span class="' + (v >= 0 ? 'up' : 'down') + '">' + esc(signoPct(v, 2)) + '</span>';
@@ -109,7 +122,7 @@ function renderWatchlist(data) {
     fila.innerHTML = '<div class="wl-desliza">' + identidad +
       '<div class="wl-spark">' + spark + '</div>' +
       '<div class="wl-precio"><b>' + (it.precio !== null && it.precio !== undefined ? esc(fmtNum(it.precio)) : '&mdash;') + '</b>' +
-      wlChip(it.cambioPct) + objetivo + '</div></div>' +
+      wlChip(it) + objetivo + '</div></div>' +
       '<div class="wl-acciones">' +
       '<button class="wl-accion alerta" aria-label="Price alert for ' + esc(it.symbol) + '">' + WL_MAS_SVG + 'Alert</button>' +
       '<button class="wl-accion quitar" aria-label="Remove ' + esc(it.symbol) + ' from the watchlist">' + WL_X_SVG + 'Remove</button>' +
