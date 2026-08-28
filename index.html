@@ -430,6 +430,12 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .wl-btn.armada { color: var(--gold); }
 .wl-btn.disparada { color: var(--green); }
 .wl-alertform { padding: 2px 0 12px; border-bottom: 1px solid var(--border); }
+/* El detalle del activo al tocar la fila (27/08/2026): mismo fondo apagado
+   que el detalle de una posicion (.detrow td), pero como bloque y no como
+   celda de tabla — las piezas de adentro (.detfund, .tvwrap) son las mismas
+   y no dependen de la tabla. */
+.wl-detalle { background: rgba(255,255,255,.025); border-radius: 12px; padding: 12px 12px 14px; margin: 0 0 10px; }
+html.light .wl-detalle { background: rgba(20,40,80,.035); }
 
 /* --- Trade --- */
 .tradeform label { display: block; color: var(--muted); font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin: 14px 0 6px; }

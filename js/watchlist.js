@@ -18,8 +18,11 @@ var VAPID_PUBLIC = 'BGjJZeqfHKPsNKP050JPlY6iKV-VHFp62Kygt151iviQXZvHbe7l_HfAFsLj
 
 var wlData = null;          // lo ultimo pintado (items del Worker)
 var wlCargando = false;
-var wlFormAbierto = null;   // symbol con el formulario de alerta desplegado
-var wlFormEl = null;        // el formulario vivo (se crea por fila, no en el HTML)
+// UN solo panel desplegado por vez, sea el detalle del activo o el formulario
+// de la alerta: los dos salen de la misma fila y verlos juntos era ruido.
+var wlPanelEl = null;       // el panel vivo (se crea por fila, no vive en el HTML)
+var wlPanelSym = null;      // de que simbolo es
+var wlPanelTipo = null;     // 'detalle' | 'alerta'
 
 function wlTiene(sym) {
   var s = String(sym || '').toUpperCase();
@@ -90,7 +93,7 @@ function renderWatchlist(data) {
   // Las filas se rehacen: la que estuviera deslizada ya no existe, y dejar la
   // referencia viva haria que la proxima apertura intente cerrar un huerfano.
   wlFilaAbierta = null;
-  wlFormEl = null;
+  wlPanelEl = null; wlPanelSym = null; wlPanelTipo = null;
   body.innerHTML = '';
   var items = data.items || [];
   if (!items.length) {
@@ -132,7 +135,10 @@ function renderWatchlist(data) {
     var accQuitar = fila.querySelector('.wl-accion.quitar');
     accAlerta.onclick = function () { wlCerrarFilas(); wlToggleForm(it, fila); };
     accQuitar.onclick = function () { wlQuitar(it.symbol, accQuitar); };
-    wlEngancharDeslizar(fila);
+    // Un toque en la fila abre el detalle del activo, como al tocar una
+    // posicion. El gesto de deslizar tiene prioridad: si la fila esta
+    // corrida, el toque la cierra y no abre nada (wlEngancharDeslizar).
+    wlEngancharDeslizar(fila, function () { wlToggleDetalle(it, fila); });
     body.appendChild(fila);
   });
   pintarEstadoPush();
@@ -158,7 +164,7 @@ function wlCerrarFilas(salvo) {
   if (wlFilaAbierta && wlFilaAbierta !== salvo && wlFilaAbierta._cerrar) wlFilaAbierta._cerrar();
 }
 
-function wlEngancharDeslizar(fila) {
+function wlEngancharDeslizar(fila, alTocar) {
   var contenido = fila.querySelector('.wl-desliza');
   var acciones = fila.querySelector('.wl-acciones');
   if (!contenido || !acciones) return;
@@ -227,8 +233,14 @@ function wlEngancharDeslizar(fila) {
     arrastrando = false;
     if (abierto) abrir(); else cerrar();
   });
-  // Un toque en el contenido de una fila abierta la cierra.
-  contenido.addEventListener('click', function () { if (abierto && !arrastrando) cerrar(); });
+  // Un toque en el contenido: si la fila esta corrida, la cierra (y nada mas
+  // — el toque que "guarda" el gesto no puede disparar tambien una pantalla).
+  // Si esta en su lugar, abre el detalle del activo.
+  contenido.addEventListener('click', function () {
+    if (arrastrando || decidido) return;      // veniamos de un gesto, no de un toque
+    if (abierto) { cerrar(); return; }
+    if (alTocar) alTocar();
+  });
 }
 
 function wlQuitar(symbol, btn) {
@@ -241,13 +253,37 @@ function wlQuitar(symbol, btn) {
   }).quitarWatchlist({ symbol: symbol });
 }
 
-// El formulario de alerta, UNO por vez, desplegado bajo su fila. Vive en la
-// variable wlFormEl (no se busca por id: se crea y se borra por referencia).
+// Cierra el panel que hubiera (detalle o alerta) y dice cual era. Los paneles
+// se crean y se borran POR REFERENCIA, no buscandolos por id: la lista se
+// repinta entera cada vez que llegan datos nuevos.
+function wlCerrarPanel() {
+  var era = wlPanelTipo && (wlPanelTipo + ':' + wlPanelSym);
+  if (wlPanelEl && wlPanelEl.parentNode) wlPanelEl.parentNode.removeChild(wlPanelEl);
+  wlPanelEl = null; wlPanelSym = null; wlPanelTipo = null;
+  return era;
+}
+
+// El detalle del activo, al tocar la fila (27/08/2026). Es lo MISMO que se ve
+// al tocar una posicion —los indicadores que le corresponden a su tipo de
+// activo y el grafico— reusando las dos piezas de graficos.js:
+// cargarFundamentales y crearTvWidget. Lo que NO se muestra son los numeros de
+// una posicion (precio medio, costo, resultado): en la watchlist no tenes el
+// activo, y esas tres celdas vacias serian una promesa incumplida.
+function wlToggleDetalle(it, fila) {
+  if (wlCerrarPanel() === 'detalle:' + it.symbol) return;   // segundo toque: cierra
+  var d = document.createElement('div');
+  d.className = 'wl-detalle';
+  d.innerHTML = '<div class="detfund"></div><div class="tvwrap"></div>';
+  fila.parentNode.insertBefore(d, fila.nextSibling);
+  wlPanelEl = d; wlPanelSym = it.symbol; wlPanelTipo = 'detalle';
+  var sym = String(it.symbol || '').toUpperCase();
+  if (typeof crearTvWidget === 'function') crearTvWidget(d.querySelector('.tvwrap'), sym);
+  if (typeof cargarFundamentales === 'function') cargarFundamentales(sym, d.querySelector('.detfund'));
+}
+
+// El formulario de alerta, en el mismo lugar y con la misma regla: uno por vez.
 function wlToggleForm(it, fila) {
-  if (wlFormEl && wlFormEl.parentNode) wlFormEl.parentNode.removeChild(wlFormEl);
-  wlFormEl = null;
-  if (wlFormAbierto === it.symbol) { wlFormAbierto = null; return; }
-  wlFormAbierto = it.symbol;
+  if (wlCerrarPanel() === 'alerta:' + it.symbol) return;
   var f = document.createElement('div');
   f.className = 'wl-alertform tradeform';
   var actual = (it.precio !== null && it.precio !== undefined) ? fmtNum(it.precio) : null;
@@ -259,7 +295,7 @@ function wlToggleForm(it, fila) {
     (it.alerta ? '<button class="ghostbtn" id="wlAlertBorrar">Remove alert</button>' : '') +
     '<div id="wlAlertMsg"></div>';
   fila.parentNode.insertBefore(f, fila.nextSibling);
-  wlFormEl = f;
+  wlPanelEl = f; wlPanelSym = it.symbol; wlPanelTipo = 'alerta';
   document.getElementById('wlAlertGuardar').onclick = function () { wlGuardarAlerta(it, this); };
   var borrar = document.getElementById('wlAlertBorrar');
   if (borrar) borrar.onclick = function () { wlMandarAlerta(it.symbol, 0, null, this); };
@@ -290,7 +326,7 @@ function wlMandarAlerta(symbol, objetivo, referencia, btn) {
       msg.innerHTML = '<div class="tmsg err">' + esc((res && res.mensajes || ['Could not save the alert.']).join(' ')) + '</div>';
       return;
     }
-    wlFormAbierto = null;
+    wlCerrarPanel();
     suscribirPush();
     cargarWatchlist(true);
   }).withFailureHandler(function (err) {
