@@ -58,7 +58,11 @@ function cargarWatchlist(forzar) {
 }
 document.getElementById('wlRefreshBtn').onclick = function () { cargarWatchlist(true); };
 
-var WL_BELL_SVG = '<svg viewBox="0 0 24 24"><path d="M18 10a6 6 0 1 0-12 0c0 5-2 6.5-2 6.5h16s-2-1.5-2-6.5"/><path d="M10.2 20a2 2 0 0 0 3.6 0"/></svg>';
+// El boton de la alerta es un "+" y no una campana (pedido de Guzman,
+// 27/08/2026 noche). Lo que dice si HAY alerta no es el icono sino su color
+// —acento si esta armada, verde si ya sono— mas el objetivo escrito bajo el
+// precio; el "+" queda como "sumale algo a este simbolo".
+var WL_MAS_SVG = '<svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg>';
 var WL_X_SVG = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 
 function wlChip(pct) {
@@ -86,11 +90,18 @@ function renderWatchlist(data) {
       objetivo = '<span class="wl-objetivo">' + (it.alerta.disparada ? '&#10003; hit ' : 'alert ') +
         (it.alerta.direccion === 'sube' ? '&#8805; ' : '&#8804; ') + esc(fmtNum(it.alerta.precio)) + '</span>';
     }
+    // El mes de cierres se dibuja con sparkSvg (graficos.js, que carga antes
+    // que este archivo): es EL MISMO dibujo de la tarjeta de Posiciones del
+    // Inicio, para que las dos pantallas cuenten el mes igual. Sin serie
+    // —lo que el proveedor no cubre— la celda queda vacia y no se inventa.
+    var spark = (it.spark && it.spark.length > 1 && typeof sparkSvg === 'function')
+      ? sparkSvg(it.spark, 64, 28) : '';
     fila.innerHTML = '<div class="wl-main"><span class="sym">' + esc(it.symbol) + '</span>' +
       '<span class="desc">' + esc(it.nombre || '') + '</span></div>' +
+      '<div class="wl-spark">' + spark + '</div>' +
       '<div class="wl-precio"><b>' + (it.precio !== null && it.precio !== undefined ? esc(fmtNum(it.precio)) : '&mdash;') + '</b>' +
       wlChip(it.cambioPct) + objetivo + '</div>' +
-      '<button class="wl-btn' + (it.alerta ? (it.alerta.disparada ? ' disparada' : ' armada') : '') + '" title="Price alert">' + WL_BELL_SVG + '</button>' +
+      '<button class="wl-btn' + (it.alerta ? (it.alerta.disparada ? ' disparada' : ' armada') : '') + '" title="Price alert">' + WL_MAS_SVG + '</button>' +
       '<button class="wl-btn" title="Remove">' + WL_X_SVG + '</button>';
     var botones = fila.querySelectorAll('.wl-btn');
     botones[0].onclick = function () { wlToggleForm(it, fila); };

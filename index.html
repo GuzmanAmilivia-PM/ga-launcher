@@ -356,14 +356,20 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .pillbtn.ghost { background: var(--navy2); color: var(--text); border: 1px solid var(--border); }
 .pillbtn.goldpill { background: linear-gradient(135deg, var(--gold), var(--gold2)); color: var(--on-gold); }
 /* --- El atajo DEPOSIT del Inicio (27/08/2026) --- "gris oscuro, mayuscula"
-   (pedido de Guzman): gris de la TONALIDAD (--navy3), no del acento — es un
-   atajo, no la accion principal de la pantalla. Los dos bancos aparecen al
-   tocarlo, como pastillas chicas. */
-.depositwrap { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
-.depositbtn { background: var(--navy3); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 9px 20px; font-family: inherit; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+   y, esa misma noche, "al lado del monto total, bien pequeño". Vive en el
+   bloque del total (.tr-val), pegado a su etiqueta y al ojito.
+   POR QUE ARRIBA DEL NUMERO Y NO A SU DERECHA: medido en 375px (el iPhone de
+   Guzman) con un total de seis cifras, el boton en la MISMA linea empujaba el
+   porcentaje hasta x=418 — fuera de la pantalla. No se ve como desborde
+   porque el body tiene overflow-x: hidden (la trampa que ya esta anotada en
+   CLAUDE.md), asi que la prueba obvia daba verde con la pantalla rota. Arriba
+   no compite por el ancho critico: esa linea solo tiene tres palabras.
+   Gris de la TONALIDAD (--navy3), no del acento: es un atajo, no la accion
+   principal de la pantalla. */
+.depositbtn { flex: 0 0 auto; margin-left: 2px; background: var(--navy3); color: var(--text); border: 1px solid var(--border); border-radius: 7px; padding: 3px 8px; font-family: inherit; font-size: 9px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; cursor: pointer; -webkit-tap-highlight-color: transparent; line-height: 1.5; }
 .depositbtn:active { opacity: .8; }
-.depositpick { display: flex; gap: 8px; }
-.depositpick .pillbtn { flex: none; padding: 8px 18px; font-size: 13px; border-radius: 18px; }
+.depositpick { display: flex; gap: 8px; margin-top: 10px; }
+.depositpick .pillbtn { flex: none; padding: 7px 16px; font-size: 12.5px; border-radius: 16px; }
 /* --- Watchlist (27/08/2026) --- Filas a mano (no .holdtable): cada una
    lleva dos botones (campana y quitar) y un formulario plegable abajo. La
    campana usa el acento cuando la alerta esta ARMADA y el verde cuando ya
@@ -372,6 +378,12 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .wlrow:last-child { border-bottom: none; }
 .wl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .wl-main .desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* El mini-grafico del mes, el mismo de la tarjeta de Posiciones (pedido de
+   Guzman, 27/08/2026 noche). flex: 0 0 auto para que NO se estire ni se
+   aplaste: quien cede ancho en esta fila es el nombre, que ya se corta con
+   puntos suspensivos. Un simbolo sin serie deja la celda vacia y la fila
+   mantiene su alto — nada salta. */
+.wl-spark { flex: 0 0 auto; width: 64px; height: 28px; display: flex; align-items: center; }
 .wl-precio { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
 .wl-precio b { font-size: 14.5px; font-weight: 800; }
 .wl-precio span { font-size: 11px; font-weight: 700; }
@@ -697,8 +709,12 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
      MISMO esquema que las filas de posiciones, apenas mas grande. -->
 <div class="sweeppanel">
 <div class="totalrow">
+<!-- El atajo DEPOSIT viaja al lado del total y bien chico (pedido de Guzman,
+     27/08/2026 noche): es un atajo, no la accion principal de la pantalla.
+     Los dos bancos aparecen al tocarlo, en su propia fila debajo — ahi no
+     compiten por el ancho con el numero, que es lo que no se puede achicar. -->
 <div class="tr-val">
-<p class="lbl">Total value <button class="eyebtn" id="eyeBtn" aria-label="Hide amounts"></button></p>
+<p class="lbl">Total value <button class="eyebtn" id="eyeBtn" aria-label="Hide amounts"></button><button class="depositbtn" id="btnDepositHome">Deposit</button></p>
 <p class="total" id="total">&mdash;</p>
 </div>
 <div class="evomini" id="evoMini" role="button" tabindex="0" title="Tap to see the chart"></div>
@@ -713,17 +729,13 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div class="evocontrols" id="evoControls" style="display:none">
 <div class="rangebar" id="rangeBar"></div><button class="expandbtn" id="evoAmpliarBtn" title="Full screen">&#9974;</button>
 </div>
-<p class="cashline"><span>Cash</span><b id="liquidezVal">&mdash;</b><span id="liquidezPct">&mdash;</span></p>
-<!-- El atajo DEPOSIT (27/08/2026): deposito directo en los bancos (BTG /
-     Itau) sin ir a Banking, que se mudo al menu lateral. El boton abre el
-     elegidor; elegir lleva al formulario de cash con la cuenta ya puesta. -->
-<div class="depositwrap">
-<button class="depositbtn" id="btnDepositHome">Deposit</button>
-<span class="depositpick" id="depositPick" style="display:none">
+<!-- Los dos bancos del atajo DEPOSIT: se muestran al tocarlo, en su propia
+     fila. El deposito en si es el formulario de Banking de siempre. -->
+<div class="depositpick" id="depositPick" style="display:none">
 <button class="pillbtn ghost" id="depBtg">BTG</button>
 <button class="pillbtn ghost" id="depItau">Ita&uacute;</button>
-</span>
 </div>
+<p class="cashline"><span>Cash</span><b id="liquidezVal">&mdash;</b><span id="liquidezPct">&mdash;</span></p>
 </div>
 <div class="sweeppanel">
 <div class="cardhead">
@@ -922,7 +934,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div class="cardhead"><h2>Watchlist</h2><button class="expandbtn" id="wlRefreshBtn" title="Refresh">&#8635;</button></div>
 <div id="wlAviso"></div>
 <div id="wlBody"><p class="loadingtxt">Loading...</p></div>
-<p class="newsempty" style="margin-top:10px">Add tickers from the search (magnifier &rarr; +). The bell sets a price alert.</p>
+<p class="newsempty" style="margin-top:10px">Add tickers from the search (magnifier &rarr; +). The + on a row sets a price alert.</p>
 </div>
 <div class="card">
 <h2>Notifications</h2>
