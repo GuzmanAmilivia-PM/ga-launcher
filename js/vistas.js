@@ -36,10 +36,11 @@
 // desincronizadas. Un numero escrito a mano en dos lugares es exactamente la
 // clase de cosa que queda vieja sin que nadie se entere.
 var VERSION_GENERACION = '1';
-// El 7: la Watchlist con alertas de precio y notificaciones push
-// (27/08/2026) — pestana nueva en la barra, Banking mudado al menu lateral.
-// El 6 fueron los indicadores fundamentales del detalle de cada posicion.
-var VERSION_FUNCION = '7';
+// El 8: editar a mano los precios del fondo de Itau desde su pagina
+// (29/08/2026, V16) — nacio con el corte a D1: la celda de la planilla que
+// Guzman editaba dejo de llegar a la app.
+// El 7 fue la Watchlist con alertas y push; el 6, los indicadores del detalle.
+var VERSION_FUNCION = '8';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre
@@ -247,7 +248,7 @@ tr.innerHTML = '<td><span class="sym">' + esc(h.symbol) + '</span><span class="d
 '<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
 '<td>' + gananciaHtml(h) + fmt(h.valor) + '</td>';
 tr.className = 'asset-row';
-tr.onclick = function () { toggleDetalle(tr, { symbol: h.symbol, precioCompra: h.precioCompra, precioActual: h.precioActual, qty: h.qty, cripto: acc.key === 'BNB' }); };
+tr.onclick = function () { toggleDetalle(tr, { symbol: h.symbol, precioCompra: h.precioCompra, precioActual: h.precioActual, qty: h.qty, cripto: acc.key === 'BNB', cuenta: acc.key, gfTicker: h.gfTicker }); };
 body.appendChild(tr);
 });
 }
@@ -273,6 +274,16 @@ body.appendChild(tr);
 // pone): con el prefijo, "USD 23.204" se partía en dos renglones en el ancho
 // del teléfono — captura de Guzmán del 25/08/2026. Sale de fmt() para
 // conservar el ojito de ocultar montos ('****').
+// Refresca la cuenta abierta con datos frescos del backend. La usa el
+// detalle desplegable despues de editar un precio manual (V16): sin esto, la
+// fila seguiria mostrando el valor viejo hasta salir y volver a entrar.
+function recargarCuentaAbierta() {
+if (!lastAcc) return;
+google.script.run.withSuccessHandler(function (data) { renderAccount(lastAcc, data); })
+.withFailureHandler(function () {})
+.getAccountData(lastAcc.key);
+}
+
 function valorPelado(v) {
   var s = fmt(v);
   return s.indexOf('USD ') === 0 ? s.slice(4) : s;

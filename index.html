@@ -229,6 +229,16 @@ canvas { max-width: 100%; }
 .detgrid > span { display: flex; flex-direction: column; gap: 3px; }
 .detlbl { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
 .detgrid b { font-size: 15px; }
+.detedit { margin-top: 12px; }
+.detedit-abrir, .detedit-botones button { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 700; }
+.detedit-botones .detedit-guardar { color: var(--text); border-color: var(--gold); }
+.detedit-form { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; max-width: 320px; }
+.detedit-form[hidden] { display: none; }
+.detedit-form label { display: flex; flex-direction: column; gap: 4px; }
+.detedit-form input { padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--text); font-size: 15px; font-family: inherit; font-weight: 600; outline: none; }
+.detedit-form input:focus { border-color: var(--gold); }
+.detedit-botones { display: flex; gap: 8px; }
+.detedit-msg { margin: 0; font-size: 12.5px; color: var(--muted); }
 /* Indicadores del detalle (V14, 26/08/2026): dos columnas nombre/valor y el
    contexto historico debajo, ocupando la fila entera. Sin hexadecimales. */
 .detfund { margin-top: 12px; }
@@ -605,6 +615,7 @@ html.light .navtab-center .cbtn { border-color: var(--navy2); background: linear
 html.light .rangebtn, html.light .morebtn, html.light .tipobtn, html.light .filtrobtn { background: rgba(20,40,80,.05); }
 html.light .rangebtn.active { background: var(--gold); color: #fff; border-color: var(--gold); }
 html.light .tradeform input, html.light .tradeform select { background: #fff; border-color: rgba(20,40,80,.18); }
+html.light .detedit-form input { background: #fff; border-color: rgba(20,40,80,.18); }
 html.light .detrow td { background: rgba(20,40,80,.035); }
 html.light #splash { background: linear-gradient(180deg,#f7f9fd,#e9edf5); }
 html.light #splash input { background: #fff; }

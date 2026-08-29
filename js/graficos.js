@@ -563,6 +563,12 @@ function toggleDetalle(tr, pos) {
   var tienePm = isFinite(pm) && pm > 0;
   var base = (pos.base !== undefined && pos.base !== null) ? Number(pos.base) : (tienePm && Number(pos.qty) ? pm * Number(pos.qty) : null);
   var pa = Number(pos.precioActual);
+  var symU = String(pos.symbol || '').toUpperCase();
+  // Editable = posicion de PRECIO MANUAL dentro de la pagina de SU cuenta
+  // (V16, 29/08/2026): sin proveedor vivo (gfTicker vacio), sin cotizacion
+  // cripto, y con la cuenta conocida — hoy, el fondo de Itau. Nacio con el
+  // corte a D1: la celda de la planilla que Guzman editaba dejo de llegar.
+  var editable = !!pos.cuenta && !pos.cripto && !pos.gfTicker && symU !== 'USDT' && symU !== 'LIQUIDEZ';
   var html = '<div class="detgrid">' +
     '<span><span class="detlbl">Average price</span><b>' + (tienePm ? esc(fmtNum(pm)) : '&mdash;') + '</b></span>' +
     '<span><span class="detlbl">Cost basis</span><b>' + (base ? fmt(base) : '&mdash;') + '</b></span>';
@@ -570,11 +576,22 @@ function toggleDetalle(tr, pos) {
     var res = (pa / pm - 1) * 100;
     html += '<span><span class="detlbl">Result</span><b class="' + (res >= 0 ? 'up' : 'down') + '">' + signoPct(res, 1) + '</b></span>';
   }
-  html += '</div><div class="detfund"></div><div class="tvwrap"></div>';
+  html += '</div>';
+  if (editable) {
+    html += '<div class="detedit">' +
+      '<button type="button" class="detedit-abrir">Edit prices</button>' +
+      '<div class="detedit-form" hidden>' +
+      '<label><span class="detlbl">Current price</span><input class="detedit-pa" type="number" inputmode="decimal" step="any" min="0"></label>' +
+      '<label><span class="detlbl">Buy price (last lot)</span><input class="detedit-pc" type="number" inputmode="decimal" step="any" min="0"></label>' +
+      '<div class="detedit-botones"><button type="button" class="detedit-guardar">Save</button><button type="button" class="detedit-cerrar">Cancel</button></div>' +
+      '<p class="detedit-msg"></p>' +
+      '</div></div>';
+  }
+  html += '<div class="detfund"></div><div class="tvwrap"></div>';
   td.innerHTML = html;
   det.appendChild(td);
   tr.parentNode.insertBefore(det, tr.nextSibling);
-  var symU = String(pos.symbol || '').toUpperCase();
+  if (editable) wireEditPrecios(td, pos);
   if (symU && symU !== 'USDT' && symU !== 'ITAU') {
     crearTvWidget(td.querySelector('.tvwrap'), pos.cripto ? ('BINANCE:' + symU + 'USDT') : symU);
   } else {
@@ -582,6 +599,47 @@ function toggleDetalle(tr, pos) {
   }
   detalleAbierto = { tr: tr, det: det };
   cargarFundamentales(symU, td.querySelector('.detfund'));
+}
+
+// El formulario de editar precios de una posicion MANUAL (V16, 29/08/2026).
+// El permiso de escribir lo decide el backend (posicion_editar rechaza toda
+// posicion con proveedor vivo): aca solo se muestra el formulario cuando
+// tiene sentido y se pinta la respuesta tal cual.
+function wireEditPrecios(td, pos) {
+  var abrir = td.querySelector('.detedit-abrir');
+  var form = td.querySelector('.detedit-form');
+  var inPa = td.querySelector('.detedit-pa');
+  var inPc = td.querySelector('.detedit-pc');
+  var msg = td.querySelector('.detedit-msg');
+  var btn = td.querySelector('.detedit-guardar');
+  var cerrar = td.querySelector('.detedit-cerrar');
+  if (!abrir || !form || !btn) return;
+  abrir.onclick = function () {
+    form.hidden = !form.hidden;
+    if (!form.hidden) {
+      if (inPa && Number(pos.precioActual) > 0) inPa.value = Number(pos.precioActual);
+      if (inPc && Number(pos.precioCompra) > 0) inPc.value = Number(pos.precioCompra);
+    }
+  };
+  if (cerrar) cerrar.onclick = function () { form.hidden = true; if (msg) msg.textContent = ''; };
+  btn.onclick = function () {
+    var pa2 = inPa && inPa.value !== '' ? Number(inPa.value) : null;
+    var pc2 = inPc && inPc.value !== '' ? Number(inPc.value) : null;
+    if (pa2 === null && pc2 === null) { if (msg) msg.textContent = 'Enter at least one price.'; return; }
+    btn.disabled = true;
+    if (msg) msg.textContent = 'Saving...';
+    google.script.run.withSuccessHandler(function (r) {
+      btn.disabled = false;
+      if (!r || !r.ok) { if (msg) msg.textContent = msgBackend(r) || 'Could not save.'; return; }
+      if (msg) msg.textContent = (r.mensajes || []).join(' ');
+      // La cuenta abierta se refresca con los numeros nuevos; la funcion
+      // vive en vistas.js (ambito global compartido, cargado antes).
+      if (typeof recargarCuentaAbierta === 'function') recargarCuentaAbierta();
+    }).withFailureHandler(function () {
+      btn.disabled = false;
+      if (msg) msg.textContent = 'Network error: could not save.';
+    }).editarPrecioManual({ cuenta: pos.cuenta, symbol: pos.symbol, precioActual: pa2, precioCompra: pc2 });
+  };
 }
 
 // ---------- Indicadores del detalle (V14) ----------
