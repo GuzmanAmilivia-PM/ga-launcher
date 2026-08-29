@@ -721,14 +721,14 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div class="menu-grid">
 <button class="mtile" id="mIA"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M12 3.5 13.8 9 19.5 11 13.8 13 12 18.5 10.2 13 4.5 11 10.2 9z"/><path d="M18.5 16.5 19.2 18.6 21.3 19.3 19.2 20 18.5 22.1 17.8 20 15.7 19.3 17.8 18.6z"/></svg></span>AI Insights</button>
 <button class="mtile" id="mRefrescar"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.7 3.5v3.8h-3.8"/></svg></span><span id="mRefrescarTxt">Sync</span></button>
-<a class="mtile" href="https://docs.google.com/spreadsheets/d/145R-cxu6zK6o7A1ht2R8mNypEacmeSmQQzzDPwy5tjg/edit" target="_blank" rel="noopener"><span class="mtile-ic"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-13"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></svg></span>Database</a>
-<!-- La D1 de Cloudflare (ga-portfolio). Es la base en ENSAYO de la Fase 2:
-     la app sigue leyendo la planilla hasta el corte (FUENTE_DATOS=planilla),
-     por eso este acceso se llama "test". Pide login de Cloudflare con la
-     cuenta guzman.aramos@gmail.com. La URL lleva la CUENTA y la BASE
-     explicitas (de wrangler whoami / d1 list): la forma ?to=/:account/...
-     le daba "no existe" a Guzman el 25/08/2026. -->
-<a class="mtile" href="https://dash.cloudflare.com/f4c2536ebeb1a3c6e4ccc234554c2e41/workers/d1/databases/6b35aa74-13d4-412c-8452-ef1b664d2b20" target="_blank" rel="noopener"><span class="mtile-ic"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-13"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/><path d="M9.5 18.2h5M12 16v4.4"/></svg></span>Database (test)</a>
+<!-- La base D1 de Cloudflare (ga-portfolio): LA base de datos de la app
+     desde el corte del 29/08/2026. El tile de la Google Sheet se saco ese
+     mismo dia (pedido de Guzman): la planilla quedo como respaldo historico
+     y un acceso directo invitaba a editarla — y editarla ya no cambia nada.
+     Pide login de Cloudflare con la cuenta guzman.aramos@gmail.com. La URL
+     lleva la CUENTA y la BASE explicitas (de wrangler whoami / d1 list): la
+     forma ?to=/:account/... le daba "no existe" a Guzman el 25/08/2026. -->
+<a class="mtile" href="https://dash.cloudflare.com/f4c2536ebeb1a3c6e4ccc234554c2e41/workers/d1/databases/6b35aa74-13d4-412c-8452-ef1b664d2b20" target="_blank" rel="noopener"><span class="mtile-ic"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-13"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/><path d="M9.5 18.2h5M12 16v4.4"/></svg></span>Database</a>
 <button class="mtile" id="mDiseno"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M4 7.5h16M4 12h16M4 16.5h16"/><circle cx="9.5" cy="7.5" r="2.2"/><circle cx="15" cy="12" r="2.2"/><circle cx="8" cy="16.5" r="2.2"/></svg></span>Settings</button>
 <button class="mtile" id="mConfig"><span class="mtile-ic"><svg viewBox="0 0 24 24"><circle cx="8.5" cy="8.5" r="4"/><path d="M11.3 11.3 20 20M16.5 16.5l2-2M14 19l2-2"/></svg></span>Keys</button>
 <button class="mtile" id="mSeguridad"><span class="mtile-ic"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg></span>Security</button>
