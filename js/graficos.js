@@ -552,32 +552,21 @@ function crearTvWidget(container, symbol) {
   // Tocar el grafico abre TradingView en ESE ticker (pedido de Guzman,
   // 29/08/2026). El toque no puede llegarle al iframe con intencion nuestra
   // (es de otro origen y va sandboxeado), asi que un ancla transparente
-  // cubre el widget entero, logo incluido. TradingView EXCLUYE los links
-  // con ?symbol= de sus enlaces universales (verificado en su
-  // apple-app-site-association: "/chart/" con query symbol => exclude), o
-  // sea que NINGUNA URL web abre su app de iOS en un ticker. Por eso el
-  // click intenta el esquema privado de la app (tradingview://, sin
-  // documentacion oficial) y, si en ~1 s la app no tomo la pantalla, abre
-  // el grafico web completo — el mismo ticker por las dos vias.
+  // cubre el widget entero, logo incluido, y lleva directo al grafico web
+  // completo de TradingView. Se probo abrir primero la app nativa via su
+  // esquema privado (tradingview://) con este mismo ticker: la app SI abre,
+  // pero TradingView no documenta en ningun lado el formato del parametro
+  // (probados varios, verificado a mano en el telefono el 29-30/08/2026) y
+  // siempre cae en la pantalla general en vez del ticker pedido — mostrar
+  // eso es peor que no intentarlo, asi que se saco. El link web es simple,
+  // predecible y siempre lleva al ticker correcto.
   var web = 'https://www.tradingview.com/chart/?symbol=' + encodeURIComponent(symbol);
   var a = document.createElement('a');
-  a.href = web; // link real: largo-toque y "abrir en pestana" funcionan igual
+  a.href = web; // link real: largo-toque, "abrir en pestana" y VoiceOver funcionan solo con el HTML
   a.target = '_blank';
   a.rel = 'noopener';
   a.setAttribute('aria-label', 'Open ' + symbol + ' in TradingView');
   a.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:1';
-  a.addEventListener('click', function (ev) {
-    ev.preventDefault();
-    var t0 = Date.now();
-    window.location.href = 'tradingview://chart?symbol=' + encodeURIComponent(symbol);
-    setTimeout(function () {
-      // Si la app abrio, la PWA quedo de fondo (hidden) — o iOS congelo el
-      // timer y este corre recien a la vuelta, mucho despues de t0. En los
-      // dos casos no hay nada que abrir encima.
-      if (document.hidden || Date.now() - t0 > 1600) return;
-      window.open(web, '_blank', 'noopener');
-    }, 900);
-  });
   container.style.position = 'relative';
   container.appendChild(a);
 }
