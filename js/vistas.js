@@ -36,11 +36,12 @@
 // desincronizadas. Un numero escrito a mano en dos lugares es exactamente la
 // clase de cosa que queda vieja sin que nadie se entere.
 var VERSION_GENERACION = '1';
-// El 8: editar a mano los precios del fondo de Itau desde su pagina
-// (29/08/2026, V16) — nacio con el corte a D1: la celda de la planilla que
-// Guzman editaba dejo de llegar a la app.
-// El 7 fue la Watchlist con alertas y push; el 6, los indicadores del detalle.
-var VERSION_FUNCION = '8';
+// El 9: el podcast diario de noticias en espanol, en la pantalla News
+// (30/08/2026) — guion con Claude + voz con Google Cloud Text-to-Speech.
+// El 8 fue editar a mano los precios del fondo de Itau desde su pagina
+// (29/08/2026, V16); el 7, la Watchlist con alertas y push; el 6, los
+// indicadores del detalle.
+var VERSION_FUNCION = '9';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre

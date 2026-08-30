@@ -29,6 +29,7 @@
   style-src 'self' 'unsafe-inline';
   font-src 'self' data:;
   img-src 'self' data: https://assets.parqet.com https://cdn.jsdelivr.net https://*.finnhub.io;
+  media-src 'self' data:;
   connect-src 'self' https://ga-portfolio-worker.ga-portfolio.workers.dev wss://ws-api.binance.com;
   frame-src https://s.tradingview.com https://www.tradingview.com;
   worker-src 'self';
@@ -1247,6 +1248,10 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <!-- ============ NOTICIAS ============ -->
 <div id="view-noticias" style="display:none">
 <p class="pagesub">Serious financial media headlines about your largest positions</p>
+<div class="card">
+<span class="newssym">Daily podcast</span>
+<div id="podcastBody"><button type="button" class="ghostbtn" id="podcastBtn">Generate podcast</button></div>
+</div>
 <div id="resultadosBody"></div>
 <div id="noticiasBody"><p class="loadingtxt">Loading...</p></div>
 </div>

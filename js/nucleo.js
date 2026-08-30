@@ -64,7 +64,7 @@ var API_TIMEOUT_LARGO_MS = 180000;
 var FNS_LENTAS = {
   noticias: 1, analisis: 1, refrescar: 1, restaurar: 1,
   ibkr_sync: 1, cs_sync: 1, bnb_sync: 1,
-  ia_analizar: 1, dividendos: 1, aportes: 1
+  ia_analizar: 1, dividendos: 1, aportes: 1, podcast: 1
 };
 
 // Un fallo de red de Safari llega como TypeError('Load failed'), y eso es lo
@@ -146,7 +146,7 @@ function apiCall(fn, args) {
 }
 // Shim compatible con google.script.run: el resto del codigo no cambia.
 (function () {
-  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getOperaciones: 'operaciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar', estadoIA: 'ia_estado', guardarClaveIA: 'ia_config', estadoFinnhub: 'finnhub_estado', guardarClaveFinnhub: 'finnhub_config', getResultados: 'resultados', analizarConIA: 'ia_analizar', buscarTicker: 'buscar', estadoIBKR: 'ibkr_estado', guardarConfigIBKR: 'ibkr_config', sincronizarIBKR: 'ibkr_sync', sincronizarBNB: 'bnb_sync', estadoCS: 'cs_estado', guardarConfigCS: 'cs_config', portalCS: 'cs_portal', sincronizarCS: 'cs_sync', getDividendos: 'dividendos', getAportes: 'aportes', getAnalisis: 'analisis', getPerfil: 'perfil', guardarPerfil: 'perfil_set', getFundamentales: 'fundamentales', listarBackups: 'backups', restaurarBackup: 'restaurar', getSalud: 'salud', getWatchlist: 'watchlist', agregarWatchlist: 'watchlist_agregar', quitarWatchlist: 'watchlist_quitar', alertaWatchlist: 'watchlist_alerta', registrarPush: 'push_registrar', editarPrecioManual: 'posicion_editar', quitarPush: 'push_quitar', probarPush: 'push_probar' };
+  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getOperaciones: 'operaciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar', estadoIA: 'ia_estado', guardarClaveIA: 'ia_config', estadoFinnhub: 'finnhub_estado', guardarClaveFinnhub: 'finnhub_config', getResultados: 'resultados', analizarConIA: 'ia_analizar', buscarTicker: 'buscar', estadoIBKR: 'ibkr_estado', guardarConfigIBKR: 'ibkr_config', sincronizarIBKR: 'ibkr_sync', sincronizarBNB: 'bnb_sync', estadoCS: 'cs_estado', guardarConfigCS: 'cs_config', portalCS: 'cs_portal', sincronizarCS: 'cs_sync', getDividendos: 'dividendos', getAportes: 'aportes', getAnalisis: 'analisis', getPerfil: 'perfil', guardarPerfil: 'perfil_set', getFundamentales: 'fundamentales', listarBackups: 'backups', restaurarBackup: 'restaurar', getSalud: 'salud', getWatchlist: 'watchlist', agregarWatchlist: 'watchlist_agregar', quitarWatchlist: 'watchlist_quitar', alertaWatchlist: 'watchlist_alerta', registrarPush: 'push_registrar', editarPrecioManual: 'posicion_editar', quitarPush: 'push_quitar', probarPush: 'push_probar', getPodcast: 'podcast' };
   function mk(ok, fail) {
     var o = {
       withSuccessHandler: function (f) { return mk(f, fail); },

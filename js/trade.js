@@ -355,6 +355,52 @@ body.appendChild(c);
 });
 }
 
+// ---------- Podcast diario de noticias (30/08/2026) ----------
+// Mismo patron UX que analizarIA (ia.js): boton -> estado de carga ->
+// exito/error, con reintento. El guion lo escribe Claude (misma clave de
+// IA Insights) y la voz la genera Google Cloud Text-to-Speech (misma cuenta
+// de servicio que ya habla con la Sheets API) — las dos APIs viven en el
+// backend, aca solo se pinta el resultado.
+var podcastCargando = false;
+function wirePodcastBtn(id, forzar) {
+var btn = document.getElementById(id);
+if (btn) btn.onclick = function () { generarPodcast(forzar); };
+}
+wirePodcastBtn('podcastBtn', false);
+function podcastErrorHtml(msg) {
+return '<p class="newsempty">' + esc(msg) + '</p><button type="button" class="ghostbtn" id="podcastBtn">Generate podcast</button>';
+}
+function podcastHtml(r) {
+// r.audioBase64 solo trae el alfabeto base64 (A-Za-z0-9+/=): no hace falta
+// esc(), y escaparlo igual no cambiaria nada.
+return '<audio controls preload="none" style="width:100%" src="data:' + esc(r.mime || 'audio/mpeg') + ';base64,' + r.audioBase64 + '"></audio>' +
+'<p class="ia-p" style="margin-top:10px">' + esc(r.guion || '') + '</p>' +
+'<button type="button" class="ghostbtn" id="podcastRegen">Regenerate</button>';
+}
+function generarPodcast(forzar) {
+if (podcastCargando) return;
+podcastCargando = true;
+var out = document.getElementById('podcastBody');
+out.innerHTML = '<p class="loadingtxt">Writing the script and generating the voice... this can take up to a minute.</p>';
+google.script.run.withSuccessHandler(function (r) {
+podcastCargando = false;
+if (!r || !r.ok) {
+var msg = (r && r.sinClave)
+? 'Configure your Anthropic key in Configuration → AI Insights to generate the podcast.'
+: msgBackend(r) || 'Error';
+out.innerHTML = podcastErrorHtml(msg);
+wirePodcastBtn('podcastBtn', false);
+return;
+}
+out.innerHTML = podcastHtml(r);
+wirePodcastBtn('podcastRegen', true);
+}).withFailureHandler(function (err) {
+podcastCargando = false;
+out.innerHTML = podcastErrorHtml(msgErr(err, 'The podcast'));
+wirePodcastBtn('podcastBtn', false);
+}).getPodcast({ forzar: !!forzar });
+}
+
 
 // ---------- Resultados de las empresas (V11) ----------
 // El calendario lo arma el backend una vez por dia (cron + Finnhub) y aca
