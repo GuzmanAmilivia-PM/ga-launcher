@@ -7,7 +7,18 @@ function secLeer() { try { return JSON.parse(localStorage.getItem('ga_sec') || '
 function secGuardar(s) { try { localStorage.setItem('ga_sec', JSON.stringify(s)); } catch (e) {} }
 function b64u(buf) { var a = new Uint8Array(buf), s = ''; for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
 function b64uBytes(b) { b = b.replace(/-/g, '+').replace(/_/g, '/'); var s = atob(b), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
-function hashPin(pin) { return crypto.subtle.digest('SHA-256', new TextEncoder().encode('ga-sec|' + pin)).then(b64u); }
+function hashPinLegacy(pin) { return crypto.subtle.digest('SHA-256', new TextEncoder().encode('ga-sec|' + pin)).then(b64u); }
+// PBKDF2 con sal aleatoria por instalacion (100k iteraciones): el hash viejo
+// (SHA-256 sin sal) era fuerza-brutable offline en milisegundos si alguien
+// leia el localStorage. hashPinLegacy queda solo para migrar un PIN guardado
+// antes de este cambio (ver secPinGo).
+function hashPin(pin, saltB64) {
+var enc = new TextEncoder();
+return crypto.subtle.importKey('raw', enc.encode(pin), 'PBKDF2', false, ['deriveBits']).then(function (key) {
+return crypto.subtle.deriveBits({ name: 'PBKDF2', salt: b64uBytes(saltB64), iterations: 100000, hash: 'SHA-256' }, key, 256);
+}).then(b64u);
+}
+function nuevaSal() { return b64u(crypto.getRandomValues(new Uint8Array(16))); }
 function bioDisponible() {
 if (!window.PublicKeyCredential || !navigator.credentials || !window.isSecureContext) return Promise.resolve(false);
 try { return PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(function () { return false; }); } catch (e) { return Promise.resolve(false); }
@@ -94,8 +105,9 @@ if (!/^[0-9]{4,8}$/.test(p1)) { segMsg('segPinMsg', 'The passcode must be 4 to 8
 if (p1 !== p2) { segMsg('segPinMsg', 'The passcodes don\u2019t match.', false); return; }
 var btn = this;
 btn.disabled = true;
-hashPin(p1).then(function (h) {
-var s = secLeer(); s.pin = h; secGuardar(s);
+var sal = nuevaSal();
+hashPin(p1, sal).then(function (h) {
+var s = secLeer(); s.pin = h; s.pinSal = sal; secGuardar(s);
 btn.disabled = false;
 document.getElementById('segPin1').value = ''; document.getElementById('segPin2').value = '';
 prepararSeguridad();
@@ -258,9 +270,17 @@ intentarBio(false);
 document.getElementById('secPinGo').onclick = function () {
 var v = document.getElementById('secPinInput').value;
 if (!v) return;
-hashPin(v).then(function (h) {
-if (h === s.pin) abrir();
-else { document.getElementById('secPinInput').value = ''; document.getElementById('secErr').textContent = 'Incorrect passcode.'; }
+// PIN guardado antes de la sal (sin s.pinSal): se valida contra el hash
+// legacy y, si coincide, se migra al formato con sal sin pedirselo a nadie.
+var comparar = s.pinSal ? hashPin(v, s.pinSal) : hashPinLegacy(v);
+comparar.then(function (h) {
+if (h === s.pin) {
+if (!s.pinSal) {
+var todos = secLeer(), sal = nuevaSal();
+hashPin(v, sal).then(function (h2) { todos.pin = h2; todos.pinSal = sal; secGuardar(todos); });
+}
+abrir();
+} else { document.getElementById('secPinInput').value = ''; document.getElementById('secErr').textContent = 'Incorrect passcode.'; }
 });
 };
 if (!_listenersDelBloqueo) {
