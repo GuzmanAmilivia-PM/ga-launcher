@@ -362,6 +362,26 @@ setTimeout(function () { el._confirm = false; el.textContent = normal; }, ms);
 // signo y los decimales salen de un solo lugar (auditoria 19/08/2026: el
 // patron estaba rearmado a mano en cinco sitios).
 function signoPct(v, dec) { return (v >= 0 ? '+' : '') + v.toFixed(dec) + '%'; }
+// ¿Esta fila es plata quieta y no un valor? (D8, 31/08/2026)
+//
+// Importa porque el cash NO tiene variacion del dia y eso esta bien: no
+// cotiza porque no se mueve, no porque falte el dato. Tratarlo como "sin
+// precio" hace que el aviso no pueda apagarse nunca.
+//
+// El payload del Inicio ya trae `tipo`, y cuando esta, MANDA. El detalle de
+// una cuenta no lo trae (getAccountData devuelve la fila de la hoja, sin
+// clasificar), asi que ahi se cae al simbolo — reflejando la MISMA lista que
+// usa el backend en `SIMBOLOS_CASH`/`_esPosicionCash` (Datos.js del worker).
+// Escrito una sola vez y no en cada pantalla a proposito: dos definiciones de
+// "esto es cash" se separan sin que nada falle, y entonces la misma fila dice
+// una cosa en el Inicio y otra en su cuenta.
+var SIMBOLOS_CASH = ['ITAU', 'HSBC', 'USDT', 'LIQUIDEZ'];
+function esFilaCash(p) {
+if (!p) return false;
+if (p.tipo) return p.tipo === 'cash';
+if (SIMBOLOS_CASH.indexOf(String(p.symbol || '').toUpperCase()) !== -1) return true;
+return /liquidez|cash/i.test(String(p.nombre || p.descripcion || ''));
+}
 // Chip de porcentaje firmado (verde/rojo): la linea estaba copiada identica
 // en daychgHtml y gananciaHtml (E6).
 function pctHtml(v, dec) {

@@ -308,6 +308,13 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .holdav.cash { background: rgba(144,160,184,.16); color: var(--muted); }
 .holdsec td { color: var(--muted); font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; padding: 16px 8px 4px; border-bottom: none; }
 .daychg { display: block; font-size: 11.5px; font-weight: 700; margin-bottom: 1px; }
+/* La marca "sin precio de hoy" (D8) ocupa el MISMO lugar que el % del dia:
+   arriba del precio y en su propia linea. Va pegada a .daychg a proposito —
+   se probo reusando la clase de la watchlist, que es inline, y la marca
+   quedaba pegada al precio ("not priced512.3") mientras el porcentaje de la
+   fila de al lado iba arriba. Los numeros no lo delataban: la celda medida
+   entraba igual y la fila media lo mismo. Lo cazo la captura. */
+.daystale { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); margin-bottom: 1px; }
 .holdpct { color: var(--gold); font-weight: 700; font-size: 13px; }
 /* .holdtable delante a proposito: sin eso, la regla de <=560px (.holdtable td,
    que suma clase + elemento) le gana a .col-spark y el padding volvia a 5px

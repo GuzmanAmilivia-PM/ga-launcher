@@ -725,10 +725,15 @@ function aplicarAportes(r) {
 // Antes estaba arriba del valor total, donde se confundia con la ganancia
 // acumulada de la posicion.
 function daychgHtml(p) {
-  if (p.cambioDia === null || p.cambioDia === undefined || p.cambioDia === '') return '';
-  var v = Number(p.cambioDia);
-  if (!isFinite(v)) return '';
-  return pctHtml(v, 2);
+  if (p.cambioDia === null || p.cambioDia === undefined || p.cambioDia === '' ||
+      !isFinite(Number(p.cambioDia))) {
+    // D8: el cash no cotiza y su celda vacia esta bien. Para un valor, en
+    // cambio, la celda vacia se lee igual que "no se movio" — y no saber no
+    // es lo mismo que no moverse. La marca ocupa el mismo renglon que
+    // ocuparia el % del dia (.daystale, hermana de .daychg).
+    return esFilaCash(p) ? '' : '<span class="daystale">not priced</span>';
+  }
+  return pctHtml(Number(p.cambioDia), 2);
 }
 
 // Ganancia acumulada de la posicion: precio actual contra el precio medio de
@@ -757,26 +762,69 @@ function gananciaHtml(p) {
 //   cuantas posiciones se calculo cuando no estan todas.
 // - El resultado no realizado solo cuenta las que tienen precio de compra
 //   conocido: el fondo de Itau y la liquidez no lo tienen.
+// D8 (31/08/2026). Fidelity separa "Today's Change" de "Change in Securities
+// Not Priced Today" en vez de meter todo en un numero. Aca no se puede copiar
+// literal —de lo que no tiene precio de hoy no sabemos NADA, ni siquiera
+// cuanto se movio—, asi que la version honesta es sacarlo del calculo y
+// decir cuanta plata quedo afuera.
+//
+// Dos cosas estaban mal antes, y las dos empujaban el numero para el mismo
+// lado:
+//
+//  1. El PORCENTAJE se dividia por la cartera ENTERA mientras que el monto
+//     de arriba solo sumaba lo que si tiene precio. Eso equivale a afirmar
+//     que lo no cotizado se movio 0%, que es una afirmacion, no un dato. Con
+//     la cartera real hay ~12,7% sin precio de hoy: el porcentaje salia
+//     aguado como un 25% menos de lo que de verdad se movio la parte medida.
+//  2. El CASH se contaba como "sin dato". El cash no cotiza porque no se
+//     mueve, no porque falte informacion. Contarlo hacia que el aviso no
+//     pudiera desaparecer nunca — y un aviso que esta siempre encendido se
+//     aprende a ignorar.
+//
+// El cash SI entra en el divisor, y ahi no hay contradiccion: de verdad se
+// movio 0%. Lo unico que se saca del calculo es lo que no sabemos.
 function calcularKpis(data) {
   var pos = (data && data.posiciones) || [];
-  var diaUsd = 0, conDia = 0, sinDia = 0;
+  var diaUsd = 0, ayerMedido = 0, conDia = 0;
+  var sinPrecio = 0, valorSinPrecio = 0;
   var valorConCosto = 0, costo = 0;
   pos.forEach(function (p) {
     var v = Number(p.valor);
     var cd = Number(p.cambioDia);
-    if (isFinite(v) && v > 0 && p.cambioDia !== null && p.cambioDia !== undefined && isFinite(cd)) {
-      // v es el valor de HOY: lo de ayer es v / (1 + cd/100).
-      var ayer = v / (1 + cd / 100);
-      if (isFinite(ayer) && ayer > 0) { diaUsd += v - ayer; conDia++; }
-    } else if (isFinite(v) && v > 0) { sinDia++; }
+    var tieneDia = p.cambioDia !== null && p.cambioDia !== undefined && isFinite(cd);
+    if (isFinite(v) && v > 0) {
+      if (tieneDia) {
+        // v es el valor de HOY: lo de ayer es v / (1 + cd/100).
+        var ayer = v / (1 + cd / 100);
+        if (isFinite(ayer) && ayer > 0) { diaUsd += v - ayer; ayerMedido += ayer; conDia++; }
+      } else if (esFilaCash(p)) {
+        ayerMedido += v;   // no se movio: aporta al divisor y nada al cambio
+      } else {
+        sinPrecio++; valorSinPrecio += v;
+      }
+    }
+    // El cash NO tiene resultado no realizado: es plata, no una posicion
+    // comprada a un precio. Excluirlo no es una preferencia de presentacion,
+    // es un bug encontrado el 31/08/2026 mirando la pantalla con datos
+    // reales: la fila de ITAU llega con `base` 239.974 contra un valor de
+    // 6.021 (la columna no esta en dolares), y esa sola fila daba
+    // "Unrealized −USD 198.516 / −65,1%" cuando lo real es +USD 35.437 /
+    // +54,4%. El SIGNO estaba dado vuelta, no solo el monto.
     var base = Number(p.base);
-    if (isFinite(v) && isFinite(base) && base > 0) { valorConCosto += v; costo += base; }
+    if (isFinite(v) && isFinite(base) && base > 0 && !esFilaCash(p)) {
+      valorConCosto += v; costo += base;
+    }
   });
-  var totalAyer = Number(data && data.total) - diaUsd;
+  var total = Number(data && data.total);
   return {
     diaUsd: conDia ? diaUsd : null,
-    diaPct: (conDia && isFinite(totalAyer) && totalAyer > 0) ? (diaUsd / totalAyer * 100) : null,
-    conDia: conDia, sinDia: sinDia,
+    diaPct: (conDia && ayerMedido > 0) ? (diaUsd / ayerMedido * 100) : null,
+    conDia: conDia,
+    sinPrecio: sinPrecio,
+    valorSinPrecio: valorSinPrecio,
+    // Sobre la cartera entera, para poder decir "esto es un octavo de lo
+    // tuyo" y no solo un monto suelto.
+    pctSinPrecio: (isFinite(total) && total > 0) ? (valorSinPrecio / total * 100) : null,
     noRealizado: costo > 0 ? (valorConCosto - costo) : null,
     noRealizadoPct: costo > 0 ? ((valorConCosto - costo) / costo * 100) : null
   };
@@ -797,10 +845,15 @@ function pintarKpis(data) {
   if (k.diaUsd === null) {
     h += celda('Today', '&mdash;', '', '', 'no daily data yet');
   } else {
+    // La nota dice la PLATA que quedo afuera, no cuantas posiciones: seis
+    // posiciones chicas y una grande se leen igual contadas, y no son lo
+    // mismo. Con la cartera real, "6 of 24 positions" suena menor y en plata
+    // es un octavo de todo.
     h += celda('Today', (k.diaUsd >= 0 ? '+' : '−') + fmt(Math.abs(k.diaUsd)),
       k.diaPct === null ? '' : signoPct(k.diaPct, 2),
       k.diaUsd >= 0 ? 'up' : 'down',
-      k.sinDia ? (k.conDia + ' of ' + (k.conDia + k.sinDia) + ' positions') : '');
+      k.sinPrecio ? ('excludes ' + fmt(k.valorSinPrecio) + ' not priced today' +
+        (k.pctSinPrecio ? ' (' + k.pctSinPrecio.toFixed(1) + '%)' : '')) : '');
   }
   // 2) El resultado no realizado.
   if (k.noRealizado === null) {
