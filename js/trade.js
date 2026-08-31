@@ -433,7 +433,16 @@ if (e.epsReal !== null || e.revReal !== null) pasados.push(e);
 else if (d.getTime() >= hoy.getTime()) porVenir.push(e);
 });
 if (!pasados.length && !porVenir.length) {
-card += '<p class="newsempty">None of your companies report in the next two weeks.</p>';
+// El plazo sale del payload, NO escrito a mano: decía "two weeks" con el
+// horizonte del backend en 14, y al ampliarlo a 90 ese texto habría pasado
+// a mentir sin que nada fallara (31/08/2026).
+var d = Number(data.horizonteDias);
+// Sin el dato (un backend anterior a que el campo existiera) no se inventa
+// un plazo: se dice que es el período cubierto, sin número.
+var plazo = (isFinite(d) && d > 0)
+  ? 'in the next ' + (d % 30 === 0 ? (d / 30) + (d === 30 ? ' month' : ' months') : d + ' days')
+  : 'in the covered period';
+card += '<p class="newsempty">None of your companies report ' + esc(plazo) + '.</p>';
 }
 pasados.forEach(function (e) {
 var partes = [];
@@ -442,7 +451,12 @@ if (e.revReal !== null) partes.push('revenue ' + usd(Math.round(e.revReal / 1e6)
 card += '<div class="newsmove"><span><b>' + esc(e.symbol) + '</b> reported on ' + esc(fechaResultado(e.fecha)) + ': ' + esc(partes.join(' · ')) + '</span></div>';
 });
 porVenir.forEach(function (e) {
-var linea = '<b>' + esc(e.symbol) + '</b> reports on ' + esc(fechaResultado(e.fecha)) + (e.hora ? ', ' + esc(e.hora) : '');
+// `hora` viaja como CÓDIGO del proveedor, no como frase: el mismo dato lo
+// consumen el mail (en español) y esta pantalla (en inglés), así que cada
+// uno traduce. Antes llegaba ya escrito y se imprimía "antes de abrir" en
+// una interfaz en inglés. Un código que no conocemos no se nombra.
+var cuando = e.hora === 'bmo' ? 'before the open' : (e.hora === 'amc' ? 'after the close' : '');
+var linea = '<b>' + esc(e.symbol) + '</b> reports on ' + esc(fechaResultado(e.fecha)) + (cuando ? ', ' + esc(cuando) : '');
 if (e.epsEstimado !== null) linea += ' — EPS expected ' + esc(usd(e.epsEstimado));
 linea += ' <span class="newsmeta">(estimated)</span>';
 card += '<div class="newsmove"><span>' + linea + '</span></div>';
