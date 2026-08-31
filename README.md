@@ -6,7 +6,8 @@ en cada push a `main` (~30-60 s).
 Son dos repos privados distintos, y conviene no confundirlos:
 
 - **El backend** vive en `ga-portfolio-worker` (Cloudflare Workers). Es el que
-  atiende a esta app desde el 20/08/2026.
+  atiende a esta app desde el 20/08/2026. Su `ARQUITECTURA.md` es el documento
+  de entrada de todo el sistema (incluida esta PWA).
 - **Los tests de ESTA app** viven en `portfolio-tracker` — el ex-backend de
   Apps Script, apagado el 22/08/2026 —, en `scripts/ui/`. Se corren con
   `npm run test:ui` desde allá, y son la única red que tiene este repo.
