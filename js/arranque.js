@@ -180,6 +180,14 @@ bnbAutoSync();
   function loadData(){
     var completa = !fullSerie || !fullSerie.length || (Date.now() - ultimaCargaCompleta > CARGA_COMPLETA_MS);
     google.script.run.withFailureHandler(function(err){
+      // OJO con el orden: cuando el servidor rechaza la clave, apiCall ya
+      // llamo a mostrarLock() y la pantalla para escribir la clave nueva
+      // ESTA arriba. Un hideSplash() aca la tapaba de inmediato, asi que
+      // Guzman veia el aviso y los datos viejos sin ninguna forma de
+      // escribir la clave: la app pedia algo y se lo escondia en el mismo
+      // suspiro. Se pasaba la tarde cambiando una clave que nunca llegaba
+      // a entrar (31/08/2026).
+      if (err && err.auth) { pintarBadges('error'); return; }
       hideSplash();
       // Con datos ya pintados (del caché), un fallo no rompe la vista: se
       // avisa y quedan los últimos datos guardados.
