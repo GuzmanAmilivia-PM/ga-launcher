@@ -27,6 +27,7 @@ render: function (r) {
 anaUltima = r;
 renderAnalisis(r);
 renderAnalisisDetalle(r);
+renderAsignacionTablero(r);   // la tarjeta del tablero, solo visible en escritorio
 },
 alFallar: function () { anaCargado = false; },
 pedir: function (ok, fail) {
@@ -223,6 +224,46 @@ function anxBarraHtml(label, pct) {
 var w = Math.max(1, Math.min(100, Math.round((Number(pct) || 0) * 100)));
 return '<div class="anxfila"><span>' + esc(label) + '</span><b>' + esc(anaPct(pct, 1)) + '</b>' +
 '<span class="pista"><i style="width:' + w + '%"></i></span></div>';
+}
+
+// ---- La tarjeta de asignación del tablero de escritorio (31/08/2026) -------
+// D4 de la lista: la asignación está en 10 de los 10 productos comparados, y
+// en esta app vivía SOLO en la página Analysis. En una pantalla ancha hay
+// lugar para tenerla a la vista sin navegar.
+//
+// No calcula NADA nuevo: reusa lo que getAnalisis ya devuelve. En particular
+// el look-through, que es lo que hace que el número valga — un ETF amplio
+// reparte su peso entre los sectores del índice en vez de contar como "una
+// cosa". IBKR lo llama *parsed exposure*; acá ya estaba, escondido.
+//
+// La COBERTURA se dice siempre que no sea total. Un "35% tecnología" medido
+// sobre el 80% de la cartera que se pudo clasificar no es lo mismo que uno
+// medido sobre todo, y sin decirlo se leen igual.
+function renderAsignacionTablero(r) {
+  var el = document.getElementById('asigBody');
+  if (!el) return;
+  if (!r || !r.ok) { el.innerHTML = '<p class="loadingtxt">Loading...</p>'; return; }
+
+  var h = '';
+  // El número que vale por todo el gráfico: cuánto pesan las cinco mayores.
+  // Los textos van en INGLES: es la regla de la app desde el 26/08/2026.
+  if (r.concentracion && typeof r.concentracion.top5 === 'number') {
+    h += '<p class="asig-top"><b>' + esc(anaPct(r.concentracion.top5, 1)) + '</b> in your top 5' +
+      (r.concentracion.posiciones ? ' <span>of ' + r.concentracion.posiciones + ' positions</span>' : '') + '</p>';
+  }
+  if (r.clases && r.clases.length) {
+    h += '<p class="asig-t">By class</p>';
+    r.clases.slice(0, 5).forEach(function (c) { h += anxBarraHtml(c.label, c.pct); });
+  }
+  if (r.sectores && r.sectores.lista && r.sectores.lista.length) {
+    h += '<p class="asig-t">By sector <span>looking inside your ETFs</span></p>';
+    r.sectores.lista.slice(0, 5).forEach(function (s) { h += anxBarraHtml(s.sector, s.pct); });
+    if (typeof r.sectores.cobertura === 'number' && r.sectores.cobertura < 0.95) {
+      h += '<p class="asig-nota">Measured over the ' + esc(anaPct(r.sectores.cobertura, 1)) +
+        ' of your stocks and ETFs that could be classified.</p>';
+    }
+  }
+  el.innerHTML = h || '<p class="newsempty">No allocation data yet.</p>';
 }
 
 // ---- El perfil de inversor y su test ---------------------------------------

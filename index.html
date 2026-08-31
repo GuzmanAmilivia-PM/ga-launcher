@@ -706,6 +706,9 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
    primera pantalla y encima queda cortado. Paso: la prueba numerica decia
    "display: block" y recien la captura lo mostro. 31/08/2026. */
 .kpis { display: none; }
+/* La tarjeta de asignacion tambien nace APAGADA: en el telefono ya vive en
+   la pagina Analysis, y aca le comeria la primera pantalla. */
+.asigcard { display: none; }
 
 /* =====================================================================
    MODO ESCRITORIO (31/08/2026) — se enciende SOLO a partir de 1100px.
@@ -823,6 +826,22 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
   .kpi-va .kpi-sec { font-size: 12px; font-weight: 700; color: var(--muted); margin-left: 7px; }
   .kpi-va.up { color: var(--green); }
   .kpi-va.down { color: var(--red); }
+
+  /* --- La asignacion (D4) --- */
+  .asigcard { display: block; }
+  .asig-top {
+    margin: 0 0 14px; font-size: 13px; color: var(--muted);
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .asig-top b { font-size: 20px; color: var(--text); font-weight: 800; margin-right: 7px; font-variant-numeric: tabular-nums; }
+  .asig-top span { opacity: .75; }
+  .asig-t {
+    font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--muted); margin: 14px 0 8px;
+  }
+  .asig-t:first-child { margin-top: 0; }
+  .asig-t span { letter-spacing: .02em; text-transform: none; font-size: 11px; opacity: .8; }
+  .asig-nota { font-size: 11px; color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
 }
 </style>
 </head>
@@ -989,6 +1008,13 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div class="card">
 <h2>Account detail</h2>
 <div id="cuentasList"></div>
+</div>
+<!-- La asignacion en el tablero (D4, 31/08/2026). Solo en escritorio: en el
+     telefono ya vive en la pagina Analysis y aca competiria por la primera
+     pantalla. Nace apagada, como la tira de indicadores. -->
+<div class="card asigcard" id="asigCard">
+<h2 id="asigTitulo" class="h2link" role="button" tabindex="0" title="Open the full analysis">Allocation <span class="chev">&rsaquo;</span></h2>
+<div id="asigBody"><p class="loadingtxt">Loading...</p></div>
 </div>
 </div>
 

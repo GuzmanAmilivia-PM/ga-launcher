@@ -90,6 +90,11 @@ function cargarPanelesDeEscritorio() {
   if (!esEscritorio()) return;
   if (!divCargado && typeof cargarDividendos === 'function') cargarDividendos(false);
   if (!apoCargado && typeof cargarAportes === 'function') cargarAportes();
+  // La asignacion (D4): en el telefono se pide al entrar a Portfolio; en el
+  // tablero esta a la vista desde el arranque, asi que hay que pedirla.
+  if (typeof anaCargado !== 'undefined' && !anaCargado && typeof cargarAnalisis === 'function') {
+    cargarAnalisis(false);
+  }
 }
 // Al arrancar, y tambien si la ventana se agranda despues (pasar de una
 // ventana angosta a pantalla completa es lo mismo que llegar deslizando).

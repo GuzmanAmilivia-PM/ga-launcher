@@ -336,6 +336,17 @@ document.getElementById('posBack').onclick = function () { setView('inicio'); };
   t.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(); } });
 })();
 
+// El titulo de la tarjeta de asignacion del tablero lleva al analisis
+// completo (31/08/2026): la tarjeta es un resumen, el detalle vive en
+// Analysis. Mismo patron que Positions, teclado incluido.
+(function () {
+  var t = document.getElementById('asigTitulo');
+  if (!t) return;
+  function abrir() { setView('analisis'); }
+  t.addEventListener('click', abrir);
+  t.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(); } });
+})();
+
 // ---------- Portafolio (torta + desglose) ----------
 var pieChartInstance = null;
 function accountByName(nombre) {
