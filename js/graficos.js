@@ -71,6 +71,41 @@ el.textContent = signoPct(pct, 2) +
 (anual !== null ? ' · ' + signoPct(anual, 1) + ' anual' : '');
 el.className = 'rangepct ' + (pct >= 0 ? 'up' : 'down');
 pintarVsBench(serie, pct);
+pintarMovimiento(serie);
+}
+// El desglose, en una linea: de cuanto arrancaste, cuanto pusiste, cuanto
+// rindio. Aparece SOLO cuando hubo aportes en el periodo — si no los hubo,
+// todo el cambio es mercado y la linea no diria nada que el % no diga ya.
+function pintarMovimiento(serie) {
+  var el = document.getElementById('movSaldo');
+  if (!el) return;
+  var m = movimientoDelSaldo(serie);
+  if (!m) { el.innerHTML = ''; el.className = 'movsaldo'; return; }
+
+  if (m.sinDatos === 'aportes') {
+    // Sin la lista no se puede separar, y decir "todo fue mercado" seria
+    // mentir. Se calla: el panel de Aportes la trae al deslizar.
+    el.innerHTML = ''; el.className = 'movsaldo'; return;
+  }
+  if (m.sinDatos === 'rango') {
+    el.innerHTML = '<span class="mov-aviso">En este período no puedo separar aportes de rendimiento: el registro de aportes empieza después.</span>';
+    el.className = 'movsaldo'; return;
+  }
+  if (Math.abs(m.aportes) < 1) { el.innerHTML = ''; el.className = 'movsaldo'; return; }
+
+  // Etiquetas CORTAS a proposito: con las largas ("al empezar", "que
+  // aportaste") la linea ocupaba cuatro renglones en un telefono de 375px y
+  // empujaba el grafico fuera de la primera pantalla. Medido, no estimado.
+  var signoAp = m.aportes >= 0 ? '+' : '−';
+  var etAp = m.aportes >= 0 ? 'aportado' : 'retirado';
+  el.innerHTML =
+    '<span class="mov-item"><b>' + esc(fmt(m.inicial)) + '</b> inicial</span>' +
+    '<span class="mov-op">' + signoAp + '</span>' +
+    '<span class="mov-item"><b>' + esc(fmt(Math.abs(m.aportes))) + '</b> ' + etAp + '</span>' +
+    '<span class="mov-op">' + (m.mercado >= 0 ? '+' : '−') + '</span>' +
+    '<span class="mov-item ' + (m.mercado >= 0 ? 'up' : 'down') + '"><b>' + esc(fmt(Math.abs(m.mercado))) + '</b> mercado' +
+      (m.mercadoPct !== null ? ' <em>' + signoPct(m.mercadoPct, 1) + '</em>' : '') + '</span>';
+  el.className = 'movsaldo';
 }
 // El delta contra el indice, en PUNTOS porcentuales (no en %): la diferencia
 // entre dos porcentajes se mide en pp, y decir "+3,2%" cuando son 3,2 pp es
@@ -84,16 +119,31 @@ function pintarVsBench(serie, pctCartera) {
   if (!el) return;
   var pb = benchPctEnRango(serie);
   if (pb === null || !isFinite(pctCartera)) { el.textContent = ''; el.className = 'vsbench'; return; }
-  var delta = pctCartera - pb;
-  var aportes = aportesEnRango(serie);
+  // Cuando hubo aportes, el % crudo de la cartera NO es comparable contra el
+  // indice: incluye plata que pusiste. Desde el 31/08/2026, si el desglose
+  // esta disponible se compara el rendimiento LIMPIO (movimientoDelSaldo),
+  // que es la comparacion honesta. El asterisco queda solo para el caso en
+  // que no se puede desglosar.
+  var m = movimientoDelSaldo(serie);
+  var limpio = (m && !m.sinDatos && m.mercadoPct !== null && Math.abs(m.aportes) >= 1) ? m.mercadoPct : null;
+  var base = (limpio !== null) ? limpio : pctCartera;
+  var delta = base - pb;
+  var noSeParan = m && m.sinDatos === 'rango' && aportesEnRango(serie) !== 0;
+  var hayAportesSinDesglose = (limpio === null) && (m ? (m.sinDatos ? true : false) : false) && aportesEnRango(serie) > 0;
+
   el.textContent = (delta >= 0 ? '+' : '−') + Math.abs(delta).toFixed(1) + ' pp vs ' +
-    (benchNombre || 'el índice') + (aportes > 0 ? ' *' : '');
+    (benchNombre || 'el índice') + ((noSeParan || hayAportesSinDesglose) ? ' *' : '');
   el.className = 'vsbench ' + (delta >= 0 ? 'up' : 'down');
-  el.title = aportes > 0
-    ? ('El índice se compara arrancando del mismo valor. En este período aportaste ' +
-       fmt(aportes) + ', así que parte de la suba de tu cartera es plata que pusiste, no rendimiento.')
-    : ('El índice se compara arrancando del mismo valor que tu cartera: es lo que habría valido el mismo dinero en ' +
-       (benchNombre || 'el índice') + '.');
+
+  if (limpio !== null) {
+    el.title = 'Comparado con el rendimiento de tu cartera SIN contar los ' + fmt(Math.abs(m.aportes)) +
+      ' que ' + (m.aportes >= 0 ? 'aportaste' : 'retiraste') + ' en el período. El índice se mide arrancando del mismo valor.';
+  } else if (noSeParan || hayAportesSinDesglose) {
+    el.title = 'Ojo: en este período hubo aportes y no pude separarlos, así que parte de la suba de tu cartera es plata que pusiste, no rendimiento.';
+  } else {
+    el.title = 'El índice se compara arrancando del mismo valor que tu cartera: es lo que habría valido el mismo dinero en ' +
+      (benchNombre || 'el índice') + '.';
+  }
 }
 function getFilteredDataPoints(serie) {
   return serie.filter(function (p, i) {
@@ -164,6 +214,50 @@ function aportesEnRango(serie) {
     if (isFinite(m)) total += m;
   });
   return total;
+}
+
+// ---------- Qué movió el saldo (31/08/2026) ----------
+// El hermano del benchmark, y la razón por la que el delta contra el índice
+// llevaba asterisco. La cuenta es simple y la conclusión no lo es:
+//
+//   saldo final − saldo inicial = lo que APORTASTE + lo que RINDIÓ
+//
+// El mercado se despeja por diferencia, que es lo correcto: los aportes se
+// saben con precisión (están registrados uno por uno), el rendimiento no se
+// mide directo. Fidelity llama a esto "What drove your change in balance?",
+// IBKR lo arma como cascada de Change in NAV y Schwab como "value vs. net
+// contributions" — tres productos llegaron por separado a lo mismo, que es
+// la señal más fuerte de la comparación.
+//
+// LAS DOS GUARDAS, que son el 90% del valor de esto:
+//  1. Si la lista de aportes no llegó todavía (se pide en su panel), NO se
+//     inventa un cero: sin ella, TODO el cambio se atribuiría a mercado.
+//  2. Si el rango empieza ANTES de lo que la lista cubre (aportesDesde), los
+//     aportes de ese tramo no están y caerían en "mercado". Se dice que no
+//     se puede desglosar, en vez de dar un número lindo y falso.
+function movimientoDelSaldo(serie) {
+  if (!serie || serie.length < 2) return null;
+  var inicial = serie[0].valor, final = serie[serie.length - 1].valor;
+  if (!isFinite(inicial) || !isFinite(final)) return null;
+
+  if (!aportesCargados) return { sinDatos: 'aportes' };
+  // El rango arranca antes de lo que la lista conoce: no alcanza para
+  // separar. Un dia de margen para no pelear con husos horarios.
+  if (aportesDesde !== null && serie[0].fecha < aportesDesde - 86400000) {
+    return { sinDatos: 'rango', desde: aportesDesde };
+  }
+
+  var aportes = aportesEnRango(serie);
+  return {
+    inicial: inicial,
+    aportes: aportes,
+    mercado: (final - inicial) - aportes,
+    final: final,
+    // El rendimiento medido sobre el capital que de verdad estuvo puesto.
+    // No es exacto —un aporte de ayer no trabajó todo el periodo— pero es
+    // mucho mas honesto que (final/inicial−1) cuando hubo aportes.
+    mercadoPct: (inicial + aportes) > 0 ? ((final - inicial - aportes) / (inicial + aportes) * 100) : null
+  };
 }
 
 // El % del indice en el mismo rango, para el delta en puntos porcentuales.
@@ -353,6 +447,7 @@ function datasetsEvolucion(dataPoints, serie) {
 // comparacionGrupo) — ya esta en produccion. Si alguna vez vuelven, viven en
 // el historial de git.
 var aportesLista = [];
+var aportesDesde = null;   // ms; hasta donde ATRAS es confiable la lista
 // "Todavia no se cargaron" y "no hubo ninguno" son la MISMA lista vacia, y
 // confundirlos es grave: comparacionAnual() sin flujos devuelve el cambio
 // BRUTO del patrimonio —el numero inflado que incluye lo que Guzman aporto—
@@ -616,6 +711,12 @@ function comparacionAnual() {
 // necesita.
 function aplicarAportes(r) {
   aportesLista = (r && r.lista) || [];
+  // `desde` vuelve a guardarse (31/08/2026). Se habia sacado el 17/08 porque
+  // solo lo leia serieCapital, que se borro — pero ahora es una GUARDA de
+  // correctitud: el desglose del periodo no puede restar aportes de un tramo
+  // que la lista no cubre, porque toda esa plata caeria en "mercado" y diria
+  // que ganaste algo que en realidad depositaste.
+  aportesDesde = (r && r.desde) ? apISOaMs(r.desde) : null;
   if (r) aportesCargados = true;
 }
 

@@ -36,6 +36,8 @@
 // desincronizadas. Un numero escrito a mano en dos lugares es exactamente la
 // clase de cosa que queda vieja sin que nadie se entere.
 var VERSION_GENERACION = '1';
+// El 12: el desglose del periodo — cuanto aportaste y cuanto rindio, y el
+// benchmark comparando el rendimiento LIMPIO (31/08/2026).
 // El 11: la linea del S&P sobre el grafico de Evolucion, con el delta en
 // puntos porcentuales y el aviso cuando hubo aportes (31/08/2026).
 // El 10: el modo escritorio — barra lateral, carrusel desplegado y tira de
@@ -45,7 +47,7 @@ var VERSION_GENERACION = '1';
 // El 8 fue editar a mano los precios del fondo de Itau desde su pagina
 // (29/08/2026, V16); el 7, la Watchlist con alertas y push; el 6, los
 // indicadores del detalle.
-var VERSION_FUNCION = '11';
+var VERSION_FUNCION = '12';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre
