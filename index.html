@@ -190,6 +190,14 @@ html[data-paleta="violeta"] .galogo-img { filter: hue-rotate(209deg) saturate(1.
 /* El % del periodo vive al lado del TOTAL (pedido de Guzman, 22/08/2026): es
    la lectura que uno busca al abrir, y ahi no compite con nada. */
 .totalpct-per { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+/* El delta contra el indice (31/08/2026). Va APAGADO respecto del % de la
+   cartera —mas chico y sin el verde/rojo fuerte— porque es la referencia y
+   no el protagonista: si grita igual que el numero propio, compiten. Vacio
+   cuando no hay dato del indice, sin dejar hueco. */
+.vsbench { display: block; font-size: 11px; font-weight: 700; margin-top: 2px; color: var(--muted); }
+.vsbench.up { color: color-mix(in srgb, var(--green) 62%, var(--muted)); }
+.vsbench.down { color: color-mix(in srgb, var(--red) 62%, var(--muted)); }
+.vsbench:empty { display: none; }
 .up { color: var(--green); font-weight: 700; }
 .down { color: var(--red); font-weight: 700; }
 /* caprow/capval/capnota: los numeros y la nota de la comparacion (V7).
@@ -897,7 +905,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <p class="total" id="total">&mdash;</p>
 </div>
 <div class="evomini" id="evoMini" role="button" tabindex="0" title="Tap to see the chart"></div>
-<div class="tr-pct"><span class="rangepct" id="rangePct"></span><span class="totalpct-per" id="rangeNombre"></span></div>
+<div class="tr-pct"><span class="rangepct" id="rangePct"></span><span class="totalpct-per" id="rangeNombre"></span><span class="vsbench" id="vsBench"></span></div>
 </div>
 <div class="chartbox" id="evoChartBox" role="button" tabindex="0" style="display:none" title="Tap to collapse"><canvas id="lineChart"></canvas></div>
 <!-- Elegir el periodo ocupaba una franja entera arriba, siempre, para algo que

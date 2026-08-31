@@ -70,6 +70,30 @@ var anual = pctAnualizado(pct, dias);
 el.textContent = signoPct(pct, 2) +
 (anual !== null ? ' · ' + signoPct(anual, 1) + ' anual' : '');
 el.className = 'rangepct ' + (pct >= 0 ? 'up' : 'down');
+pintarVsBench(serie, pct);
+}
+// El delta contra el indice, en PUNTOS porcentuales (no en %): la diferencia
+// entre dos porcentajes se mide en pp, y decir "+3,2%" cuando son 3,2 pp es
+// un error clasico que ademas cambia el numero de significado.
+//
+// El asterisco no es decorativo: si hubo aportes en el rango, la cartera
+// crecio en parte por plata que pusiste, y contra un indice re-escalado eso
+// se lee como rendimiento. Se dice, no se esconde.
+function pintarVsBench(serie, pctCartera) {
+  var el = document.getElementById('vsBench');
+  if (!el) return;
+  var pb = benchPctEnRango(serie);
+  if (pb === null || !isFinite(pctCartera)) { el.textContent = ''; el.className = 'vsbench'; return; }
+  var delta = pctCartera - pb;
+  var aportes = aportesEnRango(serie);
+  el.textContent = (delta >= 0 ? '+' : '−') + Math.abs(delta).toFixed(1) + ' pp vs ' +
+    (benchNombre || 'el índice') + (aportes > 0 ? ' *' : '');
+  el.className = 'vsbench ' + (delta >= 0 ? 'up' : 'down');
+  el.title = aportes > 0
+    ? ('El índice se compara arrancando del mismo valor. En este período aportaste ' +
+       fmt(aportes) + ', así que parte de la suba de tu cartera es plata que pusiste, no rendimiento.')
+    : ('El índice se compara arrancando del mismo valor que tu cartera: es lo que habría valido el mismo dinero en ' +
+       (benchNombre || 'el índice') + '.');
 }
 function getFilteredDataPoints(serie) {
   return serie.filter(function (p, i) {
@@ -78,6 +102,78 @@ function getFilteredDataPoints(serie) {
   return d !== 0 && d !== 6;
   }).map(function (p) { return { x: p.fecha, y: p.valor }; });
   }
+
+// ---------- La linea del indice sobre el grafico (31/08/2026) ----------
+// El dato del S&P ya viajaba en el payload y lo usaban comparacionGrupo y
+// comparacionAnual, pero NUNCA se dibujaba: el grafico tenia una sola serie.
+// Sale de comparar con IBKR (hasta 3 indices), Schwab (5) y Fidelity (26):
+// la comparacion contra un indice esta en 8 de cada 10 productos y era el
+// hueco mas grande del tablero.
+//
+// COMO se compara, que es la decision de fondo: el indice se re-escala para
+// ARRANCAR en el mismo valor que la cartera al principio del rango visible.
+// Asi las dos curvas comparten eje y se leen juntas — es lo que hace
+// Sharesight y lo que Schwab llama "value vs. net contributions". La lectura
+// es "si el mismo dinero hubiera estado en SPY".
+//
+// LA TRAMPA, y por eso existe aportesEnRango(): si en el periodo hubo
+// aportes, la cartera sube en parte porque pusiste plata, no porque rindiera,
+// y contra un indice re-escalado eso se lee como que le ganaste. La app NO
+// puede callarse eso: cuando hay aportes en el rango, el delta se muestra
+// con un asterisco y la leyenda lo dice. La comparacion limpia de verdad
+// —la que descuenta los aportes— ya existe y es comparacionGrupo().
+function serieBench(serie) {
+  if (!benchPuntos.length || serie.length < 2) return [];
+  // El ancla es el primer punto que SE DIBUJA, no serie[0]. El grafico saltea
+  // fines de semana (getFilteredDataPoints), asi que si la serie empieza un
+  // sabado ese punto no existe en el dibujo: anclando ahi, las dos curvas
+  // arrancaban separadas por un escaloncito. Se veia poco y mentia igual.
+  var vistos = serie.filter(function (p, i) {
+    if (i === serie.length - 1) return true;
+    var d = new Date(p.fecha).getDay();
+    return d !== 0 && d !== 6;
+  });
+  var ancla = null;
+  for (var i = 0; i < vistos.length; i++) {
+    var bv = benchEn(vistos[i].fecha);
+    if (bv !== null && isFinite(bv) && bv !== 0 && vistos[i].valor) {
+      ancla = { valor: vistos[i].valor, bench: bv };
+      break;
+    }
+  }
+  if (!ancla) return [];
+  var out = [];
+  vistos.forEach(function (p) {
+    var b = benchEn(p.fecha);
+    if (b === null || !isFinite(b)) return;
+    out.push({ x: p.fecha, y: ancla.valor * (b / ancla.bench) });
+  });
+  return out;
+}
+
+// Cuanto se aporto DENTRO del rango visible. Devuelve 0 si no hubo, o si
+// todavia no llego la lista de aportes (se pide aparte, en su panel).
+function aportesEnRango(serie) {
+  if (!serie.length || !aportesLista.length) return 0;
+  var desde = serie[0].fecha, hasta = serie[serie.length - 1].fecha;
+  var total = 0;
+  aportesLista.forEach(function (a) {
+    var ts = apISOaMs(a.fecha);
+    if (ts === null || ts < desde || ts > hasta) return;
+    var m = Number(a.monto);
+    if (isFinite(m)) total += m;
+  });
+  return total;
+}
+
+// El % del indice en el mismo rango, para el delta en puntos porcentuales.
+function benchPctEnRango(serie) {
+  if (!benchPuntos.length || serie.length < 2) return null;
+  var b0 = benchEn(serie[0].fecha);
+  var bFin = benchEn(serie[serie.length - 1].fecha);
+  if (!b0 || !bFin) return null;
+  return (bFin / b0 - 1) * 100;
+}
   function buildChartOptions(pts) {
   var TC = temaChart();
   var xMin = (pts && pts.length) ? pts[0].x : undefined;
@@ -100,10 +196,28 @@ function getFilteredDataPoints(serie) {
   type: 'line',
   // El acento se lee VIVO (colorAcento, nucleo.js): con el hexadecimal
   // clavado, la línea de Evolución seguía dorada con cualquier paleta.
-  data: { datasets: [{ data: dataPoints, borderColor: colorAcento(), backgroundColor: acentoRgba(0.12), fill: true, tension: 0.3, pointRadius: 0 }] },
+  data: { datasets: datasetsEvolucion(dataPoints, serie) },
   options: buildChartOptions(dataPoints)
   });
   }
+// La cartera SIEMPRE; el indice solo si hay dato. Va PUNTEADO y en gris, no
+// en otro color fuerte: es la referencia, no una segunda protagonista — y
+// ademas el punteado lo distingue sin depender del color (la misma razon por
+// la que las subas y bajas llevan signo y no solo verde/rojo).
+function datasetsEvolucion(dataPoints, serie) {
+  var ds = [{
+    data: dataPoints, borderColor: colorAcento(), backgroundColor: acentoRgba(0.12),
+    fill: true, tension: 0.3, pointRadius: 0
+  }];
+  var b = serieBench(serie || []);
+  if (b.length > 1) {
+    ds.push({
+      data: b, borderColor: 'rgba(144,160,184,.85)', borderDash: [5, 4],
+      borderWidth: 1.8, fill: false, tension: 0.3, pointRadius: 0
+    });
+  }
+  return ds;
+}
   // El grafico de Evolucion arranca PLEGADO (pedido de Guzman, 22/08/2026:
   // "que no ocupe tanto a lo largo... solo dice como fue en % durante el
   // periodo seleccionado"). Lo que queda a la vista es el % del rango y los
