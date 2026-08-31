@@ -70,6 +70,38 @@ if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) sweepGo(sweepIdx + (
 }, { passive: true });
 })();
 
+// --- Modo escritorio: los tres paneles a la vista (31/08/2026) ------------
+// En el telefono, Dividendos y Aportes se piden reciEn cuando el dedo llega
+// a su panel (sweepGo). En pantalla ancha el carrusel se despliega por CSS y
+// los tres se ven de una: sin ese gesto, dos de los tres se quedarian para
+// siempre en "Swipe to load...". O sea que el desplegado visual y la carga
+// tienen que viajar juntos, o la pantalla queda peor que antes.
+//
+// El umbral es el MISMO 1100px del @media, escrito una sola vez acA y
+// consultado con matchMedia: dos numeros iguales en dos archivos distintos
+// se despegan al primer retoque, y el sIntoma serIa justamente este —
+// paneles visibles y vacIos.
+var ESCRITORIO_MIN_PX = 1100;
+function esEscritorio() {
+  try { return window.matchMedia('(min-width: ' + ESCRITORIO_MIN_PX + 'px)').matches; }
+  catch (e) { return false; }   // navegador sin matchMedia: se comporta como telefono
+}
+function cargarPanelesDeEscritorio() {
+  if (!esEscritorio()) return;
+  if (!divCargado && typeof cargarDividendos === 'function') cargarDividendos(false);
+  if (!apoCargado && typeof cargarAportes === 'function') cargarAportes();
+}
+// Al arrancar, y tambien si la ventana se agranda despues (pasar de una
+// ventana angosta a pantalla completa es lo mismo que llegar deslizando).
+(function () {
+  try {
+    var mq = window.matchMedia('(min-width: ' + ESCRITORIO_MIN_PX + 'px)');
+    var alCambiar = function () { cargarPanelesDeEscritorio(); };
+    if (mq.addEventListener) mq.addEventListener('change', alCambiar);
+    else if (mq.addListener) mq.addListener(alCambiar);   // Safari viejo
+  } catch (e) {}
+})();
+
 var MESES_CORTOS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 // Cache local de los paneles lentos (dividendos y aportes): consultar los
 // brokers tarda varios segundos, asi que se pinta al instante lo ultimo visto

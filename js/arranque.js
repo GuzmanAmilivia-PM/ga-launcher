@@ -54,11 +54,16 @@ function pintarCache() {
   return true;
 }
 if (getApiToken()) { pintarCache(); loadData(); } else { mostrarLock(); }
+// En pantalla ancha el carrusel del Inicio se despliega y los tres paneles se
+// ven de una: Dividendos y Aportes hay que pedirlos, porque su carga colgaba
+// del gesto de deslizar (paneles.js). En el telefono esto no hace nada.
+if (typeof cargarPanelesDeEscritorio === 'function') cargarPanelesDeEscritorio();
 function render(data) {
 hideSplash();
   try {
 lastData = data;
 animarTotal(document.getElementById('total'), data.total);
+pintarKpis(data);
 document.getElementById('liquidezVal').textContent = fmt(data.liquidez);
 document.getElementById('liquidezPct').textContent = (data.liquidezPct ? (data.liquidezPct * 100).toFixed(2) : '0') + '%';
 var listEl = document.getElementById('cuentasList');

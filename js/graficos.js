@@ -526,6 +526,80 @@ function gananciaHtml(p) {
   if (!isFinite(pm) || pm <= 0 || !isFinite(pa) || pa <= 0) return '';
   return pctHtml((pa / pm - 1) * 100, 2);
 }
+// ---------- La tira de indicadores del escritorio (31/08/2026) ----------
+// Sale de comparar con IBKR, Schwab, Fidelity, Sharesight y Snowball:
+// NINGUNO abre con un grafico, todos abren con numeros. El cambio del dia en
+// DOLARES (no solo en %) y el resultado no realizado aparecen en 7-8 de cada
+// 10; hoy la app no tenia ni uno ni otro.
+//
+// Se calcula con lo que YA viene en el payload — ni una llamada mas.
+//
+// Dos honestidades que no son decorativas:
+// - El cambio del dia SOLO suma las posiciones que tienen variacion. Hoy
+//   faltan varias (Finnhub frena por IP; ver la entrada del 31/08 en
+//   HISTORIAL.md), y sumar como cero las que no tienen daria un numero
+//   MENOR al real presentado como completo. Por eso el subtitulo dice sobre
+//   cuantas posiciones se calculo cuando no estan todas.
+// - El resultado no realizado solo cuenta las que tienen precio de compra
+//   conocido: el fondo de Itau y la liquidez no lo tienen.
+function calcularKpis(data) {
+  var pos = (data && data.posiciones) || [];
+  var diaUsd = 0, conDia = 0, sinDia = 0;
+  var valorConCosto = 0, costo = 0;
+  pos.forEach(function (p) {
+    var v = Number(p.valor);
+    var cd = Number(p.cambioDia);
+    if (isFinite(v) && v > 0 && p.cambioDia !== null && p.cambioDia !== undefined && isFinite(cd)) {
+      // v es el valor de HOY: lo de ayer es v / (1 + cd/100).
+      var ayer = v / (1 + cd / 100);
+      if (isFinite(ayer) && ayer > 0) { diaUsd += v - ayer; conDia++; }
+    } else if (isFinite(v) && v > 0) { sinDia++; }
+    var base = Number(p.base);
+    if (isFinite(v) && isFinite(base) && base > 0) { valorConCosto += v; costo += base; }
+  });
+  var totalAyer = Number(data && data.total) - diaUsd;
+  return {
+    diaUsd: conDia ? diaUsd : null,
+    diaPct: (conDia && isFinite(totalAyer) && totalAyer > 0) ? (diaUsd / totalAyer * 100) : null,
+    conDia: conDia, sinDia: sinDia,
+    noRealizado: costo > 0 ? (valorConCosto - costo) : null,
+    noRealizadoPct: costo > 0 ? ((valorConCosto - costo) / costo * 100) : null
+  };
+}
+
+function pintarKpis(data) {
+  var el = document.getElementById('kpiStrip');
+  if (!el) return;
+  var k = calcularKpis(data);
+  function celda(etiqueta, valor, pct, clase, nota) {
+    return '<div><p class="kpi-et">' + esc(etiqueta) + '</p><p class="kpi-va' + (clase ? ' ' + clase : '') + '">' +
+      valor + (pct ? '<span class="kpi-sec">' + pct + '</span>' : '') + '</p>' +
+      (nota ? '<p class="kpi-et" style="margin:5px 0 0;letter-spacing:.04em;text-transform:none">' + esc(nota) + '</p>' : '') +
+      '</div>';
+  }
+  var h = '';
+  // 1) Hoy, en dolares Y en porcentaje.
+  if (k.diaUsd === null) {
+    h += celda('Today', '&mdash;', '', '', 'no daily data yet');
+  } else {
+    h += celda('Today', (k.diaUsd >= 0 ? '+' : '−') + fmt(Math.abs(k.diaUsd)),
+      k.diaPct === null ? '' : signoPct(k.diaPct, 2),
+      k.diaUsd >= 0 ? 'up' : 'down',
+      k.sinDia ? (k.conDia + ' of ' + (k.conDia + k.sinDia) + ' positions') : '');
+  }
+  // 2) El resultado no realizado.
+  if (k.noRealizado === null) {
+    h += celda('Unrealized', '&mdash;', '', '', 'no cost basis');
+  } else {
+    h += celda('Unrealized', (k.noRealizado >= 0 ? '+' : '−') + fmt(Math.abs(k.noRealizado)),
+      signoPct(k.noRealizadoPct, 1), k.noRealizado >= 0 ? 'up' : 'down');
+  }
+  // 3) La liquidez, que en el telefono vive en su propia linea.
+  h += celda('Cash', fmt(data.liquidez),
+    (data.liquidezPct ? (data.liquidezPct * 100).toFixed(1) + '%' : ''));
+  el.innerHTML = h;
+}
+
 // ---------- Detalle desplegable por activo + grafico TradingView ----------
 var detalleAbierto = null;
 // El widget se incrusta como IFRAME, no como <script> de TradingView.
