@@ -512,6 +512,23 @@ html.light .wl-detalle { background: rgba(20,40,80,.035); }
 .divbig { font-size: clamp(24px, 7vw, 32px); font-weight: 700; margin: 2px 0; letter-spacing: -.01em; }
 .divavg { color: var(--muted); font-size: 12.5px; margin: 0 0 8px; line-height: 1.5; }
 .divdetbox { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 12.5px; line-height: 1.75; }
+/* Proyeccion de dividendos a 12 meses (D5). Va separada del bloque de arriba
+   con una linea al tope: el numero de arriba es el año CALENDARIO y este es
+   el año que VIENE — pegados se leerian como el mismo dato dos veces. */
+.proybox { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.proyfila { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 2px 0 8px; }
+.proybig { font-size: clamp(20px, 6vw, 26px); font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.proyyield { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.proyrow { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.proyrow:last-of-type { border-bottom: none; }
+.proyrow .psym { font-weight: 600; min-width: 52px; }
+.proyrow .pnom { color: var(--muted); font-size: 11px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proyrow .pmonto { font-variant-numeric: tabular-nums; font-weight: 600; }
+.proyrow .pyield { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; min-width: 46px; text-align: right; }
+/* El asterisco de "es un piso, no un año entero". Se acompaña SIEMPRE de la
+   nota de abajo: un simbolo suelto no explica nada. */
+.proyrow .pparcial { color: var(--muted); font-size: 11px; }
+.proynota { font-size: 11px; color: var(--muted); margin: 10px 0 0; line-height: 1.55; }
 .apostat { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
 .apostat b.up { color: var(--green); }
 .apostat b.down { color: var(--red); }
@@ -983,6 +1000,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div id="divDetalle"></div>
 <div id="divCacheAviso" style="display:none"></div>
 <div id="divBody"><p class="loadingtxt">Swipe to load...</p></div>
+<div id="proyBloque" style="display:none"></div>
 </div>
 <div class="sweeppanel">
 <div class="cardhead">

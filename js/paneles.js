@@ -241,6 +241,9 @@ document.getElementById('divPromedio').innerHTML =
 'Received: ' + esc(fmtUsd(r.totalCobrado)) + ' &middot; Upcoming: ' + esc(fmtUsd(r.totalProximo));
 document.getElementById('divChartBox').style.display = '';
 document.getElementById('divHint').style.display = '';
+// La proyección se pide recién acá: es una segunda llamada al backend y no
+// tiene sentido gastarla si el panel de dividendos ni siquiera cargó.
+cargarProyeccion();
 var cobrados = (r.meses || []).map(function (m) { return m.cobrado || 0; });
 var proximos = (r.meses || []).map(function (m) { return m.proximo || 0; });
 var t = temaChart();
@@ -290,6 +293,74 @@ box.innerHTML = '<div class="divdetbox"><b>' + MESES_CORTOS[mes - 1] + ' ' + esc
 ajustarAlturaDeck();
 }
 document.getElementById('divRefreshBtn').onclick = function () { cargarDividendos(true); };
+
+// ---------- D5: ingreso proyectado a 12 meses ----------
+// Va DEBAJO del año calendario y separado por una línea a propósito: arriba
+// está lo cobrado y por cobrar de ESTE año; acá, lo que viene. Son dos
+// números parecidos que responden preguntas distintas.
+var proyCargado = false;
+function cargarProyeccion() {
+if (proyCargado) return;
+proyCargado = true;
+google.script.run
+.withSuccessHandler(renderProyeccion)
+.withFailureHandler(function () {
+// Sin proyección el panel de dividendos sigue completo, así que el
+// bloque se esconde en vez de gritar un error por algo secundario.
+proyCargado = false;
+var el = document.getElementById('proyBloque');
+if (el) el.style.display = 'none';
+})
+.getDividendosProyectados({});
+}
+function renderProyeccion(r) {
+var el = document.getElementById('proyBloque');
+if (!el) return;
+if (!r || !r.ok || !r.lista || !r.lista.length) { el.style.display = 'none'; return; }
+
+var h = '<div class="proybox">';
+h += '<p class="lbl">Next 12 months</p>';
+h += '<div class="proyfila"><span class="proybig">' + esc(fmtUsd(r.anual)) + '</span>' +
+  '<span class="proyyield">' + esc(fmtUsd(r.mensual)) + '/mo' +
+  // anaPct solo entiende 0 o 1 decimal: con 0 el 0,70% de la cartera se
+  // redondearia a "1%", que es otra cosa.
+  (typeof r.yieldCartera === 'number' ? ' &middot; ' + esc(anaPct(r.yieldCartera / 100, 1)) + ' of portfolio' : '') +
+  '</span></div>';
+
+var hayParcial = false;
+r.lista.slice(0, 8).forEach(function (x) {
+if (x.parcial) hayParcial = true;
+h += '<div class="proyrow">' +
+  '<span class="psym">' + esc(x.symbol) + (x.parcial ? '<span class="pparcial">*</span>' : '') + '</span>' +
+  '<span class="pnom">' + esc(x.nombre || '') + '</span>' +
+  '<span class="pmonto">' + esc(fmtUsd(x.anual)) + '</span>' +
+  '<span class="pyield">' + (typeof x.yield === 'number' ? esc(anaPct(x.yield / 100, 1)) : '&mdash;') + '</span>' +
+  '</div>';
+});
+
+// Las tres cosas que hacen honesto al número de arriba. Ninguna se omite
+// cuando aplica: sin ellas la proyección se lee como una promesa exacta.
+var notas = [];
+// El corte va casi pegado a 1 y no en 0,95: la cartera real da exactamente
+// 0,95, y con el umbral en 0,95 un hueco verdadero del 5% quedaba mudo. Lo
+// que se quiere callar es el ruido de redondeo, no un veinteavo de la cartera.
+if (typeof r.cobertura === 'number' && r.cobertura < 0.99) {
+notas.push('Covers ' + esc(anaPct(r.cobertura, 0)) + ' of your stocks and ETFs.');
+}
+if (r.pctAnunciado > 0) {
+notas.push(esc(anaPct(r.pctAnunciado / 100, 0)) + ' comes from announced rates, before withholding tax; ' +
+  'the rest is what these positions actually paid you over the last 12 months.');
+} else {
+notas.push('Based on what these positions actually paid you over the last 12 months.');
+}
+if (hayParcial) notas.push('* Held less than a full year, so this is a floor, not a full-year figure.');
+h += '<p class="proynota">' + notas.join(' ') + '</p>';
+
+h += '</div>';
+el.innerHTML = h;
+el.style.display = '';
+if (typeof ajustarAlturaDeck === 'function') ajustarAlturaDeck();
+}
 
 // ---------- Dividendos ampliados: cuánto viene de cada app ----------
 var divChartBigInstance = null;
