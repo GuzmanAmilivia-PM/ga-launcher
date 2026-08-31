@@ -181,10 +181,22 @@ bnbAutoSync();
     var completa = !fullSerie || !fullSerie.length || (Date.now() - ultimaCargaCompleta > CARGA_COMPLETA_MS);
     google.script.run.withFailureHandler(function(err){
       hideSplash();
-      // Con datos ya pintados (del caché), un fallo de red no rompe la vista:
-      // se avisa y quedan los últimos datos guardados.
+      // Con datos ya pintados (del caché), un fallo no rompe la vista: se
+      // avisa y quedan los últimos datos guardados.
       pintarBadges('error');
-      if (lastData) { avisoInicio('&#9888; No connection to the server: showing the last saved data.'); return; }
+      if (lastData) {
+        // El aviso DICE la causa. Antes decia "No connection to the server"
+        // para CUALQUIER fallo, ignorando el error que acababa de recibir:
+        // un rechazo de origen, una clave vencida o un freno por demasiados
+        // pedidos se veian los tres como "no hay senal". Guzman cambio la
+        // clave varias veces peleando contra un mensaje que no tenia nada
+        // que ver con lo que pasaba (31/08/2026). Un aviso que miente sobre
+        // la causa es peor que uno feo: manda a arreglar lo que no esta roto.
+        var motivo = (err && err.message) ? String(err.message) : '';
+        avisoInicio('&#9888; ' + esc(motivo || 'Could not reach the server') +
+          ' &mdash; showing the last saved data.');
+        return;
+      }
       var t=document.getElementById('total'); if(t){ t.textContent='ERR: '+err.message; }
     }).withSuccessHandler(function(data){
       if (!data) return;
