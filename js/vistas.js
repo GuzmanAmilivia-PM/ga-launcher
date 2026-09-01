@@ -35,7 +35,10 @@
 // sigue siendo UN solo numero para tocar, y las partes no pueden quedar
 // desincronizadas. Un numero escrito a mano en dos lugares es exactamente la
 // clase de cosa que queda vieja sin que nadie se entere.
-var VERSION_GENERACION = '1';
+// El 2, decidido por Guzmán el 1/09/2026: la app salió de la planilla de
+// Google (corte a D1 del 29/08/2026). El comentario de la era-1 decía "el 2
+// sería salir de la planilla" — salió, y este número lo cuenta.
+var VERSION_GENERACION = '2';
 // El 13: las dos lecturas de cartera que faltaban (31/08/2026) — la
 // asignacion con look-through dentro de los ETFs en el tablero de
 // escritorio, y el ingreso por dividendos de los proximos doce meses al pie
