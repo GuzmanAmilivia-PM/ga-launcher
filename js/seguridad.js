@@ -124,6 +124,7 @@ segMsg('segPinMsg', '&#10003; Passcode removed.', true);
 // desbloqueada para siempre despues del primer ingreso. Mandarla al fondo y
 // volver entraba directo a los montos. Segunda auditoria del 22/08/2026.
 var _listenersDelBloqueo = false;
+var _clickDelBloqueo = null;   // el listener de toque-para-Face-ID vivo (uno solo)
 function activarBloqueo() {
 var s = secLeer();
 if (!(s.pin || s.bio) || !getApiToken()) return;
@@ -258,7 +259,14 @@ if (autoSirve) setTimeout(function () { if (appBloqueada && modoBio) intentarBio
 document.getElementById('secBioGo').onclick = function () { intentarBio(false, true); };
 // Si iOS rechaza el intento automatico por falta de gesto, cualquier toque en
 // la pantalla de bloqueo sirve: no hay que apuntarle al boton.
-el.addEventListener('click', function (ev) {
+// UN solo listener vivo: activarBloqueo() corre en cada vuelta del segundo
+// plano, y cada corrida apilaba OTRO listener con su propio closure (fallos,
+// modoBio, bioEnCurso independientes) — a los dias, un toque disparaba N
+// intentos que se abortaban entre si y pintaban errores fantasma mientras la
+// hoja de Face ID real estaba abierta. Se saca el anterior antes de poner el
+// nuevo, mismo patron que bioAbort (auditoria 31/08/2026).
+if (_clickDelBloqueo) { try { el.removeEventListener('click', _clickDelBloqueo); } catch (e) {} }
+_clickDelBloqueo = function (ev) {
 // Solo mientras el bloqueo pide entrar y en modo biometria: si el usuario
 // eligio "Usar la clave" (o ya esta en la pantalla de la clave de acceso),
 // un toque perdido no tiene que abrirle la hoja de Face ID encima.
@@ -266,7 +274,8 @@ if (!s.bio || !modoBio || !appBloqueada) return;
 var id = (ev.target && ev.target.id) || '';
 if (id === 'secBioGo' || id === 'secOlvide' || id === 'secPinInput' || id === 'secPinGo' || id === 'secModo') return;
 intentarBio(false);
-});
+};
+el.addEventListener('click', _clickDelBloqueo);
 document.getElementById('secPinGo').onclick = function () {
 var v = document.getElementById('secPinInput').value;
 if (!v) return;
@@ -281,6 +290,10 @@ hashPin(v, sal).then(function (h2) { todos.pin = h2; todos.pinSal = sal; secGuar
 }
 abrir();
 } else { document.getElementById('secPinInput').value = ''; document.getElementById('secErr').textContent = 'Incorrect passcode.'; }
+}).catch(function () {
+// crypto.subtle no deberia fallar en HTTPS, pero si falla que lo diga en
+// vez de morir en silencio con el boton muerto.
+document.getElementById('secErr').textContent = 'Could not verify the passcode here. Try again.';
 });
 };
 if (!_listenersDelBloqueo) {

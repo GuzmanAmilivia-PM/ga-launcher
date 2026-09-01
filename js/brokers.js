@@ -161,7 +161,18 @@ loadData();
 cfg.ejecutar(dryRun, !!forzar, pintar, fallo);
 }
 document.getElementById(cfg.pref + 'VerCambios').onclick = function () { correr(true); };
-document.getElementById(cfg.pref + 'Aplicar').onclick = function () { correr(false, confirmarParcial(parcial, cfg.broker)); };
+document.getElementById(cfg.pref + 'Aplicar').onclick = function () {
+// Con reporte parcial, CANCELAR el confirm tiene que no hacer NADA: antes
+// igual salia correr(false, false) — un pedido que el backend rechaza — y
+// la lista de cambios detectados se borraba y aparecia un error rojo por
+// haber elegido "no" (auditoria 31/08/2026).
+if (parcial) {
+if (!confirmarParcial(parcial, cfg.broker)) return;
+correr(false, true);
+return;
+}
+correr(false, false);
+};
 return correr;
 }
 var ibkrSyncEnCurso = false;

@@ -205,6 +205,10 @@ b.addEventListener('click', function () { setView(b.getAttribute('data-view')); 
 
 // ---------- Detalle de cuenta ----------
 var lastAcc = null, lastAccData = null;
+// La cuenta cuyo pedido esta EN VUELO: una respuesta tardia de otra cuenta
+// (editar Itau, volver, abrir IBKR antes de que conteste) pintaba las
+// posiciones de una bajo el titulo de la otra (auditoria 31/08/2026).
+var accPedida = null;
 function showAccount(acc, fromView) {
 accountReturnView = fromView || 'portafolio';
 setView('account');
@@ -221,8 +225,13 @@ document.getElementById('accTotal').textContent = 'Loading...';
 document.getElementById('accLiq').textContent = '';
 document.getElementById('accBody').innerHTML = '';
 }
-google.script.run.withSuccessHandler(function (data) { renderAccount(acc, data); })
+accPedida = acc.key;
+google.script.run.withSuccessHandler(function (data) {
+if (accPedida !== acc.key) return;   // respuesta tardia de una cuenta que ya no esta abierta
+renderAccount(acc, data);
+})
 .withFailureHandler(function (err) {
+if (accPedida !== acc.key) return;
 // Con datos ya pintados, un fallo de red no borra la pantalla.
 if (enCache) return;
 document.getElementById('accTotal').textContent = '--';
@@ -291,9 +300,16 @@ body.appendChild(tr);
 // fila seguiria mostrando el valor viejo hasta salir y volver a entrar.
 function recargarCuentaAbierta() {
 if (!lastAcc) return;
-google.script.run.withSuccessHandler(function (data) { renderAccount(lastAcc, data); })
+// La cuenta se resuelve al momento del PEDIDO, no de la respuesta: si
+// mientras tanto se abrio otra cuenta, esta respuesta se descarta.
+var pedida = lastAcc;
+accPedida = pedida.key;
+google.script.run.withSuccessHandler(function (data) {
+if (accPedida !== pedida.key) return;
+renderAccount(pedida, data);
+})
 .withFailureHandler(function () {})
-.getAccountData(lastAcc.key);
+.getAccountData(pedida.key);
 }
 
 function valorPelado(v) {

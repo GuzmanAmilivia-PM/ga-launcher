@@ -114,7 +114,7 @@ var MESES_CORTOS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep
 // GA_CACHES: TODAS las claves de cache local con datos del portafolio. El
 // borrado de emergencia (seguridad.js) la recorre; una clave nueva que no se
 // anote aca queda viva despues de "Olvide mi clave".
-var GA_CACHES = ['ga_cache_data', 'ga_cache_div', 'ga_cache_apo', 'ga_cache_ops', 'ga_cache_ana'];
+var GA_CACHES = ['ga_cache_data', 'ga_cache_div', 'ga_cache_apo', 'ga_cache_ops', 'ga_cache_ana', 'ga_cache_wl'];
 function cacheLeer(clave) {
 try {
 var j = JSON.parse(localStorage.getItem(clave) || 'null');
@@ -191,7 +191,15 @@ apoCargado = true;
 }
 if (ex.analisis && ex.analisis.ok) {
 cacheGuardar('ga_cache_ana', ex.analisis);
+// Las MISMAS tres pantallas que pinta cargarAnalisis, no solo la tarjeta:
+// antes esto marcaba anaCargado sin setear anaUltima ni pintar el detalle,
+// y entrar a Analysis en el telefono quedaba con los spinners del HTML para
+// siempre — cargarAnalisisDetalle veia anaCargado=true (no pide) y
+// anaUltima=null (no pinta). Auditoria 31/08/2026.
+anaUltima = ex.analisis;
 renderAnalisis(ex.analisis);
+renderAnalisisDetalle(ex.analisis);
+renderAsignacionTablero(ex.analisis);
 limpiarMarca('anaCacheAviso');
 anaCargado = true;
 }

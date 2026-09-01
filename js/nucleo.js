@@ -64,7 +64,10 @@ var API_TIMEOUT_LARGO_MS = 180000;
 var FNS_LENTAS = {
   noticias: 1, analisis: 1, refrescar: 1, restaurar: 1,
   ibkr_sync: 1, cs_sync: 1, bnb_sync: 1,
-  ia_analizar: 1, dividendos: 1, aportes: 1, podcast: 1
+  // operaciones con forzar baja la actividad real de SnapTrade + IBKR Flex —
+  // la MISMA descarga por la que dividendos y aportes estan aca; faltaba y el
+  // boton de refrescar Trades se cortaba a los 25 s (auditoria 31/08/2026).
+  ia_analizar: 1, dividendos: 1, aportes: 1, operaciones: 1, podcast: 1
 };
 
 // Un fallo de red de Safari llega como TypeError('Load failed'), y eso es lo

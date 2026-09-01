@@ -33,6 +33,8 @@ buildCashForm();
 // quedaba librado a un NaN, y un cache viejo de dias arrancaba lite igual.
 var CARGA_COMPLETA_MS = 30 * 60 * 1000;
 var ultimaCargaCompleta = 0;
+var avisoDelPoll = false;   // el banner del Inicio lo puso un poll fallido
+
 var ultimaHuella = '';
 // Pintado instantáneo: al abrir se muestran los últimos datos vistos
 // (guardados en este dispositivo) y el refresco real corre por atrás.
@@ -136,8 +138,17 @@ actualizarSymbols();
 if (document.getElementById('view-portafolio').style.display !== 'none') renderPortafolio();
 // La lista completa de Posiciones se repinta igual que Portafolio: solo si
 // está a la vista (el poll de 60 s trae precios nuevos y la tabla los muestra).
+// PERO no mientras haya un detalle abierto: renderPosiciones vacía el tbody y
+// destruía el gráfico de TradingView que estabas mirando antes del minuto
+// (auditoría 31/08/2026). Los precios de esa pasada se pierden; el poll
+// siguiente repinta apenas se cierre el detalle.
 var vPos = document.getElementById('view-posiciones');
-if (vPos && vPos.style.display !== 'none') renderPosiciones();
+if (vPos && vPos.style.display !== 'none') {
+  var posBody = document.getElementById('posBody');
+  var detEnPosiciones = (typeof detalleAbierto !== 'undefined') && detalleAbierto &&
+    detalleAbierto.det && posBody && posBody.contains(detalleAbierto.det);
+  if (!detEnPosiciones) renderPosiciones();
+}
 bnbAutoSync();
   } catch(e) {
     document.getElementById('total').textContent = '—';
@@ -201,6 +212,7 @@ bnbAutoSync();
         // que ver con lo que pasaba (31/08/2026). Un aviso que miente sobre
         // la causa es peor que uno feo: manda a arreglar lo que no esta roto.
         var motivo = (err && err.message) ? String(err.message) : '';
+        avisoDelPoll = true;
         avisoInicio('&#9888; ' + esc(motivo || 'Could not reach the server') +
           ' &mdash; showing the last saved data.');
         return;
@@ -229,7 +241,15 @@ bnbAutoSync();
         }
       }
       var av = document.getElementById('autoAviso');
-      if (av && av.innerHTML.indexOf('No connection') !== -1) { av.style.display='none'; av.innerHTML=''; }
+      // El aviso que puso un poll fallido se apaga con la PRIMERA respuesta
+      // buena, sea cual sea su texto. Antes solo se limpiaba si decia
+      // "No connection", asi que un "the server took too long" quedaba
+      // pegado para siempre contradiciendo los datos vivos de abajo
+      // (auditoria 31/08/2026).
+      if (av && (avisoDelPoll || av.innerHTML.indexOf('No connection') !== -1)) {
+        av.style.display='none'; av.innerHTML='';
+      }
+      avisoDelPoll = false;
       pintarBadges('ok');
       // Si nada cambió, no se toca el DOM: el poll dejaba de lado la batería,
       // parpadeaba la pantalla y cerraba el gráfico de TradingView que
