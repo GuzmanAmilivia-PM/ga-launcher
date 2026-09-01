@@ -69,7 +69,10 @@ var pct = (currentTotal / base - 1) * 100;
 var dias = (serie[serie.length - 1].fecha - serie[0].fecha) / 86400000;
 var anual = pctAnualizado(pct, dias);
 el.textContent = signoPct(pct, 2) +
-(anual !== null ? ' · ' + signoPct(anual, 1) + ' anual' : '');
+// "ann." y no "annualized": esta celda es la que CEDE ancho en la fila del
+// total, y en 2A/5A el texto ya llega a "+245.67% · +31.2% ann." — la palabra
+// entera la empujaria fuera. Se escapo del pasaje a ingles (01/09/2026).
+(anual !== null ? ' · ' + signoPct(anual, 1) + ' ann.' : '');
 el.className = 'rangepct ' + (pct >= 0 ? 'up' : 'down');
 pintarVsBench(serie, pct);
 pintarMovimiento(serie);
@@ -89,7 +92,7 @@ function pintarMovimiento(serie) {
     el.innerHTML = ''; el.className = 'movsaldo'; return;
   }
   if (m.sinDatos === 'rango') {
-    el.innerHTML = '<span class="mov-aviso">En este período no puedo separar aportes de rendimiento: el registro de aportes empieza después.</span>';
+    el.innerHTML = '<span class="mov-aviso">Deposits cannot be separated from return in this period: the deposit record starts later.</span>';
     el.className = 'movsaldo'; return;
   }
   if (Math.abs(m.aportes) < 1) { el.innerHTML = ''; el.className = 'movsaldo'; return; }
@@ -97,14 +100,17 @@ function pintarMovimiento(serie) {
   // Etiquetas CORTAS a proposito: con las largas ("al empezar", "que
   // aportaste") la linea ocupaba cuatro renglones en un telefono de 375px y
   // empujaba el grafico fuera de la primera pantalla. Medido, no estimado.
+  // Al pasarlas a ingles (01/09/2026) se eligio la palabra corta por la misma
+  // razon, y se volvio a medir: "start"/"added"/"market" son mas cortas que
+  // las que reemplazan, asi que la linea no crece.
   var signoAp = m.aportes >= 0 ? '+' : '−';
-  var etAp = m.aportes >= 0 ? 'aportado' : 'retirado';
+  var etAp = m.aportes >= 0 ? 'added' : 'withdrawn';
   el.innerHTML =
-    '<span class="mov-item"><b>' + esc(fmt(m.inicial)) + '</b> inicial</span>' +
+    '<span class="mov-item"><b>' + esc(fmt(m.inicial)) + '</b> start</span>' +
     '<span class="mov-op">' + signoAp + '</span>' +
     '<span class="mov-item"><b>' + esc(fmt(Math.abs(m.aportes))) + '</b> ' + etAp + '</span>' +
     '<span class="mov-op">' + (m.mercado >= 0 ? '+' : '−') + '</span>' +
-    '<span class="mov-item ' + (m.mercado >= 0 ? 'up' : 'down') + '"><b>' + esc(fmt(Math.abs(m.mercado))) + '</b> mercado' +
+    '<span class="mov-item ' + (m.mercado >= 0 ? 'up' : 'down') + '"><b>' + esc(fmt(Math.abs(m.mercado))) + '</b> market' +
       (m.mercadoPct !== null ? ' <em>' + signoPct(m.mercadoPct, 1) + '</em>' : '') + '</span>';
   el.className = 'movsaldo';
 }
