@@ -210,7 +210,14 @@ function aportesEnRango(serie) {
   aportesLista.forEach(function (a) {
     var ts = apISOaMs(a.fecha);
     if (ts === null || ts < desde || ts > hasta) return;
-    var m = Number(a.monto);
+    // `grupo`, NO `monto`: es el nombre que manda el backend (getAportes
+    // devuelve {fecha, grupo}; `monto` se saco del payload hace tiempo).
+    // Leyendo `monto` esto devolvia SIEMPRE 0 —undefined no es finito— y con
+    // eso movimientoDelSaldo informaba "Contributions: US$ 0" atribuyendo
+    // todo al mercado, que es exactamente la mentira que D3 vino a eliminar.
+    // Los otros dos lugares que recorren esta lista ya leian `grupo` bien;
+    // este quedo solo. Encontrado el 1/09/2026.
+    var m = Number(a.grupo);
     if (isFinite(m)) total += m;
   });
   return total;
