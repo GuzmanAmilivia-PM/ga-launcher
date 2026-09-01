@@ -215,8 +215,16 @@ html += '<div class="anachk ' + esc(q.estado) + '"><i class="luz"></i><div><b>' 
 
 html += anaCaidaHtml(r.riesgo || {});
 // D10: los retornos mes a mes, netos de aportes. Los dos globales vienen del
-// payload del Inicio y del panel de Aportes (graficos.js).
-html += anaHeatmapHtml((lastData && lastData.serie) || [], (typeof aportesLista !== 'undefined') ? aportesLista : []);
+// payload del Inicio y del panel de Aportes (graficos.js). `aportesCargados`
+// es la bandera que distingue "todavia no se cargaron" (no dibujar: los
+// crudos mentirian) de "cargados y no hubo ninguno" (dibujar: sin aportes,
+// el crudo ES el retorno) — la misma distincion que ya protege la tarjeta
+// del año (graficos.js:458).
+html += anaHeatmapHtml(
+  (lastData && lastData.serie) || [],
+  (typeof aportesLista !== 'undefined') ? aportesLista : [],
+  (typeof aportesCargados !== 'undefined') && aportesCargados
+);
 html += '<p class="newsempty" style="margin-top:6px">This describes how your portfolio is built against the profile you chose. It is not a buy or sell recommendation.</p>';
 
 body.innerHTML = html;
@@ -239,8 +247,13 @@ body.innerHTML = html;
 // Si la lista de aportes no esta cargada, esto NO dibuja nada: mostrar los
 // crudos como si fueran retornos seria justamente el error que evita.
 var MESES_HEAT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-function retornosMensuales(serie, lista) {
-if (!serie || serie.length < 2 || !lista || !lista.length) return null;
+function retornosMensuales(serie, lista, cargados) {
+// `cargados` y no `lista.length`: una lista vacia CARGADA significa "no hubo
+// aportes" y ahi el crudo ES el retorno — suprimir el bloque era esconder un
+// dato valido. La que no puede dibujar es la lista NO cargada (los crudos
+// mentirian). Misma distincion que la tarjeta del año (graficos.js:458).
+if (!serie || serie.length < 2 || !cargados) return null;
+lista = lista || [];
 // El ULTIMO punto de cada mes: es el cierre con el que se compara.
 var fin = {};
 serie.forEach(function (p) {
@@ -270,8 +283,8 @@ conAporte: f !== 0
 }
 return celdas.length ? celdas : null;
 }
-function anaHeatmapHtml(serie, lista) {
-var celdas = retornosMensuales(serie, lista);
+function anaHeatmapHtml(serie, lista, cargados) {
+var celdas = retornosMensuales(serie, lista, cargados);
 if (!celdas) return '';
 var porAnio = {};
 celdas.forEach(function (c) { (porAnio[c.anio] = porAnio[c.anio] || {})[c.mes] = c; });
@@ -305,6 +318,13 @@ notas.push('The dot marks months where money went in or out.');
 notas.push('Your history starts ' + MESES_HEAT[celdas[0].mes - 1] + ' ' + celdas[0].anio +
   ', so ' + (celdas.length === 1 ? 'there is 1 month' : 'there are ' + celdas.length + ' months') +
   ' here — not years yet.');
+// El mes en curso esta a medias y se dice: una celda de "septiembre" el dia
+// 1 pinta un dia como si fuera el mes, y sin esta nota se lee como cerrado.
+var ultC = celdas[celdas.length - 1];
+var hoyH = new Date();
+if (ultC.anio === hoyH.getFullYear() && ultC.mes === hoyH.getMonth() + 1) {
+notas.push('The current month (' + MESES_HEAT[ultC.mes - 1] + ') is still in progress.');
+}
 h += '<p class="anadesg-nota" style="margin-bottom:12px">' + esc(notas.join(' ')) + '</p>';
 return h;
 }
