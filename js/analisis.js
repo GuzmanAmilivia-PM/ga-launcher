@@ -203,6 +203,9 @@ esc(anaPct(r.sectores.cobertura, 1)) + ' of your equity that could be classified
 }
 }
 
+// D7: quien movio de verdad la aguja, que casi nunca es quien mas subio.
+html += anaCtrHtml((lastData && lastData.posiciones) || []);
+
 // Chequeos: el corazon de la pagina. Cada uno dice como esta ese aspecto
 // CONTRA TU PERFIL y por que, con el texto resuelto en el backend.
 html += '<p class="anasub">Checks</p>';
@@ -217,6 +220,92 @@ html += '<p class="newsempty" style="margin-top:10px">The worst drawdown was bet
 html += '<p class="newsempty" style="margin-top:6px">This describes how your portfolio is built against the profile you chose. It is not a buy or sell recommendation.</p>';
 
 body.innerHTML = html;
+}
+
+// ---------- D7: contribucion al retorno (1/09/2026) ----------
+//
+// Dos listas que la gente confunde y NO son la misma. Con la cartera real de
+// Guzman: VOO es lo que mas movio su retorno (+13,8 puntos) y no aparece
+// entre los cinco que mas subieron; OMF subio 68,9% y aporto 0,39 puntos, o
+// sea nada. Una posicion chica que se duplica se siente enorme y no mueve la
+// aguja; una grande que sube 60% la mueve entera.
+//
+// La contribucion se mide sobre el COSTO total invertido, no sobre el valor
+// de hoy: asi las contribuciones SUMAN el retorno total de la cartera
+// (+53,1% con estos numeros), que es lo que las vuelve comparables entre si.
+// Medido sobre el valor actual no sumarian nada interpretable.
+//
+// Es desde la COMPRA, no del periodo elegido arriba: el costo es lo unico
+// que hay por posicion — la serie historica es del portafolio entero, no de
+// cada papel. Eso se dice en pantalla en vez de dejar suponer otra cosa.
+function contribucionAlRetorno(posiciones) {
+var lista = [];
+var costo = 0, valorCubierto = 0, valorTotal = 0;
+var sinCosto = [];
+(posiciones || []).forEach(function (p) {
+if (esFilaCash(p)) return;                       // el cash no tiene retorno
+var v = Number(p.valor), b = Number(p.base);
+if (!isFinite(v) || v <= 0) return;
+valorTotal += v;
+// Sin precio de compra no se puede decir cuanto rindio. Un cero ahi diria
+// "no gano nada", que es una afirmacion y no un dato que falta.
+if (!isFinite(b) || b <= 0) { sinCosto.push(p.symbol); return; }
+costo += b; valorCubierto += v;
+lista.push({ symbol: p.symbol, nombre: p.nombre || '', ganancia: v - b, pct: (v - b) / b * 100 });
+});
+if (!lista.length || costo <= 0) return null;
+lista.forEach(function (x) { x.ctr = x.ganancia / costo * 100; });
+var porCtr = lista.slice().sort(function (a, b) { return Math.abs(b.ctr) - Math.abs(a.ctr); });
+var porPct = lista.slice().sort(function (a, b) { return Math.abs(b.pct) - Math.abs(a.pct); });
+return {
+contribuyentes: porCtr.slice(0, 5),
+movidas: porPct.slice(0, 5),
+retornoTotal: lista.reduce(function (s, x) { return s + x.ctr; }, 0),
+sinCosto: sinCosto,
+cobertura: valorTotal > 0 ? valorCubierto / valorTotal : 0
+};
+}
+// Puntos porcentuales, NO por ciento: signoPct agrega el "%" y "+13.83% pts"
+// no significa nada. La contribucion se mide en puntos del retorno total.
+function anaPts(v) { return (v >= 0 ? '+' : '') + Number(v).toFixed(2) + ' pts'; }
+function anaCtrFila(x, principal, secundario) {
+return '<div class="anactr"><span class="asym">' + esc(x.symbol) + '</span>' +
+  '<span class="anom">' + esc(x.nombre) + '</span>' +
+  '<b class="' + (principal.valor >= 0 ? 'up' : 'down') + '">' + esc(principal.txt) + '</b>' +
+  '<span class="asec">' + esc(secundario) + '</span></div>';
+}
+function anaCtrHtml(posiciones) {
+var c = contribucionAlRetorno(posiciones);
+if (!c) return '';
+var h = '<p class="anasub">What drove your return</p>';
+h += '<p class="anadesg-nota">Since you bought, not over the range above: cost is the only ' +
+  'per-position history there is. These add up to your ' +
+  '<b>' + esc(signoPct(c.retornoTotal, 1)) + '</b> total.</p>';
+
+h += '<p class="anactr-t">Moved your return the most</p>';
+c.contribuyentes.forEach(function (x) {
+h += anaCtrFila(x, { valor: x.ctr, txt: anaPts(x.ctr) }, fmt(x.ganancia));
+});
+
+h += '<p class="anactr-t">Biggest moves in percent</p>';
+c.movidas.forEach(function (x) {
+h += anaCtrFila(x, { valor: x.pct, txt: signoPct(x.pct, 1) }, anaPts(x.ctr));
+});
+
+// La frase que justifica que sean DOS listas: si el que encabeza una no
+// encabeza la otra, decirlo es todo el punto del bloque.
+var top1 = c.contribuyentes[0], mov1 = c.movidas[0];
+if (top1 && mov1 && top1.symbol !== mov1.symbol) {
+h += '<p class="anadesg-nota"><b>' + esc(top1.symbol) + '</b> moved your return most (' +
+  esc(anaPts(top1.ctr)) + ') even though <b>' + esc(mov1.symbol) + '</b> moved more (' +
+  esc(signoPct(mov1.pct, 1)) + '). Size decides, not percentage.</p>';
+}
+if (c.cobertura < 0.99) {
+h += '<p class="anadesg-nota" style="margin-bottom:12px">Measured over the ' + esc(anaPct(c.cobertura, 1)) +
+  ' of your holdings with a known purchase price' +
+  (c.sinCosto.length ? ' (no cost for ' + esc(c.sinCosto.join(', ')) + ')' : '') + '.</p>';
+}
+return h;
 }
 
 // Una fila con barra proporcional (clases y sectores del detalle).
