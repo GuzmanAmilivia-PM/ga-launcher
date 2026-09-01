@@ -214,9 +214,99 @@ html += '<div class="anachk ' + esc(q.estado) + '"><i class="luz"></i><div><b>' 
 });
 
 html += anaCaidaHtml(r.riesgo || {});
+// D10: los retornos mes a mes, netos de aportes. Los dos globales vienen del
+// payload del Inicio y del panel de Aportes (graficos.js).
+html += anaHeatmapHtml((lastData && lastData.serie) || [], (typeof aportesLista !== 'undefined') ? aportesLista : []);
 html += '<p class="newsempty" style="margin-top:6px">This describes how your portfolio is built against the profile you chose. It is not a buy or sell recommendation.</p>';
 
 body.innerHTML = html;
+}
+
+// ---------- D10: retornos mes a mes (1/09/2026) ----------
+//
+// La lista pedia un "heatmap meses x años". HOY no da para eso: la base
+// tiene 35 filas desde el 30/12/2025 —eso es TODA la historia que existe, no
+// un recorte— y salvo agosto cada mes tiene UN punto. O sea una fila, no una
+// grilla. Se arma igual con la forma de grilla (un renglon por año) para que
+// se llene sola con el tiempo, y la pantalla dice cuantos meses hay en vez
+// de aparentar años.
+//
+// Lo que hace que estos numeros no mientan es restar los APORTES. Medido con
+// los datos reales: junio daba +0,56% en crudo y fue -0,81% — el signo dado
+// vuelta—, y enero pasaba de +3,91% a +1,16%. Un heatmap sin esta resta
+// pinta de verde un mes en el que perdiste plata.
+//
+// Si la lista de aportes no esta cargada, esto NO dibuja nada: mostrar los
+// crudos como si fueran retornos seria justamente el error que evita.
+var MESES_HEAT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function retornosMensuales(serie, lista) {
+if (!serie || serie.length < 2 || !lista || !lista.length) return null;
+// El ULTIMO punto de cada mes: es el cierre con el que se compara.
+var fin = {};
+serie.forEach(function (p) {
+var d = new Date(p.fecha);
+var k = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2);
+if (!fin[k] || p.fecha >= fin[k].fecha) fin[k] = p;
+});
+// Los aportes de cada mes, con el MISMO campo que manda el backend.
+var flujo = {};
+lista.forEach(function (a) {
+var k = String(a.fecha || '').slice(0, 7);
+var m = Number(a.grupo);
+if (k && isFinite(m)) flujo[k] = (flujo[k] || 0) + m;
+});
+var claves = Object.keys(fin).sort();
+var celdas = [];
+for (var i = 1; i < claves.length; i++) {
+var a = Number(fin[claves[i - 1]].valor), b = Number(fin[claves[i]].valor);
+if (!(a > 0) || !(b > 0)) continue;
+var f = flujo[claves[i]] || 0;
+celdas.push({
+anio: parseInt(claves[i].slice(0, 4), 10),
+mes: parseInt(claves[i].slice(5, 7), 10),
+pct: ((b - f) / a - 1) * 100,
+conAporte: f !== 0
+});
+}
+return celdas.length ? celdas : null;
+}
+function anaHeatmapHtml(serie, lista) {
+var celdas = retornosMensuales(serie, lista);
+if (!celdas) return '';
+var porAnio = {};
+celdas.forEach(function (c) { (porAnio[c.anio] = porAnio[c.anio] || {})[c.mes] = c; });
+var anios = Object.keys(porAnio).sort();
+
+var h = '<p class="anasub">Month by month</p>';
+h += '<div class="heatwrap"><table class="heat"><tr><th></th>';
+MESES_HEAT.forEach(function (m) { h += '<th>' + m + '</th>'; });
+h += '</tr>';
+anios.forEach(function (y) {
+h += '<tr><th>' + esc(y) + '</th>';
+for (var m = 1; m <= 12; m++) {
+var c = porAnio[y][m];
+if (!c) { h += '<td class="vacia"></td>'; continue; }
+// La intensidad sale de la magnitud, topeada en 10%: sin tope, un mes
+// excepcional aplasta a todos los demas a un gris indistinguible.
+var fuerza = Math.min(1, Math.abs(c.pct) / 10);
+var color = (c.pct >= 0 ? '16,185,129' : '239,68,68');
+h += '<td style="background:rgba(' + color + ',' + (0.12 + fuerza * 0.55).toFixed(2) + ')">' +
+  esc(c.pct.toFixed(1)) + (c.conAporte ? '<i>&bull;</i>' : '') + '</td>';
+}
+h += '</tr>';
+});
+h += '</table></div>';
+
+var notas = ['Net of deposits and withdrawals: a month with a deposit would ' +
+  'otherwise look like a gain you did not make.'];
+if (celdas.some(function (c) { return c.conAporte; })) {
+notas.push('The dot marks months where money went in or out.');
+}
+notas.push('Your history starts ' + MESES_HEAT[celdas[0].mes - 1] + ' ' + celdas[0].anio +
+  ', so ' + (celdas.length === 1 ? 'there is 1 month' : 'there are ' + celdas.length + ' months') +
+  ' here — not years yet.');
+h += '<p class="anadesg-nota" style="margin-bottom:12px">' + esc(notas.join(' ')) + '</p>';
+return h;
 }
 
 // ---------- D9: distancia al maximo (1/09/2026) ----------
