@@ -321,52 +321,165 @@ if (el) el.style.display = 'none';
 })
 .getDividendosProyectados({});
 }
+// El periodo elegido y si la lista por activo esta desplegada. Los dos viven
+// afuera del render porque sobreviven a un re-dibujo (pedido de Guzman,
+// 01/09/2026: "deberia ser algo que despliegue si quiero saber mas, no de una
+// y por defecto deberia estar lo del proximo mes y poder elegir hasta fin de
+// ano"). Arranca en 'mes' y con la lista PLEGADA.
+var proyPeriodo = 'mes';       // 'mes' | 'anio'
+var proyAbierto = false;
+var proyUltimo = null;
+
+// Los meses que abarca el periodo, dentro del ano calendario que conoce
+// divDatos. Devuelve null cuando el periodo cae FUERA de esa ventana, que es
+// el caso real de diciembre: "el proximo mes" es enero del ano que viene y de
+// eso no tenemos ni un dato. Un cero ahi diria "no cobras nada", que es una
+// afirmacion y no un dato que falta.
+function proyRango(periodo) {
+  var mesActual = new Date().getMonth() + 1;   // zona del dispositivo, como el resto del panel
+  var desde = mesActual + 1;
+  if (desde > 12) return null;                 // diciembre: el proximo mes ya es otro ano
+  return { desde: desde, hasta: (periodo === 'mes') ? desde : 12 };
+}
+
+// Lo que se cobra en ese rango, por simbolo. Sale de `divDatos.detalle`, el
+// MISMO dato que pinta las barras grises del grafico de arriba y el detalle
+// que se abre al tocar una barra — no de una segunda cuenta paralela que
+// podria discrepar con lo que ya se ve en pantalla.
+function proyDelRango(rango) {
+  var out = { total: 0, porSimbolo: [], hayEstimado: false, pagos: 0 };
+  if (!rango || !divDatos || !divDatos.detalle) return out;
+  var acum = {};
+  for (var m = rango.desde; m <= rango.hasta; m++) {
+    (divDatos.detalle[m] || []).forEach(function (d) {
+      if (d.estado !== 'proximo') return;      // lo ya cobrado no es "lo que viene"
+      var s = String(d.symbol || 'CASH').toUpperCase();
+      // Un mismo simbolo puede venir de dos brokers: se suman, no se listan
+      // dos veces (la fila dice el activo, no la cuenta).
+      if (!acum[s]) acum[s] = { symbol: s, monto: 0, estimado: false };
+      acum[s].monto += Number(d.monto) || 0;
+      if (d.estimado) { acum[s].estimado = true; out.hayEstimado = true; }
+      out.total += Number(d.monto) || 0;
+      out.pagos++;
+    });
+  }
+  out.total = Math.round(out.total * 100) / 100;
+  out.porSimbolo = Object.keys(acum).map(function (k) { return acum[k]; })
+    .sort(function (a, b) { return b.monto - a.monto; });
+  return out;
+}
+
 function renderProyeccion(r) {
+if (r) proyUltimo = r;
+r = proyUltimo;
 var el = document.getElementById('proyBloque');
 if (!el) return;
 if (!r || !r.ok || !r.lista || !r.lista.length) { el.style.display = 'none'; return; }
 
+// Nombre por simbolo: `detalle` trae el monto pero no el nombre, y la lista
+// de la proyeccion trae el nombre. Se cruzan por simbolo.
+var nombreDe = {};
+r.lista.forEach(function (x) { nombreDe[String(x.symbol).toUpperCase()] = x.nombre || ''; });
+
+var rango = proyRango(proyPeriodo);
+var dat = proyDelRango(rango);
+var etiquetaPeriodo = proyPeriodo === 'mes'
+  ? (rango ? MESES_CORTOS[rango.desde - 1] : '')
+  : (rango ? MESES_CORTOS[rango.desde - 1] + '&ndash;' + MESES_CORTOS[11] : '');
+
 var h = '<div class="proybox">';
-h += '<p class="lbl">Next 12 months</p>';
-h += '<div class="proyfila"><span class="proybig">' + esc(fmtUsd(r.anual)) + '</span>' +
-  '<span class="proyyield">' + esc(fmtUsd(r.mensual)) + '/mo' +
+h += '<p class="lbl">Upcoming income</p>';
+h += '<div class="proyper">' +
+  '<button type="button" class="tipobtn' + (proyPeriodo === 'mes' ? ' active-acento' : '') + '" data-proyper="mes">Next month</button>' +
+  '<button type="button" class="tipobtn' + (proyPeriodo === 'anio' ? ' active-acento' : '') + '" data-proyper="anio">Rest of year</button>' +
+  '</div>';
+
+if (!rango) {
+  // Diciembre. Se dice, no se pinta un cero.
+  h += '<p class="proyvacio">Next month falls in ' + ((new Date().getFullYear()) + 1) +
+    ', and the schedule only runs to the end of ' + esc(divDatos && divDatos.anio ? divDatos.anio : 'this year') + '.</p>';
+} else {
+  h += '<div class="proyfila"><span class="proybig">' + esc(fmtUsd(dat.total)) + '</span>' +
+    '<span class="proyyield">' + etiquetaPeriodo +
+    (dat.pagos ? ' &middot; ' + dat.pagos + ' payment' + (dat.pagos === 1 ? '' : 's') : '') +
+    '</span></div>';
+  if (!dat.pagos) {
+    h += '<p class="proyvacio">No payments scheduled for this period.</p>';
+  }
+}
+
+// El ritmo anual queda como linea CHICA y aparte (decision de Guzman). Es el
+// unico que da el rendimiento sobre la cartera, y se calcula con OTRO metodo
+// —las tasas anunciadas— asi que puede no coincidir con la suma de los meses
+// de arriba. Por eso dice de donde sale en vez de quedar como un tercer
+// numero suelto que se lee como si fuera la misma cuenta.
+h += '<p class="proyrate">Annual run-rate: <b>' + esc(fmtUsd(r.anual)) + '</b> &middot; ' +
+  esc(fmtUsd(r.mensual)) + '/mo' +
   // anaPct solo entiende 0 o 1 decimal: con 0 el 0,70% de la cartera se
   // redondearia a "1%", que es otra cosa.
   (typeof r.yieldCartera === 'number' ? ' &middot; ' + esc(anaPct(r.yieldCartera / 100, 1)) + ' of portfolio' : '') +
-  '</span></div>';
+  '</p>';
 
-var hayParcial = false;
-r.lista.slice(0, 8).forEach(function (x) {
-if (x.parcial) hayParcial = true;
-h += '<div class="proyrow">' +
-  '<span class="psym">' + esc(x.symbol) + (x.parcial ? '<span class="pparcial">*</span>' : '') + '</span>' +
-  '<span class="pnom">' + esc(x.nombre || '') + '</span>' +
-  '<span class="pmonto">' + esc(fmtUsd(x.anual)) + '</span>' +
-  '<span class="pyield">' + (typeof x.yield === 'number' ? esc(anaPct(x.yield / 100, 1)) : '&mdash;') + '</span>' +
-  '</div>';
-});
+// La lista por activo, PLEGADA por defecto. Es un <button> de verdad (no un
+// div con onclick) para que llegue por teclado y lo anuncie un lector de
+// pantalla, y lleva aria-expanded como el resto de los desplegables.
+if (rango && dat.porSimbolo.length) {
+  h += '<button type="button" class="proytoggle" id="proyToggle" aria-expanded="' + (proyAbierto ? 'true' : 'false') + '">' +
+    '<span class="proyflecha">' + (proyAbierto ? '&#9662;' : '&#9656;') + '</span> Per asset' +
+    '<span class="proycuenta">' + dat.porSimbolo.length + '</span></button>';
+  h += '<div class="proylista"' + (proyAbierto ? '' : ' style="display:none"') + '>';
+  dat.porSimbolo.forEach(function (x) {
+    h += '<div class="proyrow">' +
+      '<span class="psym">' + esc(x.symbol) + (x.estimado ? '<span class="pparcial">~</span>' : '') + '</span>' +
+      '<span class="pnom">' + esc(nombreDe[x.symbol] || '') + '</span>' +
+      '<span class="pmonto">' + esc(fmtUsd(x.monto)) + '</span>' +
+      '</div>';
+  });
+  h += '</div>';
+}
 
-// Las tres cosas que hacen honesto al número de arriba. Ninguna se omite
+// Las cosas que hacen honesto a los números de arriba. Ninguna se omite
 // cuando aplica: sin ellas la proyección se lee como una promesa exacta.
 var notas = [];
+// El "~" del periodo va PRIMERO porque explica el numero grande, que es el
+// que Guzman mira. Las de abajo hablan del ritmo anual, que ahora es la
+// linea chica.
+if (dat.hayEstimado) {
+notas.push('~ Estimated from each position’s payment cadence, not an announced date.');
+}
 // El corte va casi pegado a 1 y no en 0,95: la cartera real da exactamente
 // 0,95, y con el umbral en 0,95 un hueco verdadero del 5% quedaba mudo. Lo
 // que se quiere callar es el ruido de redondeo, no un veinteavo de la cartera.
 if (typeof r.cobertura === 'number' && r.cobertura < 0.99) {
-notas.push('Covers ' + esc(anaPct(r.cobertura, 0)) + ' of your stocks and ETFs.');
+notas.push('The run-rate covers ' + esc(anaPct(r.cobertura, 0)) + ' of your stocks and ETFs.');
 }
 if (r.pctAnunciado > 0) {
-notas.push(esc(anaPct(r.pctAnunciado / 100, 0)) + ' comes from announced rates, before withholding tax; ' +
+notas.push(esc(anaPct(r.pctAnunciado / 100, 0)) + ' of it comes from announced rates, before withholding tax; ' +
   'the rest is what these positions actually paid you over the last 12 months.');
 } else {
-notas.push('Based on what these positions actually paid you over the last 12 months.');
+notas.push('It is based on what these positions actually paid you over the last 12 months.');
 }
-if (hayParcial) notas.push('* Held less than a full year, so this is a floor, not a full-year figure.');
 h += '<p class="proynota">' + notas.join(' ') + '</p>';
 
 h += '</div>';
 el.innerHTML = h;
 el.style.display = '';
+
+// Los manejadores se enganchan desde JS, nunca con onclick inline: la
+// politica de contenido los bloquea y quedarian como codigo muerto que falla
+// en silencio (regla dura de CLAUDE.md, ya pasó con el respaldo de los logos).
+var botones = el.querySelectorAll('[data-proyper]');
+for (var i = 0; i < botones.length; i++) {
+botones[i].addEventListener('click', function () {
+  var p = this.getAttribute('data-proyper');
+  if (p === proyPeriodo) return;
+  proyPeriodo = p;
+  renderProyeccion();          // sin argumento: reusa proyUltimo
+});
+}
+var tog = document.getElementById('proyToggle');
+if (tog) tog.addEventListener('click', function () { proyAbierto = !proyAbierto; renderProyeccion(); });
+
 if (typeof ajustarAlturaDeck === 'function') ajustarAlturaDeck();
 }
 

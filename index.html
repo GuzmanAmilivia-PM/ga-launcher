@@ -544,10 +544,38 @@ html.light .wl-detalle { background: rgba(20,40,80,.035); }
 .proyrow .pnom { color: var(--muted); font-size: 11px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .proyrow .pmonto { font-variant-numeric: tabular-nums; font-weight: 600; }
 .proyrow .pyield { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; min-width: 46px; text-align: right; }
-/* El asterisco de "es un piso, no un año entero". Se acompaña SIEMPRE de la
-   nota de abajo: un simbolo suelto no explica nada. */
+/* La marca de "esto es estimado por cadencia, no una fecha anunciada". Se
+   acompaña SIEMPRE de la nota de abajo: un simbolo suelto no explica nada. */
 .proyrow .pparcial { color: var(--muted); font-size: 11px; }
 .proynota { font-size: 11px; color: var(--muted); margin: 10px 0 0; line-height: 1.55; }
+/* --- El selector de periodo y la lista plegable (01/09/2026) --------------
+   Pedido de Guzman: por defecto el proximo mes, con opcion hasta fin de ano,
+   y la lista por activo desplegable en vez de estar siempre abierta.
+   Los botones reusan .tipobtn con active-acento — NUNCA active-compra, que
+   es solo de Trades y saldria verde sin importar la paleta (regla dura). */
+.proyper { display: flex; gap: 8px; margin: 0 0 10px; }
+.proyper .tipobtn { padding: 7px 10px; font-size: 12px; font-weight: 700; }
+/* El ritmo anual: la linea CHICA. Va apagada respecto del numero del periodo
+   porque es la referencia y no el protagonista — y ademas se calcula con otro
+   metodo, asi que no puede competir visualmente con la suma de los meses. */
+.proyrate { font-size: 11.5px; color: var(--muted); margin: 0 0 4px; line-height: 1.5; }
+.proyrate b { color: var(--text); font-variant-numeric: tabular-nums; }
+.proyvacio { font-size: 12px; color: var(--muted); margin: 2px 0 8px; line-height: 1.5; }
+/* El desplegable es un <button> de verdad: llega por teclado y lo anuncia un
+   lector de pantalla. Ocupa el ancho entero para que el area de toque sea
+   comoda en el telefono. */
+.proytoggle {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  margin-top: 10px; padding: 8px 0; background: transparent; border: 0;
+  border-top: 1px solid var(--border);
+  color: var(--muted); font: inherit; font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em; cursor: pointer;
+}
+.proytoggle:hover { color: var(--text); }
+.proytoggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.proyflecha { font-size: 10px; color: var(--gold); }
+/* El conteo va al final, empujado por el margen automatico. */
+.proycuenta { margin-left: auto; font-weight: 600; letter-spacing: 0; }
 .apostat { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
 .apostat b.up { color: var(--green); }
 .apostat b.down { color: var(--red); }
