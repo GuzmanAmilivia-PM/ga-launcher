@@ -213,13 +213,52 @@ html += '<p class="anasub">Checks</p>';
 html += '<div class="anachk ' + esc(q.estado) + '"><i class="luz"></i><div><b>' + esc(q.titulo) + '</b><em>' + esc(q.detalle) + '</em></div></div>';
 });
 
-var rie = r.riesgo || {};
-if (rie.drawdown && rie.drawdownDesde) {
-html += '<p class="newsempty" style="margin-top:10px">The worst drawdown was between ' + esc(anaFecha(rie.drawdownDesde)) + ' and ' + esc(anaFecha(rie.drawdownHasta)) + '.</p>';
-}
+html += anaCaidaHtml(r.riesgo || {});
 html += '<p class="newsempty" style="margin-top:6px">This describes how your portfolio is built against the profile you chose. It is not a buy or sell recommendation.</p>';
 
 body.innerHTML = html;
+}
+
+// ---------- D9: distancia al maximo (1/09/2026) ----------
+//
+// La peor caida ya estaba, pero sola no dice donde estas HOY: se puede haber
+// dado hace ocho meses y estar en maximos. Portfolio Performance lo parte en
+// tres —maximo, actual y CUANTO HACE— y esa tercera es la que contesta "hace
+// cuanto que estoy bajo el agua".
+//
+// Dos limites que se dicen en pantalla en vez de dejarlos suponer:
+//
+//  1. La serie es el SALDO, no una inversion aislada: un deposito sube el
+//     techo y un retiro se ve como una caida. O sea que esto es la distancia
+//     a tu saldo mas alto, NO una perdida de inversion. Leidas como lo mismo
+//     son un error caro.
+//  2. El maximo es el de la ventana diaria (400 dias), no el de siempre: mas
+//     atras la serie guarda un punto por mes. "Tu maximo" a secas se leeria
+//     como maximo historico.
+function anaCaidaHtml(rie) {
+if (rie.ddActual === null || rie.ddActual === undefined) return '';
+var h = '<p class="anasub">Distance from your high</p>';
+h += '<div class="anagrid">';
+// Cero no es "sin dato": estar EN el maximo es la mejor noticia posible y se
+// muestra como tal, no como un guion.
+var hoy = rie.ddActual > 0 ? ('&minus;' + esc(anaPct(rie.ddActual, 1))) : 'At its high';
+var sub = rie.ddActual > 0
+  ? (rie.diasBajoAgua === 1 ? '1 day below it' : rie.diasBajoAgua + ' days below it')
+  : 'no gap to close';
+h += '<div class="anacelda"><span>Today</span><b class="' + (rie.ddActual > 0 ? 'down' : 'up') + '">' +
+  hoy + '</b><em>' + esc(sub) + '</em></div>';
+if (rie.drawdown) {
+h += '<div class="anacelda"><span>Worst</span><b class="down">&minus;' + esc(anaPct(rie.drawdown, 1)) + '</b>' +
+  '<em>' + esc(anaFecha(rie.drawdownDesde)) + ' &rarr; ' + esc(anaFecha(rie.drawdownHasta)) + '</em></div>';
+}
+h += '</div>';
+var partes = [];
+if (rie.picoFecha) partes.push('Your highest balance was on ' + anaFecha(rie.picoFecha) + '.');
+if (rie.ventanaDias) partes.push('Measured over the last ' + rie.ventanaDias + ' days, not all time.');
+partes.push('This follows your balance: deposits raise the high and withdrawals look like a fall, ' +
+  'so it is not the same as an investment loss.');
+h += '<p class="anadesg-nota" style="margin-bottom:12px">' + esc(partes.join(' ')) + '</p>';
+return h;
 }
 
 // ---------- D7: contribucion al retorno (1/09/2026) ----------
