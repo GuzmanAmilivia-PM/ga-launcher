@@ -464,6 +464,14 @@ card += '<div class="newsmove"><span>' + linea + '</span></div>';
 if (data.fueraDeCobertura && data.fueraDeCobertura.length) {
 card += '<p class="newsempty">No coverage (not listed in the US): ' + esc(data.fueraDeCobertura.join(', ')) + '. ETFs and crypto do not report earnings.</p>';
 }
+// Los que NO contestaron. Sin esto, un proveedor a medias se lee igual que
+// "no reporta nadie": el 1/09/2026 el calendario traía UN evento de doce y
+// la pantalla no tenía cómo decirlo — ni yo, mirándola.
+if (data.sinRespuesta && data.sinRespuesta.length) {
+card += '<p class="newsempty">&#9888; Could not check ' + esc(data.sinRespuesta.join(', ')) +
+  ' — the data provider did not answer for ' + (data.sinRespuesta.length === 1 ? 'it' : 'them') +
+  '. This list may be incomplete; it retries every morning.</p>';
+}
 el.innerHTML = '<div class="card">' + card + '</div>';
 }
 function cargarResultados() {
