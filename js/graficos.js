@@ -58,7 +58,8 @@ var el = document.getElementById('rangePct');
 var elPer = document.getElementById('rangeNombre');
 if (elPer) {
 var r = RANGES.filter(function (x) { return x.dias === currentRangeDias; })[0];
-elPer.textContent = r ? ('en ' + r.key) : '';
+// "in", no "en": se escapo del pasaje a ingles del 26/08/2026 (01/09/2026).
+elPer.textContent = r ? ('in ' + r.key) : '';
 }
 var serie = filterSerie(currentRangeDias);
 if (!serie.length || !currentTotal) { el.textContent = ''; el.className = 'rangepct'; return; }
@@ -131,18 +132,23 @@ function pintarVsBench(serie, pctCartera) {
   var noSeParan = m && m.sinDatos === 'rango' && aportesEnRango(serie) !== 0;
   var hayAportesSinDesglose = (limpio === null) && (m ? (m.sinDatos ? true : false) : false) && aportesEnRango(serie) > 0;
 
+  // El texto NO cambia de forma: el signo adelante se conserva a proposito
+  // (es la misma convencion que el % de arriba, y hay asserts que lo
+  // custodian). Lo unico que cambia es que ahora entra en una sola linea,
+  // porque el renglon es de ancho completo. Se traduce el respaldo del nombre
+  // del indice, que estaba en español como los titulos de aca abajo.
   el.textContent = (delta >= 0 ? '+' : '−') + Math.abs(delta).toFixed(1) + ' pp vs ' +
-    (benchNombre || 'el índice') + ((noSeParan || hayAportesSinDesglose) ? ' *' : '');
+    (benchNombre || 'the index') + ((noSeParan || hayAportesSinDesglose) ? ' *' : '');
   el.className = 'vsbench ' + (delta >= 0 ? 'up' : 'down');
 
   if (limpio !== null) {
-    el.title = 'Comparado con el rendimiento de tu cartera SIN contar los ' + fmt(Math.abs(m.aportes)) +
-      ' que ' + (m.aportes >= 0 ? 'aportaste' : 'retiraste') + ' en el período. El índice se mide arrancando del mismo valor.';
+    el.title = 'Compared against your portfolio’s return WITHOUT the ' + fmt(Math.abs(m.aportes)) +
+      ' you ' + (m.aportes >= 0 ? 'added' : 'withdrew') + ' over the period. The index starts from the same value.';
   } else if (noSeParan || hayAportesSinDesglose) {
-    el.title = 'Ojo: en este período hubo aportes y no pude separarlos, así que parte de la suba de tu cartera es plata que pusiste, no rendimiento.';
+    el.title = 'Heads up: there were deposits in this period and they could not be separated, so part of your portfolio’s rise is money you put in, not return.';
   } else {
-    el.title = 'El índice se compara arrancando del mismo valor que tu cartera: es lo que habría valido el mismo dinero en ' +
-      (benchNombre || 'el índice') + '.';
+    el.title = 'The index starts from the same value as your portfolio: it is what the same money would have been worth in ' +
+      (benchNombre || 'the index') + '.';
   }
 }
 function getFilteredDataPoints(serie) {

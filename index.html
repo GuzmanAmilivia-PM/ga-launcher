@@ -190,11 +190,23 @@ html[data-paleta="violeta"] .galogo-img { filter: hue-rotate(209deg) saturate(1.
 /* El % del periodo vive al lado del TOTAL (pedido de Guzman, 22/08/2026): es
    la lectura que uno busca al abrir, y ahi no compite con nada. */
 .totalpct-per { font-size: 11.5px; color: var(--muted); font-weight: 600; }
-/* El delta contra el indice (31/08/2026). Va APAGADO respecto del % de la
-   cartera —mas chico y sin el verde/rojo fuerte— porque es la referencia y
-   no el protagonista: si grita igual que el numero propio, compiten. Vacio
-   cuando no hay dato del indice, sin dejar hueco. */
-.vsbench { display: block; font-size: 11px; font-weight: 700; margin-top: 2px; color: var(--muted); }
+/* El delta contra el indice (31/08/2026; su propio renglon el 01/09/2026).
+   Va APAGADO respecto del % de la cartera —mas chico y sin el verde/rojo
+   fuerte— porque es la referencia y no el protagonista: si grita igual que el
+   numero propio, compiten. Vacio cuando no hay dato del indice, sin dejar
+   hueco.
+
+   Vive en un renglon de ancho completo debajo de la fila del total, no dentro
+   de la columna angosta del porcentaje: ahi la frase se partia en tres
+   renglones apilados y esa columna no puede ensancharse (el ancho que sobra
+   es del dibujo). El color se atenua con color-mix contra --muted en vez de
+   con transparencia: sobre las cuatro tonalidades de fondo un verde traslucido
+   cambia de intensidad segun lo que tenga atras, y con color-mix el resultado
+   es el mismo tono en todas. */
+.vsbench {
+  display: block; margin: 8px 0 0; font-size: 11.5px; font-weight: 700;
+  color: var(--muted); line-height: 1.4;
+}
 .vsbench.up { color: color-mix(in srgb, var(--green) 62%, var(--muted)); }
 .vsbench.down { color: color-mix(in srgb, var(--red) 62%, var(--muted)); }
 .vsbench:empty { display: none; }
@@ -989,8 +1001,15 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <p class="total" id="total">&mdash;</p>
 </div>
 <div class="evomini" id="evoMini" role="button" tabindex="0" title="Tap to see the chart"></div>
-<div class="tr-pct"><span class="rangepct" id="rangePct"></span><span class="totalpct-per" id="rangeNombre"></span><span class="vsbench" id="vsBench"></span></div>
+<div class="tr-pct"><span class="rangepct" id="rangePct"></span><span class="totalpct-per" id="rangeNombre"></span></div>
 </div>
+<!-- La comparacion contra el indice va en su PROPIO renglon, ancho completo
+     (01/09/2026). Nacio dentro de .tr-pct, que es la columna angosta de la
+     derecha: ahi la frase entera ("+15.2 pp vs S&P 500") no entra y se parte
+     en tres renglones apilados debajo del porcentaje. Y esa columna no puede
+     ensancharse — es la regla de arriba: .tr-val no cede y lo que sobra es
+     del dibujo. Aca abajo tiene la tarjeta entera y entra en una linea. -->
+<p class="vsbench" id="vsBench"></p>
 <div class="chartbox" id="evoChartBox" role="button" tabindex="0" style="display:none" title="Tap to collapse"><canvas id="lineChart"></canvas></div>
 <!-- El desglose del periodo (31/08/2026): de cuanto arrancaste, cuanto
      pusiste y cuanto rindio. Solo aparece si hubo aportes; si no, todo el
