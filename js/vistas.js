@@ -195,9 +195,7 @@ if (name === 'noticias' && !noticiasCargadas) {
 // toque en la pestana mientras el pedido esta en vuelo disparaba OTRA llamada
 // de hasta dos minutos. Si falla se revierte, para poder reintentar. Es el
 // mismo patron que ya usaba cargarOperaciones.
-noticiasCargadas = true;
-google.script.run.withSuccessHandler(function (d) { renderNoticias(d); })
-.withFailureHandler(function (err) { noticiasCargadas = false; errorEnVista('noticiasBody', err, 'las noticias'); }).getNoticias();
+pedirNoticias();
 }
 if (name === 'trade' && !opsCargadas) cargarOperaciones(false);
 window.scrollTo(0, 0);
@@ -212,6 +210,27 @@ var lastAcc = null, lastAccData = null;
 // (editar Itau, volver, abrir IBKR antes de que conteste) pintaba las
 // posiciones de una bajo el titulo de la otra (auditoria 31/08/2026).
 var accPedida = null;
+// UNA sola peticion de noticias alimenta las DOS pantallas (02/09/2026): la
+// pestana News y la tarjeta del mundo que quedo al pie del Inicio. Pedirlas
+// dos veces seria pagar dos veces por el mismo dato — y este pedido es de los
+// caros: lee los feeds de seis medios.
+//
+// La bandera se marca ANTES de pedir, no en el handler de exito: si no, cada
+// toque en la pestana mientras el pedido esta en vuelo disparaba OTRA llamada.
+// Si falla se revierte, para poder reintentar.
+function pedirNoticias() {
+  if (noticiasCargadas) return;
+  noticiasCargadas = true;
+  google.script.run.withSuccessHandler(function (d) {
+    renderNoticias(d);
+    // trade.js se carga DESPUES que este archivo, asi que la funcion existe
+    // recien en tiempo de ejecucion. Se consulta en vez de suponerla.
+    if (typeof renderMacroInicio === 'function') renderMacroInicio(d);
+  }).withFailureHandler(function (err) {
+    noticiasCargadas = false;
+    errorEnVista('noticiasBody', err, 'las noticias');
+  }).getNoticias();
+}
 function showAccount(acc, fromView) {
 accountReturnView = fromView || 'portafolio';
 setView('account');
@@ -360,6 +379,16 @@ document.getElementById('posBack').onclick = function () { setView('inicio'); };
   t.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(); } });
 })();
 
+// El titulo de la tarjeta del mundo lleva a News, donde vive el bloque
+// completo (02/09/2026). Mismo patron que Positions, teclado incluido: la
+// politica de contenido no permite onclick inline.
+(function () {
+  var t = document.getElementById('macroTitulo');
+  if (!t) return;
+  function abrir() { setView('noticias'); }
+  t.addEventListener('click', abrir);
+  t.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(); } });
+})();
 // El titulo de la tarjeta de asignacion del tablero lleva al analisis
 // completo (31/08/2026): la tarjeta es un resumen, el detalle vive en
 // Analysis. Mismo patron que Positions, teclado incluido.
@@ -424,14 +453,17 @@ datasets: [{ data: items.map(function (c) { return c.valor; }), backgroundColor:
 },
 options: { cutout: '62%', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
 });
-// Leyenda compacta al costado: nombre + % (el detalle en USD vive en Inicio)
+// Leyenda al costado: nombre, monto y %. El monto entro el 02/09/2026, al
+// sacar la tarjeta "Account detail" del Inicio: era el UNICO lugar donde se
+// veia cuanto vale cada cuenta, y esta leyenda ya era el otro camino para
+// abrirlas. Sin esto, el dato se perdia.
 var leg = document.getElementById('pieLegend');
 leg.innerHTML = '';
 items.forEach(function (c, i) {
 var row = document.createElement('div');
 row.className = 'pierow' + (c.acc ? ' clickable' : '');
 row.innerHTML = '<span class="lname"><span class="dot" style="background:' + coloresPie()[i % PIE_COLORS.length] + '"></span>' + esc(c.label) + '</span>' +
-'<span class="lpct">' + (total ? ((c.valor / total) * 100).toFixed(1) : '0') + '%' + (c.acc ? '<span class="chev">&rsaquo;</span>' : '') + '</span>';
+'<span class="lpct"><b>' + esc(fmt(c.valor)) + '</b>' + (total ? ' ' + ((c.valor / total) * 100).toFixed(1) + '%' : '') + (c.acc ? '<span class="chev">&rsaquo;</span>' : '') + '</span>';
 if (c.acc) row.onclick = function () { showAccount(c.acc, 'portafolio'); };
 leg.appendChild(row);
 });

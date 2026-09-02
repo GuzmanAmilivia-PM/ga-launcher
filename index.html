@@ -1115,9 +1115,18 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <button id="holdMoreBtn" class="morebtn">See all</button>
 </div>
 </div>
-<div class="card">
-<h2>Account detail</h2>
-<div id="cuentasList"></div>
+<!-- Las noticias del dia en el Inicio (02/09/2026). Reemplazan a la tarjeta
+     "Account detail", que Guzman saco de aca: "para mi esa info no va ahi".
+     El valor por cuenta no se perdio — paso a la leyenda de la torta de
+     Portfolio, que ademas es desde donde se abre cada cuenta.
+
+     Son los titulares MACRO, no los de mercado: el bloque de mercado ya vive
+     en la pestana News y repetirlo aca no agregaria nada. Salen del MISMO
+     payload de noticias que esa pestana, sin una llamada nueva. Si no hay
+     dato, la tarjeta no se muestra: un hueco con un titulo es peor que nada. -->
+<div class="card" id="macroCard" style="display:none">
+<h2 id="macroTitulo" class="h2link" role="button" tabindex="0" title="See all news">World &amp; macro <span class="chev">&#8250;</span></h2>
+<div id="macroList"></div>
 </div>
 <!-- La asignacion en el tablero (D4, 31/08/2026). Solo en escritorio: en el
      telefono ya vive en la pagina Analysis y aca competiria por la primera

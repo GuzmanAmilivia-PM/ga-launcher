@@ -355,6 +355,31 @@ body.appendChild(c);
 });
 }
 
+// ---------- Las noticias del mundo en el Inicio (02/09/2026) ----------
+// Pedido de Guzman al sacar la tarjeta "Account detail": "capaz noticias
+// geopoliticas mas importantes".
+//
+// Sale de `data.macro`, que el backend ya venia juntando desde el 31/08 y que
+// hasta hoy NO se mostraba en ninguna pantalla: solo lo consumian el podcast y
+// el informe de los lunes. O sea que esto no agrega ni una llamada ni un feed:
+// estrena un dato que ya estaba pago.
+//
+// TRES titulares, no mas: es el pie del Inicio, no la pestana de noticias. El
+// titulo es un enlace a News, que es donde vive el bloque completo.
+var MACRO_EN_INICIO = 3;
+function renderMacroInicio(data) {
+  var card = document.getElementById('macroCard');
+  var lista = document.getElementById('macroList');
+  if (!card || !lista) return;
+  var items = (data && data.macro) || [];
+  // Sin titulares la tarjeta NO se muestra. Un titulo con un hueco debajo se
+  // lee como que algo se rompio; no estar no promete nada.
+  if (!items.length) { card.style.display = 'none'; lista.innerHTML = ''; return; }
+  lista.innerHTML = newsItemsHtml(items.slice(0, MACRO_EN_INICIO));
+  card.style.display = '';
+  if (typeof ajustarAlturaDeck === 'function') ajustarAlturaDeck();
+}
+
 // ---------- Podcast diario de noticias (30/08/2026) ----------
 // Mismo patron UX que analizarIA (ia.js): boton -> estado de carga ->
 // exito/error, con reintento. El guion lo escribe Claude (misma clave de

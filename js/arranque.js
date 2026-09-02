@@ -68,16 +68,15 @@ animarTotal(document.getElementById('total'), data.total);
 pintarKpis(data);
 document.getElementById('liquidezVal').textContent = fmt(data.liquidez);
 document.getElementById('liquidezPct').textContent = (data.liquidezPct ? (data.liquidezPct * 100).toFixed(2) : '0') + '%';
-var listEl = document.getElementById('cuentasList');
-listEl.innerHTML = '';
-data.cuentas.forEach(function (c) {
-var acc = accountByName(c.nombre);
-var row = document.createElement('div');
-row.className = 'row' + (acc ? ' clickable' : '');
-row.innerHTML = '<span>' + esc(nombrePlataforma(c.nombre)) + '</span><span>' + fmt(c.valor) + (acc ? '<span class="chev">&rsaquo;</span>' : '') + '</span>';
-if (acc) row.onclick = function () { showAccount(acc, 'inicio'); };
-listEl.appendChild(row);
-});
+// La lista de cuentas del Inicio se fue el 02/09/2026 ("para mi esa info no
+// va ahi"). El valor por cuenta NO se perdio: pasa a la leyenda de la torta
+// de Portfolio, que ademas ya era el otro camino para abrir cada cuenta.
+// Las noticias del mundo del pie del Inicio. Se piden DESPUES de pintar y una
+// sola vez (pedirNoticias tiene su propia bandera): el pedido lee los feeds de
+// seis medios y es de los lentos, asi que no puede competir con el payload del
+// arranque, que es el momento mas sensible de la app. La tarjeta nace
+// escondida y aparece cuando el dato llega.
+if (typeof pedirNoticias === 'function') setTimeout(pedirNoticias, 1200);
 document.getElementById('cashTotal').textContent = fmt(data.liquidez);
 var cashListEl = document.getElementById('cashList');
 cashListEl.innerHTML = '';
