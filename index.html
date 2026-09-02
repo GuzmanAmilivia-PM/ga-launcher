@@ -378,7 +378,16 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
    habia desborde horizontal de la pagina, asi que la unica medicion que se le
    habia hecho daba verde: medía la propiedad equivocada. Auditoria 25/08/2026. */
 .totalrow .tr-val { flex: 0 0 auto; }
-.totalrow .tr-pct { flex: 0 1 auto; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+/* El `margin-left: auto` es lo que mantiene el % pegado al borde DERECHO
+   cuando el grafico esta desplegado (02/09/2026, reporte de Guzman con captura).
+   Al abrir el grafico, pintarBotonEvo esconde .evomini — que era el UNICO
+   hijo con flex-grow de la fila. Sin el, ni .tr-val ni .tr-pct crecen, asi
+   que las dos se amontonaban a la izquierda y quedaban 67px muertos a la
+   derecha con el porcentaje colgado en el medio de la nada. Medido a 375px.
+   Con el mini visible este margen no cambia NADA: el dibujo se come el
+   espacio libre y el auto resuelve a cero (verificado: el dibujo sigue
+   midiendo 55px). */
+.totalrow .tr-pct { flex: 0 1 auto; margin-left: auto; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
 .totalrow .tr-pct .totalpct-per { margin-top: 1px; }
 /* El piso baja de 54 a 40: ahora que la celda del numero no se encoge, es el
    dibujo el que tiene que ceder en pantallas angostas. Con 54 el renglon se
