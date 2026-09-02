@@ -289,6 +289,12 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .holdtable td:first-child { max-width: 0; width: 100%; }
 .holdtable tr.hidden-row { display: none; }
 /* La cabecera de la tabla del Inicio se OCULTA, no se borra (02/09/2026).
+   ACOTADA a .holdhome, no a .holdtable: esa clase la comparten TRES tablas —
+   el Inicio, la pagina Positions (Instr/Buy/Price/Value) y la de indicadores
+   de la IA (Indicator/Value/Reading)— y la primera version las escondio a las
+   tres. Lo cazo la auditoria del 02/09/2026, midiendo el thead de Positions en
+   0px. El argumento de Guzman ("esta recontra sobreentendido") vale para
+   simbolo, curva y precio del Inicio; NO para cuatro columnas de numeros.
    Pedido de Guzman: "borra el instr. month y price, esta recontra
    sobreentendido". Tiene razon en la pantalla: un simbolo con su logo, una
    curva y un precio no necesitan que se los nombre.
@@ -304,7 +310,7 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
    asi deja de contar para el ancho de las columnas, y aca las columnas las
    define el cuerpo. El borde de abajo se va con ellos: era la linea que
    separaba la cabecera de la lista, y sin cabecera no separa nada. */
-.holdtable thead th {
+.holdhome thead th {
   padding: 0; height: 0; line-height: 0; font-size: 0;
   border-bottom: 0; clip-path: inset(50%); white-space: nowrap;
 }
@@ -426,6 +432,20 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .dot { width: 11px; height: 11px; border-radius: 3px; display: inline-block; margin-right: 9px; flex-shrink: 0; }
 .lname { display: flex; align-items: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lpct { font-weight: 800; white-space: nowrap; }
+/* En el TELEFONO la fila se apila (02/09/2026). El monto entro en esta
+   leyenda al sacar la tarjeta "Account detail" del Inicio, y en una sola
+   linea no entra: .lname cede (ellipsis) y .lpct es nowrap e irreducible, asi
+   que el bloque "USD 97,512 45.6% >" se queda con todo. Medido a 393px, el
+   telefono de Guzman: "Interactive Brokers" quedaba con 31px de los 128 que
+   necesita — o sea ilegible. Y agrava que esta leyenda es AHORA el unico
+   camino para abrir cada cuenta: sus etiquetas no pueden ser un muñon.
+   Apilado entra todo sin truncar nada. En pantalla ancha la leyenda tiene de
+   sobra y sigue en una linea. Lo cazo la auditoria del 02/09/2026. */
+@media (max-width: 560px) {
+  .pierow { flex-direction: column; align-items: stretch; gap: 2px; }
+  .pierow .lname { overflow: visible; text-overflow: clip; white-space: normal; }
+  .pierow .lpct { font-size: 13px; padding-left: 16px; }
+}
 
 /* --- Botones Retirar / Depositar --- */
 .cashbtns { display: flex; gap: 10px; margin: 16px 0 2px; }
@@ -1111,7 +1131,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 </div>
 <div class="card">
 <h2 id="posTitulo" class="h2link" role="button" tabindex="0" title="See all positions">Positions <span class="chev">&#8250;</span></h2>
-<div style="overflow-x:auto"><table class="holdtable"><thead><tr><th>Instr.</th><th class="col-spark">Month</th><th>Price</th><th class="col-pct">%</th></tr></thead><tbody id="holdingsList"></tbody></table></div>
+<div style="overflow-x:auto"><table class="holdtable holdhome"><thead><tr><th>Instr.</th><th class="col-spark">Month</th><th>Price</th><th class="col-pct">%</th></tr></thead><tbody id="holdingsList"></tbody></table></div>
 <button id="holdMoreBtn" class="morebtn">See all</button>
 </div>
 </div>
