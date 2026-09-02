@@ -288,6 +288,26 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .holdtable .desc { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .holdtable td:first-child { max-width: 0; width: 100%; }
 .holdtable tr.hidden-row { display: none; }
+/* La cabecera de la tabla del Inicio se OCULTA, no se borra (02/09/2026).
+   Pedido de Guzman: "borra el instr. month y price, esta recontra
+   sobreentendido". Tiene razon en la pantalla: un simbolo con su logo, una
+   curva y un precio no necesitan que se los nombre.
+
+   Pero los <th> siguen en el HTML por dos motivos que no se ven:
+   un lector de pantalla anuncia cada celda por su columna y sin ellos la
+   tabla se lee como una lista de numeros sueltos; y el arnes cuenta los <th>
+   para verificar que los colspan de las cabeceras de seccion (ETFS, STOCKS)
+   coincidan con las columnas reales — sin cabecera, ese chequeo se queda sin
+   contra que comparar.
+
+   Se colapsan en vez de usar display:none porque una fila de tabla escondida
+   asi deja de contar para el ancho de las columnas, y aca las columnas las
+   define el cuerpo. El borde de abajo se va con ellos: era la linea que
+   separaba la cabecera de la lista, y sin cabecera no separa nada. */
+.holdtable thead th {
+  padding: 0; height: 0; line-height: 0; font-size: 0;
+  border-bottom: 0; clip-path: inset(50%); white-space: nowrap;
+}
 /* Estilo lista de mercado (18/08/2026, referencia de Guzman: TradingView):
    avatar circular con las iniciales coloreado por tipo + secciones. */
 .holdcell { display: flex; align-items: center; gap: 10px; }
