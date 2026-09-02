@@ -75,45 +75,12 @@ el.textContent = signoPct(pct, 2) +
 (anual !== null ? ' · ' + signoPct(anual, 1) + ' ann.' : '');
 el.className = 'rangepct ' + (pct >= 0 ? 'up' : 'down');
 pintarVsBench(serie, pct);
-pintarMovimiento(serie);
 }
-// El desglose, en una linea: de cuanto arrancaste, cuanto pusiste, cuanto
-// rindio. Aparece SOLO cuando hubo aportes en el periodo — si no los hubo,
-// todo el cambio es mercado y la linea no diria nada que el % no diga ya.
-function pintarMovimiento(serie) {
-  var el = document.getElementById('movSaldo');
-  if (!el) return;
-  var m = movimientoDelSaldo(serie);
-  if (!m) { el.innerHTML = ''; el.className = 'movsaldo'; return; }
-
-  if (m.sinDatos === 'aportes') {
-    // Sin la lista no se puede separar, y decir "todo fue mercado" seria
-    // mentir. Se calla: el panel de Aportes la trae al deslizar.
-    el.innerHTML = ''; el.className = 'movsaldo'; return;
-  }
-  if (m.sinDatos === 'rango') {
-    el.innerHTML = '<span class="mov-aviso">Deposits cannot be separated from return in this period: the deposit record starts later.</span>';
-    el.className = 'movsaldo'; return;
-  }
-  if (Math.abs(m.aportes) < 1) { el.innerHTML = ''; el.className = 'movsaldo'; return; }
-
-  // Etiquetas CORTAS a proposito: con las largas ("al empezar", "que
-  // aportaste") la linea ocupaba cuatro renglones en un telefono de 375px y
-  // empujaba el grafico fuera de la primera pantalla. Medido, no estimado.
-  // Al pasarlas a ingles (01/09/2026) se eligio la palabra corta por la misma
-  // razon, y se volvio a medir: "start"/"added"/"market" son mas cortas que
-  // las que reemplazan, asi que la linea no crece.
-  var signoAp = m.aportes >= 0 ? '+' : '−';
-  var etAp = m.aportes >= 0 ? 'added' : 'withdrawn';
-  el.innerHTML =
-    '<span class="mov-item"><b>' + esc(fmt(m.inicial)) + '</b> start</span>' +
-    '<span class="mov-op">' + signoAp + '</span>' +
-    '<span class="mov-item"><b>' + esc(fmt(Math.abs(m.aportes))) + '</b> ' + etAp + '</span>' +
-    '<span class="mov-op">' + (m.mercado >= 0 ? '+' : '−') + '</span>' +
-    '<span class="mov-item ' + (m.mercado >= 0 ? 'up' : 'down') + '"><b>' + esc(fmt(Math.abs(m.mercado))) + '</b> market' +
-      (m.mercadoPct !== null ? ' <em>' + signoPct(m.mercadoPct, 1) + '</em>' : '') + '</span>';
-  el.className = 'movsaldo';
-}
+// El desglose "start + added + market" se SACO el 02/09/2026 a pedido de
+// Guzman. movimientoDelSaldo() NO se toca: sigue viva y es la que le da a
+// pintarVsBench el rendimiento LIMPIO —sin los aportes— para comparar contra
+// el indice. Borrarla de paso habria devuelto esa comparacion al % crudo, que
+// infla la cartera con la plata que pusiste.
 // El delta contra el indice, en PUNTOS porcentuales (no en %): la diferencia
 // entre dos porcentajes se mide en pp, y decir "+3,2%" cuando son 3,2 pp es
 // un error clasico que ademas cambia el numero de significado.
@@ -164,6 +131,106 @@ function getFilteredDataPoints(serie) {
   return d !== 0 && d !== 6;
   }).map(function (p) { return { x: p.fecha, y: p.valor }; });
   }
+
+
+// ---------- Las etiquetas de los ejes (02/09/2026) ----------
+// Parte del mismo pedido ("que se vea mas pro"), y las dos son de lectura,
+// no de dato: el grafico dibuja exactamente lo mismo.
+//
+// EJE Y: "120K" en vez de "120000". Seis cifras repetidas cinco veces roban
+// ancho al dibujo y no agregan precision — el numero exacto vive arriba, en
+// el total, que es donde se lo busca. Por debajo de 10.000 se escribe entero:
+// ahi el "K" con decimal (9,4K) es MENOS legible que 9.400.
+function montoCorto(v) {
+  var n = Number(v);
+  if (!isFinite(n)) return '';
+  var abs = Math.abs(n);
+  if (abs >= 1e6) return (n / 1e6).toFixed(abs >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M';
+  if (abs >= 1e4) return Math.round(n / 1e3) + 'K';
+  return n.toLocaleString('en-US');
+}
+
+// EJE X: la escala manda el formato. Con "02 Sep" fijo, un rango de 5 anios
+// mostraba cinco dias sueltos y un rango de una semana repetia el mes cinco
+// veces. Ahora: dias en los rangos cortos, mes en los medianos, mes+anio
+// cuando el rango cruza mas de un anio (si no, "Jan" de 2024 y "Jan" de 2026
+// se leen igual, que es el error mas caro de los tres).
+var MS_DIA_EJE = 86400000;
+function etiquetaFechaEje(valor, xMin, xMax) {
+  var d = new Date(valor);
+  var dias = (xMax && xMin) ? (xMax - xMin) / MS_DIA_EJE : 0;
+  // El apostrofo NO es decorativo: 'Apr 26' (mes + anio) se lee igual que
+  // 'Apr 26' (mes + dia), que es lo que muestra el rango corto de abajo. Con
+  // 'Apr '26' no hay forma de confundirlos. Lo destapo el arnes al comparar
+  // los tres formatos entre si.
+  if (dias > 400) return d.toLocaleDateString('en-US', { month: 'short' }) + ' ’' +
+    String(d.getFullYear()).slice(-2);
+  if (dias > 45) return d.toLocaleDateString('en-US', { month: 'short' });
+  return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+}
+
+// ---------- Submuestreo del grafico (02/09/2026) ----------
+// Pedido de Guzman: "tiene muchos puntos para YTD, optimizalo para que se vea
+// mas pro". Y era un numero, no una impresion: YTD son ~175 dias habiles y el
+// grafico del Inicio mide ~290px, o sea MENOS DE 2 PIXELES por segmento. A esa
+// densidad cada movimiento diario se dibuja como un diente y el conjunto se lee
+// como ruido, no como una tendencia.
+//
+// Se usa LTTB (Largest-Triangle-Three-Buckets), que es el algoritmo estandar
+// para achicar series temporales sin deformarlas. Lo importante para ESTA app:
+//
+//   ELIGE PUNTOS REALES, no promedia. Cada punto dibujado es un valor que tu
+//   cartera tuvo de verdad ese dia. Un promedio movil se veria mas lindo y
+//   seria un numero inventado — y este grafico es tu patrimonio.
+//
+// Ademas conserva los PICOS: por eso no sirve "uno cada N", que se saltea los
+// maximos y minimos justo cuando son lo unico que importa mirar. LTTB elige,
+// dentro de cada tramo, el punto que forma el triangulo mas grande con el
+// anterior y con el promedio del tramo siguiente — que es una forma de decir
+// "el que mas cambia la silueta".
+//
+// El primero y el ultimo NUNCA se tocan: el ultimo es el valor de hoy.
+function submuestrearLTTB(puntos, cupo) {
+  var n = puntos.length;
+  if (!(cupo >= 3) || n <= cupo) return puntos;      // ya entra: no se toca
+  var out = [puntos[0]];
+  var paso = (n - 2) / (cupo - 2);
+  var aIdx = 0;
+  for (var i = 0; i < cupo - 2; i++) {
+    // Promedio del tramo SIGUIENTE, que es el tercer vertice del triangulo.
+    var desdeProm = Math.floor((i + 1) * paso) + 1;
+    var hastaProm = Math.min(Math.floor((i + 2) * paso) + 1, n - 1);
+    var promX = 0, promY = 0, cuenta = hastaProm - desdeProm;
+    if (cuenta < 1) { desdeProm = n - 1; hastaProm = n; cuenta = 1; }
+    for (var j = desdeProm; j < hastaProm; j++) { promX += puntos[j].x; promY += puntos[j].y; }
+    promX /= cuenta; promY /= cuenta;
+
+    var desde = Math.floor(i * paso) + 1;
+    var hasta = Math.min(Math.floor((i + 1) * paso) + 1, n - 1);
+    var aX = puntos[aIdx].x, aY = puntos[aIdx].y;
+    var mejorArea = -1, mejor = desde;
+    for (var k = desde; k < hasta; k++) {
+      var area = Math.abs((aX - promX) * (puntos[k].y - aY) - (aX - puntos[k].x) * (promY - aY)) / 2;
+      if (area > mejorArea) { mejorArea = area; mejor = k; }
+    }
+    out.push(puntos[mejor]);
+    aIdx = mejor;
+  }
+  out.push(puntos[n - 1]);
+  return out;
+}
+
+// El cupo sale del ANCHO REAL del lienzo, no de un numero fijo: el grafico del
+// Inicio y el de pantalla completa son el mismo codigo con anchos muy
+// distintos, y un cupo unico dejaria a uno ruidoso o al otro con escalones.
+// ~4px por segmento es lo que hace que la linea se lea como una curva.
+var PX_POR_SEGMENTO = 4;
+function cupoDePuntos(canvasId) {
+  var c = document.getElementById(canvasId);
+  var ancho = (c && c.getBoundingClientRect().width) || 0;
+  if (!ancho) return 90;                              // sin medida, un default sano
+  return Math.max(40, Math.min(240, Math.round(ancho / PX_POR_SEGMENTO)));
+}
 
 // ---------- La linea del indice sobre el grafico (31/08/2026) ----------
 // El dato del S&P ya viajaba en el payload y lo usaban comparacionGrupo y
@@ -296,20 +363,23 @@ function benchPctEnRango(serie) {
   maintainAspectRatio: false,
   plugins: { legend: { display: false } },
   scales: {
-  x: { type: 'linear', min: xMin, max: xMax, bounds: 'data', ticks: { color: TC.tick, maxTicksLimit: 6, callback: function (value) { return new Date(value).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }); } }, grid: { color: TC.grid } },
-  y: { ticks: { color: TC.tick, callback: function (v) { return montosOcultos ? '' : v; } }, grid: { color: TC.grid } }
+  x: { type: 'linear', min: xMin, max: xMax, bounds: 'data', ticks: { color: TC.tick, maxTicksLimit: 6, callback: function (value) { return etiquetaFechaEje(value, xMin, xMax); } }, grid: { color: TC.grid } },
+  y: { ticks: { color: TC.tick, callback: function (v) { return montosOcultos ? '' : montoCorto(v); } }, grid: { color: TC.grid } }
   }
   };
   }
   // El grafico chico y el del modal eran la misma llamada copiada (E6).
   function dibujarEvolucion(canvasId, prev, serie) {
-  var dataPoints = getFilteredDataPoints(serie);
+  // El cupo se calcula ANTES de destruir el grafico anterior: el lienzo tiene
+  // que estar en el documento para poder medirle el ancho.
+  var cupo = cupoDePuntos(canvasId);
+  var dataPoints = submuestrearLTTB(getFilteredDataPoints(serie), cupo);
   if (prev) prev.destroy();
   return new Chart(document.getElementById(canvasId), {
   type: 'line',
   // El acento se lee VIVO (colorAcento, nucleo.js): con el hexadecimal
   // clavado, la línea de Evolución seguía dorada con cualquier paleta.
-  data: { datasets: datasetsEvolucion(dataPoints, serie) },
+  data: { datasets: datasetsEvolucion(dataPoints, serie, cupo) },
   options: buildChartOptions(dataPoints)
   });
   }
@@ -317,12 +387,15 @@ function benchPctEnRango(serie) {
 // en otro color fuerte: es la referencia, no una segunda protagonista — y
 // ademas el punteado lo distingue sin depender del color (la misma razon por
 // la que las subas y bajas llevan signo y no solo verde/rojo).
-function datasetsEvolucion(dataPoints, serie) {
+function datasetsEvolucion(dataPoints, serie, cupo) {
   var ds = [{
     data: dataPoints, borderColor: colorAcento(), backgroundColor: acentoRgba(0.12),
     fill: true, tension: 0.3, pointRadius: 0
   }];
-  var b = serieBench(serie || []);
+  // El indice se submuestrea con el MISMO cupo: si una curva llevara todos
+  // sus puntos y la otra no, la comparacion visual seria entre dos niveles de
+  // detalle distintos y la mas densa pareceria mas volatil por el dibujo.
+  var b = submuestrearLTTB(serieBench(serie || []), cupo || 0);
   if (b.length > 1) {
     ds.push({
       data: b, borderColor: 'rgba(144,160,184,.85)', borderDash: [5, 4],

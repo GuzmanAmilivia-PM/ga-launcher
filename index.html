@@ -210,20 +210,6 @@ html[data-paleta="violeta"] .galogo-img { filter: hue-rotate(209deg) saturate(1.
 .vsbench.up { color: color-mix(in srgb, var(--green) 62%, var(--muted)); }
 .vsbench.down { color: color-mix(in srgb, var(--red) 62%, var(--muted)); }
 .vsbench:empty { display: none; }
-/* El desglose del periodo. Se lee como una cuenta —"120.000 al empezar +
-   5.000 que aportaste + 3.200 de mercado"— y por eso los operadores van
-   sueltos entre las piezas, no como puntuacion pegada. */
-.movsaldo {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 7px;
-  margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.5;
-}
-.movsaldo:empty { display: none; }
-.mov-item b { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
-.mov-item.up b { color: var(--green); }
-.mov-item.down b { color: var(--red); }
-.mov-item em { font-style: normal; font-weight: 700; font-size: 11px; opacity: .85; }
-.mov-op { color: var(--muted); font-weight: 700; opacity: .6; }
-.mov-aviso { color: var(--gold2); font-size: 11.5px; }
 .up { color: var(--green); font-weight: 700; }
 .down { color: var(--red); font-weight: 700; }
 /* caprow/capval/capnota: los numeros y la nota de la comparacion (V7).
@@ -1048,10 +1034,6 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
      del dibujo. Aca abajo tiene la tarjeta entera y entra en una linea. -->
 <p class="vsbench" id="vsBench"></p>
 <div class="chartbox" id="evoChartBox" role="button" tabindex="0" style="display:none" title="Tap to collapse"><canvas id="lineChart"></canvas></div>
-<!-- El desglose del periodo (31/08/2026): de cuanto arrancaste, cuanto
-     pusiste y cuanto rindio. Solo aparece si hubo aportes; si no, todo el
-     cambio es mercado y la linea no diria nada nuevo. -->
-<div class="movsaldo" id="movSaldo"></div>
 <!-- Elegir el periodo ocupaba una franja entera arriba, siempre, para algo que
      casi nunca se toca (23/08/2026: "ocupa mucho espacio, que no aparezcan
      cuando no expando la grafica"). Baja debajo del dibujo y solo se ve con el

@@ -133,10 +133,19 @@
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.fillStyle = tickColor(ejes.x, '#8ea0b8');
     var nx = Math.min(6, pts.length);
+    // Una etiqueta REPETIDA no se dibuja (02/09/2026). Las marcas se reparten
+    // parejo por el eje, no por mes, asi que en cuanto el formato se acorta
+    // aparecen duplicados: un rango de 3 meses con 6 marcas cada 15 dias
+    // escribia 'Jun Jun Jul Jul Aug Aug'. Dejar el hueco se lee bien; repetir
+    // el mismo mes dos veces seguidas se lee como un error.
+    var ultTxt = null;
     for (var i = 0; i < nx; i++) {
       var frac = nx === 1 ? 0 : i / (nx - 1);
       var xv = x0 + (x1 - x0) * frac;
-      ctx.fillText(String(cbX(xv)), Math.min(Math.max(X(xv), padIzq + 14), padIzq + W - 14), padArr + H + 5);
+      var txtX = String(cbX(xv));
+      if (txtX === ultTxt) continue;
+      ultTxt = txtX;
+      ctx.fillText(txtX, Math.min(Math.max(X(xv), padIzq + 14), padIzq + W - 14), padArr + H + 5);
     }
 
     // curva suave (puntos medios, el efecto del tension 0.3)
