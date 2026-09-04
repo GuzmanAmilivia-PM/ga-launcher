@@ -88,6 +88,13 @@ function esEscritorio() {
 }
 function cargarPanelesDeEscritorio() {
   if (!esEscritorio()) return;
+  // Sin clave guardada no se pide NADA (3/09/2026). El arranque normal ya lo
+  // sabia (arranque.js muestra la pantalla de clave y no llama a loadData),
+  // pero esta carga corria igual: los tres pedidos volvian con 'auth' y la
+  // pantalla de clave le decia "The saved passcode no longer works" a alguien
+  // que nunca guardo ninguna. Visto en una ventana ancha con el navegador
+  // limpio. Cuando la clave se guarda, lockBtn (nucleo.js) vuelve a llamar.
+  if (typeof getApiToken === 'function' && !getApiToken()) return;
   if (!divCargado && typeof cargarDividendos === 'function') cargarDividendos(false);
   if (!apoCargado && typeof cargarAportes === 'function') cargarAportes();
   // La asignacion (D4): en el telefono se pide al entrar a Portfolio; en el

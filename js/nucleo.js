@@ -193,6 +193,9 @@ document.getElementById('lockBtn').onclick = function () {
   document.getElementById('lockErr').textContent = '';
   hideSplash();
   loadData();
+  // En pantalla ancha los tres paneles estan a la vista y su carga NO pasa
+  // por loadData: se pide aca, ahora que hay clave (3/09/2026).
+  if (typeof cargarPanelesDeEscritorio === 'function') cargarPanelesDeEscritorio();
 };
 document.getElementById('lockInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('lockBtn').click(); });
 // Service worker (carga instantanea / shell offline)
