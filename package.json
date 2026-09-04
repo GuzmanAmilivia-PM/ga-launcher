@@ -1,0 +1,9 @@
+{
+  "name": "ga-launcher",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GA Portfolio Tracker: la app (PWA). Sin dependencias; los arneses de test/ corren con Node pelado.",
+  "scripts": {
+    "test": "node test/run.js"
+  }
+}

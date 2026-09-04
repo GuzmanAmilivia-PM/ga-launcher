@@ -8,11 +8,16 @@ Son dos repos privados distintos, y conviene no confundirlos:
 - **El backend** vive en `ga-portfolio-worker` (Cloudflare Workers). Es el que
   atiende a esta app desde el 20/08/2026. Su `ARQUITECTURA.md` es el documento
   de entrada de todo el sistema (incluida esta PWA).
-- **Los tests de ESTA app** viven en `portfolio-tracker` — el ex-backend de
-  Apps Script, apagado el 22/08/2026 —, en `scripts/ui/`. Se corren con
-  `npm run test:ui` desde allá, y son la única red que tiene este repo.
+- **Los tests de ESTA app** viven acá, en `test/`, desde el 4/09/2026 (antes,
+  en el repo histórico `ga-portfolio-tracker`, y había que clonar el ex-backend
+  para probar la app). Se corren con `npm test`: Node pelado, sin dependencias.
+  `test/test-html.js` cruza además el contrato con el Worker, así que
+  necesita el clon de `ga-portfolio-worker` al lado de este repo (o la variable
+  `GA_WORKER` apuntando a donde esté).
+- `scripts/logo.js` regenera todos los íconos de la app desde un PNG del
+  logo (`node scripts/logo.js <logo.png> --aplicar`).
 
-(El repo de los tests se llama `portfolio-tracker` en GitHub aunque la
+(El repo histórico se llama `portfolio-tracker` en GitHub aunque la
 documentación lo nombre `ga-portfolio-tracker`: es el mismo.)
 
 **Los pendientes de esta app NO están acá.** Viven en el `MEJORAS.md` del repo
