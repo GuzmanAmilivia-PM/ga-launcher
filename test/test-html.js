@@ -98,8 +98,28 @@ ok(/connect-src[^;]*wss:\/\/ws-api\.binance\.com/.test(csp), 'permite el WebSock
 ok(/connect-src/.test(csp) && !/connect-src[^;]*\*/.test(csp), 'connect-src NO es abierto: sin eso la clave se podria mandar a cualquier lado');
 ok(/frame-src[^;]*tradingview\.com/.test(csp), 'permite el iframe de TradingView');
 ok(/script-src[^;]*'self'/.test(csp) && !/script-src[^;]*https:\/\//.test(csp), 'script-src sin hosts externos');
-ok(/frame-ancestors 'none'/.test(csp), 'nadie puede embeber la app');
+// frame-ancestors se SACO el 4/09/2026: dentro de un <meta> el navegador la
+// ignora y deja un error en consola en cada carga (solo vale por cabecera
+// HTTP, que GitHub Pages no manda). El assert se da vuelta para que nadie la
+// reponga creyendo que protege algo.
+ok(!/frame-ancestors/.test(csp), 'sin frame-ancestors en el <meta>: ahi no hace nada y ensucia la consola');
 ok(/object-src 'none'/.test(csp), 'sin plugins');
+
+console.log('\nC2b) todo boton se puede nombrar: texto visible o aria-label');
+// Un boton que es solo un icono (el de refrescar, el de cerrar) no le dice
+// nada a un lector de pantalla. La radiografia del 3/09/2026 conto 86
+// botones y 19 con etiqueta; los diez que eran solo un simbolo se
+// etiquetaron el 4/09. Esto evita que vuelvan a entrar mudos.
+{
+  var reBtn = /<button\b([^>]*)>([\s\S]*?)<\/button>/g, mB, mudos = [];
+  while ((mB = reBtn.exec(html)) !== null) {
+    var textoBtn = mB[2].replace(/<[^>]+>/g, '').replace(/&[a-z#0-9]+;/gi, 'x').trim();
+    if (!/aria-label="[^"]+"/.test(mB[1]) && textoBtn.length < 2) {
+      mudos.push((mB[1].match(/id="([^"]+)"/) || [])[1] || mB[1].trim().slice(0, 40));
+    }
+  }
+  ok(mudos.length === 0, 'ningun boton del index.html es solo un icono sin aria-label' + (mudos.length ? ' — MUDOS: ' + mudos.join(', ') : ''));
+}
 
 console.log('\nC3) la politica de contenido y lo que la app de verdad carga');
 // INCIDENTE del 24/08/2026: se cerro img-src a 'self' data: por un hallazgo de

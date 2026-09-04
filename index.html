@@ -22,7 +22,11 @@
      script-src SIN 'unsafe-inline' (desde v39): todo el codigo vive en js/*.js
      y el unico inline es el snippet del tema, permitido por su hash sha256.
      OJO: si se EDITA ese snippet hay que recalcular el hash o el tema deja de
-     aplicarse antes del primer pintado. test-html.js verifica que coincidan. -->
+     aplicarse antes del primer pintado.      test-html.js verifica que coincidan.
+     frame-ancestors NO esta (4/09/2026): en un <meta> el navegador la ignora
+     y solo deja un error en consola en cada carga; solo vale por cabecera
+     HTTP, que GitHub Pages no manda. Nunca protegio nada — la proteccion
+     real contra embeber la app es que sin la clave no muestra un numero. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
   script-src 'self' 'sha256-eCEv2Xtk/d4etq+pER4EYyojYMTusYCys+IfxZyAxE0=';
@@ -35,8 +39,7 @@
   worker-src 'self';
   object-src 'none';
   base-uri 'self';
-  form-action 'self';
-  frame-ancestors 'none'">
+  form-action 'self'">
 <title>Guzmana</title>
 <script>try{if(localStorage.getItem('ga_tema')==='claro')document.documentElement.classList.add('light');}catch(e){}</script>
 <base target="_top">
@@ -1080,7 +1083,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
      grafico abierto. Plegado igual se sabe que periodo rige: el % de la fila
      dice "en 1S", "en YTD". -->
 <div class="evocontrols" id="evoControls" style="display:none">
-<div class="rangebar" id="rangeBar"></div><button class="expandbtn" id="evoAmpliarBtn" title="Full screen">&#9974;</button>
+<div class="rangebar" id="rangeBar"></div><button class="expandbtn" id="evoAmpliarBtn" title="Full screen" aria-label="Full screen">&#9974;</button>
 </div>
 <!-- Los dos bancos del atajo DEPOSIT: se muestran al tocarlo, en su propia
      fila. El deposito en si es el formulario de Banking de siempre. -->
@@ -1100,7 +1103,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div class="sweeppanel">
 <div class="cardhead">
 <h2>Dividends <span class="rangepct" id="divAnio"></span></h2>
-<div style="display:flex;gap:4px"><button class="expandbtn" id="divRefreshBtn" title="Refresh">&#8635;</button><button class="expandbtn" id="divExpandBtn" title="Expand">&#9974;</button></div>
+<div style="display:flex;gap:4px"><button class="expandbtn" id="divRefreshBtn" title="Refresh" aria-label="Refresh dividends">&#8635;</button><button class="expandbtn" id="divExpandBtn" title="Expand" aria-label="Expand dividends">&#9974;</button></div>
 </div>
 <div id="divStats" style="display:none">
 <p class="lbl">Estimated this year</p>
@@ -1183,7 +1186,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <!-- Desde el 26/08/2026 esta tarjeta es el RESUMEN: el titulo (role=button,
      la politica de contenido no permite onclick inline) abre la pagina
      Analysis, donde viven el perfil, el test y el detalle completo. -->
-<div class="cardtop"><h2 id="anaTitulo" role="button" tabindex="0" title="Open the full analysis">Portfolio analysis <span class="anascore-chev">&rsaquo;</span></h2><button class="expandbtn" id="anaRefreshBtn" title="Refresh">&#8635;</button></div>
+<div class="cardtop"><h2 id="anaTitulo" role="button" tabindex="0" title="Open the full analysis">Portfolio analysis <span class="anascore-chev">&rsaquo;</span></h2><button class="expandbtn" id="anaRefreshBtn" title="Refresh" aria-label="Refresh allocation">&#8635;</button></div>
 <div id="anaCacheAviso" style="display:none"></div>
 <div id="anaBody"><p class="loadingtxt">Analyzing your portfolio...</p></div>
 </div>
@@ -1234,7 +1237,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <div id="anxPerfilBody"><p class="loadingtxt">Loading...</p></div>
 </div>
 <div class="card">
-<div class="cardtop"><h2>Against your profile</h2><button class="expandbtn" id="anxRefreshBtn" title="Refresh">&#8635;</button></div>
+<div class="cardtop"><h2>Against your profile</h2><button class="expandbtn" id="anxRefreshBtn" title="Refresh" aria-label="Refresh analysis">&#8635;</button></div>
 <div id="anxBody"><p class="loadingtxt">Analyzing your portfolio...</p></div>
 </div>
 </div>
@@ -1308,7 +1311,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
      Sin titulo de pagina: es pestana de la barra, como las otras cuatro. -->
 <div id="view-watchlist" style="display:none">
 <div class="card">
-<div class="cardhead"><h2>Watchlist</h2><button class="expandbtn" id="wlRefreshBtn" title="Refresh">&#8635;</button></div>
+<div class="cardhead"><h2>Watchlist</h2><button class="expandbtn" id="wlRefreshBtn" title="Refresh" aria-label="Refresh watchlist">&#8635;</button></div>
 <div id="wlAviso"></div>
 <div id="wlBody"><p class="loadingtxt">Loading...</p></div>
 <p class="newsempty" style="margin-top:10px">Add tickers from the search (magnifier &rarr; +). Swipe a row to set a price alert or remove it.</p>
@@ -1537,7 +1540,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <button type="button" class="filtrobtn" id="opsFiltroRango"><span>Period</span><b>This year</b></button>
 <button type="button" class="filtrobtn" id="opsFiltroTipo"><span>Type</span><b>All</b></button>
 <button type="button" class="filtrobtn" id="opsFiltroTicker"><span>Ticker</span><b>All</b></button>
-<button class="expandbtn" id="opsRefreshBtn" title="Refresh">&#8635;</button>
+<button class="expandbtn" id="opsRefreshBtn" title="Refresh" aria-label="Refresh trades">&#8635;</button>
 </div>
 <div id="opsCacheAviso" style="display:none"></div>
 <div id="opsResumen"></div>
@@ -1549,7 +1552,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 <!-- Elegir un filtro de Trades: se abre desde los botones de arriba -->
 <div class="chartmodal" id="opsPicker" style="display:none">
 <div class="chartmodal-inner opspicker-inner">
-<div class="chartmodal-top"><h2 style="margin:0" id="opsPickerTit"></h2><button class="chartmodal-close" id="opsPickerClose">&times;</button></div>
+<div class="chartmodal-top"><h2 style="margin:0" id="opsPickerTit"></h2><button class="chartmodal-close" id="opsPickerClose" aria-label="Close">&times;</button></div>
 <div id="opsPickerOpts"></div>
 </div>
 </div>
@@ -1647,7 +1650,7 @@ Trades</button>
 
 <div class="chartmodal" id="chartModal" style="display:none">
 <div class="chartmodal-inner">
-<div class="chartmodal-top"><h2 style="margin:0">Performance</h2><button class="chartmodal-close" id="chartModalClose">&times;</button></div>
+<div class="chartmodal-top"><h2 style="margin:0">Performance</h2><button class="chartmodal-close" id="chartModalClose" aria-label="Close">&times;</button></div>
 <div class="rangebar" id="rangeBarBig" style="margin-bottom:14px"></div>
 <div class="chartbox chartbox-big"><canvas id="lineChartBig"></canvas></div>
 </div>
@@ -1656,7 +1659,7 @@ Trades</button>
 <!-- Dividendos ampliados: desglose por broker -->
 <div class="chartmodal" id="divModal" style="display:none">
 <div class="chartmodal-inner" style="max-height:92vh;overflow-y:auto">
-<div class="chartmodal-top"><h2 style="margin:0">Dividends <span class="rangepct" id="divModalAnio"></span></h2><button class="chartmodal-close" id="divModalClose">&times;</button></div>
+<div class="chartmodal-top"><h2 style="margin:0">Dividends <span class="rangepct" id="divModalAnio"></span></h2><button class="chartmodal-close" id="divModalClose" aria-label="Close">&times;</button></div>
 <p class="divavg" id="divModalTotales"></p>
 <div id="divModalBrokers"></div>
 <div class="chartbox chartbox-big" style="margin-top:12px"><canvas id="divChartBig"></canvas></div>
