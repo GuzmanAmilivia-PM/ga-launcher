@@ -1,17 +1,32 @@
 // Service worker: cachea el "cascarón" de la app para carga instantánea.
 // Los datos (POST a la API) nunca se cachean.
-var CACHE = 'ga-pwa-v167';
+var CACHE = 'ga-pwa-v168';
 var ASSETS = ['./', './index.html',   './js/gagraf.js', './js/analisis.js', './js/arranque.js', './js/brokers.js', './js/buscador.js', './js/config.js', './js/graficos.js', './js/ia.js', './js/nucleo.js', './js/paneles.js', './js/seguridad.js', './js/sincronizar.js', './js/trade.js', './js/vistas.js', './js/watchlist.js',
-  './fonts/manrope.woff2', './fonts/montserrat-500.woff2',
-  './apple-touch-icon.png', './icon-512.png', './favicon.png', './manifest.json'];
+  './manifest.json'];
+// Lo ESTABLE (5/09/2026): fuentes e iconos, ~110 KB que no cambian desde agosto
+// y se volvian a bajar con CADA version (entre 2 y 9 por dia). Viven en un cache
+// aparte que NO se renueva con CACHE: en install solo se baja lo que falte. Si
+// alguno cambia de verdad, se sube ESTABLES ('ga-estables-v2') y se baja todo de
+// nuevo. El nombre NO empieza con 'ga-pwa-' a proposito: versionShell (vistas.js)
+// saca el numero de version de los caches que si empiezan asi.
+var ESTABLES = 'ga-estables-v1';
+var ASSETS_ESTABLES = ['./fonts/manrope.woff2', './fonts/montserrat-500.woff2',
+  './apple-touch-icon.png', './icon-512.png', './favicon.png'];
 
 self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(ASSETS.map(function (u) { return new Request(u, { cache: 'reload' }); })); }).then(function () { return self.skipWaiting(); }));
+  e.waitUntil(Promise.all([
+    caches.open(CACHE).then(function (c) { return c.addAll(ASSETS.map(function (u) { return new Request(u, { cache: 'reload' }); })); }),
+    caches.open(ESTABLES).then(function (c) {
+      return Promise.all(ASSETS_ESTABLES.map(function (u) {
+        return c.match(u).then(function (hay) { return hay ? null : c.add(u); });
+      }));
+    })
+  ]).then(function () { return self.skipWaiting(); }));
 });
 
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (keys) {
-    return Promise.all(keys.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); }));
+    return Promise.all(keys.filter(function (k) { return k !== CACHE && k !== ESTABLES; }).map(function (k) { return caches.delete(k); }));
   }).then(function () { return self.clients.claim(); }));
 });
 

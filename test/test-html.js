@@ -71,6 +71,16 @@ var woff2 = fsA.existsSync(dirFonts) ? fsA.readdirSync(dirFonts).filter(function
 ok(woff2.length >= 2, 'los .woff2 estan en el repo (' + woff2.length + ')');
 var fontsSinCachear = woff2.filter(function (f) { return sw.indexOf('./fonts/' + f) === -1; });
 ok(fontsSinCachear.length === 0, 'las fuentes estan en ASSETS del sw' + (fontsSinCachear.length ? ' — FALTAN: ' + fontsSinCachear.join(', ') : ''));
+// El cache de lo estable (5/09/2026): fuentes e iconos en un cajon que no se
+// renueva con cada version. Que exista, que el activate no lo borre, que su
+// nombre no empiece con 'ga-pwa-' (versionShell saca de ahi la version), y que
+// fuentes e iconos ya no esten TAMBIEN en ASSETS (se bajarian dos veces).
+var mEst = sw.match(/var ESTABLES = '([^']+)'/);
+ok(!!mEst && mEst[1].indexOf('ga-pwa-') !== 0, 'el cache de lo estable existe y NO se llama ga-pwa-*: ' + (mEst ? mEst[1] : 'no esta'));
+ok(/k !== CACHE && k !== ESTABLES/.test(sw), 'el activate conserva el cache de lo estable');
+var swPlano = sw.replace(/\n/g, ' ');
+ok(/ASSETS_ESTABLES = \[[^\]]*fonts\/[^\]]*icon-512/.test(swPlano), 'fuentes e iconos van en el cajon estable');
+ok(!/var ASSETS = \[[^\]]*fonts\//.test(swPlano), 'y ya no estan en ASSETS del cascaron');
 // El contrato cache-first: responde del cache y va a la red SOLO si falta.
 // La version anterior disparaba un fetch de revalidacion en cada pedido.
 ok(/return cached \|\| fetch\(/.test(sw), 'el sw responde del cache y solo va a la red si falta');
