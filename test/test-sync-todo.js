@@ -147,7 +147,9 @@ var OK1 = { ok: true, cambios: [{ tipo: 'qty', symbol: 'VOO' }] };
     ibkr: OKV, cs: OKV, bnbConfigurado: false, refrescar: 'FALLA'
   });
   ok(e.menuCerrado && e.loadData === 1, 'igual cierra y recarga');
-  ok(/[Pp]recios/.test(e.avisos[0].msg), 'avisa del fallo de precios');
+  // Desde el 5/09/2026 el paso final no refresca precios: estampa el historico
+  // del dia. El aviso nombra eso, y en ingles como el resto de la interfaz.
+  ok(/History/.test(e.avisos[0].msg) && /today's totals/.test(e.avisos[0].msg), 'avisa del fallo del paso final, con su nombre nuevo');
 
   // G) ya hay una sincronización corriendo -> no arranca otra
   e = await correr('G) con otra sincronización en curso', {
