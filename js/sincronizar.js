@@ -93,9 +93,12 @@ sig();
 })[cfg.fn]({ dryRun: false });
 }
 function precios() {
-paso('Refreshing prices...');
+// Desde el 5/09/2026 el paso final ya no refresca formulas (no hay): estampa
+// el historico del dia con los totales frescos. El nombre de la fn del
+// contrato (refrescarPrecios -> 'refrescar') se conserva.
+paso("Saving today's totals...");
 google.script.run.withSuccessHandler(terminar).withFailureHandler(function () {
-error('Precios', 'could not refresh.');
+error("History", "could not save today's totals.");
 terminar();
 }).refrescarPrecios();
 }

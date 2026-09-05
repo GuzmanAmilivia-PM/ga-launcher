@@ -493,8 +493,6 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .wl-accion:active { filter: brightness(.85); }
 .wl-accion.alerta { background: linear-gradient(135deg, var(--gold), var(--gold2)); color: var(--on-gold); }
 .wl-accion.quitar { background: var(--red); color: #fff; }
-.wl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.wl-main .desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* La identidad (logo + simbolo + descripcion) es la MISMA pieza que usan la
    tarjeta del Inicio y la pantalla Posiciones — celdaInstrumentoHtml. Acá
    solo se le da el ancho flexible que en aquellas le da su <td>. */
@@ -515,10 +513,6 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 /* La marca de "este precio no es el de ahora": apagada a proposito. El dato
    que importa es el numero; esto solo evita que se lea como precio en vivo. */
 .wl-viejo { font-size: 10.5px; color: var(--muted); font-weight: 600; }
-.wl-btn { background: none; border: none; color: var(--muted); cursor: pointer; padding: 6px 4px; line-height: 0; -webkit-tap-highlight-color: transparent; }
-.wl-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.wl-btn.armada { color: var(--gold); }
-.wl-btn.disparada { color: var(--green); }
 .wl-alertform { padding: 2px 0 12px; border-bottom: 1px solid var(--border); }
 /* El detalle del activo al tocar la fila (27/08/2026): mismo fondo apagado
    que el detalle de una posicion (.detrow td), pero como bloque y no como
@@ -581,7 +575,6 @@ html.light .wl-detalle { background: rgba(20,40,80,.035); }
 .proyrow .psym { font-weight: 600; min-width: 52px; }
 .proyrow .pnom { color: var(--muted); font-size: 11px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .proyrow .pmonto { font-variant-numeric: tabular-nums; font-weight: 600; }
-.proyrow .pyield { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; min-width: 46px; text-align: right; }
 /* La marca de "esto es estimado por cadencia, no una fecha anunciada". Se
    acompaña SIEMPRE de la nota de abajo: un simbolo suelto no explica nada. */
 .proyrow .pparcial { color: var(--muted); font-size: 11px; }
