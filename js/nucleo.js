@@ -57,7 +57,7 @@ function mostrarLockPendiente() {
 // puede tardar minutos; el resto es rapido y no tiene por que esperar tanto.
 var API_TIMEOUT_MS = 25000;
 var API_TIMEOUT_LARGO_MS = 180000;
-// Todas las que hablan con un tercero o reescriben la planilla. ia_analizar,
+// Todas las que hablan con un tercero o escriben en la base. ia_analizar,
 // bnb_sync, dividendos y aportes faltaban, y la de la IA era una contradiccion
 // con la pantalla: ia.js le dice al usuario "puede tardar hasta un minuto"
 // mientras el pedido se cortaba a los 25 s. Segunda auditoria del 22/08/2026.

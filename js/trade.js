@@ -383,8 +383,8 @@ function renderMacroInicio(data) {
 // ---------- Podcast diario de noticias (30/08/2026) ----------
 // Mismo patron UX que analizarIA (ia.js): boton -> estado de carga ->
 // exito/error, con reintento. El guion lo escribe Claude (misma clave de
-// IA Insights) y la voz la genera Google Cloud Text-to-Speech (misma cuenta
-// de servicio que ya habla con la Sheets API) — las dos APIs viven en el
+// IA Insights) y la voz la genera Google Cloud Text-to-Speech (la cuenta de
+// servicio de Google del backend) — las dos APIs viven en el
 // backend, aca solo se pinta el resultado.
 var podcastCargando = false;
 function wirePodcastBtn(id, forzar) {

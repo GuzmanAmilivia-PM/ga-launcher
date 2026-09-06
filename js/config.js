@@ -261,7 +261,7 @@ document.getElementById('cfgBack').onclick = function () { setView('inicio'); };
 
 // ---------- Diagnostico ----------
 // Lado APP al entrar (todo local, instantaneo); lado SERVIDOR a pedido, que
-// cuesta el viaje al backend y las lecturas de la Sheet.
+// cuesta el viaje al backend y la lectura de la base.
 function filaSalud(etiqueta, valor, esOk) {
 var color = esOk === undefined ? '' : (esOk ? ' style="color:var(--green)"' : ' style="color:var(--red)"');
 return '<div class="row"><span>' + etiqueta + '</span><span' + color + '>' + valor + '</span></div>';
@@ -318,7 +318,7 @@ html += filaSalud('History', esc((s.historico && s.historico.error) || '?'), fal
 }
 // Lo que la lectura del resumen no encontro (bloque de cuentas, fila del
 // total, fila de Liquidez). Esta pantalla es "¿esta bien mi planilla?" y era
-// el unico lugar donde esos avisos no llegaban. Con la planilla sana la lista
+// el unico lugar donde esos avisos no llegaban. Con los datos sanos la lista
 // viene vacia y no se dibuja nada: un aviso que aparece siempre es ruido.
 // Auditoria del 23/08/2026.
 var avs = (s.avisosResumen && s.avisosResumen.length) ? s.avisosResumen : null;

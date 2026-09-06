@@ -395,8 +395,8 @@ return out;
 var sparksPorSym = {};
 function aplicarSparks(data) {
 var s = data && data.sparks;
-// Un objeto VACIO tambien se ignora: el backend manda {} cuando la hoja _spark
-// falla (Sheets caida, GOOGLEFINANCE sin responder, cuota), y pisar con vacio
+// Un objeto VACIO tambien se ignora: el backend manda {} cuando no pudo leer
+// los cierres guardados, y pisar con vacio
 // borraria dibujos que siguen siendo validos. Auditoria del 22/08/2026.
 if (!s || typeof s !== 'object' || !Object.keys(s).length) return;
 sparksPorSym = s;
