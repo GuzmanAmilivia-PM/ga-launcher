@@ -154,7 +154,7 @@ ok(/\.kpis \{ display: none; \}/.test(sinBloque),
 ok(/\.kpis\s*\{[^}]*display:\s*grid/.test(bloque),
   'y el @media la enciende como grilla');
 ok(/id="kpiStrip"/.test(html), 'el contenedor existe en el HTML');
-var graficos = fs.readFileSync(path.join(ruta.RUTA, 'js', 'graficos.js'), 'utf8');
+var graficos = fs.readFileSync(path.join(ruta.RUTA, 'js', 'tablero.js'), 'utf8');
 ok(/function calcularKpis/.test(graficos) && /function pintarKpis/.test(graficos),
   'y el JS que la calcula y la pinta');
 // La honestidad del numero: si faltan variaciones, se DICE cuanta PLATA

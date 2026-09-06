@@ -120,7 +120,7 @@ function celdas(archivo) {
 // (simbolo, tendencia del mes, precio con su variacion del dia); el detalle de
 // cuenta sigue siendo el ESTADO DE CUENTA y conserva los dos datos.
 // Lo unico que las dos comparten: el % del dia va ARRIBA del precio.
-['graficos.js', 'vistas.js'].forEach(function (f) {
+['tablero.js', 'vistas.js'].forEach(function (f) {
   var trozo = celdas(f);
   ok(trozo !== null, f + ': encuentro la fila de la tabla');
   if (!trozo) return;
@@ -133,7 +133,7 @@ console.log('\nC2) Inicio = lista de mercado; detalle de cuenta = estado de cuen
 // La fila del Inicio se mira ENTERA (celdas() corta en holdpct, que ahora es
 // la celda siguiente al precio): si alguien repone el monto o la ganancia ahi,
 // estos asserts fallan.
-var filaInicio = (fs.readFileSync(path.join(ruta.RUTA, 'js', 'graficos.js'), 'utf8')
+var filaInicio = (fs.readFileSync(path.join(ruta.RUTA, 'js', 'tablero.js'), 'utf8')
   .match(/function filaHoldingHtml[\s\S]*?(?=\/\/ ---------- Reparto de Principales)/) || [''])[0];
 var trozoCuenta = celdas('vistas.js');
 ok(filaInicio.indexOf('fmt(h.valor)') === -1,
@@ -456,11 +456,11 @@ ok(pctAnualizado(-120, 800) === null, 'una perdida total no rompe la formula (nu
 console.log('\nF) el mini-grafico de cada posicion (V6)');
 // Se evalua la funcion REAL, no una copia: un sparkline mal escalado dibuja
 // una linea plausible y falsa, y a ojo no se distingue de una buena.
-var graficosSrc = fs.readFileSync(path.join(ruta.RUTA, 'js', 'graficos.js'), 'utf8');
+var graficosSrc = fs.readFileSync(path.join(ruta.RUTA, 'js', 'tablero.js'), 'utf8');
 // Se corta en sparkDe, no en el primer '}' al margen: en este código las llaves
 // internas también van al margen, y cortar ahí traía media función.
 var sparkSrc = (graficosSrc.match(/var SPARK_W[\s\S]*?(?=function sparkDe)/) || [''])[0];
-ok(!!sparkSrc, 'sparkSvg existe en graficos.js');
+ok(!!sparkSrc, 'sparkSvg existe en tablero.js');
 var sparkSvg = new Function(sparkSrc + '\nreturn sparkSvg;')();
 
 var sube = sparkSvg([10, 11, 12, 15]);
@@ -601,7 +601,7 @@ ok(filaCon.indexOf('<img src="https://assets.parqet.com/logos/symbol/MSFT') !== 
 // logos y no se noto porque los logos cargaban. Auditoria del 24/08/2026.
 ok(filaCon.indexOf('onerror=') === -1, 'sin manejadores inline, que la politica de contenido bloquea');
 ok(filaCon.indexOf('class="holdlogo"') !== -1, 'la imagen queda marcada para engancharla desde JS');
-var graficosLogo = fs.readFileSync(path.join(ruta.RUTA, 'js', 'graficos.js'), 'utf8');
+var graficosLogo = fs.readFileSync(path.join(ruta.RUTA, 'js', 'tablero.js'), 'utf8');
 ok(/function engancharLogos[\s\S]{0,400}onerror = function/.test(graficosLogo),
   'y hay un enganche por JS que cae a las iniciales');
 ok(/tr\.innerHTML = filaHoldingHtml\(h\);\s*\n\s*engancharLogos\(tr\);/.test(graficosLogo),

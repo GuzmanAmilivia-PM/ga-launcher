@@ -141,7 +141,7 @@ console.log('\nC3) la politica de contenido y lo que la app de verdad carga');
 //
 // Estos asserts atan las dos cosas al codigo REAL, no a una lista escrita a
 // mano: de donde saca los logos la app, y que la politica los permita.
-var graficosCsp = fsA.readFileSync(pathA.join(ruta.RUTA, 'js', 'graficos.js'), 'utf8');
+var graficosCsp = fsA.readFileSync(pathA.join(ruta.RUTA, 'js', 'tablero.js'), 'utf8');
 var fnLogo = (graficosCsp.match(/function logoUrl[\s\S]*?\n\}/) || [''])[0];
 var hostsLogo = (fnLogo.match(/https:\/\/[a-z0-9.-]+/g) || []).map(function (u) { return u.replace(/\/$/, ''); });
 ok(hostsLogo.length > 0, 'se detectan los hosts de los logos en el codigo: ' + hostsLogo.join(', '));
