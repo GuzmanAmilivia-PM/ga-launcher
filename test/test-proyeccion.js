@@ -182,8 +182,8 @@ ok(typeof clicks.anio === 'function', 'el botón "Rest of year" está enganchado
 clicks.anio();
 // 42,50 (oct) + 12 (nov) + 60 (dic) = 114,50
 ok(el.innerHTML.indexOf('$114.50') !== -1, 'suma octubre a diciembre (=hasta fin de año)');
-ok(el.innerHTML.indexOf('Oct–Dec') !== -1 || el.innerHTML.indexOf('Oct&ndash;Dec') !== -1,
-  'y dice el rango que abarca');
+ok(el.innerHTML.indexOf('Sep–Dec') !== -1 || el.innerHTML.indexOf('Sep&ndash;Dec') !== -1,
+  'y dice el rango que abarca, arrancando en el MES EN CURSO');
 ok(/data-proyper="anio"[^>]*active-acento|active-acento[^>]*data-proyper="anio"/.test(el.innerHTML) ||
    el.innerHTML.indexOf('active-acento" data-proyper="anio"') !== -1,
   'el botón elegido queda marcado');
@@ -192,6 +192,37 @@ ok(el.innerHTML.indexOf('active-compra') === -1 && el.innerHTML.indexOf('active-
   'usa active-acento y NUNCA las clases de Trades (regla dura del proyecto)');
 clicks.mes();
 ok(el.innerHTML.indexOf('$42.50') !== -1, 'y se puede volver al próximo mes');
+
+console.log('\nC2) el MES EN CURSO entra en "Rest of year" (06/09/2026)');
+// Lo cazó la auditoría del 02/09: el rango arrancaba SIEMPRE en el mes
+// siguiente, así que un dividendo del 20 de septiembre todavía sin cobrar no
+// estaba en ninguno de los dos períodos — y el panel se llama "Upcoming
+// income". El gráfico de arriba sí lo mostraba en gris: otra vez las dos
+// mitades del mismo dato en desacuerdo.
+//
+// "Next month" sigue siendo el mes que viene, literal: es lo que se pidió.
+api = correr(COMPLETA, false, {
+  divDatos: {
+    anio: 2026,
+    detalle: {
+      // Estamos en SEPTIEMBRE (el reloj del arnés). Estas dos filas son de
+      // este mes: una todavía por cobrar y otra ya cobrada.
+      9: [{ broker: 'CS', symbol: 'MPT', monto: 7.25, estado: 'proximo', estimado: false },
+          { broker: 'CS', symbol: 'O', monto: 99, estado: 'cobrado', estimado: false }],
+      10: [{ broker: 'CS', symbol: 'VOO', monto: 17.5, estado: 'proximo', estimado: false }]
+    }
+  }
+});
+api.cargar();
+ok(el.innerHTML.indexOf('$17.50') !== -1, '"Next month" sigue siendo octubre, sin septiembre');
+clicks.anio();
+// 7,25 (sep, por cobrar) + 17,50 (oct) = 24,75. Los 99 ya cobrados NO entran.
+ok(el.innerHTML.indexOf('$24.75') !== -1,
+  '"Rest of year" suma lo que falta cobrar de ESTE mes');
+ok(el.innerHTML.indexOf('Sep–Dec') !== -1 || el.innerHTML.indexOf('Sep&ndash;Dec') !== -1,
+  'y el rótulo lo dice: arranca en septiembre');
+ok(el.innerHTML.indexOf('$123.75') === -1 && el.innerHTML.indexOf('$116.50') === -1,
+  'lo YA COBRADO de este mes sigue afuera: el panel es de lo que falta');
 
 console.log('\nD) el período elegido SOBREVIVE a abrir y cerrar la lista');
 api = correr(COMPLETA);
@@ -311,6 +342,23 @@ ok(codigo.indexOf('divDatos.detalle') !== -1,
 // onclick inline, así que serían código muerto que falla en silencio.
 ok(codigo.indexOf('addEventListener') !== -1 && !/onclick=/.test(codigo),
   'los botones se enganchan con addEventListener, nunca con onclick inline');
+
+// El boton Refresh tiene que repintar TAMBIEN este panel (06/09/2026).
+//
+// ALCANCE: mira el fuente, no ejecuta — el arreglo vive en renderDividendos,
+// que esta FUERA del bloque que este arnes evalua.
+//
+// El defecto que cierra: cargarProyeccion() sale por su bandera a la segunda
+// vuelta, asi que al tocar Refresh las barras de arriba se actualizaban con el
+// payload nuevo y el panel de abajo se quedaba con los numeros del anterior.
+// Las dos mitades del mismo dato contradiciendose en la misma pantalla — justo
+// lo que el panel por periodo venia a evitar calculando sobre divDatos.detalle.
+var panelesSrc = require('fs').readFileSync(require('path').join(ruta.RUTA, 'js', 'paneles.js'), 'utf8');
+ok(/cargarProyeccion\(\);[\s\S]{0,600}if \(proyUltimo\) renderProyeccion\(\);/.test(panelesSrc),
+  'tras pedir la proyeccion se repinta con el divDatos recien llegado');
+// Y sin gastar una llamada: renderProyeccion sin argumento reusa lo ya pedido.
+ok(/function renderProyeccion\(r\) \{[\s\S]{0,200}if \(r\) proyUltimo = r;/.test(codigo),
+  'renderProyeccion sin argumento reusa el payload guardado, no vuelve a pedir');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

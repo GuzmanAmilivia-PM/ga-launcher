@@ -39,7 +39,10 @@ function extraer(nombre) {
   if (fin < 0) { console.log('  FALLA: no pude delimitar ' + nombre); fallos++; asserts++; return null; }
   return src.slice(ini, fin + 2);
 }
-var piezas = ['submuestrearLTTB', 'montoCorto', 'etiquetaFechaEje'].map(extraer);
+// _decimalesPara es el ayudante de montoCorto: sin el, montoCorto explota al
+// recibir un paso. Extraerlo aparte es a proposito — si alguien lo renombra,
+// esto falla en vez de pasar sin probar nada.
+var piezas = ['submuestrearLTTB', '_decimalesPara', 'montoCorto', 'etiquetaFechaEje'].map(extraer);
 if (piezas.some(function (p) { return !p; })) {
   console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
   process.exit(1);
@@ -106,6 +109,47 @@ ok(api.montoCorto(12000000) === '12M', 'y de 10M para arriba, ninguno');
 ok(api.montoCorto(9400) === '9,400', 'por debajo de 10.000 se escribe entero');
 ok(api.montoCorto(0) === '0', 'el cero se escribe');
 ok(api.montoCorto('x') === '', 'un valor invalido no imprime basura');
+console.log('\nE2) el eje Y NO puede escribir dos marcas vecinas iguales (06/09/2026)');
+// Lo cazo la auditoria del 02/09: con la cartera de Guzman en 120K y el rango
+// 1S, la escala da paso 200 y el eje escribia "120K" CINCO VECES. Borrar las
+// repetidas —como hace el eje X— aca seria peor: quedaria una sola etiqueta y
+// se perderia la escala entera. La solucion es al reves: mas precision, y el
+// unico dato que sabe cuanta hace falta es el PASO.
+//
+// escalaLinda es la del motor real (gagraf.js), no una copia: si cambia, este
+// arnes se entera.
+var ggSrc = require('fs').readFileSync(require('path').join(ruta.RUTA, 'js', 'gagraf.js'), 'utf8');
+var escIni = ggSrc.indexOf('function escalaLinda');
+var escalaLinda = new Function(ggSrc.slice(escIni, ggSrc.indexOf('\n  }', escIni) + 4) + '; return escalaLinda;')();
+
+function etiquetasDe(lo, hi) {
+  var e = escalaLinda(lo, hi, 5);
+  var out = [];
+  for (var v = e.min; v <= e.max + e.paso / 2; v += e.paso) out.push(api.montoCorto(Math.round(v), e.paso));
+  return out;
+}
+[['1S con la cartera de hoy', 119600, 120400],
+ ['una cartera arriba del millon', 1180000, 1240000],
+ ['YTD normal', 88000, 122000],
+ ['1M', 700000, 760000],
+ ['una cartera chica', 8800, 9600]].forEach(function (caso) {
+  var txt = etiquetasDe(caso[1], caso[2]);
+  var unicas = {};
+  txt.forEach(function (t) { unicas[t] = 1; });
+  ok(Object.keys(unicas).length === txt.length,
+    caso[0] + ': ' + txt.length + ' marcas, todas distintas -> ' + txt.join(' '));
+});
+
+// Y SIN el paso se comporta igual que antes: los asserts de arriba siguen
+// valiendo y cualquier llamador que solo quiera el numero corto no cambia.
+ok(api.montoCorto(120000) === '120K' && api.montoCorto(1500000) === '1.5M',
+  'sin paso, el formato de siempre');
+
+// La otra mitad: que el motor le PASE el paso. Sin esto el formateador nunca
+// se entera y las marcas vuelven a repetirse, con el arnes en verde.
+ok(/cbY\(Math\.round\(v\), e\.paso\)/.test(ggSrc),
+  'gagraf le pasa el paso de la escala al callback del eje Y');
+
 
 console.log('');
 console.log('F) el eje X: la escala manda el formato, y los tres NO se confunden');

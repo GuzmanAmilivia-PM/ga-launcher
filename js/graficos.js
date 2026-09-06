@@ -146,14 +146,33 @@ function getFilteredDataPoints(serie) {
 // ancho al dibujo y no agregan precision — el numero exacto vive arriba, en
 // el total, que es donde se lo busca. Por debajo de 10.000 se escribe entero:
 // ahi el "K" con decimal (9,4K) es MENOS legible que 9.400.
-function montoCorto(v) {
+// Cuantos decimales necesita una escala para que dos marcas VECINAS no se
+// escriban igual (06/09/2026). Sale del PASO, que es el unico dato que lo
+// sabe: con paso 200 sobre 120.000, "120K" se repetia cinco veces.
+function _decimalesPara(paso, div) {
+  var p = Math.abs(Number(paso)) / div;
+  if (!isFinite(p) || p <= 0) return 0;
+  if (p >= 1) return 0;
+  if (p >= 0.1) return 1;
+  return 2;
+}
+function montoCorto(v, paso) {
   var n = Number(v);
   if (!isFinite(n)) return '';
   var abs = Math.abs(n);
-  if (abs >= 1e6) return (n / 1e6).toFixed(abs >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M';
-  if (abs >= 1e4) return Math.round(n / 1e3) + 'K';
+  // Sin paso se comporta como antes: los tests unitarios y cualquier llamador
+  // que solo quiera el numero corto siguen viendo lo mismo.
+  if (abs >= 1e6) {
+    var dM = paso === undefined ? (abs >= 1e7 ? 0 : 1) : _decimalesPara(paso, 1e6);
+    return (n / 1e6).toFixed(dM).replace(/\.0+$/, '') + 'M';
+  }
+  if (abs >= 1e4) {
+    var dK = paso === undefined ? 0 : _decimalesPara(paso, 1e3);
+    return (n / 1e3).toFixed(dK).replace(/\.0+$/, '') + 'K';
+  }
   return n.toLocaleString('en-US');
 }
+
 
 // EJE X: la escala manda el formato. Con "02 Sep" fijo, un rango de 5 anios
 // mostraba cinco dias sueltos y un rango de una semana repetia el mes cinco
@@ -369,7 +388,7 @@ function benchPctEnRango(serie) {
   plugins: { legend: { display: false } },
   scales: {
   x: { type: 'linear', min: xMin, max: xMax, bounds: 'data', ticks: { color: TC.tick, maxTicksLimit: 6, callback: function (value) { return etiquetaFechaEje(value, xMin, xMax); } }, grid: { color: TC.grid } },
-  y: { ticks: { color: TC.tick, callback: function (v) { return montosOcultos ? '' : montoCorto(v); } }, grid: { color: TC.grid } }
+  y: { ticks: { color: TC.tick, callback: function (v, paso) { return montosOcultos ? '' : montoCorto(v, paso); } }, grid: { color: TC.grid } }
   }
   };
   }

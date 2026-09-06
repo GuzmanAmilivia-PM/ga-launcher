@@ -105,11 +105,16 @@
     var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs);
     if (x1 === x0) x1 = x0 + 1;
 
+    // Al callback del eje Y se le pasa el PASO de la escala (06/09/2026). Sin
+    // el, un formateador que redondea no sabe cuanta precision hace falta: con
+    // la cartera en 120K y el rango 1S, el paso es 200 y el eje escribia
+    // "120K" CINCO VECES. Borrar las repetidas —como hace el eje X— aca seria
+    // peor: quedaria una sola etiqueta y se perderia la escala entera.
     var cbY = tickCb(ejes.y), cbX = tickCb(ejes.x);
     ctx.font = tickFont(ejes.y) + 'px sans-serif';
     var padIzq = 8, etiquetasY = [];
     for (var v = e.min; v <= e.max + e.paso / 2; v += e.paso) {
-      var txt = String(cbY(Math.round(v)));
+      var txt = String(cbY(Math.round(v), e.paso));
       etiquetasY.push({ v: v, txt: txt });
       padIzq = Math.max(padIzq, ctx.measureText(txt).width + 10);
     }
@@ -244,7 +249,7 @@
     ctx.font = fs + 'px sans-serif';
     var padIzq = 8, etiquetasY = [];
     for (var v = e.min; v <= e.max + e.paso / 2; v += e.paso) {
-      var txt = String(cbY(Math.round(v * 100) / 100));
+      var txt = String(cbY(Math.round(v * 100) / 100, e.paso));
       etiquetasY.push({ v: v, txt: txt });
       padIzq = Math.max(padIzq, ctx.measureText(txt).width + 10);
     }

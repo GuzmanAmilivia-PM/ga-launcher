@@ -259,6 +259,14 @@ document.getElementById('divHint').style.display = '';
 // La proyección se pide recién acá: es una segunda llamada al backend y no
 // tiene sentido gastarla si el panel de dividendos ni siquiera cargó.
 cargarProyeccion();
+// Y si YA se habia pedido, se vuelve a pintar con el divDatos recien llegado
+// (06/09/2026). cargarProyeccion() sale por su bandera a la segunda vuelta,
+// asi que al tocar Refresh las barras de arriba se actualizaban y el panel de
+// abajo se quedaba con los numeros del payload ANTERIOR — las dos mitades del
+// mismo dato contradiciendose en la misma pantalla, que es justo lo que el
+// panel por periodo venia a evitar calculando sobre divDatos.detalle.
+// No cuesta una llamada: renderProyeccion sin argumento reusa lo ya pedido.
+if (proyUltimo) renderProyeccion();
 var cobrados = (r.meses || []).map(function (m) { return m.cobrado || 0; });
 var proximos = (r.meses || []).map(function (m) { return m.proximo || 0; });
 var t = temaChart();
@@ -344,9 +352,16 @@ var proyUltimo = null;
 // afirmacion y no un dato que falta.
 function proyRango(periodo) {
   var mesActual = new Date().getMonth() + 1;   // zona del dispositivo, como el resto del panel
+  // "Rest of year" arranca en el mes EN CURSO (06/09/2026). Arrancaba en el
+  // siguiente, asi que un dividendo del 20 de septiembre todavia sin cobrar no
+  // estaba en NINGUNO de los dos periodos — y el panel se llama "Upcoming
+  // income". Solo entran las filas con estado `proximo`, que por definicion
+  // son las que faltan cobrar: lo ya cobrado de este mes sigue afuera.
+  if (periodo === 'anio') return { desde: mesActual, hasta: 12 };
+  // "Next month" SI es el mes que viene, literal: es lo que pidio Guzman.
   var desde = mesActual + 1;
   if (desde > 12) return null;                 // diciembre: el proximo mes ya es otro ano
-  return { desde: desde, hasta: (periodo === 'mes') ? desde : 12 };
+  return { desde: desde, hasta: desde };
 }
 
 // Lo que se cobra en ese rango, por simbolo. Sale de `divDatos.detalle`, el
