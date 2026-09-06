@@ -17,7 +17,7 @@ var limpio = html.replace(/<!--[\s\S]*?-->/g, '');
 console.log('\nA) todo el JavaScript compila');
 // El HTML solo conserva un bloque inline chico (el del tema, en el head);
 // el resto vive en js/*.js. leerIndex() ya concatena todo.
-var soloHtml = require('fs').readFileSync(ruta.INDEX, 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+var soloHtml = ruta.leerIndexCrudo().replace(/<!--[\s\S]*?-->/g, '');
 var re = /<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/g;
 var m, n = 0, malos = [];
 while ((m = re.exec(soloHtml)) !== null) {
@@ -58,6 +58,13 @@ var sw = fsA.readFileSync(pathA.join(ruta.RUTA, 'sw.js'), 'utf8');
 var sinCachear = archivosJs.filter(function (f) { return sw.indexOf("./js/" + f) === -1; });
 ok(sinCachear.length === 0,
    'ASSETS del sw.js al dia' + (sinCachear.length ? ' — FALTAN: ' + sinCachear.join(', ') + ' (offline se rompe)' : ''));
+// El CSS vive aparte desde el 6/09/2026 (120 de los 160 KB del index): el
+// index lo enlaza, no queda ningun <style> grande adentro, y el sw lo cachea.
+var indexEnDisco = fsA.readFileSync(ruta.INDEX, 'utf8');
+ok(/<link rel="stylesheet" href="\.\/css\/estilos\.css">/.test(indexEnDisco), 'index.html enlaza css/estilos.css');
+ok(!/<style>/.test(indexEnDisco), 'y ya no trae el bloque <style> adentro');
+ok(fsA.existsSync(pathA.join(ruta.RUTA, 'css', 'estilos.css')), 'css/estilos.css existe');
+ok(sw.indexOf('./css/estilos.css') !== -1, 'y esta en ASSETS del sw (offline se rompe sin el)');
 
 console.log('\nB3) las fuentes viven en la app y el shell va cache-first');
 // Desde v65 (R4): el CSS de Google Fonts bloqueaba el primer pintado sin
@@ -315,7 +322,7 @@ if (tocados === null) {
   console.log('  (sin git en ' + ruta.RUTA + ': me salteo el chequeo del bump)');
 } else {
   var lista = tocados.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
-  var esCascaron = function (f) { return f === 'index.html' || /^js\/[\w-]+\.js$/.test(f); };
+  var esCascaron = function (f) { return f === 'index.html' || /^js\/[\w-]+\.js$/.test(f) || /^css\/[\w-]+\.css$/.test(f); };
   var cambiaronDelCascaron = lista.filter(esCascaron);
   var subioSw = lista.indexOf('sw.js') !== -1;
   ok(cambiaronDelCascaron.length === 0 || subioSw,

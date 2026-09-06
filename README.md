@@ -39,7 +39,8 @@ mejora toca las dos. Leerlo antes de proponer trabajo sobre esta app.
 
 ## Estructura
 
-- `index.html` — solo estructura visual + CSP. El código vive en `js/`.
+- `index.html` — solo estructura visual + CSP. Los estilos viven en
+  `css/estilos.css` (desde el 6/09/2026) y el código en `js/`.
 - `js/nucleo.js` — shim de la API, helpers. Se carga primero.
 - `js/gagraf.js` — gráficos propios (reemplazo de Chart.js, misma interfaz).
 - `js/vistas|trade|graficos|tablero|calor|config|brokers|paneles|analisis|sincronizar|ia|seguridad|buscador|watchlist.js`

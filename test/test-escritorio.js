@@ -13,7 +13,7 @@
 var ruta = require('./_ruta');
 var fs = require('fs');
 var path = require('path');
-var html = fs.readFileSync(ruta.INDEX, 'utf8');
+var html = ruta.leerIndexCrudo();
 var paneles = fs.readFileSync(path.join(ruta.RUTA, 'js', 'paneles.js'), 'utf8');
 var arranque = fs.readFileSync(path.join(ruta.RUTA, 'js', 'arranque.js'), 'utf8');
 

@@ -171,7 +171,7 @@ ok(/pieBorder: leerVarCss\('--navy2', '#ffffff'\)/.test(configSrc2) && /pieBorde
   'el borde de la torta acompana a la tonalidad (temaChart lee la variable viva)');
 
 console.log('\nF) el CSS: paletas y tonalidades con su par claro, sin colores clavados');
-var indexCrudo = fs.readFileSync(ruta.INDEX, 'utf8');
+var indexCrudo = ruta.leerIndexCrudo();
 ['oceano', 'esmeralda', 'violeta'].forEach(function (p) {
   ok(indexCrudo.indexOf('html[data-paleta="' + p + '"]') !== -1, p + ': regla oscura del acento');
   ok(indexCrudo.indexOf('html.light[data-paleta="' + p + '"]') !== -1, p + ': y su par claro');

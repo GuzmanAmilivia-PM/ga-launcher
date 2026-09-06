@@ -165,7 +165,7 @@ api.renderPosiciones();
 ok(els.posBody.innerHTML.indexOf('No positions') !== -1, 'sin posiciones, idem');
 
 console.log('\nG) el HTML y el cableado del resto de la app');
-var indexCrudo = fs.readFileSync(ruta.INDEX, 'utf8');
+var indexCrudo = ruta.leerIndexCrudo();
 ok(indexCrudo.indexOf('Principales posiciones') === -1, 'el titulo del Inicio ya no dice "Principales posiciones"');
 ok(/<h2 id="posTitulo"[^>]*>Positions/.test(indexCrudo), 'dice "Positions" y es el h2 con id posTitulo');
 ok(/id="posTitulo"[^>]*role="button"/.test(indexCrudo) && /id="posTitulo"[^>]*tabindex="0"/.test(indexCrudo),

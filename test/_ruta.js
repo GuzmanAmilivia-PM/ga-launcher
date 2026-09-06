@@ -8,13 +8,28 @@ var path = require('path');
 var RUTA = process.env.GA_LAUNCHER || path.join(__dirname, '..');
 var INDEX = path.join(RUTA, 'index.html');
 
+/**
+ * El index.html tal cual, pero con el CSS de css/estilos.css pegado de vuelta
+ * en su lugar (desde el 6/09/2026 vive en un archivo aparte). Asi los arneses
+ * que miran reglas de estilo en "el HTML" siguen viendo lo mismo que antes.
+ */
+function leerIndexCrudo() {
+  var html = fs.readFileSync(INDEX, 'utf8');
+  var css = path.join(RUTA, 'css', 'estilos.css');
+  if (fs.existsSync(css)) {
+    html = html.replace('<link rel="stylesheet" href="./css/estilos.css">',
+      function () { return '<style>\n' + fs.readFileSync(css, 'utf8') + '\n</style>'; });
+  }
+  return html;
+}
+
 function leerIndex() {
   if (!fs.existsSync(INDEX)) {
     console.error('No encuentro ' + INDEX + '.');
     console.error('Cloná el repo ga-launcher o apuntá la variable GA_LAUNCHER a donde esté.');
     process.exit(1);
   }
-  var html = fs.readFileSync(INDEX, 'utf8');
+  var html = leerIndexCrudo();
   // Desde el 16/08/2026 el codigo vive en js/*.js (scripts clasicos que el
   // index carga en orden). Para los arneses se devuelve todo concatenado EN
   // ESE MISMO ORDEN, asi los marcadores de bloque se siguen encontrando y el
@@ -52,4 +67,5 @@ function bloque(html, desde, hasta) {
   return html.slice(i, f);
 }
 
-module.exports = { RUTA: RUTA, INDEX: INDEX, leerIndex: leerIndex, bloque: bloque };
+module.exports = {
+  leerIndexCrudo: leerIndexCrudo, RUTA: RUTA, INDEX: INDEX, leerIndex: leerIndex, bloque: bloque };

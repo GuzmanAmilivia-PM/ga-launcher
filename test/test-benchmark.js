@@ -35,7 +35,7 @@ var path = require('path');
 var graficos = fs.readFileSync(path.join(ruta.RUTA, 'js', 'graficos.js'), 'utf8');
 // Solo el index.html (leerIndex concatena tambien los js/): hace falta para
 // verificar que el nodo y su CSS se fueron de la PANTALLA, no del codigo.
-var indexHtml = fs.readFileSync(ruta.INDEX, 'utf8');
+var indexHtml = ruta.leerIndexCrudo();
 
 function montar(opts) {
   opts = opts || {};
