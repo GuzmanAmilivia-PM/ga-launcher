@@ -268,6 +268,11 @@ ok(!!mLista, 'encuentro el armado de la lista de aportes en el worker');
 var camposWorker = (mLista ? mLista[1] : '').match(/(\w+)\s*:/g) || [];
 camposWorker = camposWorker.map(function (c) { return c.replace(':', '').trim(); });
 ok(camposWorker.indexOf('grupo') !== -1, 'el worker sigue mandando `grupo` (si lo renombró, la app hay que tocarla)');
+// `total` (7/09/2026): el aporte del día sobre el patrimonio ENTERO. Los
+// cálculos sobre la serie total lo leen; sin él caen a `grupo`, y un
+// depósito a BTG vuelve a contarse como rendimiento (el caso real que lo
+// originó: 1.500 de sueldo a BTG, y el Inicio decía +1,25 pp contra el S&P).
+ok(camposWorker.indexOf('total') !== -1, 'y manda `total`: el aporte del día a TODAS las cuentas, para la serie total');
 ok(camposWorker.indexOf('monto') === -1, 'y NO manda `monto`: leerlo da undefined y suma cero en silencio');
 // Todo lugar de la app que recorra aportesLista tiene que leer un campo que
 // el worker mande de verdad. Se mira SOLO adentro de esos recorridos: hay
@@ -279,8 +284,25 @@ var conMonto = recorridos.filter(function (b) { return /\b\w+\.monto\b/.test(b);
 ok(conMonto.length === 0,
   'ningún recorrido de aportes lee `.monto`' +
   (conMonto.length ? ' — hay ' + conMonto.length + ', y ese campo no viaja: suma cero en silencio' : ''));
-var conGrupo = recorridos.filter(function (b) { return /\b\w+\.grupo\b/.test(b); });
-ok(conGrupo.length === recorridos.length, 'todos leen `grupo`, que es el campo real');
+// Cada recorrido lee `grupo` (la comparación del grupo, que mide solo esas
+// cuentas) o pasa por aporteTotalDelDia (todo lo que mide la serie total).
+var conCampoReal = recorridos.filter(function (b) { return /\b\w+\.grupo\b/.test(b) || /aporteTotalDelDia\(/.test(b); });
+ok(conCampoReal.length === recorridos.length, 'todos leen `grupo` o pasan por aporteTotalDelDia (los dos campos reales)');
+// Y el reparto no se cruza: la serie TOTAL descuenta `total`, la del GRUPO
+// descuenta `grupo`. Un depósito a BTG tiene grupo 0 y total > 0 — si
+// aportesEnRango o comparacionAnual leyeran `grupo`, ese depósito sería
+// "rendimiento"; si comparacionGrupo leyera `total`, el capital del grupo
+// subiría sin que su valor suba.
+function cuerpo(nombre) {
+  var m = html.match(new RegExp('function ' + nombre + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}'));
+  return m ? m[0] : '';
+}
+ok(/aporteTotalDelDia\(/.test(cuerpo('aportesEnRango')), 'aportesEnRango (serie total) descuenta el aporte TOTAL del día');
+ok(/aporteTotalDelDia\(/.test(cuerpo('comparacionAnual')), 'comparacionAnual (serie total) descuenta el aporte TOTAL del día');
+ok(/\.grupo\b/.test(cuerpo('comparacionGrupo')) && !/aporteTotalDelDia\(|\.total\b/.test(cuerpo('comparacionGrupo')),
+  'comparacionGrupo sigue con `grupo` y NO toca `total`: mide solo Schwab + IBKR + Binance');
+ok(/\.total\b/.test(cuerpo('aporteTotalDelDia')) && /\.grupo\b/.test(cuerpo('aporteTotalDelDia')),
+  'aporteTotalDelDia lee `total` y cae a `grupo` si no vino (cache anterior al campo)');
 
 console.log('\nH) la CSP sin unsafe-inline: el hash del snippet del tema coincide');
 ok(csp.indexOf("script-src 'self' 'sha256-") !== -1 && !/script-src[^;]*unsafe-inline/.test(csp), 'script-src va por hash, no por unsafe-inline');

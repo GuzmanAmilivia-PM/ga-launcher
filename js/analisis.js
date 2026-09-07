@@ -261,11 +261,17 @@ var d = new Date(p.fecha);
 var k = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2);
 if (!fin[k] || p.fecha >= fin[k].fecha) fin[k] = p;
 });
-// Los aportes de cada mes, con el MISMO campo que manda el backend.
+// Los aportes de cada mes. La serie es la del patrimonio ENTERO, asi que el
+// campo es `total` (lo que entro a todas las cuentas, bancos incluidos), no
+// `grupo` (solo Schwab + IBKR + Binance): con `grupo`, un deposito a BTG
+// pintaba de verde el mes (7/09/2026). Si `total` no vino (cache local
+// anterior al campo), se cae a `grupo`, como hace aporteTotalDelDia en
+// graficos.js — se repite aca porque este bloque se prueba aislado.
 var flujo = {};
 lista.forEach(function (a) {
 var k = String(a.fecha || '').slice(0, 7);
-var m = Number(a.grupo);
+var m = Number(a.total);
+if (!isFinite(m)) m = Number(a.grupo);
 if (k && isFinite(m)) flujo[k] = (flujo[k] || 0) + m;
 });
 var claves = Object.keys(fin).sort();

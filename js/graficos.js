@@ -306,6 +306,8 @@ function serieBench(serie) {
 
 // Cuanto se aporto DENTRO del rango visible. Devuelve 0 si no hubo, o si
 // todavia no llego la lista de aportes (se pide aparte, en su panel).
+// Es sobre la serie TOTAL, asi que descuenta el aporte a TODAS las cuentas
+// (aporteTotalDelDia, en el bloque de aportes), no solo el del grupo.
 function aportesEnRango(serie) {
   if (!serie.length || !aportesLista.length) return 0;
   var desde = serie[0].fecha, hasta = serie[serie.length - 1].fecha;
@@ -313,14 +315,7 @@ function aportesEnRango(serie) {
   aportesLista.forEach(function (a) {
     var ts = apISOaMs(a.fecha);
     if (ts === null || ts < desde || ts > hasta) return;
-    // `grupo`, NO `monto`: es el nombre que manda el backend (getAportes
-    // devuelve {fecha, grupo}; `monto` se saco del payload hace tiempo).
-    // Leyendo `monto` esto devolvia SIEMPRE 0 —undefined no es finito— y con
-    // eso movimientoDelSaldo informaba "Contributions: US$ 0" atribuyendo
-    // todo al mercado, que es exactamente la mentira que D3 vino a eliminar.
-    // Los otros dos lugares que recorren esta lista ya leian `grupo` bien;
-    // este quedo solo. Encontrado el 1/09/2026.
-    var m = Number(a.grupo);
+    var m = aporteTotalDelDia(a);
     if (isFinite(m)) total += m;
   });
   return total;
@@ -581,6 +576,25 @@ function apISOaMs(s) {
   return new Date(+p[0], +p[1] - 1, +p[2]).getTime();
 }
 
+// El aporte de un dia sobre el patrimonio ENTERO. El backend manda dos montos
+// por dia (getAportes, 7/09/2026): `grupo` es lo que entro a Schwab + IBKR +
+// Binance, y `total` lo que entro a TODAS las cuentas, bancos incluidos.
+// Todo calculo sobre la serie TOTAL (aportesEnRango y con ella la linea vs
+// S&P del Inicio, comparacionAnual, los retornos mensuales de Analisis) tiene
+// que leer `total`: leyendo `grupo`, un deposito de sueldo a BTG —grupo 0—
+// quedaba contado como rendimiento, y el Inicio decia que la cartera le habia
+// ganado 1,25 puntos al indice con plata que Guzman acababa de poner.
+// comparacionGrupo() es la UNICA que sigue leyendo `grupo`: mide solo esas
+// cuentas, y ahi un deposito a BTG no existe.
+// Si `total` no vino (un cache local anterior a este campo), se cae a `grupo`,
+// que es lo que se leia hasta hoy: peor que el dato nuevo, mejor que un cero.
+// Y NUNCA `monto`: ese nombre no viaja, y leerlo sumaba cero en silencio
+// (encontrado el 1/09/2026).
+function aporteTotalDelDia(a) {
+  var t = Number(a.total);
+  return isFinite(t) ? t : Number(a.grupo);
+}
+
 // ---------- El indice de referencia ----------
 // El backend manda el cierre del indice alineado punto a punto con la serie
 // (`bench.valores`), asi el telefono no tiene que buscar ninguna fecha. Lo
@@ -788,10 +802,13 @@ function comparacionAnual() {
   var base = fullSerie[i0].valor, fin = fullSerie[fullSerie.length - 1].valor;
   if (!(base > 0)) return null;
 
+  // `total`, no `grupo`: esta es la serie del patrimonio ENTERO, y el aporte
+  // que hay que descontar es el que entro a cualquier cuenta (ver
+  // aporteTotalDelDia).
   var flujos = [];
   aportesLista.forEach(function (r) {
     var ts = apISOaMs(r.fecha);
-    var m = Number(r.grupo);
+    var m = aporteTotalDelDia(r);
     if (isFinite(ts) && ts > fullSerie[i0].fecha && isFinite(m) && m !== 0) flujos.push({ ts: ts, monto: m });
   });
 

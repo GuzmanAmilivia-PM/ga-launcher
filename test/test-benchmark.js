@@ -165,7 +165,7 @@ console.log('\nF) LO DELICADO: si hubo aportes en el periodo, se avisa');
 // re-escalado eso se lee como rendimiento propio. No se puede callar.
 var conAportes = montar({ fullSerie: SERIE });
 conAportes.aplicarBench({ bench: { nombre: 'S&P 500', valores: [5000, 5100, 5250] } });
-conAportes.aplicarAportes({ lista: [{ fecha: '2026-03-03', grupo: 5000 }], desde: '2026-03-02' });
+conAportes.aplicarAportes({ lista: [{ fecha: '2026-03-03', grupo: 5000, total: 5000 }], desde: '2026-03-01' });
 ok(conAportes.aportesEnRango(SERIE) === 5000, 'detecta los 5.000 aportados dentro del rango');
 conAportes.pintarVsBench(SERIE, 10);
 // Desde D3 (31/08/2026) este caso mejoro: en vez de un asterisco vago, se
@@ -219,7 +219,7 @@ ok(apiCero.serieBench(todoCero).length === 0, 'con TODO en cero no hay de donde 
 // =========================================================================
 console.log('\nI) el desglose: inicial + aportes + mercado = final');
 var apiM = montar({ fullSerie: SERIE });
-apiM.aplicarAportes({ lista: [{ fecha: '2026-03-03', grupo: 4000 }], desde: '2026-03-01' });
+apiM.aplicarAportes({ lista: [{ fecha: '2026-03-03', grupo: 4000, total: 4000 }], desde: '2026-03-01' });
 var m = apiM.movimientoDelSaldo(SERIE);
 // 100.000 -> 110.000 son +10.000, pero 4.000 los pusiste vos: rindio 6.000.
 ok(m.inicial === 100000 && m.final === 110000, 'toma los extremos del rango');
@@ -230,10 +230,31 @@ ok(Math.abs(m.mercadoPct - (6000 / 104000 * 100)) < 0.01,
 
 console.log('\nJ) un RETIRO da vuelta el signo sin romper la cuenta');
 var apiR = montar({ fullSerie: SERIE });
-apiR.aplicarAportes({ lista: [{ fecha: '2026-03-03', grupo: -3000 }], desde: '2026-03-01' });
+apiR.aplicarAportes({ lista: [{ fecha: '2026-03-03', grupo: -3000, total: -3000 }], desde: '2026-03-01' });
 var mr = apiR.movimientoDelSaldo(SERIE);
 ok(mr.aportes === -3000, 'los retiros vienen negativos (asi los manda el backend)');
 ok(mr.mercado === 13000, 'y el mercado sube: subiste 10.000 HABIENDO sacado 3.000');
+
+console.log('\nJ2) un deposito a BTG (grupo 0, total 1.500) SE DESCUENTA: la serie es la del patrimonio entero');
+// El caso real del 7/09/2026: Guzman puso 1.500 de sueldo en BTG. BTG no es
+// del grupo comparable, asi que viaja con grupo 0 — y leyendo `grupo`, el
+// Inicio lo mostraba como rendimiento: "+1,25 pp vs S&P" con plata recien
+// puesta. Sobre la serie TOTAL el campo es `total`.
+var apiBtg = montar({ fullSerie: SERIE });
+apiBtg.aplicarBench({ bench: { nombre: 'S&P 500', valores: [5000, 5100, 5250] } });
+apiBtg.aplicarAportes({ lista: [{ fecha: '2026-03-03', grupo: 0, total: 1500 }], desde: '2026-03-01' });
+ok(apiBtg.aportesEnRango(SERIE) === 1500, 'aportesEnRango lee `total`: 1.500, no el 0 del grupo');
+var mb = apiBtg.movimientoDelSaldo(SERIE);
+ok(mb.aportes === 1500 && mb.mercado === 8500, 'el desglose: subio 10.000, 1.500 los pusiste, 8.500 fueron mercado');
+apiBtg.pintarVsBench(SERIE, 10);
+// Limpio: 8.500 / 101.500 = 8,37%, contra un indice de +5% = +3,4 pp.
+ok(/\+3\.4 pp/.test(apiBtg._pintado.texto), 'el delta usa el rendimiento limpio (8,37% − 5%), no el +10% crudo: ' + apiBtg._pintado.texto);
+ok(/WITHOUT the/.test(apiBtg._pintado.titulo) && /1,500/.test(apiBtg._pintado.titulo), 'y la explicacion dice que se descontaron los 1.500');
+// Un cache local anterior al campo (sin `total`) cae a `grupo`: es lo que se
+// leia hasta hoy — peor que el dato nuevo, mejor que atribuir todo al mercado.
+var apiViejo = montar({ fullSerie: SERIE });
+apiViejo.aplicarAportes({ lista: [{ fecha: '2026-03-03', grupo: 4000 }], desde: '2026-03-01' });
+ok(apiViejo.aportesEnRango(SERIE) === 4000, 'sin `total` (cache viejo) sigue leyendo `grupo`');
 
 console.log('\nK) GUARDA 1 — sin la lista de aportes no se inventa un cero');
 // Sin ella, TODO el cambio se atribuiria a mercado: diria que ganaste
@@ -247,7 +268,7 @@ ok(mSin.mercado === undefined, 'y NO trae un mercado calculado a ciegas');
 console.log('\nL) GUARDA 2 — un rango que empieza ANTES de lo que la lista cubre');
 // Los aportes de ese tramo no estan y caerian enteros en "mercado".
 var apiAntes = montar({ fullSerie: SERIE });
-apiAntes.aplicarAportes({ lista: [{ fecha: '2026-03-04', grupo: 1000 }], desde: '2026-06-01' });
+apiAntes.aplicarAportes({ lista: [{ fecha: '2026-03-04', grupo: 1000, total: 1000 }], desde: '2026-06-01' });
 var mAntes = apiAntes.movimientoDelSaldo(SERIE);
 ok(mAntes && mAntes.sinDatos === 'rango', 'detecta que el rango excede lo que la lista conoce');
 

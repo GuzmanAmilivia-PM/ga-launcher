@@ -46,9 +46,9 @@ var SERIE = [
   cierre(2026, 3, 90082), cierre(2026, 4, 102572)
 ];
 var APORTES = [
-  { fecha: '2026-01-15', grupo: 2500 },
-  { fecha: '2026-02-10', grupo: 1500 },
-  { fecha: '2026-03-05', grupo: 1500 }
+  { fecha: '2026-01-15', grupo: 2500, total: 2500 },
+  { fecha: '2026-02-10', grupo: 1500, total: 1500 },
+  { fecha: '2026-03-05', grupo: 1500, total: 1500 }
 ];
 
 // Tercer argumento `cargados` (1/09/2026, tarde): la bandera aportesCargados
@@ -70,15 +70,32 @@ console.log('\nB) el caso que justifica todo: el signo dado vuelta');
 // neto −0,81%. Sin la resta, la grilla lo pinta VERDE.
 var junio = api.retornosMensuales(
   [cierre(2026, 5, 109885), cierre(2026, 6, 110500)],
-  [{ fecha: '2026-06-11', grupo: 1500 }], true
+  [{ fecha: '2026-06-11', grupo: 1500, total: 1500 }], true
 );
 ok(junio[0].pct < 0, 'junio da NEGATIVO una vez restado el aporte (dio ' + junio[0].pct.toFixed(2) + ')');
 ok(Math.abs(junio[0].pct - (-0.81)) < 0.02, 'y da −0,81%, no +0,56%');
 var hJunio = api.anaHeatmapHtml(
   [cierre(2026, 5, 109885), cierre(2026, 6, 110500)],
-  [{ fecha: '2026-06-11', grupo: 1500 }], true
+  [{ fecha: '2026-06-11', grupo: 1500, total: 1500 }], true
 );
 ok(/239,68,68/.test(hJunio) && !/16,185,129/.test(hJunio), 'y la celda se pinta ROJA, no verde');
+
+console.log('\nB2) un deposito a BTG (grupo 0, total 1.500) tambien se resta: la serie es la del patrimonio entero');
+// El caso real del 7/09/2026. BTG no es del grupo comparable, asi que el
+// backend lo manda con grupo 0 y total 1.500. Leyendo `grupo`, junio quedaba
+// VERDE con plata que Guzman acababa de depositar.
+var btg = api.retornosMensuales(
+  [cierre(2026, 5, 109885), cierre(2026, 6, 110500)],
+  [{ fecha: '2026-06-11', grupo: 0, total: 1500 }], true
+);
+ok(btg[0].pct < 0 && Math.abs(btg[0].pct - (-0.81)) < 0.02, 'lee `total`: junio da −0,81%, no +0,56% (dio ' + btg[0].pct.toFixed(2) + ')');
+ok(btg[0].conAporte, 'y el mes queda marcado con movimiento de plata');
+// Un cache local anterior al campo (sin `total`) cae a `grupo`.
+var viejo = api.retornosMensuales(
+  [cierre(2026, 5, 109885), cierre(2026, 6, 110500)],
+  [{ fecha: '2026-06-11', grupo: 1500 }], true
+);
+ok(Math.abs(viejo[0].pct - (-0.81)) < 0.02, 'sin `total` (cache viejo) sigue leyendo `grupo`');
 
 console.log('\nC) sin la lista de aportes CARGADA no se dibuja nada; cargada y vacia SI');
 // La lista no viaja en el payload del Inicio: la pide el panel de Aportes.

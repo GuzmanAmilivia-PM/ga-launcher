@@ -116,7 +116,7 @@ console.log('\nK) la comparacion del panel de Aportes (V7): % real vs % del indi
 // Grupo: 80.000 -> 86.000, con un aporte de 5.000 el dia 3.
 function montarK(valoresGrupo, aportes) {
   var a = montar({ fullSerie: serieG });
-  a.aplicarAportes({ lista: aportes || [{ fecha: '2026-03-04', monto: 5000, grupo: 5000 }], desde: '2026-03-02' });
+  a.aplicarAportes({ lista: aportes || [{ fecha: '2026-03-04', grupo: 5000, total: 5000 }], desde: '2026-03-02' });
   a.aplicarBench({ bench: { nombre: 'S&P 500', valores: [5000, 5250, 5500] } });
   a.aplicarGrupo({ serieGrupo: { nombre: 'Schwab + IBKR + Binance', valores: valoresGrupo } });
   return a;
@@ -135,10 +135,10 @@ ok(Math.abs(comp.idxPct - ((uK * 5500) / 85000 - 1) * 100) < 0.001, 'porcentaje 
 ok(comp.idxNombre === 'S&P 500', 'dice contra que indice compara');
 
 console.log('\nL) solo cuenta la parte del aporte que fue a esas cuentas');
-// Un deposito a Itau: viaja en `monto` pero con `grupo` en 0. Si se contara,
+// Un deposito a Itau: viaja en `total` pero con `grupo` en 0. Si se contara,
 // el capital subiria sin que el valor del grupo suba, y el rendimiento se
 // hundiria por una plata que nunca entro ahi.
-api = montarK([null, 80000, 86000], [{ fecha: '2026-03-04', monto: 9000, grupo: 0 }]);
+api = montarK([null, 80000, 86000], [{ fecha: '2026-03-04', grupo: 0, total: 9000 }]);
 comp = api.comparacionGrupo();
 ok(comp.capital === 80000, 'un aporte a Itau NO entra al capital del grupo (=' + comp.capital + ')');
 ok(Math.abs(comp.pct - (86000 / 80000 - 1) * 100) < 0.001, 'y el porcentaje sale de las cuentas del grupo solas');
@@ -150,7 +150,7 @@ console.log('\nO) aporte fechado el MISMO dia del primer snapshot: ambiguo, se c
 // poder probarlo fue el bug real: el aporte aparecia contado como rendimiento
 // porque el valor final SI lo tenia pero el capital no.
 // 3 dias: d1(76000) -- aporte de 5000 fechado d1 (ambiguo) -- d2(80000) -- d3(86000).
-api = montarK([76000, 80000, 86000], [{ fecha: '2026-03-02', monto: 5000, grupo: 5000 }]);
+api = montarK([76000, 80000, 86000], [{ fecha: '2026-03-02', grupo: 5000, total: 5000 }]);
 ok(api.grupo().length === 3, 'los tres dias tienen dato');
 comp = api.comparacionGrupo();
 ok(comp && !comp.pocos, 'igual calcula: queda un dia limpio para usar de base');
@@ -161,7 +161,7 @@ ok(Math.abs(comp.pct - (86000 / 80000 - 1) * 100) < 0.001, 'porcentaje sin el ap
 console.log('\nP) el mismo aporte, un dia despues del snapshot: sin ambiguedad, cuenta normal');
 // Control: el aporte fechado d2 (no el dia del primer snapshot) no dispara el
 // corrimiento — es exactamente el escenario K de siempre.
-api = montarK([76000, 80000, 86000], [{ fecha: '2026-03-03', monto: 5000, grupo: 5000 }]);
+api = montarK([76000, 80000, 86000], [{ fecha: '2026-03-03', grupo: 5000, total: 5000 }]);
 comp = api.comparacionGrupo();
 ok(comp.desde === d1, 'la base NO se corre: d1 no tiene ningun aporte ese dia (=' + new Date(comp.desde).toDateString() + ')');
 ok(comp.capital === 81000, 'el aporte de d2 SI entra al capital (76000 + 5000) (=' + comp.capital + ')');
@@ -170,7 +170,7 @@ console.log('\nQ) si TODOS los dias salvo el ultimo quedan ambiguos, mejor hones
 // Solo 2 dias con dato (d2 y d3, igual que en K) y el primero es ambiguo: no
 // queda ningun dia limpio para usar de base, así que no se puede afirmar nada
 // — mismo criterio que "pocos dias".
-api = montarK([null, 80000, 86000], [{ fecha: '2026-03-03', monto: 5000, grupo: 5000 }]);
+api = montarK([null, 80000, 86000], [{ fecha: '2026-03-03', grupo: 5000, total: 5000 }]);
 comp = api.comparacionGrupo();
 ok(comp && comp.pocos === true, 'sin ningun dia limpio, avisa en vez de calcular');
 
@@ -197,7 +197,7 @@ console.log('\nR) "la cartera" vs "rindio": el rendimiento sin el efecto del tim
 // d1=100.000 -> d2=110.000 (+10%) -> aporte 100.000 -> d3 la cartera cae 5%:
 // 110.000x0,95 = 104.500 de lo viejo + 95.000?? NO: el aporte entra al cierre
 // de d3, asi que d3 = 110.000x0,95 + 100.000 = 204.500.
-api = montarK([100000, 110000, 204500], [{ fecha: '2026-03-04', monto: 100000, grupo: 100000 }]);
+api = montarK([100000, 110000, 204500], [{ fecha: '2026-03-04', grupo: 100000, total: 100000 }]);
 comp = api.comparacionGrupo();
 ok(Math.abs(comp.twrPct - 4.5) < 0.001, 'la cartera rindio +4,5% (1.10 x 0.95) (=' + comp.twrPct.toFixed(2) + '%)');
 ok(Math.abs(comp.pct - 2.25) < 0.001, 'tu resultado fue +2,25% (204.500 / 200.000): lo gordo entro antes de la caida');
@@ -209,12 +209,12 @@ comp = api.comparacionGrupo();
 ok(Math.abs(comp.twrPct - comp.pct) < 0.001, 'sin aportes, cartera y resultado coinciden (=' + comp.twrPct.toFixed(2) + '%)');
 
 // Un retiro tambien se descuenta de su tramo (suma al valor sin flujo).
-api = montarK([100000, 110000, 60500], [{ fecha: '2026-03-04', monto: -50000, grupo: -50000 }]);
+api = montarK([100000, 110000, 60500], [{ fecha: '2026-03-04', grupo: -50000, total: -50000 }]);
 comp = api.comparacionGrupo();
 ok(Math.abs(comp.twrPct - 10.5) < 0.01, 'con un retiro en el medio, la cartera rinde 1.10 x 1.0045 = +10,5% (=' + comp.twrPct.toFixed(2) + '%)');
 
 // Un tramo que no se puede medir con honestidad -> null, no un invento.
-api = montarK([null, 80000, 4000], [{ fecha: '2026-03-04', monto: 5000, grupo: 5000 }]);
+api = montarK([null, 80000, 4000], [{ fecha: '2026-03-04', grupo: 5000, total: 5000 }]);
 comp = api.comparacionGrupo();
 ok(comp.twrPct === null, 'si el aporte del tramo es mayor que el valor del dia, twr viaja null');
 
@@ -252,7 +252,7 @@ A.aplicarBench({ bench: { nombre: 'S&P 500', valores: [100, 105, 105, 110] } });
 // cambio BRUTO (+142%) presentado como rendimiento.
 ok(A.comparacionAnual() === null, 'sin los aportes cargados no devuelve nada (mejor nada que un numero inflado)');
 
-A.aplicarAportes({ lista: [{ fecha: '2026-01-15', grupo: 1000 }] });
+A.aplicarAportes({ lista: [{ fecha: '2026-01-15', grupo: 1000, total: 1000 }] });
 var r = A.comparacionAnual();
 ok(r !== null, 'con los aportes cargados ya calcula');
 ok(Math.abs(r.pct - 21) < 0.01, 'el rendimiento REAL encadena los tramos y descuenta el aporte: +21% (' + (r ? r.pct.toFixed(2) : '-') + ')');
@@ -272,9 +272,27 @@ ok(B.comparacionAnual() === null, 'sin un punto del año pasado no hay con que c
 // Sin indice alineado el numero propio SIGUE valiendo; lo que falta es el
 // termino de comparacion.
 var C = montar({ fullSerie: serieA });
-C.aplicarAportes({ lista: [{ fecha: '2026-01-15', grupo: 1000 }] });
+C.aplicarAportes({ lista: [{ fecha: '2026-01-15', grupo: 1000, total: 1000 }] });
 var rc = C.comparacionAnual();
 ok(rc !== null && rc.idxPct === null, 'sin indice, el rendimiento propio se calcula igual y el indice queda en null');
+
+// Un deposito a BTG (el caso real del 7/09/2026: 1.500 de sueldo). BTG no es
+// del grupo, asi que viaja con grupo 0 y total 1.500. La tarjeta del año es
+// sobre el patrimonio ENTERO: lo tiene que descontar. Leyendo `grupo` decia
+// que ese tramo habia rendido lo que Guzman acababa de depositar.
+var serieD = [
+  { fecha: dic(31), valor: 1000 },
+  { fecha: ene(10), valor: 1100 },   // +10% real
+  { fecha: ene(20), valor: 2600 },   // 1.500 a BTG el 15 -> el tramo NO rindio (1100+1500)
+  { fecha: ene(30), valor: 2860 }    // +10% real
+];
+var D = montar({ fullSerie: serieD });
+D.aplicarBench({ bench: { nombre: 'S&P 500', valores: [100, 105, 105, 110] } });
+D.aplicarAportes({ lista: [{ fecha: '2026-01-15', grupo: 0, total: 1500 }] });
+var rd = D.comparacionAnual();
+ok(rd !== null && Math.abs(rd.pct - 21) < 0.01, 'el deposito a BTG se descuenta de la serie total: +21%, no +186% (' + (rd ? rd.pct.toFixed(2) : '-') + ')');
+ok(rd && rd.aportes === 1500, 'e informa los 1.500 puestos, aunque el grupo diga 0');
+ok(rd && Math.abs(rd.bruto - 186) < 0.01, 'el bruto sigue siendo el cambio del patrimonio: +186%');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);
