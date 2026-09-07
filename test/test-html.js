@@ -738,6 +738,8 @@ ok(/lsep"><\/span>' : ''\) \+ esc\(fmt\(c\.valor\)\)/.test(vistasSrcM),
 ok(/<b>' \+ \(\(c\.valor \/ total\) \* 100\)\.toFixed\(1\) \+ '%<\/b><span class="lsep">/.test(vistasSrcM),
   'el % va primero, en negrita, y el separador entre el % y el monto');
 ok(/\.lpct \.lsep \{[^}]*opacity: \.28/.test(html), 'el separador es una linea gris tenue');
+ok(/\.lpct \{[^}]*color: var\(--muted\)/.test(html) && /\.lpct b \{[^}]*color: var\(--text\)/.test(html),
+  'el monto va en gris y el % en blanco');
 ok(/showAccount\(c\.acc, 'portafolio'\)/.test(vistasSrcM),
   'y desde ahi se siguen abriendo las cuentas: sacar la tarjeta no dejo huerfanas las paginas');
 // La tarjeta nueva.

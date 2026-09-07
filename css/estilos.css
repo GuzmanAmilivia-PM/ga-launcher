@@ -378,7 +378,10 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .pierow.clickable:active { opacity: .7; }
 .dot { width: 11px; height: 11px; border-radius: 3px; display: inline-block; margin-right: 9px; flex-shrink: 0; }
 .lname { display: flex; align-items: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lpct { font-weight: 800; white-space: nowrap; }
+/* El % en blanco y negrita (es lo que la torta cuenta); el monto en gris, el
+   detalle. Pedido de Guzman, 7/09/2026. */
+.lpct { font-weight: 600; white-space: nowrap; color: var(--muted); }
+.lpct b { color: var(--text); font-weight: 800; }
 .lpct .lsep { display: inline-block; width: 1px; height: .85em; margin: 0 8px; vertical-align: -0.1em; background: currentColor; opacity: .28; }
 /* En el TELEFONO la fila se apila (02/09/2026). El monto entro en esta
    leyenda al sacar la tarjeta "Account detail" del Inicio, y en una sola
