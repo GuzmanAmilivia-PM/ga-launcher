@@ -15,7 +15,8 @@ Son dos repos privados distintos, y conviene no confundirlos:
   necesita el clon de `ga-portfolio-worker` al lado de este repo (o la variable
   `GA_WORKER` apuntando a donde esté).
 - `scripts/logo.js` regenera todos los íconos de la app desde un PNG del
-  logo (`node scripts/logo.js <logo.png> --aplicar`).
+  logo (`node scripts/logo.js <logo.png> --aplicar`); `scripts/cuantizar-icono.js`
+  deja el de 512 px en 256 colores (de 113 a 53 KB) sin que se note.
 
 (El repo histórico se llama `portfolio-tracker` en GitHub aunque la
 documentación lo nombre `ga-portfolio-tracker`: es el mismo.)

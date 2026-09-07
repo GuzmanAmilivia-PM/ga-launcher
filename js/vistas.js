@@ -453,17 +453,19 @@ datasets: [{ data: items.map(function (c) { return c.valor; }), backgroundColor:
 },
 options: { cutout: '62%', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
 });
-// Leyenda al costado: nombre, monto y %. El monto entro el 02/09/2026, al
+// Leyenda al costado: nombre, % y monto. El monto entro el 02/09/2026, al
 // sacar la tarjeta "Account detail" del Inicio: era el UNICO lugar donde se
 // veia cuanto vale cada cuenta, y esta leyenda ya era el otro camino para
-// abrirlas. Sin esto, el dato se perdia.
+// abrirlas. Sin esto, el dato se perdia. El orden es % primero y el monto
+// despues de un separador tenue (pedido de Guzman, 7/09/2026): el % es lo que
+// la torta cuenta; el monto es el detalle.
 var leg = document.getElementById('pieLegend');
 leg.innerHTML = '';
 items.forEach(function (c, i) {
 var row = document.createElement('div');
 row.className = 'pierow' + (c.acc ? ' clickable' : '');
 row.innerHTML = '<span class="lname"><span class="dot" style="background:' + coloresPie()[i % PIE_COLORS.length] + '"></span>' + esc(c.label) + '</span>' +
-'<span class="lpct"><b>' + esc(fmt(c.valor)) + '</b>' + (total ? ' ' + ((c.valor / total) * 100).toFixed(1) + '%' : '') + (c.acc ? '<span class="chev">&rsaquo;</span>' : '') + '</span>';
+'<span class="lpct">' + (total ? '<b>' + ((c.valor / total) * 100).toFixed(1) + '%</b><span class="lsep"></span>' : '') + esc(fmt(c.valor)) + (c.acc ? '<span class="chev">&rsaquo;</span>' : '') + '</span>';
 if (c.acc) row.onclick = function () { showAccount(c.acc, 'portafolio'); };
 leg.appendChild(row);
 });

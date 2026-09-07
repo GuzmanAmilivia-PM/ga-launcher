@@ -710,8 +710,12 @@ ok(html.indexOf('id="cuentasList"') === -1, 'ni su nodo');
 ok(arranqueSrcM.indexOf('cuentasList') === -1, 'ni el codigo que la pintaba, que si no explotaria al arrancar');
 // El valor por cuenta NO se perdio: era el UNICO lugar donde se veia, y paso a
 // la leyenda de la torta, que ya era el otro camino para abrir cada cuenta.
-ok(/lpct"><b>' \+ esc\(fmt\(c\.valor\)\)/.test(vistasSrcM),
+ok(/lsep"><\/span>' : ''\) \+ esc\(fmt\(c\.valor\)\)/.test(vistasSrcM),
   'el monto por cuenta vive ahora en la leyenda de Portfolio');
+// Primero el %, en negrita, y el monto despues de un separador tenue (7/09/2026).
+ok(/<b>' \+ \(\(c\.valor \/ total\) \* 100\)\.toFixed\(1\) \+ '%<\/b><span class="lsep">/.test(vistasSrcM),
+  'el % va primero, en negrita, y el separador entre el % y el monto');
+ok(/\.lpct \.lsep \{[^}]*opacity: \.28/.test(html), 'el separador es una linea gris tenue');
 ok(/showAccount\(c\.acc, 'portafolio'\)/.test(vistasSrcM),
   'y desde ahi se siguen abriendo las cuentas: sacar la tarjeta no dejo huerfanas las paginas');
 // La tarjeta nueva.
