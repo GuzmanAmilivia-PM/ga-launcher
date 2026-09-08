@@ -17,7 +17,20 @@ function daychgHtml(p) {
     // ocuparia el % del dia (.daystale, hermana de .daychg).
     return esFilaCash(p) ? '' : '<span class="daystale">not priced</span>';
   }
-  return pctHtml(Number(p.cambioDia), 2);
+  return pctHtml(Number(p.cambioDia), 2, extHtml(p));
+}
+
+// El salto fuera de rueda (8/09/2026), pedido de Guzman: "cuando hay un
+// salto grande de pre market o after market deberia aparecer entre parentesis
+// al costado de ese %". El backend manda cambioExt (el ultimo precio fuera
+// de rueda contra el cierre regular) y sesionExt ('pre' | 'post') solo con el
+// mercado cerrado; aca se muestra si el salto llega a EXT_UMBRAL_PCT. Un
+// movimiento chico fuera de rueda es ruido y no merece el renglon.
+var EXT_UMBRAL_PCT = 1;
+function extHtml(p) {
+  var x = Number(p.cambioExt);
+  if (p.cambioExt === null || p.cambioExt === undefined || !isFinite(x) || Math.abs(x) < EXT_UMBRAL_PCT) return '';
+  return ' <span class="dayext">(' + (p.sesionExt === 'pre' ? 'pre' : 'post') + ' ' + signoPct(x, 1) + ')</span>';
 }
 
 // Ganancia acumulada de la posicion: precio actual contra el precio medio de

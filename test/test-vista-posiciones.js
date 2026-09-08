@@ -36,6 +36,9 @@ var preambulo = 'var montosOcultos = false;\n' +
   fuente('celdaInstrumentoHtml', /function celdaInstrumentoHtml\(h\) \{[\s\S]*?\n\}/) + '\n' +
   fuente('ordenarPorTipo', /function ordenarPorTipo\(list\) \{[\s\S]*?\n\}/) + '\n' +
   fuente('daychgHtml', /function daychgHtml\(p\) \{[\s\S]*?\n\}/) + '\n' +
+  // El salto fuera de rueda (8/09/2026): daychgHtml lo pide a extHtml.
+  fuente('EXT_UMBRAL_PCT', /var EXT_UMBRAL_PCT = [^;]*;/) + '\n' +
+  fuente('extHtml', /function extHtml\(p\) \{[\s\S]*?\n\}/) + '\n' +
   fuente('gananciaHtml', /function gananciaHtml\(p\) \{[\s\S]*?\n\}/) + '\n' +
   fuente('TIPO_LABELS', /var TIPO_LABELS = \{[^}]*\};/) + '\n';
 

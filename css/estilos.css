@@ -286,6 +286,9 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
    fila de al lado iba arriba. Los numeros no lo delataban: la celda medida
    entraba igual y la fila media lo mismo. Lo cazo la captura. */
 .daystale { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); margin-bottom: 1px; }
+/* El salto fuera de rueda, al costado del % del dia (8/09/2026): mas chico y
+   apagado, entre parentesis; el color lo lleva el % de la rueda. */
+.dayext { font-size: 10px; font-weight: 600; color: var(--muted); margin-left: 3px; white-space: nowrap; }
 .holdpct { color: var(--gold); font-weight: 700; font-size: 13px; }
 /* .holdtable delante a proposito: sin eso, la regla de <=560px (.holdtable td,
    que suma clase + elemento) le gana a .col-spark y el padding volvia a 5px

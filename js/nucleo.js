@@ -390,8 +390,10 @@ return /liquidez|cash/i.test(String(p.nombre || p.descripcion || ''));
 }
 // Chip de porcentaje firmado (verde/rojo): la linea estaba copiada identica
 // en daychgHtml y gananciaHtml (E6).
-function pctHtml(v, dec) {
-return '<span class="daychg ' + (v >= 0 ? 'up' : 'down') + '">' + signoPct(v, dec) + '</span>';
+// `extra`: algo chico que va al costado del %, adentro del mismo renglon (el
+// salto fuera de rueda entre parentesis, 8/09/2026).
+function pctHtml(v, dec, extra) {
+return '<span class="daychg ' + (v >= 0 ? 'up' : 'down') + '">' + signoPct(v, dec) + (extra || '') + '</span>';
 }
 // Etiqueta visual de una plataforma. La Sheet y el backend conservan el
 // nombre real ("Interactive Brokers", anclado a su hoja); ac\u00e1 solo se
