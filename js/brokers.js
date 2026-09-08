@@ -243,10 +243,46 @@ return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ('0' 
 });
 }
 // Lee los saldos spot con una petición firmada de account.status.
+// El precio medio de compra (8/09/2026), pedido de Guzman: "de Binance podes
+// sacar los precios medios de compra? para que aparezca el %". Sale del
+// historial de operaciones spot (myTrades) con la MISMA clave de solo lectura,
+// por la misma via (WebSocket API). Metodo del costo promedio: cada compra
+// suma su costo en USDT y su cantidad; cada venta baja cantidad y costo en
+// la misma proporcion (lo vendido se lleva su parte del costo). La comision
+// cobrada en la propia cripto resta cantidad recibida. Lo que entro por
+// deposito o por Convert no figura en los trades: si la cantidad operada no
+// llega a la del saldo, el promedio es "parcial" y el backend lo dice.
+function bnbCostoPromedio(trades) {
+  var lista = (trades || []).slice().sort(function (a, b) { return (Number(a.time) || 0) - (Number(b.time) || 0); });
+  var qty = 0, costo = 0;
+  lista.forEach(function (t) {
+    var q = parseFloat(t.qty), quote = parseFloat(t.quoteQty), precio = parseFloat(t.price);
+    if (!(q > 0)) return;
+    if (!(quote > 0)) quote = (precio > 0) ? q * precio : 0;
+    if (t.isBuyer) {
+      var recibida = q;
+      // La comision en la cripto comprada (BTC al comprar BTC) no llega a la billetera.
+      var com = parseFloat(t.commission);
+      if (com > 0 && t.commissionAsset && String(t.commissionAsset).toUpperCase() !== 'USDT' && String(t.commissionAsset).toUpperCase() !== 'BNB') recibida -= com;
+      if (recibida <= 0) return;
+      costo += quote;
+      qty += recibida;
+    } else if (qty > 0) {
+      var vendida = Math.min(q, qty);
+      costo -= costo * (vendida / qty);
+      qty -= vendida;
+    }
+  });
+  if (!(qty > 0) || !(costo > 0)) return { costoUnitario: null, qty: qty };
+  return { costoUnitario: Number((costo / qty).toPrecision(8)), qty: qty };
+}
+// Las stablecoins no tienen precio de compra que valga la pena.
+var BNB_SIN_COSTO = ['USDT', 'USDC', 'BUSD', 'FDUSD', 'TUSD', 'DAI'];
+
 function bnbLeerSaldos(cb, fail) {
 var cfg = bnbConfig();
 if (!cfg) { fail(new Error('The Binance API key needs to be saved first.')); return; }
-var ws = null, done = false;
+var ws = null, done = false, esperando = {};
 function terminar(err, saldos) {
 if (done) return;
 done = true;
@@ -254,28 +290,58 @@ clearTimeout(timer);
 try { if (ws) ws.close(); } catch (e) {}
 if (err) fail(err); else cb(saldos);
 }
+// 15 s para los saldos; los trades se piden de a uno y cada uno estira el
+// plazo 5 s (una cartera de 6 criptos son ~45 s de tope, nunca cerca).
 var timer = setTimeout(function () { terminar(new Error('Binance did not respond (timed out). Try again.')); }, 15000);
+function estirar(ms) { clearTimeout(timer); timer = setTimeout(function () { terminar(new Error('Binance did not respond (timed out). Try again.')); }, ms); }
 try { ws = new WebSocket('wss://ws-api.binance.com/ws-api/v3'); } catch (e) { terminar(e); return; }
 ws.onerror = function () { terminar(new Error('Could not connect to Binance. Check your internet connection.')); };
-ws.onopen = function () {
+// Un pedido firmado por el mismo socket: la firma va sobre los parametros en
+// orden alfabetico, que es como Binance la verifica. La respuesta llega por
+// onmessage con el mismo id.
+function pedir(method, extra, alResponder) {
 var ts = Date.now();
-// Los parámetros van ordenados alfabéticamente en la firma.
-var payload = 'apiKey=' + cfg.key + '&recvWindow=10000&timestamp=' + ts;
+var params = { apiKey: cfg.key, recvWindow: 10000, timestamp: ts };
+Object.keys(extra || {}).forEach(function (k) { params[k] = extra[k]; });
+var payload = Object.keys(params).sort().map(function (k) { return k + '=' + params[k]; }).join('&');
+var id = 'ga-' + method + '-' + ts + '-' + Math.floor(Math.random() * 1e6);
+esperando[id] = alResponder;
 bnbFirmar(cfg.secret, payload).then(function (sig) {
-ws.send(JSON.stringify({ id: 'ga-' + ts, method: 'account.status', params: { apiKey: cfg.key, recvWindow: 10000, timestamp: ts, signature: sig } }));
+params.signature = sig;
+ws.send(JSON.stringify({ id: id, method: method, params: params }));
 }).catch(function (e) { terminar(e); });
-};
-ws.onmessage = function (ev) {
-var j = null;
-try { j = JSON.parse(ev.data); } catch (e) { return; }
-if (!j || j.id === undefined) return;
+}
+function costosDe(saldos) {
+var cola = saldos.filter(function (s) { return BNB_SIN_COSTO.indexOf(s.symbol) === -1; });
+var i = 0;
+function siguiente() {
+if (i >= cola.length) { terminar(null, saldos); return; }
+var s = cola[i++];
+estirar(5000 + 5000 * (cola.length - i + 1));
+pedir('myTrades', { symbol: s.symbol + 'USDT', limit: 1000 }, function (j) {
+// Un par que no existe (-1121) o cualquier otro tropiezo: ese saldo va sin
+// costo, los demas siguen.
+if (j.status === 200 && Object.prototype.toString.call(j.result) === '[object Array]') {
+var c = bnbCostoPromedio(j.result);
+if (c.costoUnitario > 0) {
+s.costoUnitario = c.costoUnitario;
+if (c.qty < s.qty * 0.9) s.costoParcial = true;
+}
+}
+siguiente();
+});
+}
+siguiente();
+}
+ws.onopen = function () {
+pedir('account.status', null, function (j) {
 if (j.status === 200 && j.result && j.result.balances) {
 var saldos = [];
 j.result.balances.forEach(function (b) {
 var qty = (parseFloat(b.free) || 0) + (parseFloat(b.locked) || 0);
 if (qty > 1e-8) saldos.push({ symbol: String(b.asset || '').toUpperCase(), qty: qty });
 });
-terminar(null, saldos);
+costosDe(saldos);
 return;
 }
 var code = j.error && j.error.code;
@@ -284,6 +350,16 @@ if (code === -2015 || code === -2014) msg = 'Binance rejected the API key: check
 if (code === -1022) msg = 'The signature did not validate: check the Secret Key (delete it and paste it again).';
 if (code === -1021) msg = 'Your phone\u2019s clock differs from Binance\u2019s: enable automatic date and time.';
 terminar(new Error(msg));
+});
+};
+ws.onmessage = function (ev) {
+var j = null;
+try { j = JSON.parse(ev.data); } catch (e) { return; }
+if (!j || j.id === undefined) return;
+var h = esperando[j.id];
+if (!h) return;
+delete esperando[j.id];
+h(j);
 };
 }
 var bnbEnCurso = false;

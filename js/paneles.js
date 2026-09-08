@@ -622,6 +622,7 @@ html += '<div class="apostat"><span>Net this year</span><b>' + esc(fmtUsdEnt(r.n
 // de mentira, hasta dar "perdidas" en un a&ntilde;o ganador. El rendimiento
 // real vive en htmlComparacion(): solo las apps, contra sus propios aportes.
 html += htmlComparacion();
+html += htmlCrecimientoTotal(r);
 (r.avisos || []).forEach(function (a) { html += '<p class="newsempty" style="font-size:12px">&#9888; ' + esc(a) + '</p>'; });
 body.innerHTML = html;
 }
@@ -659,6 +660,38 @@ h += '</div>';
 h += '<p class="capnota">Since ' + fechaCortaMs(c.desde) + ', over ' +
 esc(fmtUsdEnt(c.capital)) + ' of capital. \u201cReturned\u201d is YOUR result (your money, your contribution dates); \u201cthe portfolio\u201d is how the investments performed without the effect of that timing. The banks (Ita\u00fa, BTG) are not included: they don\u2019t earn a return, and moving money from them into the apps counts as a contribution, not a gain.' +
 (c.idxPct !== null ? ' The index doesn\u2019t pay dividends and your accounts do.' : '') + '</p>';
+return h;
+}
+
+/**
+ * El portafolio ENTERO sin el efecto de los aportes (8/09/2026), pedido de
+ * Guzmán: "el % de crecimiento SIN aportes ytd, y que guarde cada año el valor
+ * cierre de ese número". Lo calcula el backend (Bench.crecimientoSinAportes:
+ * la misma cuenta que "the portfolio" del grupo, pero con TODAS las cuentas y
+ * TODOS los flujos, bancos incluidos) y viaja en getAportes como
+ * `crecimiento`; los años cerrados vienen en `cierresAnuales`, guardados en
+ * la base por el cron. Acá solo se pinta.
+ */
+function htmlCrecimientoTotal(r) {
+var c = r && r.crecimiento;
+var anios = (r && r.cierresAnuales) || [];
+var pasados = anios.filter(function (a) { return Number(a.anio) < Number(r.anio); });
+if (!c && !pasados.length) return '';
+var h = '<p class="lbl" style="margin-top:14px">Whole portfolio, without contributions</p>';
+if (c && c.pocos) {
+h += '<p class="capnota">Growth without contributions needs at least two days of history in the year. With one more day the first number will appear here.</p>';
+} else if (c && c.pct !== null && isFinite(Number(c.pct))) {
+h += '<div class="caprow">';
+h += '<div><p class="lbl">' + esc(r.anio) + ' so far</p><p class="capval ' + (c.pct >= 0 ? 'up' : 'down') + '">' + signoPct(Number(c.pct), 1) + '</p></div>';
+h += '<div><p class="lbl">Started at</p><p class="capval">' + esc(mask(fmtUsdEnt(c.base))) + '</p></div>';
+h += '<div><p class="lbl">Now</p><p class="capval">' + esc(mask(fmtUsdEnt(c.valor))) + '</p></div>';
+h += '</div>';
+h += '<p class="capnota">Since ' + fechaCortaMs(c.desde) + ', over everything you own (banks included): what the investments did, with every deposit and withdrawal taken out (' + esc(mask(fmtUsdEnt(c.aportes))) + ' net this year). The year-end value is saved each year.</p>';
+}
+pasados.forEach(function (a) {
+var pct = Number(a.pct);
+h += '<div class="apostat"><span>' + esc(a.anio) + '</span><b class="' + (pct >= 0 ? 'up' : 'down') + '">' + (isFinite(pct) ? signoPct(pct, 1) : '&mdash;') + ' &middot; ' + esc(mask(fmtUsdEnt(a.valor))) + '</b></div>';
+});
 return h;
 }
 
