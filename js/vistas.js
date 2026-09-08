@@ -278,19 +278,25 @@ document.getElementById('accTotal').textContent = fmt(data.total);
 document.getElementById('accLiq').textContent = 'Cash in account: ' + fmt(data.liquidez);
 var body = document.getElementById('accBody');
 body.innerHTML = '';
-// Podada a 4 columnas (pedido de Guzman, 18/08/2026): precio medio de
-// compra, precio actual con el % del dia arriba, y valor con la ganancia
-// total arriba — mismos helpers y mismo orden que la tabla del Inicio
-// (test-posiciones vigila que las dos digan lo mismo). La cantidad y el
-// resto viven en el detalle desplegable.
+// El mismo diseno que el Inicio y la lista de posiciones (pedido de Guzman,
+// 8/09/2026: la de Binance "se veia desactualizada sin las graficas ni la
+// compra promedio"): logo con las iniciales de respaldo, el mini-grafico del
+// mes (los mismos cierres que el Inicio, sparkDe), el % del dia arriba del
+// precio y el precio medio de compra debajo en chico, y el valor con la
+// ganancia total arriba. Mismos helpers que filaHoldingHtml y
+// renderPosiciones; la cantidad y el resto viven en el detalle desplegable.
 data.posiciones.forEach(function (h) {
 h.cambioDia = cambioDiaDe(h.symbol);
+if (!h.nombre) h.nombre = h.descripcion || '';
+if (acc.key === 'BNB' && h.cripto === undefined) h.cripto = String(h.symbol).toUpperCase() !== 'USDT';
+var compra = Number(h.precioCompra) > 0 ? '<span class="pcmini">avg ' + esc(fmtNum(h.precioCompra)) + '</span>' : '';
 var tr = document.createElement('tr');
-tr.innerHTML = '<td><span class="sym">' + esc(h.symbol) + '</span><span class="desc">' + esc(h.descripcion || '') + '</span></td>' +
-'<td>' + (Number(h.precioCompra) > 0 ? esc(fmtNum(h.precioCompra)) : '&mdash;') + '</td>' +
-'<td>' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + '</td>' +
-'<td>' + gananciaHtml(h) + fmt(h.valor) + '</td>';
+tr.innerHTML = '<td>' + celdaInstrumentoHtml(h) + '</td>' +
+'<td class="col-spark">' + sparkDe(h) + '</td>' +
+'<td class="col-precio">' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + compra + '</td>' +
+'<td class="col-valor">' + gananciaHtml(h) + fmt(h.valor) + '</td>';
 tr.className = 'asset-row';
+engancharLogos(tr);
 tr.onclick = function () { toggleDetalle(tr, { symbol: h.symbol, precioCompra: h.precioCompra, precioActual: h.precioActual, qty: h.qty, cripto: acc.key === 'BNB', cuenta: acc.key, gfTicker: h.gfTicker }); };
 body.appendChild(tr);
 });

@@ -308,6 +308,9 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
    el dato que tiene que saltar a la vista es el PRECIO actual; los chips de
    ganancia/% conservan su verde/rojo. */
 .postable .col-valor { white-space: nowrap; font-size: 16.5px; font-weight: 700; color: var(--muted); }
+/* El precio medio de compra debajo del precio, en el detalle de una cuenta
+   (8/09/2026): chico y apagado, para no competir con el precio de hoy. */
+.pcmini { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); margin-top: 1px; }
 .spark { display: block; margin: 0 auto; opacity: .95; }
 /* El trazo toma el color del TEMA (el claro usa otro verde y otro rojo). */
 .spark polyline { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; stroke: var(--red); }
