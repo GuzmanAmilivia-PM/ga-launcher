@@ -285,16 +285,21 @@ body.innerHTML = '';
 // precio y el precio medio de compra debajo en chico, y el valor con la
 // ganancia total arriba. Mismos helpers que filaHoldingHtml y
 // renderPosiciones; la cantidad y el resto viven en el detalle desplegable.
+// Las TRES columnas del Inicio (8/09/2026, segunda vuelta: con cuatro, el
+// nombre se montaba sobre el mini-grafico en el telefono): instrumento,
+// mes, precio. El valor en dolares y la ganancia acumulada van en el renglon
+// de abajo del simbolo. Las filas que son cash (USDT en Binance) no van: ya
+// estan en "Cash in account".
 data.posiciones.forEach(function (h) {
+if (esFilaCash(h)) return;
 h.cambioDia = cambioDiaDe(h.symbol);
 if (!h.nombre) h.nombre = h.descripcion || '';
-if (acc.key === 'BNB' && h.cripto === undefined) h.cripto = String(h.symbol).toUpperCase() !== 'USDT';
+if (acc.key === 'BNB' && h.cripto === undefined) h.cripto = true;
 var compra = Number(h.precioCompra) > 0 ? '<span class="pcmini">avg ' + esc(fmtNum(h.precioCompra)) + '</span>' : '';
 var tr = document.createElement('tr');
-tr.innerHTML = '<td>' + celdaInstrumentoHtml(h) + '</td>' +
+tr.innerHTML = '<td>' + celdaInstrumentoHtml(h, esc(fmt(h.valor)) + gananciaHtml(h)) + '</td>' +
 '<td class="col-spark">' + sparkDe(h) + '</td>' +
-'<td class="col-precio">' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + compra + '</td>' +
-'<td class="col-valor">' + gananciaHtml(h) + fmt(h.valor) + '</td>';
+'<td class="col-precio">' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + compra + '</td>';
 tr.className = 'asset-row';
 engancharLogos(tr);
 tr.onclick = function () { toggleDetalle(tr, { symbol: h.symbol, precioCompra: h.precioCompra, precioActual: h.precioActual, qty: h.qty, cripto: acc.key === 'BNB', cuenta: acc.key, gfTicker: h.gfTicker }); };

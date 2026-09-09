@@ -551,7 +551,10 @@ for (var i = 0; i < imgs.length; i++) {
 // lugar: la usan la tarjeta del Inicio (aca abajo) y la pantalla Posiciones
 // (renderPosiciones, vistas.js). Devuelve el contenido, sin el <td>: cada
 // tabla pone el suyo.
-function celdaInstrumentoHtml(h) {
+// `descHtml` (opcional, YA escapado por quien lo manda): reemplaza el nombre
+// en el renglon de abajo. El detalle de cuenta pone ahi el valor y la
+// ganancia (8/09/2026).
+function celdaInstrumentoHtml(h, descHtml) {
 var sym = String(h.symbol || '');
 var inic = sym.length <= 3 ? sym : sym.slice(0, 2);
 var logo = logoUrl(h);
@@ -563,7 +566,7 @@ var logo = logoUrl(h);
 var avatar = logo
   ? '<img src="' + esc(logo) + '" alt="" loading="lazy" class="holdlogo"><span class="holdinit" style="display:none">' + esc(inic) + '</span>'
   : esc(inic);
-return '<span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + avatar + '</span><span class="holdid"><span class="sym">' + esc(sym) + '</span><span class="desc">' + esc(h.nombre || '') + '</span></span></span>';
+return '<span class="holdcell"><span class="holdav ' + tipoDe(h) + '">' + avatar + '</span><span class="holdid"><span class="sym">' + esc(sym) + '</span><span class="desc' + (descHtml ? ' accval' : '') + '">' + (descHtml || esc(h.nombre || '')) + '</span></span></span>';
 }
 function filaHoldingHtml(h) {
 var pctDisplay = (h.pct * 100).toFixed(1) + '%';

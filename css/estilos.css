@@ -311,6 +311,10 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 /* El precio medio de compra debajo del precio, en el detalle de una cuenta
    (8/09/2026): chico y apagado, para no competir con el precio de hoy. */
 .pcmini { display: block; font-size: 10.5px; font-weight: 600; color: var(--muted); margin-top: 1px; }
+/* El renglon de abajo del simbolo en el detalle de cuenta: el valor y, al
+   lado, la ganancia acumulada (la misma pastilla .daychg, pero en linea). */
+.accval { color: var(--text); font-weight: 600; }
+.accval .daychg { display: inline; margin-left: 6px; font-size: 11.5px; }
 .spark { display: block; margin: 0 auto; opacity: .95; }
 /* El trazo toma el color del TEMA (el claro usa otro verde y otro rojo). */
 .spark polyline { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; stroke: var(--red); }
