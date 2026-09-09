@@ -220,6 +220,12 @@ if (k.length < 10 || s.length < 10) {
 res.innerHTML = '<div class="tmsg err">Paste the full API Key and Secret Key.</div>';
 return;
 }
+// Una clave Ed25519/RSA ("Self-generated") viene como bloque PEM: la app
+// firma con HMAC y solo sirve la "System generated" (9/09/2026).
+if (/PRIVATE KEY|BEGIN /.test(k + s)) {
+res.innerHTML = '<div class="tmsg err">That is a Self-generated (Ed25519/RSA) key. The app needs a <b>System generated</b> key: create one of that type in Binance and paste its API Key and Secret Key.</div>';
+return;
+}
 try { localStorage.setItem('ga_bnb', JSON.stringify({ key: k, secret: s })); } catch (e) {}
 document.getElementById('bnbKey').value = '';
 document.getElementById('bnbSecret').value = '';
@@ -296,6 +302,14 @@ var timer = setTimeout(function () { terminar(new Error('Binance did not respond
 function estirar(ms) { clearTimeout(timer); timer = setTimeout(function () { terminar(new Error('Binance did not respond (timed out). Try again.')); }, ms); }
 try { ws = new WebSocket('wss://ws-api.binance.com/ws-api/v3'); } catch (e) { terminar(e); return; }
 ws.onerror = function () { terminar(new Error('Could not connect to Binance. Check your internet connection.')); };
+// Con una clave que no reconoce, Binance NO contesta con un error: cierra la
+// conexion (comprobado el 9/09/2026 con el reloj corregido, para cualquier
+// metodo firmado). Sin esto el cierre vencia el plazo y se leia "did not
+// respond (timed out)", que apuntaba a la red cuando el problema era la clave.
+ws.onclose = function (ev) {
+if (done) return;
+terminar(new Error('Binance closed the connection without answering (code ' + (ev && ev.code) + '): it does not recognize this API key. In Binance → API Management check that it is a System generated key with Enable Reading, paste both keys again whole, and if the key is IP-restricted, remove the restriction.'));
+};
 // Un pedido firmado por el mismo socket: la firma va sobre los parametros en
 // orden alfabetico, que es como Binance la verifica. La respuesta llega por
 // onmessage con el mismo id.
