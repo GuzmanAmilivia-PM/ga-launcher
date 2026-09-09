@@ -288,7 +288,7 @@ var BNB_SIN_COSTO = ['USDT', 'USDC', 'BUSD', 'FDUSD', 'TUSD', 'DAI'];
 function bnbLeerSaldos(cb, fail) {
 var cfg = bnbConfig();
 if (!cfg) { fail(new Error('The Binance API key needs to be saved first.')); return; }
-var ws = null, done = false, esperando = {};
+var ws = null, done = false, esperando = {}, nPedidos = 0, saldosLeidos = null;
 function terminar(err, saldos) {
 if (done) return;
 done = true;
@@ -308,6 +308,10 @@ ws.onerror = function () { terminar(new Error('Could not connect to Binance. Che
 // respond (timed out)", que apuntaba a la red cuando el problema era la clave.
 ws.onclose = function (ev) {
 if (done) return;
+// Binance corta despues de CUALQUIER error, tambien el de un par que no
+// existe en myTrades: si los saldos ya se leyeron, valen con los costos
+// que alcanzaron a llegar.
+if (saldosLeidos) { terminar(null, saldosLeidos); return; }
 terminar(new Error('Binance closed the connection without answering (code ' + (ev && ev.code) + '): it does not recognize this API key. In Binance → API Management check that it is a System generated key with Enable Reading, paste both keys again whole, and if the key is IP-restricted, remove the restriction.'));
 };
 // Un pedido firmado por el mismo socket: la firma va sobre los parametros en
@@ -318,7 +322,11 @@ var ts = Date.now();
 var params = { apiKey: cfg.key, recvWindow: 10000, timestamp: ts };
 Object.keys(extra || {}).forEach(function (k) { params[k] = extra[k]; });
 var payload = Object.keys(params).sort().map(function (k) { return k + '=' + params[k]; }).join('&');
-var id = 'ga-' + method + '-' + ts + '-' + Math.floor(Math.random() * 1e6);
+// Binance solo acepta ids de hasta 36 caracteres con letras, numeros, '-' y
+// '_' (error -1135 y corta la conexion si no). En v178 el id paso a llevar el
+// metodo crudo ('ga-account.status-...', con punto) y la lectura murio en
+// silencio como "did not respond" (9/09/2026). Antes era 'ga-' + ts.
+var id = 'ga-' + (++nPedidos) + '-' + method.replace(/[^a-zA-Z0-9_-]/g, '');
 esperando[id] = alResponder;
 bnbFirmar(cfg.secret, payload).then(function (sig) {
 params.signature = sig;
@@ -355,6 +363,7 @@ j.result.balances.forEach(function (b) {
 var qty = (parseFloat(b.free) || 0) + (parseFloat(b.locked) || 0);
 if (qty > 1e-8) saldos.push({ symbol: String(b.asset || '').toUpperCase(), qty: qty });
 });
+saldosLeidos = saldos;
 costosDe(saldos);
 return;
 }
@@ -370,6 +379,9 @@ ws.onmessage = function (ev) {
 var j = null;
 try { j = JSON.parse(ev.data); } catch (e) { return; }
 if (!j || j.id === undefined) return;
+// Un pedido mal formado vuelve con id null y su motivo; sin esto se
+// perdia y solo quedaba el corte de la conexion.
+if (j.id === null && j.error) { terminar(new Error('Binance rejected the request: ' + j.error.msg)); return; }
 var h = esperando[j.id];
 if (!h) return;
 delete esperando[j.id];
