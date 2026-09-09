@@ -572,10 +572,16 @@ ok(api.logoUrl({ symbol: 'MSFT', tipo: 'accion' }).indexOf('/logos/symbol/MSFT')
   'una accion arma la URL con SU ticker');
 ok(api.logoUrl({ symbol: 'VOO', tipo: 'etf' }).indexOf('/logos/symbol/VOO') !== -1,
   'un ETF tambien');
-ok(api.logoUrl({ symbol: 'ETH', tipo: 'cripto', cripto: true }) === 'https://bin.bnbstatic.com/static/assets/logos/ETH.png',
-  'una cripto usa el servidor de logos de Binance, por ticker (9/09/2026: tiene a RUNE y POL, el set anterior no)');
-ok(api.logoUrl({ symbol: 'RUNE', tipo: 'cripto', cripto: true }).indexOf('/logos/RUNE.png') !== -1,
+// 9/09/2026, dos vueltas el mismo dia: el set de cdn.jsdelivr.net no tenia a
+// RUNE ni a POL; el servidor de Binance (bin.bnbstatic.com) se publico sin
+// probar cada ticker y contesta 403 a TODOS (seis circulos vacios). CoinCap
+// da imagen a las ocho probadas, por ticker en minusculas.
+ok(api.logoUrl({ symbol: 'ETH', tipo: 'cripto', cripto: true }) === 'https://assets.coincap.io/assets/icons/eth@2x.png',
+  'una cripto usa los iconos de CoinCap, por ticker en minusculas');
+ok(api.logoUrl({ symbol: 'RUNE', tipo: 'cripto', cripto: true }).indexOf('/icons/rune@2x.png') !== -1,
   'RUNE tambien');
+ok(api.logoUrl({ symbol: 'POL', tipo: 'cripto', cripto: true }).indexOf('bnbstatic') === -1,
+  'y el servidor de Binance (403 a todo) no vuelve');
 ok(api.logoUrl({ symbol: 'ITAU', tipo: 'cash' }) === null,
   'una fila que es CASH (un saldo bancario) no tiene logo de empresa que mostrar');
 ok(api.logoUrl({ symbol: 'msft', tipo: 'accion' }).indexOf('/MSFT') !== -1,

@@ -517,7 +517,7 @@ return sparkSvg(s);
 // 4 de 6 criptos. Lo que no esta en ninguna de las dos (NA9 en Xetra, TEP en
 // Paris, MPT) se queda con las iniciales de siempre — que es el
 // comportamiento anterior, no una falla. Desde el 9/09/2026 las criptos
-// salen del servidor de Binance, que cubre las seis.
+// salen de CoinCap, que cubre las seis (probado ticker por ticker).
 function logoUrl(h) {
 var sym = String(h.symbol || '').toUpperCase();
 if (tipoDe(h) === 'cash') return null;
@@ -527,10 +527,13 @@ if (tipoDe(h) === 'cash') return null;
 // devolvia el logo de la gestora que lo tenia antes — un logo ajeno al lado
 // de un simbolo se lee como si fuera el suyo.
 if (h.logo) return h.logo;
-// Cripto: el servidor de logos del propio Binance, por ticker (9/09/2026,
-// pedido de Guzman: RUNE y POL no estaban en el set de iconos anterior y en
-// Binance si). Un ticker que no tiene devuelve 403 y se cae a las iniciales.
-if (tipoDe(h) === 'cripto') return 'https://bin.bnbstatic.com/static/assets/logos/' + encodeURIComponent(sym) + '.png';
+// Cripto: los iconos de CoinCap, por ticker en minusculas (9/09/2026). El set
+// anterior (cdn.jsdelivr.net) no tenia a RUNE ni a POL; a la tarde se probo
+// el servidor de Binance (bin.bnbstatic.com) y contesta 403 a TODOS los
+// tickers —salio publicado y Guzman vio las seis criptos sin imagen—. CoinCap
+// da 200 image/png a las ocho probadas (BTC, ETH, BNB, SOL, RUNE, POL, THETA,
+// USDT); un ticker que no tiene se cae a las iniciales.
+if (tipoDe(h) === 'cripto') return 'https://assets.coincap.io/assets/icons/' + encodeURIComponent(sym.toLowerCase()) + '@2x.png';
 return 'https://assets.parqet.com/logos/symbol/' + encodeURIComponent(sym);
 }
 // Si el logo no carga (dominio sin logo, cripto fuera del set, sin red), se

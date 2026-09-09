@@ -10,9 +10,10 @@
      sacaron el 22/08/2026, al apagar ese backend: eran dos destinos de
      exfiltracion que ya no cumplian ninguna funcion.
      img-src lleva TRES servidores de logos, y cada uno esta por algo:
-     assets.parqet.com (acciones/ETF, por ticker), bin.bnbstatic.com (cripto,
-     el servidor de logos del propio Binance; hasta el 9/09/2026 era un set
-     de iconos en cdn.jsdelivr.net que no tenia a RUNE ni a POL) y
+     assets.parqet.com (acciones/ETF, por ticker), assets.coincap.io (cripto,
+     por ticker; hasta el 9/09/2026 era un set de iconos en cdn.jsdelivr.net
+     que no tenia a RUNE ni a POL, y ese mismo dia se probo un rato el
+     servidor de Binance, que contesta 403 a todo: seis circulos vacios) y
      desde el 27/08/2026 *.finnhub.io — el logo OFICIAL que el backend guarda
      por simbolo. Ese tercero entro porque el servicio por ticker mostraba
      para SPCX (SpaceX) el logo de la gestora que uso ese ticker antes: un
@@ -34,7 +35,7 @@
   script-src 'self' 'sha256-eCEv2Xtk/d4etq+pER4EYyojYMTusYCys+IfxZyAxE0=';
   style-src 'self' 'unsafe-inline';
   font-src 'self' data:;
-  img-src 'self' data: https://assets.parqet.com https://bin.bnbstatic.com https://*.finnhub.io;
+  img-src 'self' data: https://assets.parqet.com https://assets.coincap.io https://*.finnhub.io;
   media-src 'self' data:;
   connect-src 'self' https://ga-portfolio-worker.ga-portfolio.workers.dev wss://ws-api.binance.com;
   frame-src https://s.tradingview.com https://www.tradingview.com;

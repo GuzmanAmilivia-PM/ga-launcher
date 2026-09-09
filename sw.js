@@ -1,6 +1,6 @@
 // Service worker: cachea el "cascarón" de la app para carga instantánea.
 // Los datos (POST a la API) nunca se cachean.
-var CACHE = 'ga-pwa-v189';
+var CACHE = 'ga-pwa-v190';
 var ASSETS = ['./', './index.html', './css/estilos.css',   './js/gagraf.js', './js/analisis.js', './js/arranque.js', './js/brokers.js', './js/buscador.js', './js/calor.js', './js/config.js', './js/graficos.js', './js/ia.js', './js/nucleo.js', './js/paneles.js', './js/seguridad.js', './js/sincronizar.js', './js/tablero.js', './js/trade.js', './js/vistas.js', './js/watchlist.js',
   './manifest.json'];
 // Lo ESTABLE (5/09/2026): fuentes e iconos, ~110 KB que no cambian desde agosto
