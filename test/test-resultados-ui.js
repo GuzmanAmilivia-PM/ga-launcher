@@ -164,6 +164,50 @@ var m8 = montar();
 m8.api.renderResultados({ hay: true, horizonteDias: 90, fueraDeCobertura: [], eventos: [] });
 ok(!/Could not check/.test(m8.elems.resultadosBody.innerHTML), "sin el campo tampoco");
 
+// Solo lo INMINENTE a la vista (9/09/2026, pedido de Guzmán): con el
+// horizonte de 90 días la lista mezclaba lo de esta semana con lo de dentro
+// de dos meses. Lo que falta 10 días o más queda plegado en un <details>
+// nativo, sin JS ni manejadores inline (la política de contenido los
+// bloquea), y el resumen dice cuántos y desde cuándo.
+function ev(sym, dias) { return { symbol: sym, fecha: ymd(dias), hora: '', epsEstimado: null, epsReal: null, revEstimado: null, revReal: null }; }
+var m9 = montar();
+m9.api.renderResultados({ hay: true, horizonteDias: 90, fueraDeCobertura: [],
+  eventos: [ev('LEJOS2', 40), ev('CERCA', 3), ev('BORDE9', 9), ev('BORDE10', 10), ev('LEJOS1', 25)] });
+var plegado = m9.elems.resultadosBody.innerHTML;
+var iDet = plegado.indexOf('<details class="newsmas">');
+ok(iDet >= 0, 'los que faltan 10 dias o mas van dentro de un <details>');
+ok(plegado.indexOf('CERCA') >= 0 && plegado.indexOf('CERCA') < iDet, 'el que falta 3 dias se ve a la vista, antes del plegado');
+ok(plegado.indexOf('BORDE9') >= 0 && plegado.indexOf('BORDE9') < iDet, 'a 9 dias todavia es "menos de 10": a la vista');
+ok(plegado.indexOf('BORDE10') > iDet, 'a 10 dias justos ya va plegado');
+ok(plegado.indexOf('LEJOS1') > iDet && plegado.indexOf('LEJOS2') > iDet, 'y los mas lejanos tambien');
+ok(plegado.indexOf('LEJOS1') < plegado.indexOf('LEJOS2'), 'dentro del plegado van por fecha aunque el payload venga desordenado');
+ok(new RegExp('<summary>3 more further out, from ' + m9.api.fechaResultado(ymd(10)) + '</summary>').test(plegado),
+  'el resumen dice CUANTOS quedan plegados y desde que fecha (la primera de verdad)');
+ok(!/None of your companies report/.test(plegado), 'con algo inminente no hay aviso de vacio');
+ok(!/onclick|onerror/.test(plegado), 'el plegado no usa manejadores inline (la politica los bloquea)');
+
+// Sin nada inminente pero con algo mas lejos: se DICE, o el plegado cerrado
+// se leeria como "no reporta nadie".
+var m10 = montar();
+m10.api.renderResultados({ hay: true, horizonteDias: 90, fueraDeCobertura: [], eventos: [ev('MSFT', 48)] });
+var soloLejos = m10.elems.resultadosBody.innerHTML;
+ok(/None of your companies report in the next 10 days./.test(soloLejos), 'sin inminentes lo dice, con el plazo de 10 dias');
+ok(/<details class="newsmas"><summary>1 more further out/.test(soloLejos) && /MSFT/.test(soloLejos), 'y el lejano sigue ahi, plegado');
+ok(!/in the next 3 months/.test(soloLejos), 'el aviso de calendario vacio NO sale: hay eventos');
+
+// Todo inminente: ningun plegado (un desplegable vacio seria ruido).
+var m11 = montar();
+m11.api.renderResultados({ hay: true, horizonteDias: 90, fueraDeCobertura: [], eventos: [ev('AAA', 0), ev('BBB', 5)] });
+var todoCerca = m11.elems.resultadosBody.innerHTML;
+ok(!/<details/.test(todoCerca), 'con todo inminente no hay plegado');
+ok(/AAA/.test(todoCerca) && /BBB/.test(todoCerca), 'y los dos se ven (hoy cuenta como inminente)');
+
+// El estilo del plegado existe en la hoja real (mira la regla escrita, no
+// mide geometria: el arnes no tiene navegador).
+var cssSrc = fs.readFileSync(path.join(ruta.RUTA, 'css', 'estilos.css'), 'utf8');
+ok(/\.newsmas > summary \{[^}]*list-style: none/.test(cssSrc) && /\.newsmas\[open\] > summary::after/.test(cssSrc),
+  'estilos.css trae .newsmas con el marcador propio (+ / -), como .manualop');
+
 // XSS: un symbol hostil no puede meter HTML
 var m4 = montar();
 m4.api.renderResultados({

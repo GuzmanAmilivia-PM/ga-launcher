@@ -690,6 +690,12 @@ html.light .anxfila .pista { background: rgba(20,40,80,.08); }
 .newsmove { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 9px 0 2px; font-size: 13.5px; }
 .newsmove + .newsitem { border-top: none; }
 .newsempty { color: var(--muted); font-size: 12px; }
+/* Resultados más lejanos, plegados (9/09/2026): mismo gesto que .manualop */
+.newsmas { margin-top: 4px; }
+.newsmas > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 0 2px; font-size: 12.5px; font-weight: 700; color: var(--gold); -webkit-tap-highlight-color: transparent; }
+.newsmas > summary::-webkit-details-marker { display: none; }
+.newsmas > summary::after { content: '+'; font-size: 18px; line-height: 1; }
+.newsmas[open] > summary::after { content: '2'; }
 /* Transicion al cambiar de vista: en seco se sentia "de programador". */
 .vacio { text-align: center; padding: 22px 12px; color: var(--muted); }
 .vacio .vic { font-size: 30px; display: block; margin-bottom: 8px; opacity: .8; }

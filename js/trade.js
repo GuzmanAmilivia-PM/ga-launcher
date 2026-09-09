@@ -433,6 +433,10 @@ wirePodcastBtn('podcastBtn', false);
 // empresa confirme), y que reporto contra que se esperaba. Los limites se
 // dicen (regla U2): cubre acciones de EE.UU.; ETFs y cripto no reportan.
 var resultadosCargados = false;
+// Los próximos se muestran solo si faltan MENOS de estos días; el resto queda
+// plegado en un <details> (pedido de Guzmán, 9/09/2026: con el horizonte de
+// 90 días la lista mezclaba lo de esta semana con lo de dentro de dos meses).
+var RESULTADOS_DIAS_CERCA = 10;
 function fechaResultado(ymd) {
 var d = new Date(String(ymd) + 'T12:00:00');
 if (isNaN(d.getTime())) return String(ymd);
@@ -450,13 +454,22 @@ el.innerHTML = '<div class="card">' + card + '</div>';
 return;
 }
 var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-var pasados = [], porVenir = [];
+var pasados = [], porVenir = [], cerca = [], lejos = [];
 (data.eventos || []).forEach(function (e) {
 var d = new Date(String(e.fecha) + 'T12:00:00');
 if (isNaN(d.getTime())) return;
 if (e.epsReal !== null || e.revReal !== null) pasados.push(e);
-else if (d.getTime() >= hoy.getTime()) porVenir.push(e);
+else if (d.getTime() >= hoy.getTime()) {
+porVenir.push(e);
+// d es mediodía y hoy medianoche: floor deja los días enteros que faltan.
+var faltan = Math.floor((d.getTime() - hoy.getTime()) / 86400000);
+if (faltan < RESULTADOS_DIAS_CERCA) cerca.push(e); else lejos.push(e);
+}
 });
+// Se ordenan por fecha para que el plegado diga "desde" la primera de verdad
+// (el backend ya las manda ordenadas, pero esta pantalla no depende de eso).
+function porFecha(a, b) { return String(a.fecha) < String(b.fecha) ? -1 : (String(a.fecha) > String(b.fecha) ? 1 : 0); }
+cerca.sort(porFecha); lejos.sort(porFecha);
 if (!pasados.length && !porVenir.length) {
 // El plazo sale del payload, NO escrito a mano: decía "two weeks" con el
 // horizonte del backend en 14, y al ampliarlo a 90 ese texto habría pasado
@@ -475,7 +488,7 @@ if (e.epsReal !== null) partes.push('EPS ' + usd(e.epsReal) + (e.epsEstimado !==
 if (e.revReal !== null) partes.push('revenue ' + usd(Math.round(e.revReal / 1e6)) + 'M' + (e.revEstimado !== null ? ' vs ' + usd(Math.round(e.revEstimado / 1e6)) + 'M' : ''));
 card += '<div class="newsmove"><span><b>' + esc(e.symbol) + '</b> reported on ' + esc(fechaResultado(e.fecha)) + ': ' + esc(partes.join(' · ')) + '</span></div>';
 });
-porVenir.forEach(function (e) {
+function filaProximo(e) {
 // `hora` viaja como CÓDIGO del proveedor, no como frase: el mismo dato lo
 // consumen el mail (en español) y esta pantalla (en inglés), así que cada
 // uno traduce. Antes llegaba ya escrito y se imprimía "antes de abrir" en
@@ -484,8 +497,21 @@ var cuando = e.hora === 'bmo' ? 'before the open' : (e.hora === 'amc' ? 'after t
 var linea = '<b>' + esc(e.symbol) + '</b> reports on ' + esc(fechaResultado(e.fecha)) + (cuando ? ', ' + esc(cuando) : '');
 if (e.epsEstimado !== null) linea += ' — EPS expected ' + esc(usd(e.epsEstimado));
 linea += ' <span class="newsmeta">(estimated)</span>';
-card += '<div class="newsmove"><span>' + linea + '</span></div>';
-});
+return '<div class="newsmove"><span>' + linea + '</span></div>';
+}
+// Solo lo inminente a la vista. Si no hay nada inminente pero sí más lejos,
+// se dice (si no, el plegado cerrado se leería como "no reporta nadie").
+if (!cerca.length && lejos.length) {
+card += '<p class="newsempty">None of your companies report in the next ' + RESULTADOS_DIAS_CERCA + ' days.</p>';
+}
+cerca.forEach(function (e) { card += filaProximo(e); });
+// El resto, plegado: un <details> nativo (el mismo que "Log one manually"),
+// sin JS ni manejadores inline, que la política de contenido bloquea.
+if (lejos.length) {
+card += '<details class="newsmas"><summary>' + lejos.length + ' more further out, from ' + esc(fechaResultado(lejos[0].fecha)) + '</summary>';
+lejos.forEach(function (e) { card += filaProximo(e); });
+card += '</details>';
+}
 if (data.fueraDeCobertura && data.fueraDeCobertura.length) {
 card += '<p class="newsempty">No coverage (not listed in the US): ' + esc(data.fueraDeCobertura.join(', ')) + '. ETFs and crypto do not report earnings.</p>';
 }

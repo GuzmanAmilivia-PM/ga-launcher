@@ -22,9 +22,10 @@ var TRADES = {
 // Un Binance de mentira. `esc` describe el escenario: clave valida, saldos, y
 // si un par de myTrades falla.
 function binanceFalso(esc) {
-  var registro = { ids: [], metodos: [], cerrado: null };
+  var registro = { ids: [], metodos: [], cerrado: null, conexiones: 0 };
   function WS(url) {
     var self = this;
+    registro.conexiones++;
     this.readyState = 0;
     setTimeout(function () { self.readyState = 1; if (self.onopen) self.onopen(); }, 2);
     this.send = function (txt) {
@@ -85,18 +86,25 @@ var SALDOS = [{ asset: 'ETH', free: '1', locked: '0' }, { asset: 'USDT', free: '
   ok(r.reg.cerrado === 1008, 'A) el par inexistente hizo que Binance cortara (1008)...');
   var foo = (r.saldos || []).filter(function (s) { return s.symbol === 'FOO'; })[0];
   ok(foo && !foo.costoUnitario, 'A) ...y FOO queda sin costo, sin tumbar la lectura');
+  ok(eth && eth.costoInfo === '1 ops' && foo && /^error -1121 Invalid symbol/.test(foo.costoInfo), 'A) cada cripto lleva costoInfo: ETH "1 ops", FOO su error (fue ' + (foo && foo.costoInfo) + ')');
 
   // B) clave desconocida: -2015 y corte. El error nombra la clave, no el "timed out".
   r = await correr({ clave: 'OTRA', saldos: SALDOS });
   ok(r.err && /rejected the API key/.test(r.err.message), 'B) clave desconocida: "Binance rejected the API key" (dio: ' + (r.err ? r.err.message : 'ok?') + ')');
   ok(!/timed out/.test(r.err ? r.err.message : ''), 'B) y no "timed out"');
 
-  // C) el par inexistente va PRIMERO: Binance corta con el pedido de ETH en
-  // vuelo. Los saldos ya leidos vuelven igual (ETH sin costo), no un error.
+  // C) el par inexistente va PRIMERO: Binance corta. La app abre OTRA
+  // conexion y sigue, asi ETH no pierde su costo por culpa de FOO.
   r = await correr({ clave: 'GOOD', saldos: [SALDOS[2], SALDOS[0], SALDOS[1]] });
   ok(!r.err && r.saldos && r.saldos.length === 3, 'C) corte a mitad de camino: vuelven los saldos leidos' + (r.err ? ' (dio: ' + r.err.message + ')' : ''));
   eth = (r.saldos || []).filter(function (s) { return s.symbol === 'ETH'; })[0];
-  ok(eth && !eth.costoUnitario, 'C) ETH queda sin costo: su pedido murio con el corte');
+  ok(eth && eth.costoUnitario === 2000, 'C) ETH conserva su costo: la app reabrio la conexion (fue ' + (eth && eth.costoUnitario) + ')');
+  ok(r.reg.conexiones === 2, 'C) dos conexiones en total (fueron ' + r.reg.conexiones + ')');
+  // C2) muchos pares malos: como mucho tres reconexiones, y despues se
+  // devuelve lo que hay en vez de reintentar para siempre.
+  r = await correr({ clave: 'GOOD', saldos: [{ asset: 'A1', free: '1' }, { asset: 'A2', free: '1' }, { asset: 'A3', free: '1' }, { asset: 'A4', free: '1' }, { asset: 'A5', free: '1' }, SALDOS[0]] });
+  ok(!r.err && r.saldos && r.saldos.length === 6, 'C2) cinco pares malos: igual vuelven los saldos' + (r.err ? ' (dio: ' + r.err.message + ')' : ''));
+  ok(r.reg.conexiones === 4, 'C2) tope de tres reconexiones (fueron ' + r.reg.conexiones + ')');
 
   console.log(asserts + ' asserts, ' + fallos + ' fallas');
   process.exit(fallos ? 1 : 0);

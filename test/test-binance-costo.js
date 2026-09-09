@@ -46,7 +46,7 @@ ok(ctx.BNB_SIN_COSTO.indexOf('USDT') !== -1, 'USDT no lleva precio de compra');
 ok(/pedir\('myTrades', \{ symbol: s\.symbol \+ 'USDT', limit: 1000 \}/.test(html), 'bnbLeerSaldos pide myTrades por simbolo con la misma clave');
 // 9/09/2026: con una clave que no reconoce, Binance cierra el socket sin
 // contestar; antes se leia como "did not respond (timed out)".
-ok(/ws\.onclose = function \(ev\) \{\r?\nif \(done\) return;[\s\S]{0,600}?terminar\(new Error\('Binance closed the connection without answering/.test(html), 'el cierre del socket sin respuesta se informa como clave no reconocida');
+ok(/mio\.onclose = function \(ev\) \{\r?\nif \(done \|\| ws !== mio\) return;[\s\S]{0,600}?terminar\(new Error\('Binance closed the connection without answering/.test(html), 'el cierre del socket sin respuesta se informa como clave no reconocida (y un socket viejo ya reemplazado no cuenta)');
 ok(/it does not recognize this API key\. In Binance/.test(html), 'y dice que revisar en Binance');
 ok(/PRIVATE KEY\|BEGIN \/\.test\(k \+ s\)/.test(html) && /needs a <b>System generated<\/b> key/.test(html), 'al guardar, una clave PEM (Self-generated) se rechaza con la explicacion');
 ok(/costoParcial = true/.test(html), 'y marca el promedio parcial cuando lo operado no llega al saldo');

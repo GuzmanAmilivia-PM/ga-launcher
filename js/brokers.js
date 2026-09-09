@@ -288,7 +288,8 @@ var BNB_SIN_COSTO = ['USDT', 'USDC', 'BUSD', 'FDUSD', 'TUSD', 'DAI'];
 function bnbLeerSaldos(cb, fail) {
 var cfg = bnbConfig();
 if (!cfg) { fail(new Error('The Binance API key needs to be saved first.')); return; }
-var ws = null, done = false, esperando = {}, nPedidos = 0, saldosLeidos = null;
+var ws = null, done = false, esperando = {}, nPedidos = 0, saldosLeidos = null, reconexiones = 0;
+var MSJ_TARDO = 'Binance did not respond (timed out). Try again.';
 function terminar(err, saldos) {
 if (done) return;
 done = true;
@@ -298,25 +299,41 @@ if (err) fail(err); else cb(saldos);
 }
 // 15 s para los saldos; los trades se piden de a uno y cada uno estira el
 // plazo 5 s (una cartera de 6 criptos son ~45 s de tope, nunca cerca).
-var timer = setTimeout(function () { terminar(new Error('Binance did not respond (timed out). Try again.')); }, 15000);
-function estirar(ms) { clearTimeout(timer); timer = setTimeout(function () { terminar(new Error('Binance did not respond (timed out). Try again.')); }, ms); }
-try { ws = new WebSocket('wss://ws-api.binance.com/ws-api/v3'); } catch (e) { terminar(e); return; }
-ws.onerror = function () { terminar(new Error('Could not connect to Binance. Check your internet connection.')); };
-// Con una clave que no reconoce, Binance NO contesta con un error: cierra la
-// conexion (comprobado el 9/09/2026 con el reloj corregido, para cualquier
-// metodo firmado). Sin esto el cierre vencia el plazo y se leia "did not
-// respond (timed out)", que apuntaba a la red cuando el problema era la clave.
-ws.onclose = function (ev) {
-if (done) return;
-// Binance corta despues de CUALQUIER error, tambien el de un par que no
-// existe en myTrades: si los saldos ya se leyeron, valen con los costos
-// que alcanzaron a llegar.
+var timer = setTimeout(function () { terminar(new Error(MSJ_TARDO)); }, 15000);
+function estirar(ms) { clearTimeout(timer); timer = setTimeout(function () { terminar(new Error(MSJ_TARDO)); }, ms); }
+// Abre una conexion y engancha sus manejadores. Se vuelve a llamar cuando
+// Binance corta a mitad de los trades: corta despues de CUALQUIER error.
+function abrir(alAbrir) {
+var mio;
+try { mio = new WebSocket('wss://ws-api.binance.com/ws-api/v3'); } catch (e) { terminar(e); return; }
+ws = mio;
+mio.onerror = function () { if (ws === mio) terminar(new Error('Could not connect to Binance. Check your internet connection.')); };
+// Con una clave que no reconoce, Binance contesta -2015 y corta; con un
+// pedido mal formado, -1135 con id null y corta (9/09/2026, visto con el
+// paquete ws: el WebSocket de Node se tragaba ese mensaje). Si el cierre
+// llega sin que se haya visto respuesta, se dice lo mas probable.
+mio.onclose = function (ev) {
+if (done || ws !== mio) return;
 if (saldosLeidos) { terminar(null, saldosLeidos); return; }
-terminar(new Error('Binance closed the connection without answering (code ' + (ev && ev.code) + '): it does not recognize this API key. In Binance → API Management check that it is a System generated key with Enable Reading, paste both keys again whole, and if the key is IP-restricted, remove the restriction.'));
+terminar(new Error('Binance closed the connection without answering (code ' + (ev && ev.code) + '): it does not recognize this API key. In Binance \u2192 API Management check that it is a System generated key with Enable Reading, paste both keys again whole, and if the key is IP-restricted, remove the restriction.'));
 };
-// Un pedido firmado por el mismo socket: la firma va sobre los parametros en
-// orden alfabetico, que es como Binance la verifica. La respuesta llega por
-// onmessage con el mismo id.
+mio.onmessage = function (ev) {
+var j = null;
+try { j = JSON.parse(ev.data); } catch (e) { return; }
+if (!j || j.id === undefined) return;
+// Un pedido mal formado vuelve con id null y su motivo; sin esto se
+// perdia y solo quedaba el corte de la conexion.
+if (j.id === null && j.error) { terminar(new Error('Binance rejected the request: ' + j.error.msg)); return; }
+var h = esperando[j.id];
+if (!h) return;
+delete esperando[j.id];
+h(j);
+};
+mio.onopen = alAbrir;
+}
+// Un pedido firmado por el socket actual: la firma va sobre los parametros
+// en orden alfabetico, que es como Binance la verifica. La respuesta llega
+// por onmessage con el mismo id.
 function pedir(method, extra, alResponder) {
 var ts = Date.now();
 var params = { apiKey: cfg.key, recvWindow: 10000, timestamp: ts };
@@ -333,6 +350,16 @@ params.signature = sig;
 ws.send(JSON.stringify({ id: id, method: method, params: params }));
 }).catch(function (e) { terminar(e); });
 }
+// Binance corta la conexion despues de un error (tambien el -1121 de un par
+// que no cotiza contra USDT). Para no perder los costos de las demas criptos
+// se abre otra conexion y se sigue, con un tope por si el corte es otra cosa.
+function reconectarY(sig) {
+if (reconexiones++ >= 3) { terminar(null, saldosLeidos); return; }
+var viejo = ws;
+ws = null;
+try { viejo.close(); } catch (e) {}
+abrir(sig);
+}
 function costosDe(saldos) {
 var cola = saldos.filter(function (s) { return BNB_SIN_COSTO.indexOf(s.symbol) === -1; });
 var i = 0;
@@ -341,21 +368,26 @@ if (i >= cola.length) { terminar(null, saldos); return; }
 var s = cola[i++];
 estirar(5000 + 5000 * (cola.length - i + 1));
 pedir('myTrades', { symbol: s.symbol + 'USDT', limit: 1000 }, function (j) {
-// Un par que no existe (-1121) o cualquier otro tropiezo: ese saldo va sin
-// costo, los demas siguen.
+// Lo que paso con cada cripto viaja al cerebro (costoInfo), para que la
+// sync pueda decir por que falta un precio medio: sin operaciones spot
+// (las compras por Convert o con tarjeta no figuran) o un error de Binance.
 if (j.status === 200 && Object.prototype.toString.call(j.result) === '[object Array]') {
 var c = bnbCostoPromedio(j.result);
+s.costoInfo = j.result.length ? j.result.length + ' ops' : 'sin operaciones';
 if (c.costoUnitario > 0) {
 s.costoUnitario = c.costoUnitario;
 if (c.qty < s.qty * 0.9) s.costoParcial = true;
 }
-}
 siguiente();
+return;
+}
+s.costoInfo = 'error ' + (j.error && j.error.code) + (j.error && j.error.msg ? ' ' + String(j.error.msg).slice(0, 60) : '');
+reconectarY(siguiente);
 });
 }
 siguiente();
 }
-ws.onopen = function () {
+abrir(function () {
 pedir('account.status', null, function (j) {
 if (j.status === 200 && j.result && j.result.balances) {
 var saldos = [];
@@ -374,19 +406,7 @@ if (code === -1022) msg = 'The signature did not validate: check the Secret Key 
 if (code === -1021) msg = 'Your phone\u2019s clock differs from Binance\u2019s: enable automatic date and time.';
 terminar(new Error(msg));
 });
-};
-ws.onmessage = function (ev) {
-var j = null;
-try { j = JSON.parse(ev.data); } catch (e) { return; }
-if (!j || j.id === undefined) return;
-// Un pedido mal formado vuelve con id null y su motivo; sin esto se
-// perdia y solo quedaba el corte de la conexion.
-if (j.id === null && j.error) { terminar(new Error('Binance rejected the request: ' + j.error.msg)); return; }
-var h = esperando[j.id];
-if (!h) return;
-delete esperando[j.id];
-h(j);
-};
+});
 }
 var bnbEnCurso = false;
 // UNICO punto de escritura del candado de Binance: lo usan la pantalla de
