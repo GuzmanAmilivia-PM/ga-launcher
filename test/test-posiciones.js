@@ -724,7 +724,12 @@ var htmlMerged = detalleDe({ symbol: 'ITAU', precioCompra: 120.49, precioActual:
 ok(htmlMerged.indexOf('Edit prices') === -1,
   'fuera de la pagina de la cuenta (sin cuenta conocida) tampoco: el boton vive en la pagina de Itau');
 var htmlUsdt = detalleDe({ symbol: 'USDT', precioActual: 1, qty: 380, cuenta: 'BNB', gfTicker: null, cripto: false });
-ok(htmlUsdt.indexOf('Edit prices') === -1, 'USDT no: su 1 esta a mano y es verdad, no se toca desde la app');
+ok(htmlUsdt.indexOf('Edit prices') === -1 && htmlUsdt.indexOf('Set buy price') === -1, 'USDT no: su 1 esta a mano y es verdad, no se toca desde la app');
+// 9/09/2026: una cripto de Binance ofrece cargar SOLO el precio de compra
+// (lo comprado por Convert o con tarjeta no figura en el historial spot).
+var htmlBtc = detalleDe({ symbol: 'BTC', precioActual: 79138.7, qty: 0.0257, cuenta: 'BNB', gfTicker: null, cripto: true });
+ok(htmlBtc.indexOf('Set buy price') !== -1 && htmlBtc.indexOf('detedit-pc') !== -1, 'BTC en Binance ofrece cargar el precio de compra');
+ok(htmlBtc.indexOf('detedit-pa') === -1 && htmlBtc.indexOf('Edit prices') === -1, 'pero NO el precio actual: ese viene del mercado');
 // Y la fn esta cableada en el MAP de nucleo.js (el contrato del otro lado lo
 // cruza test-html seccion G contra API_FNS del worker).
 var nucleoSrc = fs.readFileSync(path.join(ruta.RUTA, 'js', 'nucleo.js'), 'utf8');

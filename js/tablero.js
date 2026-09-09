@@ -227,7 +227,12 @@ function toggleDetalle(tr, pos) {
   // (V16, 29/08/2026): sin proveedor vivo (gfTicker vacio), sin cotizacion
   // cripto, y con la cuenta conocida — hoy, el fondo de Itau. Nacio con el
   // corte a D1: la celda de la planilla que Guzman editaba dejo de llegar.
-  var editable = !!pos.cuenta && !pos.cripto && !pos.gfTicker && symU !== 'USDT' && symU !== 'LIQUIDEZ';
+  // Las criptos de Binance tambien pueden editar SOLO el precio de compra
+  // (9/09/2026): lo comprado por Convert o con tarjeta no figura en el
+  // historial spot que lee la app, y sin precio medio no hay % de ganancia.
+  // El precio actual de una cripto sigue viniendo del mercado.
+  var editable = !!pos.cuenta && !pos.gfTicker && symU !== 'USDT' && symU !== 'LIQUIDEZ';
+  var soloCompra = !!pos.cripto;
   var html = '<div class="detgrid">' +
     '<span><span class="detlbl">Average price</span><b>' + (tienePm ? esc(fmtNum(pm)) : '&mdash;') + '</b></span>' +
     '<span><span class="detlbl">Cost basis</span><b>' + (base ? fmt(base) : '&mdash;') + '</b></span>';
@@ -238,9 +243,9 @@ function toggleDetalle(tr, pos) {
   html += '</div>';
   if (editable) {
     html += '<div class="detedit">' +
-      '<button type="button" class="detedit-abrir">Edit prices</button>' +
+      '<button type="button" class="detedit-abrir">' + (soloCompra ? 'Set buy price' : 'Edit prices') + '</button>' +
       '<div class="detedit-form" hidden>' +
-      '<label><span class="detlbl">Current price</span><input class="detedit-pa" type="number" inputmode="decimal" step="any" min="0"></label>' +
+      (soloCompra ? '' : '<label><span class="detlbl">Current price</span><input class="detedit-pa" type="number" inputmode="decimal" step="any" min="0"></label>') +
       '<label><span class="detlbl">Buy price (last lot)</span><input class="detedit-pc" type="number" inputmode="decimal" step="any" min="0"></label>' +
       '<div class="detedit-botones"><button type="button" class="detedit-guardar">Save</button><button type="button" class="detedit-cerrar">Cancel</button></div>' +
       '<p class="detedit-msg"></p>' +
