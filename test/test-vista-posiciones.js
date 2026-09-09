@@ -134,7 +134,7 @@ console.log('\nC2) la fila tiene la pinta de la lista de mercado (la referencia 
 ok(voo.indexOf('holdcell') !== -1 && voo.indexOf('holdav etf') !== -1,
   'logo en circulo con el color de su tipo, como en el Inicio');
 ok(voo.indexOf('assets.parqet.com/logos/symbol/VOO') !== -1, 'el logo del ETF sale por SU ticker');
-ok(filas[6].innerHTML.indexOf('cryptocurrency-icons') !== -1, 'la cripto usa su set de iconos');
+ok(filas[6].innerHTML.indexOf('bin.bnbstatic.com/static/assets/logos/BTC.png') !== -1, 'la cripto usa el logo del servidor de Binance (9/09/2026)');
 ok(voo.indexOf('class="sym"') !== -1 && voo.indexOf('class="desc"') !== -1,
   'simbolo grande y descripcion abajo (el CSS de .holdtable la corta en una linea)');
 ok(voo.indexOf('holdinit') !== -1 && voo.indexOf('onerror=') === -1,

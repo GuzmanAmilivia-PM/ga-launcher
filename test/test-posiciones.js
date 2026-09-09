@@ -572,8 +572,10 @@ ok(api.logoUrl({ symbol: 'MSFT', tipo: 'accion' }).indexOf('/logos/symbol/MSFT')
   'una accion arma la URL con SU ticker');
 ok(api.logoUrl({ symbol: 'VOO', tipo: 'etf' }).indexOf('/logos/symbol/VOO') !== -1,
   'un ETF tambien');
-ok(api.logoUrl({ symbol: 'ETH', tipo: 'cripto', cripto: true }).indexOf('/eth.png') !== -1,
-  'una cripto usa el set de iconos, en minuscula');
+ok(api.logoUrl({ symbol: 'ETH', tipo: 'cripto', cripto: true }) === 'https://bin.bnbstatic.com/static/assets/logos/ETH.png',
+  'una cripto usa el servidor de logos de Binance, por ticker (9/09/2026: tiene a RUNE y POL, el set anterior no)');
+ok(api.logoUrl({ symbol: 'RUNE', tipo: 'cripto', cripto: true }).indexOf('/logos/RUNE.png') !== -1,
+  'RUNE tambien');
 ok(api.logoUrl({ symbol: 'ITAU', tipo: 'cash' }) === null,
   'una fila que es CASH (un saldo bancario) no tiene logo de empresa que mostrar');
 ok(api.logoUrl({ symbol: 'msft', tipo: 'accion' }).indexOf('/MSFT') !== -1,

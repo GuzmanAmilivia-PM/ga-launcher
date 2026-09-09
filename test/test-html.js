@@ -141,7 +141,7 @@ console.log('\nC2b) todo boton se puede nombrar: texto visible o aria-label');
 console.log('\nC3) la politica de contenido y lo que la app de verdad carga');
 // INCIDENTE del 24/08/2026: se cerro img-src a 'self' data: por un hallazgo de
 // auditoria que decia "la app no carga ninguna imagen de afuera". Era FALSO —
-// los logos de las posiciones salen de assets.parqet.com y cdn.jsdelivr.net— y
+// los logos de las posiciones salen de assets.parqet.com y bin.bnbstatic.com (antes cdn.jsdelivr.net)— y
 // se publico asi: los circulos de la tabla quedaron VACIOS durante dos dias.
 // Peor: el respaldo a las iniciales tampoco corria, porque estaba enganchado
 // con un onerror INLINE y la propia politica prohibe el codigo inline.

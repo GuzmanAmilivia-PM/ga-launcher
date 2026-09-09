@@ -515,8 +515,9 @@ return sparkSvg(s);
 //
 // Cobertura medida contra la cartera real ese dia: 16 de 19 acciones/ETFs, y
 // 4 de 6 criptos. Lo que no esta en ninguna de las dos (NA9 en Xetra, TEP en
-// Paris, MPT, RUNE, POL) se queda con las iniciales de siempre — que es el
-// comportamiento anterior, no una falla.
+// Paris, MPT) se queda con las iniciales de siempre — que es el
+// comportamiento anterior, no una falla. Desde el 9/09/2026 las criptos
+// salen del servidor de Binance, que cubre las seis.
 function logoUrl(h) {
 var sym = String(h.symbol || '').toUpperCase();
 if (tipoDe(h) === 'cash') return null;
@@ -526,7 +527,10 @@ if (tipoDe(h) === 'cash') return null;
 // devolvia el logo de la gestora que lo tenia antes — un logo ajeno al lado
 // de un simbolo se lee como si fuera el suyo.
 if (h.logo) return h.logo;
-if (tipoDe(h) === 'cripto') return 'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@master/128/color/' + sym.toLowerCase() + '.png';
+// Cripto: el servidor de logos del propio Binance, por ticker (9/09/2026,
+// pedido de Guzman: RUNE y POL no estaban en el set de iconos anterior y en
+// Binance si). Un ticker que no tiene devuelve 403 y se cae a las iniciales.
+if (tipoDe(h) === 'cripto') return 'https://bin.bnbstatic.com/static/assets/logos/' + encodeURIComponent(sym) + '.png';
 return 'https://assets.parqet.com/logos/symbol/' + encodeURIComponent(sym);
 }
 // Si el logo no carga (dominio sin logo, cripto fuera del set, sin red), se
