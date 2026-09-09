@@ -70,6 +70,9 @@ ok(typeof btn._onclick === 'function', 'wirePodcastBtn corre al cargar el bloque
 console.log('\nB) click -> estado de carga -> pedido sin forzar');
 btn._onclick();
 ok(/loadingtxt/.test(podBody.innerHTML), 'pinta el estado de carga de inmediato');
+// La tarjeta compacta (9/09/2026): el boton vive al lado del titulo, y desde
+// que se pide el cuerpo se abre a todo el ancho (clase podfull).
+ok(podBody.className === 'podfull', 'al pedir, el cuerpo pasa a todo el ancho (podfull)');
 ok(run.estado.pedido && run.estado.pedido.forzar === false, 'primer pedido: forzar:false');
 
 console.log('\nC) exito: reproductor con el audio del backend + el guion escapado + Regenerate');
@@ -77,6 +80,7 @@ run.estado.onOk({ ok: true, guion: 'Hola, buenas tardes. <b>Test</b> & mas', aud
 ok(podBody.innerHTML.indexOf('data:audio/mpeg;base64,QUJD') !== -1, 'el audio va como data: URI con el base64 que mando el backend');
 ok(podBody.innerHTML.indexOf('&lt;b&gt;Test&lt;/b&gt; &amp; mas') !== -1, 'el guion se escapa (no es HTML de confianza)');
 ok(typeof btn._onclick === 'function', 'Regenerate queda enganchado');
+ok(/class="ghostbtn mini" id="podcastRegen"/.test(podBody.innerHTML), 'Regenerate es el boton chico, como el de generar');
 
 console.log('\nD) Regenerate pide con forzar:true');
 btn._onclick();
@@ -85,6 +89,7 @@ ok(run.estado.pedido && run.estado.pedido.forzar === true, 'el reintento pide fo
 console.log('\nE) error del backend: mensaje + boton para reintentar (sin forzar)');
 run.estado.onOk({ ok: false, mensajes: ['El modelo declinó armar el guion.'] });
 ok(podBody.innerHTML.indexOf('El modelo declinó armar el guion.') !== -1, 'muestra el mensaje del backend');
+ok(/class="ghostbtn mini" id="podcastBtn">Generate<\/button>/.test(podBody.innerHTML), 'y el boton para reintentar es el chico, con el mismo texto que el de index.html');
 btn._onclick();
 ok(run.estado.pedido && run.estado.pedido.forzar === false, 'el reintento tras un error NO hereda el forzar de antes');
 

@@ -690,6 +690,21 @@ html.light .anxfila .pista { background: rgba(20,40,80,.08); }
 .newsmove { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 9px 0 2px; font-size: 13.5px; }
 .newsmove + .newsitem { border-top: none; }
 .newsempty { color: var(--muted); font-size: 12px; }
+/* La tarjeta compacta de arriba de Noticias (9/09/2026, "podcast y resultados
+   ocupan mucho espacio"): el podcast es UNA línea con el botón a la derecha, y
+   cuando se genera el cuerpo se abre a todo el ancho debajo del título. */
+.newsbrief .newsrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.newsbrief .newsrow .newssym { margin: 0; }
+#podcastBody { margin-left: auto; min-width: 0; }
+#podcastBody.podfull { flex-basis: 100%; margin-left: 0; }
+.ghostbtn.mini { display: inline-block; width: auto; margin: 0; padding: 6px 14px; font-size: 12.5px; border-radius: 10px; }
+.newssep { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; }
+/* Resultados sin nada inminente: título + estado en una sola línea plegada */
+.newsmas.newshead { margin: 0; }
+.newsmas.newshead > summary { padding: 0; }
+.newsmas.newshead .newshead-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.newsmas.newshead .newshead-txt .newssym { margin: 0; }
+.newsmas.newshead .newshead-txt .newsempty { font-weight: 400; }
 /* Resultados más lejanos, plegados (9/09/2026): mismo gesto que .manualop */
 .newsmas { margin-top: 4px; }
 .newsmas > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 0 2px; font-size: 12.5px; font-weight: 700; color: var(--gold); -webkit-tap-highlight-color: transparent; }

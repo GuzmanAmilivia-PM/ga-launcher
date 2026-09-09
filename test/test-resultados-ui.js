@@ -188,19 +188,57 @@ ok(!/onclick|onerror/.test(plegado), 'el plegado no usa manejadores inline (la p
 
 // Sin nada inminente pero con algo mas lejos: se DICE, o el plegado cerrado
 // se leeria como "no reporta nadie".
+// Y desde la tarde del 9/09/2026 (Guzmán: "podcast y resultados ocupan mucho
+// espacio, además ni hay próximos resultados a la brevedad"), ese caso —el
+// normal fuera de temporada— es UNA sola línea plegada: título + estado.
 var m10 = montar();
-m10.api.renderResultados({ hay: true, horizonteDias: 90, fueraDeCobertura: [], eventos: [ev('MSFT', 48)] });
+m10.api.renderResultados({ hay: true, horizonteDias: 90, fueraDeCobertura: ['NA9'], eventos: [ev('MSFT', 48)] });
 var soloLejos = m10.elems.resultadosBody.innerHTML;
-ok(/None of your companies report in the next 10 days./.test(soloLejos), 'sin inminentes lo dice, con el plazo de 10 dias');
-ok(/<details class="newsmas"><summary>1 more further out/.test(soloLejos) && /MSFT/.test(soloLejos), 'y el lejano sigue ahi, plegado');
+ok(/^<div class="newssep"><details class="newsmas newshead"><summary>/.test(soloLejos), 'sin inminentes, la seccion ENTERA es un plegado cerrado');
+ok(new RegExp('<summary><span class="newshead-txt"><span class="newssym">Your companies&rsquo; earnings</span><span class="newsempty">None in 10 days &middot; next ' + m10.api.fechaResultado(ymd(48)) + ' &middot; 1 more</span></span></summary>').test(soloLejos),
+  'y el resumen lleva el titulo y el estado: nada en 10 dias, cuantos vienen y desde cuando');
+ok(soloLejos.indexOf('MSFT') > soloLejos.indexOf('</summary>'), 'el lejano sigue ahi, adentro del plegado');
+ok(soloLejos.indexOf('No coverage') > soloLejos.indexOf('</summary>'), 'la nota de cobertura (un hecho fijo) tambien va adentro, no ocupa lugar cerrada');
 ok(!/in the next 3 months/.test(soloLejos), 'el aviso de calendario vacio NO sale: hay eventos');
+ok(!/<div class="card">/.test(soloLejos), 'ya no arma tarjeta propia: vive en la del podcast, separado por .newssep');
+
+// Con algo inminente el titulo queda a la vista y la nota de cobertura va
+// adentro del plegado de los lejanos.
+var m10b = montar();
+m10b.api.renderResultados({ hay: true, horizonteDias: 90, fueraDeCobertura: ['NA9'], eventos: [ev('AAA', 2), ev('BBB', 30)] });
+var mixto = m10b.elems.resultadosBody.innerHTML;
+ok(/^<div class="newssep"><span class="newssym">/.test(mixto), 'con algo inminente el titulo va suelto, a la vista');
+ok(mixto.indexOf('AAA') < mixto.indexOf('<details'), 'el inminente antes del plegado');
+ok(mixto.indexOf('No coverage') > mixto.indexOf('<details'), 'y la cobertura adentro del plegado');
+
+// El aviso de proveedor a medias es un aviso REAL: nunca se pliega.
+var m10c = montar();
+m10c.api.renderResultados({ hay: true, horizonteDias: 90, fueraDeCobertura: [], sinRespuesta: ['GOOG'], eventos: [ev('MSFT', 48)] });
+var conAviso = m10c.elems.resultadosBody.innerHTML;
+ok(conAviso.indexOf('Could not check GOOG') > conAviso.indexOf('</details>'), 'el aviso de los que no contestaron queda FUERA del plegado, a la vista');
 
 // Todo inminente: ningun plegado (un desplegable vacio seria ruido).
 var m11 = montar();
-m11.api.renderResultados({ hay: true, horizonteDias: 90, fueraDeCobertura: [], eventos: [ev('AAA', 0), ev('BBB', 5)] });
+m11.api.renderResultados({ hay: true, horizonteDias: 90, fueraDeCobertura: ['NA9'], eventos: [ev('AAA', 0), ev('BBB', 5)] });
 var todoCerca = m11.elems.resultadosBody.innerHTML;
 ok(!/<details/.test(todoCerca), 'con todo inminente no hay plegado');
 ok(/AAA/.test(todoCerca) && /BBB/.test(todoCerca), 'y los dos se ven (hoy cuenta como inminente)');
+ok(/No coverage/.test(todoCerca), 'sin plegado, la nota de cobertura queda a la vista (no hay donde guardarla)');
+
+// La tarjeta compacta de arriba de Noticias: UNA tarjeta para el podcast y los
+// resultados, el podcast en una linea con el boton chico a la derecha.
+var iNot = html.indexOf('id="view-noticias"');
+var iBrief = html.indexOf('<div class="card newsbrief">', iNot);
+var iFinBrief = html.indexOf('</div>\n<div id="noticiasBody">', iBrief);
+ok(iBrief > iNot && iFinBrief > iBrief, 'existe la tarjeta compacta .newsbrief antes de los titulares');
+var brief = html.slice(iBrief, iFinBrief);
+ok(/<div class="newsrow"><span class="newssym">Daily podcast<\/span><div id="podcastBody"><button type="button" class="ghostbtn mini" id="podcastBtn">Generate<\/button><\/div><\/div>/.test(brief),
+  'el podcast es una fila: titulo + boton chico (ghostbtn mini) a la derecha');
+ok(/<div id="resultadosBody"><\/div>/.test(brief), 'y resultadosBody vive DENTRO de esa misma tarjeta');
+ok((html.slice(iNot, html.indexOf('<div id="noticiasBody">', iNot)).match(/<div class="card/g) || []).length === 1, 'view-noticias tiene una sola tarjeta escrita a mano (las de titulares las arma el JS)');
+var cssBrief = fs.readFileSync(path.join(ruta.RUTA, 'css', 'estilos.css'), 'utf8');
+ok(/\.ghostbtn\.mini \{[^}]*width: auto/.test(cssBrief) && /#podcastBody\.podfull \{[^}]*flex-basis: 100%/.test(cssBrief) && /\.newssep \{[^}]*border-top/.test(cssBrief) && /\.newsmas\.newshead \.newshead-txt \{[^}]*flex-direction: column/.test(cssBrief),
+  'estilos.css trae el boton chico, el cuerpo del podcast a todo el ancho, el separador y el encabezado plegado (mira la regla escrita, no mide)');
 
 // El estilo del plegado existe en la hoja real (mira la regla escrita, no
 // mide geometria: el arnes no tiene navegador).

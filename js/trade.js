@@ -393,19 +393,23 @@ if (btn) btn.onclick = function () { generarPodcast(forzar); };
 }
 wirePodcastBtn('podcastBtn', false);
 function podcastErrorHtml(msg) {
-return '<p class="newsempty">' + esc(msg) + '</p><button type="button" class="ghostbtn" id="podcastBtn">Generate podcast</button>';
+return '<p class="newsempty">' + esc(msg) + '</p><button type="button" class="ghostbtn mini" id="podcastBtn">Generate</button>';
 }
 function podcastHtml(r) {
 // r.audioBase64 solo trae el alfabeto base64 (A-Za-z0-9+/=): no hace falta
 // esc(), y escaparlo igual no cambiaria nada.
 return '<audio controls preload="none" style="width:100%" src="data:' + esc(r.mime || 'audio/mpeg') + ';base64,' + r.audioBase64 + '"></audio>' +
 '<p class="ia-p" style="margin-top:10px">' + esc(r.guion || '') + '</p>' +
-'<button type="button" class="ghostbtn" id="podcastRegen">Regenerate</button>';
+'<button type="button" class="ghostbtn mini" id="podcastRegen">Regenerate</button>';
 }
 function generarPodcast(forzar) {
 if (podcastCargando) return;
 podcastCargando = true;
 var out = document.getElementById('podcastBody');
+// Desde que se pide, el cuerpo deja la línea del título y se abre a todo el
+// ancho (la tarjeta compacta del 9/09/2026): el reproductor y el guion no
+// entran al lado del título.
+out.className = 'podfull';
 out.innerHTML = '<p class="loadingtxt">Writing the script and generating the voice... this can take up to a minute.</p>';
 google.script.run.withSuccessHandler(function (r) {
 podcastCargando = false;
@@ -447,10 +451,14 @@ function usd(n) { return 'US$ ' + String(n); }
 function renderResultados(data) {
 var el = document.getElementById('resultadosBody');
 if (!el) return;
-var card = '<span class="newssym">Your companies&rsquo; earnings</span>';
+// Vive en la MISMA tarjeta que el podcast, separado por una línea (9/09/2026,
+// Guzmán: "podcast y resultados ocupan mucho espacio"). Y cuando no hay nada
+// inminente, la sección entera es UNA línea de estado que se abre para ver lo
+// lejano — el caso normal fuera de temporada de balances.
+var titulo = '<span class="newssym">Your companies&rsquo; earnings</span>';
+function envolver(html) { el.innerHTML = '<div class="newssep">' + html + '</div>'; }
 if (!data || !data.hay) {
-card += '<p class="newsempty">No calendar data yet: it updates every morning with the sync.</p>';
-el.innerHTML = '<div class="card">' + card + '</div>';
+envolver(titulo + '<p class="newsempty">No calendar data yet: it updates every morning with the sync.</p>');
 return;
 }
 var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
@@ -470,6 +478,35 @@ if (faltan < RESULTADOS_DIAS_CERCA) cerca.push(e); else lejos.push(e);
 // (el backend ya las manda ordenadas, pero esta pantalla no depende de eso).
 function porFecha(a, b) { return String(a.fecha) < String(b.fecha) ? -1 : (String(a.fecha) > String(b.fecha) ? 1 : 0); }
 cerca.sort(porFecha); lejos.sort(porFecha);
+function filaProximo(e) {
+// `hora` viaja como CÓDIGO del proveedor, no como frase: el mismo dato lo
+// consumen el mail (en español) y esta pantalla (en inglés), así que cada
+// uno traduce. Antes llegaba ya escrito y se imprimía "antes de abrir" en
+// una interfaz en inglés. Un código que no conocemos no se nombra.
+var cuando = e.hora === 'bmo' ? 'before the open' : (e.hora === 'amc' ? 'after the close' : '');
+var linea = '<b>' + esc(e.symbol) + '</b> reports on ' + esc(fechaResultado(e.fecha)) + (cuando ? ', ' + esc(cuando) : '');
+if (e.epsEstimado !== null) linea += ' — EPS expected ' + esc(usd(e.epsEstimado));
+linea += ' <span class="newsmeta">(estimated)</span>';
+return '<div class="newsmove"><span>' + linea + '</span></div>';
+}
+var filasLejos = '';
+lejos.forEach(function (e) { filasLejos += filaProximo(e); });
+// La cobertura es un hecho fijo (las mismas dos europeas, siempre): va
+// ADENTRO del plegado cuando lo hay, para no ocupar dos líneas cada día.
+var notas = '';
+if (data.fueraDeCobertura && data.fueraDeCobertura.length) {
+notas += '<p class="newsempty">No coverage (not listed in the US): ' + esc(data.fueraDeCobertura.join(', ')) + '. ETFs and crypto do not report earnings.</p>';
+}
+var desde = lejos.length ? esc(fechaResultado(lejos[0].fecha)) : '';
+var card = '';
+if (!pasados.length && !cerca.length && lejos.length) {
+// Nada inminente: título y estado en una sola línea plegada.
+// Corto a propósito: a 375 px "12 further out, from Wed 14/10" partía la
+// línea en dos y la gracia era que fuera UNA.
+var estado = 'None in ' + RESULTADOS_DIAS_CERCA + ' days &middot; next ' + desde + ' &middot; ' + lejos.length + ' more';
+card += '<details class="newsmas newshead"><summary><span class="newshead-txt">' + titulo + '<span class="newsempty">' + estado + '</span></span></summary>' + filasLejos + notas + '</details>';
+} else {
+card += titulo;
 if (!pasados.length && !porVenir.length) {
 // El plazo sale del payload, NO escrito a mano: decía "two weeks" con el
 // horizonte del backend en 14, y al ampliarlo a 90 ese texto habría pasado
@@ -488,42 +525,26 @@ if (e.epsReal !== null) partes.push('EPS ' + usd(e.epsReal) + (e.epsEstimado !==
 if (e.revReal !== null) partes.push('revenue ' + usd(Math.round(e.revReal / 1e6)) + 'M' + (e.revEstimado !== null ? ' vs ' + usd(Math.round(e.revEstimado / 1e6)) + 'M' : ''));
 card += '<div class="newsmove"><span><b>' + esc(e.symbol) + '</b> reported on ' + esc(fechaResultado(e.fecha)) + ': ' + esc(partes.join(' · ')) + '</span></div>';
 });
-function filaProximo(e) {
-// `hora` viaja como CÓDIGO del proveedor, no como frase: el mismo dato lo
-// consumen el mail (en español) y esta pantalla (en inglés), así que cada
-// uno traduce. Antes llegaba ya escrito y se imprimía "antes de abrir" en
-// una interfaz en inglés. Un código que no conocemos no se nombra.
-var cuando = e.hora === 'bmo' ? 'before the open' : (e.hora === 'amc' ? 'after the close' : '');
-var linea = '<b>' + esc(e.symbol) + '</b> reports on ' + esc(fechaResultado(e.fecha)) + (cuando ? ', ' + esc(cuando) : '');
-if (e.epsEstimado !== null) linea += ' — EPS expected ' + esc(usd(e.epsEstimado));
-linea += ' <span class="newsmeta">(estimated)</span>';
-return '<div class="newsmove"><span>' + linea + '</span></div>';
-}
-// Solo lo inminente a la vista. Si no hay nada inminente pero sí más lejos,
-// se dice (si no, el plegado cerrado se leería como "no reporta nadie").
-if (!cerca.length && lejos.length) {
-card += '<p class="newsempty">None of your companies report in the next ' + RESULTADOS_DIAS_CERCA + ' days.</p>';
-}
+// Solo lo inminente a la vista; el resto, plegado en un <details> nativo (el
+// mismo que "Log one manually"), sin JS ni manejadores inline, que la
+// política de contenido bloquea.
 cerca.forEach(function (e) { card += filaProximo(e); });
-// El resto, plegado: un <details> nativo (el mismo que "Log one manually"),
-// sin JS ni manejadores inline, que la política de contenido bloquea.
 if (lejos.length) {
-card += '<details class="newsmas"><summary>' + lejos.length + ' more further out, from ' + esc(fechaResultado(lejos[0].fecha)) + '</summary>';
-lejos.forEach(function (e) { card += filaProximo(e); });
-card += '</details>';
+card += '<details class="newsmas"><summary>' + lejos.length + ' more further out, from ' + desde + '</summary>' + filasLejos + notas + '</details>';
+} else {
+card += notas;
 }
-if (data.fueraDeCobertura && data.fueraDeCobertura.length) {
-card += '<p class="newsempty">No coverage (not listed in the US): ' + esc(data.fueraDeCobertura.join(', ')) + '. ETFs and crypto do not report earnings.</p>';
 }
 // Los que NO contestaron. Sin esto, un proveedor a medias se lee igual que
 // "no reporta nadie": el 1/09/2026 el calendario traía UN evento de doce y
-// la pantalla no tenía cómo decirlo — ni yo, mirándola.
+// la pantalla no tenía cómo decirlo — ni yo, mirándola. Siempre a la vista:
+// es un aviso real, no un hecho fijo.
 if (data.sinRespuesta && data.sinRespuesta.length) {
 card += '<p class="newsempty">&#9888; Could not check ' + esc(data.sinRespuesta.join(', ')) +
   ' — the data provider did not answer for ' + (data.sinRespuesta.length === 1 ? 'it' : 'them') +
   '. This list may be incomplete; it retries every morning.</p>';
 }
-el.innerHTML = '<div class="card">' + card + '</div>';
+envolver(card);
 }
 function cargarResultados() {
 if (resultadosCargados) return;
