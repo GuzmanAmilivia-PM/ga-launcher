@@ -33,7 +33,7 @@ var preambulo = 'var montosOcultos = false;\n' +
   fuente('pctHtml', /function pctHtml[\s\S]*?\n\}/) + '\n' +
   fuente('tipoDe', /function tipoDe\(h\) \{[\s\S]*?\n\}/) + '\n' +
   fuente('logoUrl', /function logoUrl\(h\) \{[\s\S]*?\n\}/) + '\n' +
-  fuente('celdaInstrumentoHtml', /function celdaInstrumentoHtml\(h\) \{[\s\S]*?\n\}/) + '\n' +
+  fuente('celdaInstrumentoHtml', /function celdaInstrumentoHtml\(h, descHtml\) \{[\s\S]*?\n\}/) + '\n' +
   fuente('ordenarPorTipo', /function ordenarPorTipo\(list\) \{[\s\S]*?\n\}/) + '\n' +
   fuente('daychgHtml', /function daychgHtml\(p\) \{[\s\S]*?\n\}/) + '\n' +
   // El salto fuera de rueda (8/09/2026): daychgHtml lo pide a extHtml.
