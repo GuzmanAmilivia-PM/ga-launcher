@@ -117,6 +117,16 @@ var OK1 = { ok: true, cambios: [{ tipo: 'qty', symbol: 'VOO' }] };
   ok(e.avisos.length === 0, 'sin avisos cuando no hay nada configurado');
   ok(e.loadData === 1, 'igual refresca precios y recarga');
 
+  // B2) IBKR sincronizo pero la clave de Binance no esta en el telefono: se
+  // dice (9/09/2026: Guzman creia que Sync "solo sincronizaba Charles e IBKR").
+  e = await correr('B2) IBKR y Schwab OK, Binance sin clave en el telefono', {
+    ibkr: OK1, cs: OKV, bnbConfigurado: false, refrescar: {}
+  });
+  ok(e.llamadas.indexOf('bnb') === -1, 'no intenta Binance sin clave');
+  ok(e.avisos.length === 1 && /Binance: not synced, the API key is not on this phone/.test(e.avisos[0].msg), 'la linea de Binance dice que falta la clave en este telefono');
+  ok(/Keys &rarr; Platforms &rarr; Binance/.test(e.avisos[0].msg), 'y a donde ir a pegarla');
+  ok(e.avisos[0].ok === true, 'sin ponerse en rojo: no es un error');
+
   // C) IBKR falla: no corta la cadena
   e = await correr('C) IBKR con error', {
     ibkr: { ok: false, mensajes: ['token vencido'] }, cs: OKV,

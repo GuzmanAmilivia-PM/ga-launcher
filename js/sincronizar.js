@@ -102,8 +102,13 @@ error("History", "could not save today's totals.");
 terminar();
 }).refrescarPrecios();
 }
+// Sin clave en ESTE telefono no hay sync posible, y saltearla en silencio
+// hacia creer que "solo sincronizo Schwab e IBKR" (9/09/2026). Se dice, pero
+// solo si algun otro broker reporto: una app recien instalada sin nada
+// configurado sigue callada.
+var BNB_SIN_CLAVE = '&#8226; Binance: not synced, the API key is not on this phone (Keys &rarr; Platforms &rarr; Binance).';
 function binance() {
-if (!bnbConfig()) { precios(); return; }
+if (!bnbConfig()) { if (lineas.length) lineas.push(BNB_SIN_CLAVE); precios(); return; }
 paso('Syncing Binance...');
 bnbSincronizar({
 alOk: function (r) { ok('Binance', r); precios(); },
