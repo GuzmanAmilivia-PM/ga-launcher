@@ -133,7 +133,7 @@ document.getElementById('mDiseno').onclick = function () { toggleMenu(false); se
 document.getElementById('mSeguridad').onclick = function () { toggleMenu(false); setView('seguridad'); };
 document.getElementById('mTrans').onclick = function () { toggleMenu(false); setView('trade'); };
 // Banking vive en el menu desde el 27/08/2026: su lugar en la barra de abajo
-// lo ocupa la Watchlist. La vista es la misma de siempre (view-cash).
+// lo ocupa la Watchlist (segunda desde el 9/09/2026; el central es Portfolio). La vista es la misma de siempre (view-cash).
 document.getElementById('mCash').onclick = function () { toggleMenu(false); setView('cash'); };
 document.getElementById('mRefrescar').onclick = function () { sincronizarTodo(); };
 

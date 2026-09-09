@@ -820,5 +820,21 @@ var configSrc = fsA.readFileSync(pathA.join(ruta.RUTA, 'js', 'config.js'), 'utf8
 ok(/avisosResumen/.test(configSrc), 'el Diagnostico muestra los avisos de la hoja resumen');
 ok(/esc\(a\)/.test(configSrc), 'y los escapa, como todo lo que viene del backend');
 
+// 11) El orden de la barra inferior (9/09/2026). Lo pidio Guzman por como usa
+// la app: Home, Watchlist, Portfolio, News, Trades. El boton central redondo
+// paso de News a Portfolio (es la pantalla a la que mas vuelve desde otras;
+// Home no lo necesita porque es donde abre la app). Watchlist va segunda
+// porque Guzman es zurdo y ese es el lugar comodo para su pulgar.
+var navHtml = (limpio.match(/<nav class="bottomnav">([\s\S]*?)<\/nav>/) || [])[1] || '';
+var navOrden = (navHtml.match(/data-view="([a-z]+)"/g) || []).map(function (x) { return x.slice(11, -1); });
+ok(navOrden.join(',') === 'inicio,watchlist,portafolio,noticias,trade',
+  'la barra va Home, Watchlist, Portfolio, News, Trades (' + navOrden.join(',') + ')');
+ok(/class="navtab navtab-center" data-view="portafolio"/.test(navHtml),
+  'el boton central redondo es Portfolio');
+ok((navHtml.match(/navtab-center/g) || []).length === 1 && (navHtml.match(/class="cbtn"/g) || []).length === 1,
+  'y hay un solo boton redondo, con su unico circulo');
+ok(/data-view="portafolio">\s*<span class="cbtn">/.test(navHtml),
+  'el circulo envuelve el icono de Portfolio, no el de News');
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

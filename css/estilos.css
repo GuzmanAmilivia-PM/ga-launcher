@@ -861,7 +861,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
     background: rgba(var(--gold-rgb),.12); border-left-color: var(--gold);
   }
   .navtab svg { width: 18px; height: 18px; flex: 0 0 auto; }
-  /* El boton central redondo (News) es un patron de barra inferior: colgado
+  /* El boton central redondo (Portfolio desde el 9/09/2026; antes News) es un patron de barra inferior: colgado
      hacia arriba y con sombra. Acostado se veria como un globo suelto en
      medio de la lista, asi que vuelve a ser un item mas. */
   .navtab-center .cbtn {
