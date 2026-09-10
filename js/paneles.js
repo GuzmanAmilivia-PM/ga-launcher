@@ -249,8 +249,13 @@ divDatos = r;
 var totalAnio = Math.round(((r.totalCobrado || 0) + (r.totalProximo || 0)) * 100) / 100;
 document.getElementById('divStats').style.display = '';
 document.getElementById('divTotalAnio').textContent = fmtUsd(totalAnio);
-// Sin "Monthly average" (9/09/2026, Guzmán: "mucha info duplicada"): es la
-// línea celeste del gráfico y volvía a aparecer abajo como US$/mo.
+// El promedio mensual ya no se ESCRIBE (9/09/2026, Guzmán: "mucha info
+// duplicada": volvía abajo como US$/mo), pero sigue siendo la línea celeste
+// del gráfico. En v191 se borró esta variable junto con el texto y el gráfico
+// murió en silencio con un ReferenceError: Guzmán vio "Swipe to load..." y
+// una tarjeta vacía. Ningún arnés ejecutaba renderDividendos entera.
+var prom = Math.round(totalAnio / 12 * 100) / 100;
+// Desde entonces test-dividendos-render.js corre la función completa.
 document.getElementById('divPromedio').innerHTML =
 'Received: ' + esc(fmtUsd(r.totalCobrado)) + ' &middot; Upcoming: ' + esc(fmtUsd(r.totalProximo));
 document.getElementById('divChartBox').style.display = '';
