@@ -76,7 +76,7 @@ var nombre = nombrePlataforma(ACCOUNTS.filter(function (a) { return a.key === f.
 var monto = Math.round(f.qty * f.precio * 100) / 100;
 document.getElementById('tConfirmTxt').innerHTML =
 '<b>' + (f.tipo === 'compra' ? 'BUY' : 'SELL') + '</b>: ' + esc(f.qty) + ' &times; <b>' + esc(f.symbol) + '</b> at USD ' + esc(f.precio) +
-' = <b>USD ' + esc(monto.toLocaleString('en-US')) + '</b><br>in ' + esc(nombre) + '. This updates the Google Sheet (quantity, average price and cash).';
+' = <b>USD ' + esc(monto.toLocaleString('en-US')) + '</b><br>in ' + esc(nombre) + '. This updates quantity, average price and cash.';
 document.getElementById('tConfirmWrap').style.display = '';
 this.style.display = 'none';
 };

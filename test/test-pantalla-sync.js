@@ -108,7 +108,7 @@ function esperar() { return new Promise(function (r) { setTimeout(r, 80); }); }
   await esperar();
   var llamada = m.llamadas.find(function (l) { return l.fn === 'sincronizarIBKR'; });
   ok(llamada && llamada.args.dryRun === true, 'compara con dryRun');
-  ok(/already matches IBKR \(10 positions\)/.test(m.elems.ibkrCambios.innerHTML), 'muestra "ya coincide" con el total');
+  ok(/Your positions already match IBKR \(10 positions\)/.test(m.elems.ibkrCambios.innerHTML), 'muestra "ya coincide" con el total (sin nombrar la planilla, 9/09/2026)');
   ok(m.elems.ibkrAplicar.style.display === 'none', 'sin cambios no ofrece Aplicar');
 
   console.log('\nB) IBKR: cambios y aplicar');
@@ -123,7 +123,8 @@ function esperar() { return new Promise(function (r) { setTimeout(r, 80); }); }
   ok(aplicada && aplicada.args.dryRun === false, 'aplica de verdad');
   ok(m.confirms.length === 0, 'sin parcial no molesta con confirmacion');
   ok(m.loadData === 1, 'recarga la app tras aplicar');
-  ok(/Done\. The IB sheet/.test(m.elems.ibkrSyncResultado.innerHTML), 'confirma el exito');
+  ok(/Done\. Your positions now match/.test(m.elems.ibkrSyncResultado.innerHTML), 'confirma el exito');
+  ok(!/sheet/i.test(m.elems.ibkrSyncResultado.innerHTML), 'sin mencionar la planilla, que ya no existe (9/09/2026)');
 
   console.log('\nC) Schwab: reporte parcial pide confirmacion y manda forzar');
   m = montar({ confirmar: true, respuestas: { sincronizarCS: { ok: true, parcial: true, cambios: [{ tipo: 'cerrada', symbol: 'QQQ', antes: 21, despues: 0 }], mensajes: ['OJO'], posicionesBroker: 1 } } });

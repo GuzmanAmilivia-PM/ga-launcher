@@ -224,7 +224,7 @@ bodyId: 'divBody',
 cargando: 'Reading dividends from your brokers...',
 forzar: !!forzar,
 limpiar: function () {
-['divStats', 'divChartBox', 'divHint'].forEach(function (id) { document.getElementById(id).style.display = 'none'; });
+['divStats', 'divChartBox'].forEach(function (id) { document.getElementById(id).style.display = 'none'; });
 document.getElementById('divDetalle').innerHTML = '';
 document.getElementById('divDetalle').removeAttribute('data-mes');
 },
@@ -246,16 +246,14 @@ body.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>';
 return;
 }
 divDatos = r;
-document.getElementById('divAnio').textContent = r.anio;
 var totalAnio = Math.round(((r.totalCobrado || 0) + (r.totalProximo || 0)) * 100) / 100;
-var prom = Math.round(totalAnio / 12 * 100) / 100;
 document.getElementById('divStats').style.display = '';
 document.getElementById('divTotalAnio').textContent = fmtUsd(totalAnio);
+// Sin "Monthly average" (9/09/2026, Guzmán: "mucha info duplicada"): es la
+// línea celeste del gráfico y volvía a aparecer abajo como US$/mo.
 document.getElementById('divPromedio').innerHTML =
-'Monthly average: <b>' + esc(fmtUsd(prom)) + '</b><br>' +
 'Received: ' + esc(fmtUsd(r.totalCobrado)) + ' &middot; Upcoming: ' + esc(fmtUsd(r.totalProximo));
 document.getElementById('divChartBox').style.display = '';
-document.getElementById('divHint').style.display = '';
 // La proyección se pide recién acá: es una segunda llamada al backend y no
 // tiene sentido gastarla si el panel de dividendos ni siquiera cargó.
 cargarProyeccion();
@@ -440,6 +438,7 @@ h += '<p class="proyrate">Annual run-rate: <b>' + esc(fmtUsd(r.anual)) + '</b> &
   // anaPct solo entiende 0 o 1 decimal: con 0 el 0,70% de la cartera se
   // redondearia a "1%", que es otra cosa.
   (typeof r.yieldCartera === 'number' ? ' &middot; ' + esc(anaPct(r.yieldCartera / 100, 1)) + ' of portfolio' : '') +
+  (r.pctAnunciado > 0 ? ' &middot; before tax' : '') +
   '</p>';
 
 // La lista por activo, PLEGADA por defecto. Es un <button> de verdad (no un
@@ -460,28 +459,10 @@ if (rango && dat.porSimbolo.length) {
   h += '</div>';
 }
 
-// Las cosas que hacen honesto a los números de arriba. Ninguna se omite
-// cuando aplica: sin ellas la proyección se lee como una promesa exacta.
-var notas = [];
-// El "~" del periodo va PRIMERO porque explica el numero grande, que es el
-// que Guzman mira. Las de abajo hablan del ritmo anual, que ahora es la
-// linea chica.
-if (dat.hayEstimado) {
-notas.push('~ Estimated from each position’s payment cadence, not an announced date.');
-}
-// El corte va casi pegado a 1 y no en 0,95: la cartera real da exactamente
-// 0,95, y con el umbral en 0,95 un hueco verdadero del 5% quedaba mudo. Lo
-// que se quiere callar es el ruido de redondeo, no un veinteavo de la cartera.
-if (typeof r.cobertura === 'number' && r.cobertura < 0.99) {
-notas.push('The run-rate covers ' + esc(anaPct(r.cobertura, 0)) + ' of your stocks and ETFs.');
-}
-if (r.pctAnunciado > 0) {
-notas.push(esc(anaPct(r.pctAnunciado / 100, 0)) + ' of it comes from announced rates, before withholding tax; ' +
-  'the rest is what these positions actually paid you over the last 12 months.');
-} else {
-notas.push('It is based on what these positions actually paid you over the last 12 months.');
-}
-h += '<p class="proynota">' + notas.join(' ') + '</p>';
+// La nota larga (cobertura, % anunciado, "cadencia, no fecha anunciada") se
+// sacó el 9/09/2026 a pedido de Guzmán: "comentarios que nunca voy a leer".
+// La marca ~ en cada fila sigue; y lo único permanente —que las tasas
+// anunciadas son antes de impuestos— va como dos palabras en el run-rate.
 
 h += '</div>';
 el.innerHTML = h;
@@ -522,7 +503,6 @@ if (document.getElementById('divModal').style.display === 'none') return;
 var brokersBox = document.getElementById('divModalBrokers');
 if (!divDatos) { brokersBox.innerHTML = '<p class="loadingtxt">Reading dividends...</p>'; return; }
 var r = divDatos;
-document.getElementById('divModalAnio').textContent = r.anio;
 var totalAnio = Math.round(((r.totalCobrado || 0) + (r.totalProximo || 0)) * 100) / 100;
 document.getElementById('divModalTotales').innerHTML =
 'Estimated this year: <b>' + esc(fmtUsd(totalAnio)) + '</b> &middot; Received: ' + esc(fmtUsd(r.totalCobrado)) + ' &middot; Upcoming: ' + esc(fmtUsd(r.totalProximo));
@@ -641,7 +621,7 @@ if (!c) return '';
 var h = '<p class="lbl" style="margin-top:14px">' + esc(c.nombre || 'Accounts with known contributions') + '</p>';
 if (c.pocos) {
 // Un guion sin explicacion no sirve: hay que decir que esto recien arranca.
-h += '<p class="capnota">Return is measured only over your investment apps (banks don\u2019t earn a return, they\u2019re capital), and that history started being saved today. With one more day the first number will appear.</p>';
+h += '<p class="capnota">History starts today: the first number appears tomorrow.</p>';
 return h;
 }
 function pct(v, esNum) {
@@ -657,9 +637,11 @@ h += '<div><p class="lbl">Returned</p>' + pct(c.pct) + '</div>';
 h += '<div><p class="lbl">The portfolio</p>' + pct(c.twrPct) + '</div>';
 h += '<div><p class="lbl">' + esc(c.idxNombre || 'Index') + '</p>' + pct(c.idxPct) + '</div>';
 h += '</div>';
+// Solo lo que hace falta para leer los tres números (9/09/2026, Guzmán:
+// "comentarios que nunca voy a leer"): desde cuándo, sobre cuánto, y que
+// los bancos quedan afuera.
 h += '<p class="capnota">Since ' + fechaCortaMs(c.desde) + ', over ' +
-esc(fmtUsdEnt(c.capital)) + ' of capital. \u201cReturned\u201d is YOUR result (your money, your contribution dates); \u201cthe portfolio\u201d is how the investments performed without the effect of that timing. The banks (Ita\u00fa, BTG) are not included: they don\u2019t earn a return, and moving money from them into the apps counts as a contribution, not a gain.' +
-(c.idxPct !== null ? ' The index doesn\u2019t pay dividends and your accounts do.' : '') + '</p>';
+esc(fmtUsdEnt(c.capital)) + ' of capital. Banks (Ita\u00fa, BTG) are not included.</p>';
 return h;
 }
 
@@ -679,14 +661,14 @@ var pasados = anios.filter(function (a) { return Number(a.anio) < Number(r.anio)
 if (!c && !pasados.length) return '';
 var h = '<p class="lbl" style="margin-top:14px">Whole portfolio, without contributions</p>';
 if (c && c.pocos) {
-h += '<p class="capnota">Growth without contributions needs at least two days of history in the year. With one more day the first number will appear here.</p>';
+h += '<p class="capnota">Needs two days of history in the year: the first number appears tomorrow.</p>';
 } else if (c && c.pct !== null && isFinite(Number(c.pct))) {
 h += '<div class="caprow">';
 h += '<div><p class="lbl">' + esc(r.anio) + ' so far</p><p class="capval ' + (c.pct >= 0 ? 'up' : 'down') + '">' + signoPct(Number(c.pct), 1) + '</p></div>';
 h += '<div><p class="lbl">Started at</p><p class="capval">' + esc(mask(fmtUsdEnt(c.base))) + '</p></div>';
 h += '<div><p class="lbl">Now</p><p class="capval">' + esc(mask(fmtUsdEnt(c.valor))) + '</p></div>';
 h += '</div>';
-h += '<p class="capnota">Since ' + fechaCortaMs(c.desde) + ', over everything you own (banks included): what the investments did, with every deposit and withdrawal taken out (' + esc(mask(fmtUsdEnt(c.aportes))) + ' net this year). The year-end value is saved each year.</p>';
+h += '<p class="capnota">Since ' + fechaCortaMs(c.desde) + ', all accounts, net of deposits and withdrawals (' + esc(mask(fmtUsdEnt(c.aportes))) + ' net this year).</p>';
 }
 pasados.forEach(function (a) {
 var pct = Number(a.pct);

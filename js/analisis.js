@@ -433,8 +433,7 @@ function anaCtrHtml(posiciones) {
 var c = contribucionAlRetorno(posiciones);
 if (!c) return '';
 var h = '<p class="anasub">What drove your return</p>';
-h += '<p class="anadesg-nota">Since you bought, not over the range above: cost is the only ' +
-  'per-position history there is. These add up to your ' +
+h += '<p class="anadesg-nota">Since purchase. These add up to your ' +
   '<b>' + esc(signoPct(c.retornoTotal, 1)) + '</b> total.</p>';
 
 h += '<p class="anactr-t">Moved your return the most</p>';

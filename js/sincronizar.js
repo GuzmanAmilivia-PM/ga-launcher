@@ -153,7 +153,7 @@ errorEnVista('bakList', err, 'las copias');
 }
 function restaurarHoja(hoja, cuando) {
 if (bakEnCurso) return;
-if (!window.confirm('The ' + hoja + ' sheet will go back to how it was in that backup.\n\nWhat\u2019s there now gets saved too, so this can also be undone.\n\nContinue?')) return;
+if (!window.confirm('The ' + hoja + ' data will go back to how it was in that backup.\n\nWhat\u2019s there now gets saved too, so this can also be undone.\n\nContinue?')) return;
 bakEnCurso = true;
 var res = document.getElementById('bakResultado');
 res.innerHTML = '<p class="loadingtxt">Restoring ' + esc(hoja) + '...</p>';

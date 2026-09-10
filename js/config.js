@@ -192,7 +192,7 @@ var esCS = /charles schwab/i.test(pl.nombre);
 var row = document.createElement('div');
 row.className = 'platrow';
 row.innerHTML = '<span>' + esc(nombrePlataforma(pl.nombre)) +
-'<span class="platmeta">' + fmt(pl.valor) + ((esIB || esCS) ? ' &middot; automatic connection' : (esBNB ? ' &middot; live balances' : (pl.gestionada ? ' &middot; has a positions sheet' : ' &middot; manual'))) + '</span></span>' +
+'<span class="platmeta">' + fmt(pl.valor) + ((esIB || esCS) ? ' &middot; automatic connection' : (esBNB ? ' &middot; live balances' : (pl.gestionada ? ' &middot; tracked positions' : ' &middot; manual'))) + '</span></span>' +
 '<span class="platbtns"></span>';
 var btns = row.querySelector('.platbtns');
 // Plataformas con pantalla de conexi\u00f3n propia: la fila entera navega ah\u00ed.
@@ -322,7 +322,7 @@ html += filaSalud('History', esc((s.historico && s.historico.error) || '?'), fal
 // viene vacia y no se dibuja nada: un aviso que aparece siempre es ruido.
 // Auditoria del 23/08/2026.
 var avs = (s.avisosResumen && s.avisosResumen.length) ? s.avisosResumen : null;
-html += filaSalud('The "resumen" sheet', avs ? (avs.length + ' notice(s)') : '&#10003; no notices', !avs);
+html += filaSalud('Summary', avs ? (avs.length + ' notice(s)') : '&#10003; no notices', !avs);
 if (avs) {
 avs.forEach(function (a) { html += '<p class="newsempty" style="margin:2px 0 0">' + esc(a) + '</p>'; });
 }

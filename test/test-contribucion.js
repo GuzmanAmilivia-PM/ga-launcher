@@ -90,8 +90,9 @@ ok(c.sinCosto.indexOf('USDT') === -1 && c.sinCosto.indexOf('ITAU') === -1,
 console.log('\nD) lo que se dice en pantalla');
 var h = api.anaCtrHtml(CARTERA);
 ok(/What drove your return/.test(h), 'tiene su titulo');
-ok(/Since you bought, not over the range above/.test(h),
-  'aclara el periodo: es desde la compra, no del rango elegido arriba');
+// Acortado el 9/09/2026 (Guzmán: "comentarios que nunca voy a leer").
+ok(/Since purchase\./.test(h), 'aclara el periodo en dos palabras: desde la compra');
+ok(!/not over the range above|per-position history/.test(h), 'y la explicacion larga no volvio');
 ok(/\+61\.4%/.test(h), 'y dice el retorno total que las contribuciones suman');
 ok(/GRANDE<\/b> moved your return most/.test(h), 'nombra al que movio la aguja');
 // Son PUNTOS porcentuales, no por ciento. La primera version escribia

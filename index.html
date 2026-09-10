@@ -192,7 +192,7 @@
 </div>
 <div class="sweeppanel">
 <div class="cardhead">
-<h2>Dividends <span class="rangepct" id="divAnio"></span></h2>
+<h2>Dividends</h2>
 <div style="display:flex;gap:4px"><button class="expandbtn" id="divRefreshBtn" title="Refresh" aria-label="Refresh dividends">&#8635;</button><button class="expandbtn" id="divExpandBtn" title="Expand" aria-label="Expand dividends">&#9974;</button></div>
 </div>
 <div id="divStats" style="display:none">
@@ -201,7 +201,6 @@
 <p class="divavg" id="divPromedio"></p>
 </div>
 <div class="chartbox" id="divChartBox" style="display:none"><canvas id="divChart"></canvas></div>
-<p class="newsempty" id="divHint" style="display:none;font-size:11.5px;margin:8px 0 0">Tap a bar to see the month&rsquo;s detail &middot; gray bars = upcoming (estimated)</p>
 <div id="divDetalle"></div>
 <div id="divCacheAviso" style="display:none"></div>
 <div id="divBody"><p class="loadingtxt">Swipe to load...</p></div>
@@ -283,7 +282,7 @@
 <div class="card">
 <h2>Monthly performance</h2>
 <div id="mapaCalor"></div>
-<p class="capnota">Each month&rsquo;s close against the previous one, on total net worth: a large contribution or withdrawal counts as movement for the month.</p>
+<p class="capnota">Month over month, on total net worth. A large deposit or withdrawal counts as movement.</p>
 </div>
 </div>
 
@@ -404,7 +403,6 @@
 <div class="cardhead"><h2>Watchlist</h2><button class="expandbtn" id="wlRefreshBtn" title="Refresh" aria-label="Refresh watchlist">&#8635;</button></div>
 <div id="wlAviso"></div>
 <div id="wlBody"><p class="loadingtxt">Loading...</p></div>
-<p class="newsempty" style="margin-top:10px">Add tickers from the search (magnifier &rarr; +). Swipe a row to set a price alert or remove it.</p>
 </div>
 <div class="card">
 <h2>Notifications</h2>
@@ -446,7 +444,7 @@
 </div>
 <div class="card">
 <h2>Undo</h2>
-<p class="newsempty">Before every automatic sync and every operation, a copy of the sheet is saved. You can roll back here if something went wrong.</p>
+<p class="newsempty">A copy is saved before every automatic sync and every operation. You can roll back here.</p>
 <div id="bakList"><p class="loadingtxt">Loading...</p></div>
 <div id="bakResultado"></div>
 </div>
@@ -751,11 +749,10 @@ Trades</button>
 <!-- Dividendos ampliados: desglose por broker -->
 <div class="chartmodal" id="divModal" style="display:none">
 <div class="chartmodal-inner" style="max-height:92vh;overflow-y:auto">
-<div class="chartmodal-top"><h2 style="margin:0">Dividends <span class="rangepct" id="divModalAnio"></span></h2><button class="chartmodal-close" id="divModalClose" aria-label="Close">&times;</button></div>
+<div class="chartmodal-top"><h2 style="margin:0">Dividends</h2><button class="chartmodal-close" id="divModalClose" aria-label="Close">&times;</button></div>
 <p class="divavg" id="divModalTotales"></p>
 <div id="divModalBrokers"></div>
 <div class="chartbox chartbox-big" style="margin-top:12px"><canvas id="divChartBig"></canvas></div>
-<p class="newsempty" style="font-size:11.5px;margin:8px 0 0">One color per app &middot; tap a bar to see the month&rsquo;s detail</p>
 <div id="divModalDetalle"></div>
 </div>
 </div>

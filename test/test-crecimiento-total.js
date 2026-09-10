@@ -19,9 +19,11 @@ ok(/Whole portfolio, without contributions/.test(h), 'el titulo');
 ok(/2026 so far/.test(h) && /capval up">\+20\.8%/.test(h), 'el % del anio en curso, en verde');
 ok(/US\$ 94,418/.test(h) && /US\$ 120,981/.test(h), 'de donde arranco y donde esta');
 ok(/US\$ 6,000 net this year/.test(h), 'los flujos descontados, dichos');
-ok(/banks included/.test(h) && /year-end value is saved/.test(h), 'y la nota explica que es todo el patrimonio y que el cierre se guarda');
+// Nota corta desde el 9/09/2026: todas las cuentas, neto de flujos, y nada mas.
+ok(/all accounts, net of deposits and withdrawals/.test(h), 'la nota dice que es todo, neto de flujos');
+ok(!/year-end value is saved|banks included/.test(h), 'sin la explicacion larga de antes');
 var h2 = ctx.htmlCrecimientoTotal({ anio: 2027, crecimiento: { pocos: true, dias: 1 }, cierresAnuales: [{ anio: 2026, pct: 12.3, valor: 130000 }] });
-ok(/at least two days/.test(h2), 'con un punto en el anio nuevo lo dice');
+ok(/two days of history/.test(h2), 'con un punto en el anio nuevo lo dice');
 ok(/<span>2026<\/span><b class="up">\+12\.3% &middot; US\$ 130,000<\/b>/.test(h2), 'y el anio cerrado aparece con su % y su valor de cierre');
 ok(ctx.htmlCrecimientoTotal({ anio: 2026, crecimiento: null, cierresAnuales: [] }) === '', 'sin dato ni anios cerrados, nada');
 var h3 = ctx.htmlCrecimientoTotal({ anio: 2026, crecimiento: { pct: null, base: 1, valor: 1, aportes: 0 }, cierresAnuales: [] });

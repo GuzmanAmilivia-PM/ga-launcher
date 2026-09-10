@@ -43,7 +43,7 @@ var wrap = document.getElementById('ibkrSyncWrap');
 var syncCard = document.getElementById('ibkrSyncCard');
 if (syncCard) syncCard.style.display = (st && st.configurada) ? '' : 'none';
 if (st && st.configurada) {
-var html = '&#10003; Connected to IBKR. The IB sheet updates itself once a day (~8:00).';
+var html = '&#10003; Connected to IBKR. It syncs itself once a day (~8:00).';
 html += ultimaSyncHtml(st.ultimaSync);
 if (st.triggerDiario === false) html += '<br>&#9888; The automatic daily sync is not active: save the connection again.';
 html += st.actividadConfigurada
@@ -130,7 +130,7 @@ return;
 }
 var html = '';
 if (!r.cambios.length) {
-html = '<p class="newsempty" style="margin-top:10px">&#10003; The ' + cfg.hoja + ' sheet already matches ' + cfg.broker + ' (' + esc(cfg.total(r)) + ' ' + cfg.unidad + '). Nothing to change.</p>';
+html = '<p class="newsempty" style="margin-top:10px">&#10003; Your positions already match ' + cfg.broker + ' (' + esc(cfg.total(r)) + ' ' + cfg.unidad + '). Nothing to change.</p>';
 } else {
 html = '<p class="subtotal" style="margin:12px 0 6px">' + (dryRun ? 'Changes detected (nothing applied yet):' : 'Changes applied:') + '</p>';
 r.cambios.forEach(function (c) {
@@ -153,7 +153,7 @@ btnAplicar.style.display = r.cambios.length ? '' : 'none';
 } else {
 parcial = false;
 btnAplicar.style.display = 'none';
-if (r.cambios.length) resEl.innerHTML = '<div class="tmsg ok">&#10003; Done. The ' + cfg.hoja + ' sheet now matches your ' + cfg.broker + ' account.</div>';
+if (r.cambios.length) resEl.innerHTML = '<div class="tmsg ok">&#10003; Done. Your positions now match your ' + cfg.broker + ' account.</div>';
 cfg.alAplicar();
 loadData();
 }
@@ -180,7 +180,7 @@ pantallaSync({
 pref: 'ibkr', hoja: 'IB', broker: 'IBKR', unidad: 'positions',
 sujeto: 'The IBKR connection',
 cargandoDry: 'Checking IBKR... this can take half a minute (the report is generated on the spot).',
-cargandoApply: 'Applying changes to the IB sheet...',
+cargandoApply: 'Applying IBKR changes...',
 cerradaTxt: 'closed at IBKR',
 total: function (r) { return r.posicionesBroker; },
 lock: function (v) { ibkrSyncEnCurso = v; },
@@ -423,7 +423,7 @@ pantallaSync({
 pref: 'bnb', hoja: 'BNB', broker: 'Binance', unidad: 'balances',
 sujeto: 'The sync with Binance',
 cargandoDry: 'Reading your real Binance balances...',
-cargandoApply: 'Applying to the BNB sheet...',
+cargandoApply: 'Applying Binance balances...',
 cerradaTxt: 'no balance on Binance',
 total: function (r) { return r.saldosBinance; },
 lock: bnbLock,
@@ -472,7 +472,7 @@ sync.style.display = 'none';
 btnCon.style.display = '';
 return;
 }
-var html = '&#10003; Connected to Schwab via SnapTrade (' + esc((st.cuentas || []).join(', ') || 'connected account') + '). The CS sheet updates itself once a day (~8:00).';
+var html = '&#10003; Connected to Schwab via SnapTrade (' + esc((st.cuentas || []).join(', ') || 'connected account') + '). It syncs itself once a day (~8:00).';
 html += ultimaSyncHtml(st.ultimaSync);
 t.innerHTML = html;
 sync.style.display = '';
@@ -516,7 +516,7 @@ pantallaSync({
 pref: 'cs', hoja: 'CS', broker: 'Schwab', unidad: 'positions',
 sujeto: 'The Schwab connection',
 cargandoDry: 'Checking your Schwab positions...',
-cargandoApply: 'Applying changes to the CS sheet...',
+cargandoApply: 'Applying Schwab changes...',
 cerradaTxt: 'closed at Schwab',
 total: function (r) { return r.posicionesBroker; },
 lock: function (v) { csEnCurso = v; },

@@ -247,10 +247,12 @@ ok(el.style.display === '', 'y el bloque sigue visible: el ritmo anual todavía 
 console.log('\nF) las declaraciones que hacen honesto al ritmo anual');
 api = correr(COMPLETA);
 api.cargar();
-ok(el.innerHTML.indexOf('95%') !== -1, 'declara la cobertura: 0,95 exacto es un hueco real del 5%');
-ok(/45% of it comes from announced rates, before withholding tax/.test(el.innerHTML),
-  'dice qué parte es BRUTA: mezcla tasas anunciadas con cobros reales');
-ok(el.innerHTML.indexOf('actually paid you over the last 12 months') !== -1, 'y de dónde sale el resto');
+// 9/09/2026, Guzmán: "comentarios que nunca voy a leer". La nota larga
+// (cobertura, % anunciado, de dónde sale el resto) se fue; lo único
+// permanente —que hay tasas anunciadas, brutas— son dos palabras en el run-rate.
+ok(el.innerHTML.indexOf('proynota') === -1, 'la nota larga ya no se pinta');
+ok(!/covers|announced rates|actually paid you/.test(el.innerHTML), 'ni cobertura, ni % anunciado, ni de donde sale el resto');
+ok(/of portfolio &middot; before tax/.test(el.innerHTML), 'pero el run-rate dice "before tax" cuando mezcla tasas anunciadas');
 // 0,70% con cero decimales se redondearia a "1%", que es otra cifra.
 ok(el.innerHTML.indexOf('0.7% of portfolio') !== -1, 'el rendimiento de la cartera va con decimal');
 ok(el.innerHTML.indexOf('run-rate') !== -1,
@@ -261,14 +263,14 @@ api = correr(COMPLETA);
 api.cargar();
 clicks.toggle();
 ok(/O<span class="pparcial">~<\/span>/.test(el.innerHTML), 'el símbolo estimado lleva su marca');
-ok(el.innerHTML.indexOf('payment cadence') !== -1,
-  'y la marca se explica abajo: un símbolo suelto no dice nada');
+ok(el.innerHTML.indexOf('payment cadence') === -1,
+  'y ya no se explica abajo (9/09/2026): la marca alcanza');
 // Un período sin nada estimado no debe arrastrar la nota.
 api = correr(COMPLETA, false, {
   divDatos: { anio: 2026, detalle: { 10: [{ broker: 'CS', symbol: 'VOO', monto: 9, estado: 'proximo', estimado: false }] } }
 });
 api.cargar();
-ok(el.innerHTML.indexOf('payment cadence') === -1, 'sin nada estimado, la nota no aparece');
+ok(el.innerHTML.indexOf('payment cadence') === -1, 'sin nada estimado, tampoco');
 ok(el.innerHTML.indexOf('pparcial') === -1, 'ni la marca');
 
 console.log('\nH) un período vacío se dice, y sigue sin inventar ceros');
