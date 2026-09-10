@@ -33,7 +33,19 @@ function filterSerie(dias) {
 if (!fullSerie.length) return [];
 var now = Date.now();
 var day = 24 * 60 * 60 * 1000;
-var corte; if (dias === 'ytd') { corte = new Date(new Date().getFullYear(), 0, 1).getTime(); } else { corte = now - dias * day; }
+var corte;
+if (dias === 'ytd') {
+// La base del año es el ÚLTIMO punto del año anterior —el cierre con el que
+// se arranca—, no el primer dato de enero (9/09/2026, Guzmán: el YTD del
+// Inicio decía +27,7% desde el 30/01 mientras la tarjeta del año decía que
+// el patrimonio subió +32,7% desde el 30/12: dos "YTD" distintos). Es la
+// misma base que comparacionAnual y que el crecimiento sin aportes del
+// backend. Si la serie empieza dentro del año, se cae al 1 de enero.
+var ene1 = new Date(new Date().getFullYear(), 0, 1).getTime();
+var i0 = -1;
+for (var k = 0; k < fullSerie.length; k++) { if (fullSerie[k].fecha < ene1) i0 = k; }
+corte = i0 >= 0 ? fullSerie[i0].fecha : ene1;
+} else { corte = now - dias * day; }
 var out = fullSerie.filter(function (p) { return p.fecha >= corte; });
 if (out.length < 2 && fullSerie.length) {
 var idx = fullSerie.length - 2;
@@ -353,15 +365,17 @@ function movimientoDelSaldo(serie) {
   }
 
   var aportes = aportesEnRango(serie);
+  // El % es el MISMO encadenado que usan la tarjeta del año y el backend
+  // (twrEnRango, 9/09/2026). Antes era (final−inicial−aportes)/(inicial+aportes),
+  // una aproximación distinta: el "vs S&P" del Inicio y el de Portfolio daban
+  // números distintos para el mismo período.
+  var t = twrEnRango(serie);
   return {
     inicial: inicial,
     aportes: aportes,
     mercado: (final - inicial) - aportes,
     final: final,
-    // El rendimiento medido sobre el capital que de verdad estuvo puesto.
-    // No es exacto —un aporte de ayer no trabajó todo el periodo— pero es
-    // mucho mas honesto que (final/inicial−1) cuando hubo aportes.
-    mercadoPct: (inicial + aportes) > 0 ? ((final - inicial - aportes) / (inicial + aportes) * 100) : null
+    mercadoPct: t ? t.pct : null
   };
 }
 
@@ -595,6 +609,35 @@ function aporteTotalDelDia(a) {
   return isFinite(t) ? t : Number(a.grupo);
 }
 
+// El rendimiento SIN aportes de un tramo de la serie TOTAL: encadenado punto
+// a punto, descontando de cada tramo los aportes y retiros (`total`) que
+// cayeron en él. Es LA definición de "sin depósitos" de la app (9/09/2026):
+// la usan el "vs S&P" del Inicio (movimientoDelSaldo), la tarjeta del año en
+// Portfolio (comparacionAnual) y —con la misma cuenta, en el backend— el
+// bloque "Whole portfolio, without contributions". Un tramo que no se puede
+// medir (valor no positivo) anula el número: null, nunca un invento.
+// Vive en ESTE bloque porque test-capital.js lo evalúa aislado y
+// comparacionAnual la necesita.
+function twrEnRango(serie) {
+  if (!serie || serie.length < 2) return null;
+  var t0 = serie[0].fecha, tFin = serie[serie.length - 1].fecha;
+  var flujos = [];
+  aportesLista.forEach(function (r) {
+    var ts = apISOaMs(r.fecha);
+    var m = aporteTotalDelDia(r);
+    if (isFinite(ts) && ts > t0 && ts <= tFin && isFinite(m) && m !== 0) flujos.push({ ts: ts, monto: m });
+  });
+  var twr = 1;
+  for (var j = 1; j < serie.length; j++) {
+    var vPrev = serie[j - 1].valor, vHoy = serie[j].valor;
+    var flujo = 0;
+    flujos.forEach(function (a) { if (a.ts > serie[j - 1].fecha && a.ts <= serie[j].fecha) flujo += a.monto; });
+    if (!(vPrev > 0) || !(vHoy - flujo > 0)) return null;
+    twr *= (vHoy - flujo) / vPrev;
+  }
+  return { pct: (twr - 1) * 100, aportes: flujos.reduce(function (m, a) { return m + a.monto; }, 0) };
+}
+
 // ---------- El indice de referencia ----------
 // El backend manda el cierre del indice alineado punto a punto con la serie
 // (`bench.valores`), asi el telefono no tiene que buscar ninguna fecha. Lo
@@ -802,35 +845,19 @@ function comparacionAnual() {
   var base = fullSerie[i0].valor, fin = fullSerie[fullSerie.length - 1].valor;
   if (!(base > 0)) return null;
 
-  // `total`, no `grupo`: esta es la serie del patrimonio ENTERO, y el aporte
-  // que hay que descontar es el que entro a cualquier cuenta (ver
+  // El encadenado vive en twrEnRango (9/09/2026): es la MISMA cuenta que el
+  // "vs S&P" del Inicio, así los dos números coinciden por construcción.
+  // `total`, no `grupo`: esta es la serie del patrimonio ENTERO (ver
   // aporteTotalDelDia).
-  var flujos = [];
-  aportesLista.forEach(function (r) {
-    var ts = apISOaMs(r.fecha);
-    var m = aporteTotalDelDia(r);
-    if (isFinite(ts) && ts > fullSerie[i0].fecha && isFinite(m) && m !== 0) flujos.push({ ts: ts, monto: m });
-  });
-
-  // Encadenado por tramos: cada tramo rinde su valor final MENOS los aportes
-  // que cayeron dentro, contra el valor anterior. Un tramo que no se puede
-  // medir con honestidad (valor no positivo) anula el numero entero.
-  var twr = 1, ok = true;
-  for (var j = i0 + 1; j < fullSerie.length; j++) {
-    var vPrev = fullSerie[j - 1].valor, vHoy = fullSerie[j].valor;
-    var flujo = 0;
-    flujos.forEach(function (a) { if (a.ts > fullSerie[j - 1].fecha && a.ts <= fullSerie[j].fecha) flujo += a.monto; });
-    if (!(vPrev > 0) || !(vHoy - flujo > 0)) { ok = false; break; }
-    twr *= (vHoy - flujo) / vPrev;
-  }
-  if (!ok) return null;
+  var t = twrEnRango(fullSerie.slice(i0));
+  if (!t) return null;
 
   var b0 = benchEn(fullSerie[i0].fecha), bFin = benchEn(fullSerie[fullSerie.length - 1].fecha);
   var out = {
     desde: fullSerie[i0].fecha,
-    pct: (twr - 1) * 100,
+    pct: t.pct,
     bruto: (fin / base - 1) * 100,
-    aportes: flujos.reduce(function (m, a) { return m + a.monto; }, 0),
+    aportes: t.aportes,
     idxNombre: benchNombre,
     idxPct: (b0 && bFin) ? ((bFin / b0 - 1) * 100) : null
   };
