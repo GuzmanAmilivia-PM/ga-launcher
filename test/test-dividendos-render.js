@@ -29,7 +29,7 @@ g.document.getElementById = function (id) {
 };
 // El gráfico: se guarda la configuración pedida en vez de dibujar.
 var charts = [];
-g.Chart = function (canvas, cfg) { charts.push(cfg); return { destroy: function () {}, update: function () {} }; };
+g.Chart = function (canvas, cfg) { charts.push({ canvas: canvas, cfg: cfg }); return { destroy: function () {}, update: function () {} }; };
 // La proyección se pide al backend desde adentro de renderDividendos: se
 // anula para que este arnés pruebe SOLO el panel de dividendos.
 g.cargarProyeccion = function () {};
@@ -47,8 +47,12 @@ console.log('A) renderDividendos corre entera y dibuja');
 var error = null;
 try { g.renderDividendos(payload); } catch (e) { error = e; }
 ok(!error, 'no tira' + (error ? ' — ' + error.message : ''));
-ok(charts.length === 1, 'pide UN gráfico');
-var datasets = (charts[0] && charts[0].data && charts[0].data.datasets) || [];
+// renderDividendos dibuja el gráfico de la tarjeta y también repinta el del
+// modal ampliado (divChartBig) por si está abierto: acá importa el de la
+// tarjeta, que es el que Guzmán vio vacío.
+var principal = charts.filter(function (c) { return c.canvas === elems.divChart; })[0];
+ok(!!principal, 'dibuja el gráfico de la tarjeta (canvas divChart); pedidos: ' + charts.length);
+var datasets = (principal && principal.cfg && principal.cfg.data && principal.cfg.data.datasets) || [];
 var etiquetas = datasets.map(function (d) { return d.label; });
 ok(etiquetas.indexOf('Average') !== -1, 'con la línea del promedio: ' + etiquetas.join(', '));
 var promedio = datasets.filter(function (d) { return d.label === 'Average'; })[0];
