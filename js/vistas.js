@@ -708,13 +708,6 @@ function fechaCortaItau(iso) {
   var d = new Date(+m[1], +m[2] - 1, +m[3]);
   return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
-function diasDesde(iso) {
-  var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return null;
-  var d = new Date(+m[1], +m[2] - 1, +m[3]);
-  var hoy = new Date();
-  return Math.round((new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()) - d) / 86400000);
-}
 function comprasItauHtml(data, r) {
   var filas = ((data && data.posiciones) || []).filter(function (h) {
     return String(h.symbol || '').trim().toUpperCase() === 'ITAU' && Number(h.qty) > 0;
@@ -733,21 +726,22 @@ function comprasItauHtml(data, r) {
     var costo = Number(h.precioCompra);
     var pctUYU = (costo > 0 && precioHoy > 0) ? ((precioHoy / costo - 1) * 100) : null;
     var valorUSD = (tc > 0 && precioHoy > 0) ? (qty * precioHoy / tc) : null;
-    var dias = diasDesde(h.fechaInicio);
     out += '<tr>' +
       '<td><b>' + esc(fechaCortaItau(h.fechaInicio) || '—') + '</b>' +
-        '<span class="pcmini">' + esc(fmtNum(qty)) + ' units @ ' + esc(fmtNum(costo)) + ' UYU' +
-        (dias !== null ? ' &middot; ' + dias + ' days' : '') + '</span></td>' +
+        '<span class="pcmini">' + esc(fmtNum(qty)) + ' units @ ' + esc(fmtNum(costo)) + ' UYU</span></td>' +
       '<td class="col-precio">' +
         (pctUYU === null ? '<span class="detlbl">—</span>'
           : '<span class="' + (pctUYU >= 0 ? 'up' : 'down') + '">' + signoPct(pctUYU, 2) + '</span>') +
         (valorUSD !== null ? '<span class="pcmini">' + esc(fmt(valorUSD)) + '</span>' : '') +
       '</td></tr>';
   });
+  // UNA linea, no un parrafo (13/09/2026, Guzman: "hay mucha info tuya,
+  // minimalizaria un poco nomas"). Lo que NO se puede sacar es que ese retorno
+  // es en pesos: sin eso, el numero se lee como dolares y no lo es. El por que
+  // —que el dolar de cada compra nadie lo guardo— ya vive arriba, en el bloque
+  // que pide los dolares aportados.
   out += '</tbody></table>' +
-    '<p class="detlbl">Return per purchase is the fund in pesos: the unit is worth ' +
-    esc(fmtNum(precioHoy)) + ' UYU today. In dollars only the total can be split, and that is the block above: ' +
-    'nobody saved the exchange rate of each purchase day.</p>';
+    '<p class="detlbl">In pesos &middot; unit at ' + esc(fmtNum(precioHoy)) + ' UYU today</p>';
   return out;
 }
 

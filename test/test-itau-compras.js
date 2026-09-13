@@ -17,14 +17,13 @@ function trozo(re, nombre) {
   return m[0];
 }
 var fuente = trozo(/function fechaCortaItau[\s\S]*?\n\}/, 'fechaCortaItau') + '\n' +
-  trozo(/function diasDesde[\s\S]*?\n\}/, 'diasDesde') + '\n' +
   trozo(/function comprasItauHtml[\s\S]*?\n\}/, 'comprasItauHtml') + '\n' +
   trozo(/function signoPct[^\n]*\}/, 'signoPct') + '\n' +
   trozo(/function esc\(s\)[\s\S]*?\n\}/, 'esc');
 var api = new Function('Number,String,Date,Math,isFinite',
   'function fmt(v) { return "USD " + Number(v).toFixed(2); }\n' +
   'function fmtNum(v) { return String(Number(v)); }\n' + fuente +
-  '\nreturn { compras: comprasItauHtml, fecha: fechaCortaItau, dias: diasDesde };'
+  '\nreturn { compras: comprasItauHtml, fecha: fechaCortaItau };'
 )(Number, String, Date, Math, isFinite);
 
 var DATOS = { posiciones: [
@@ -51,7 +50,12 @@ ok(out.indexOf('+0.45%') !== -1, 'la de agosto, +0.45%: cada una contra SU preci
 ok((out.match(/%<\/span>/g) || []).length === 2, 'las DOS compras tienen retorno: la segunda no queda en blanco por no traer el precio de hoy');
 // Valor de hoy en dolares: 1674.43 x 121.03 / 40.270978 = 5032.1
 ok(out.indexOf('USD 5032.') !== -1, 'y el valor de hoy en dolares, que si sale del tipo de cambio de hoy');
-ok(/is the fund in pesos/.test(out), 'la pantalla dice que ese retorno es en pesos, no en dolares');
+ok(/In pesos/.test(out), 'la pantalla dice que ese retorno es en pesos, no en dolares');
+// Corto a proposito (13/09/2026, Guzman: "hay mucha info tuya, minimalizaria
+// un poco nomas"). Lo unico que no se puede sacar es que el retorno es en
+// pesos: sin eso, el numero se lee como dolares y no lo es.
+ok(out.indexOf('days') === -1, 'sin los dias: el bloque es corto');
+ok(out.length < 1100, 'y el bloque entero mide menos de 1100 caracteres (' + out.length + ')');
 
 console.log('\nC) lo que NO se inventa');
 // Sin tipo de cambio no hay valor en dolares, pero el retorno en pesos sigue.
@@ -61,7 +65,6 @@ ok(sinTC.indexOf('USD') === -1, 'pero el valor en dolares no se inventa');
 // Una compra sin fecha no rompe nada ni se le pone una.
 var sinFecha = api.compras({ posiciones: [{ symbol: 'ITAU', qty: 10, precioCompra: 100, precioActual: 110 }] }, RESUMEN);
 ok(sinFecha.indexOf('&mdash;') !== -1 || sinFecha.indexOf('—') !== -1, 'sin fecha queda la rayita, no una fecha inventada');
-ok(sinFecha.indexOf('days') === -1, 'ni los dias, que salen de esa fecha');
 ok(api.compras({ posiciones: [] }, RESUMEN) === '', 'sin compras no se dibuja un bloque vacio');
 
 console.log('\nD) la fecha se lee LOCAL, no en UTC');
@@ -69,7 +72,6 @@ console.log('\nD) la fecha se lee LOCAL, no en UTC');
 // el 26. Un dia de menos en una compra es un error que no se ve como error.
 ok(api.fecha('2026-01-01').indexOf('Jan 1, 2026') === 0, 'el 1 de enero es el 1, no el 31 de diciembre');
 ok(api.fecha('') === '' && api.fecha(null) === '', 'sin fecha, nada');
-ok(api.dias('2026-01-01') > 0, 'los dias desde la compra son un numero positivo');
 
 console.log('\nE) el camino a la pantalla de Itau');
 // La base guarda la cuenta como "Itau" y la hoja de posiciones como "Itau
