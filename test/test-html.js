@@ -78,6 +78,16 @@ var woff2 = fsA.existsSync(dirFonts) ? fsA.readdirSync(dirFonts).filter(function
 ok(woff2.length >= 2, 'los .woff2 estan en el repo (' + woff2.length + ')');
 var fontsSinCachear = woff2.filter(function (f) { return sw.indexOf('./fonts/' + f) === -1; });
 ok(fontsSinCachear.length === 0, 'las fuentes estan en ASSETS del sw' + (fontsSinCachear.length ? ' — FALTAN: ' + fontsSinCachear.join(', ') : ''));
+// Cada peso que el CSS PIDA tiene que existir como archivo (13/09/2026). Si no,
+// el navegador finge la negrita engordando los trazos, y en la palabra del
+// splash —letra-espaciado ancho, 34px— eso se lee como un borroneo. Paso justo
+// al reves: el comentario decia "Montserrat 800", la regla estaba en 500 y no
+// habia mas archivo que el 500.
+var pesosMontserrat = (html.match(/\.splash-brand\{[^}]*font-weight:(\d{3})/) || [])[1];
+ok(!!pesosMontserrat && woff2.indexOf('montserrat-' + pesosMontserrat + '.woff2') !== -1,
+  'el peso de Montserrat que pide .splash-brand (' + pesosMontserrat + ') existe como archivo, no es negrita fingida');
+ok(new RegExp("@font-face[^}]*Montserrat[^}]*font-weight:\\s*" + pesosMontserrat).test(html.replace(/\n/g, ' ')),
+  'y tiene su propio @font-face');
 // El cache de lo estable (5/09/2026): fuentes e iconos en un cajon que no se
 // renueva con cada version. Que exista, que el activate no lo borre, que su
 // nombre no empiece con 'ga-pwa-' (versionShell saca de ahi la version), y que
@@ -870,6 +880,30 @@ ok(/\.evomini \{[^}]*min-width: 40px/.test(html),
 // HISTORIAL.md — 393/375/320px en Chrome, con el index.html real.
 ok(/\.evomini \{[^}]*flex: 1 1 40px/.test(html),
   'y pide su piso como base, asi la celda del numero entra entera antes de repartir');
+
+// 9) El desbloqueo del splash, a la altura del pulgar (13/09/2026).
+//
+// ALCANCE: miran la regla escrita. Lo medido de verdad quedo en HISTORIAL.md
+// (393x852, 393x420 con el teclado abierto y 393x280).
+//
+// El boton baja por un margen automatico ARRIBA del bloque, no por una
+// posicion fija: si no entra, el margen vale cero y el splash scrollea, que es
+// lo que esta pantalla ya sabia hacer porque aca tambien se escribe la clave.
+ok(/#splashLock,#splashToken\{[^}]*margin:auto auto/.test(html),
+  'el bloque del desbloqueo se ancla abajo con margen automatico arriba');
+ok(/#splash\{[^}]*overflow-y:auto/.test(html),
+  'y el splash conserva su scroll: con el teclado abierto el boton sigue alcanzable');
+// El escudo NO puede encogerse. En una columna flexible el alto es el eje
+// principal y los hijos se encogen por defecto: a 280px de alto el logo
+// quedaba en CERO y la pantalla se veia sin marca. Medido antes del arreglo.
+ok(/\.splash-mark\{[^}]*flex:none/.test(html),
+  'el escudo no se aplasta cuando la pantalla es baja');
+// Y la columna es lo que hace posible el reparto: sin ella los margenes
+// automaticos no tienen espacio libre que repartir.
+ok(/\.splash-inner\{[^}]*flex-direction:column/.test(html),
+  'el splash se reparte en columna');
+ok(!/\.splash-inner\{[^}]*translateY/.test(html),
+  'y ya no se sube con un translateY, que peleaba con el reparto');
 
 // 9) img-src: la app no carga ni una imagen de afuera.
 ok(/img-src 'self' data:/.test(csp),

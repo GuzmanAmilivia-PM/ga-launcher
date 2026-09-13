@@ -1,6 +1,6 @@
 // Service worker: cachea el "cascarón" de la app para carga instantánea.
 // Los datos (POST a la API) nunca se cachean.
-var CACHE = 'ga-pwa-v205';
+var CACHE = 'ga-pwa-v206';
 var ASSETS = ['./', './index.html', './css/estilos.css',   './js/gagraf.js', './js/analisis.js', './js/arranque.js', './js/brokers.js', './js/buscador.js', './js/calor.js', './js/config.js', './js/graficos.js', './js/ia.js', './js/nucleo.js', './js/paneles.js', './js/seguridad.js', './js/sincronizar.js', './js/tablero.js', './js/trade.js', './js/vistas.js', './js/watchlist.js',
   './manifest.json'];
 // Lo ESTABLE (5/09/2026): fuentes e iconos, ~110 KB que no cambian desde agosto
@@ -11,6 +11,7 @@ var ASSETS = ['./', './index.html', './css/estilos.css',   './js/gagraf.js', './
 // saca el numero de version de los caches que si empiezan asi.
 var ESTABLES = 'ga-estables-v1';
 var ASSETS_ESTABLES = ['./fonts/manrope.woff2', './fonts/montserrat-500.woff2',
+  './fonts/montserrat-700.woff2',
   './apple-touch-icon.png', './icon-512.png', './favicon.png'];
 
 self.addEventListener('install', function (e) {
