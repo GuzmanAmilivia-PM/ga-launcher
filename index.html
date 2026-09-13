@@ -305,7 +305,30 @@
      fondo y lo que hizo el tipo de cambio. Sin separarlas, "gane 32 dolares"
      no se entiende. Se dibuja solo si esta cargado lo aportado. -->
 <div id="accFondo" hidden class="card" style="margin-top:12px"></div>
-<div class="card" style="margin-top:16px">
+<!-- BTG (13/09/2026). Es la cuenta del sueldo: entra, paga impuestos y
+     transferencias, y lo que queda es polvora seca esperando ir a un broker.
+     Por eso el corte es a FIN DE MES, cuando el sueldo ya salio: mirar el dia
+     5 es mirar el sueldo, no el patrimonio. NO se puede leer solo (iBanca
+     pide token en cada acceso), asi que los numeros se cargan a mano una vez
+     por mes y la app deriva el resto. -->
+<div id="accBtg" hidden class="card" style="margin-top:12px"></div>
+<div id="accBtgForm" hidden class="card" style="margin-top:12px">
+<p class="lbl">Month-end balances</p>
+<label><span class="detlbl">Date (month end)</span><input id="btgFecha" type="date" class="login-control"></label>
+<div class="detgrid" style="margin-top:8px">
+<label><span class="detlbl">Liquid USD</span><input id="btgLiqUsd" type="number" inputmode="decimal" step="any" min="0"></label>
+<label><span class="detlbl">Liquid UYU</span><input id="btgLiqUyu" type="number" inputmode="decimal" step="any" min="0"></label>
+<label><span class="detlbl">Deposit USD</span><input id="btgPfUsd" type="number" inputmode="decimal" step="any" min="0"></label>
+<label><span class="detlbl">Deposit UYU</span><input id="btgPfUyu" type="number" inputmode="decimal" step="any" min="0"></label>
+</div>
+<label style="display:block;margin-top:8px"><input id="btgFlujo" type="checkbox"> <span class="detlbl">Also record the change as a deposit/withdrawal</span></label>
+<div class="detedit-botones" style="margin-top:8px">
+<button type="button" class="ghostbtn" id="btgGuardar">Save</button>
+<button type="button" class="ghostbtn" id="btgCancelar">Cancel</button>
+</div>
+<p class="detlbl" id="btgMsg" style="margin-top:6px"></p>
+</div>
+<div class="card" id="accTabla" style="margin-top:16px">
 <div style="overflow-x:auto">
 <table class="holdtable holdhome">
 <thead><tr><th>Instr.</th><th class="col-spark">Month</th><th>Price</th></tr></thead>

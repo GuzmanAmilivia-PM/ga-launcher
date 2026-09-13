@@ -39,6 +39,11 @@
 // Google (corte a D1 del 29/08/2026). El comentario de la era-1 decía "el 2
 // sería salir de la planilla" — salió, y este número lo cuenta.
 var VERSION_GENERACION = '2';
+// El 16: la pantalla de BTG (13/09/2026), con los saldos cortados a FIN DE
+// MES. Es la cuenta del sueldo: mirarla el dia 5 es mirar el sueldo recien
+// caido, no el patrimonio. Muestra liquido y plazo fijo, en pesos y dolares
+// convertidos, y parte el cambio del mes entre lo que pusiste o sacaste y lo
+// que hizo el peso.
 // El 15: el desglose del fondo de Itaú en su pantalla (13/09/2026): cuánto
 // aportaste, cuánto vale, y la ganancia partida entre lo que rindió el fondo
 // en pesos y lo que hizo el tipo de cambio. Antes esa fila mostraba un guion
@@ -63,7 +68,7 @@ var VERSION_GENERACION = '2';
 // El 8 fue editar a mano los precios del fondo de Itau desde su pagina
 // (29/08/2026, V16); el 7, la Watchlist con alertas y push; el 6, los
 // indicadores del detalle.
-var VERSION_FUNCION = '15';
+var VERSION_FUNCION = '16';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre
@@ -270,6 +275,11 @@ document.getElementById('accLiq').textContent = '';
 document.getElementById('accBody').innerHTML = '';
 }
 accPedida = acc.key;
+// BTG no tiene hoja de posiciones: su detalle son los saldos cortados a fin
+// de mes, que trae otra fn. Se atiende aparte y se sale; el resto de las
+// cuentas primero recupera la tabla, que BTG deja escondida.
+if (esBtg(acc)) { mostrarBtg(); return; }
+restaurarVistaCuenta();
 google.script.run.withSuccessHandler(function (data) {
 if (accPedida !== acc.key) return;   // respuesta tardia de una cuenta que ya no esta abierta
 renderAccount(acc, data);
@@ -301,8 +311,8 @@ document.getElementById('accLiq').textContent = 'Cash in account: ' + fmt(data.l
 // El desglose del fondo, solo en Itau. OJO CON LA FORMA: dentro de esta
 // funcion NO puede haber una llave de cierre al principio de una linea, porque
 // test-cuenta-detalle extrae renderAccount con una expresion regular que corta
-// en la primera, y se quedaba con media funcion. Por eso va en UNA sola linea,
-// sin llaves, y quien decide que dibujar es renderFondoItau.
+// en la primera, y se quedaba con media funcion. Por eso van en UNA sola
+// linea, sin llaves, y quien decide que dibujar es cada render.
 if (typeof renderFondoItau === 'function') renderFondoItau(acc, data);
 var body = document.getElementById('accBody');
 body.innerHTML = '';
@@ -678,4 +688,158 @@ function wireFondoSet() {
       alert(msgErr ? msgErr(err, 'Saving the amount') : 'It could not be saved.');
     }).itauAportado({ aportado: n });
   };
+}
+
+// ---------------------------------------------------------------------------
+// BTG: los saldos cortados a fin de mes (13/09/2026)
+// ---------------------------------------------------------------------------
+// BTG es la cuenta del sueldo de Guzmán: entra, paga impuestos, transfiere a
+// Itaú para la tarjeta y para el fondo, y lo que queda es pólvora seca
+// esperando ir a un broker, parte líquida y parte en un plazo fijo de un mes.
+//
+// Mirar ese saldo el día 5 es mirar el sueldo recién caído, no el patrimonio.
+// Por eso el corte va a FIN DE MES, cuando ya pagó todo. Y por eso esta
+// pantalla no "actualiza": carga un corte con su fecha.
+//
+// BTG no se puede leer solo: iBanca pide token en cada acceso y tiene huella
+// de dispositivo, no hay scraper posible como con Itaú. Los cuatro números
+// los carga Guzmán una vez por mes; lo demás lo deriva la app.
+function esBtg(acc) {
+  return /^btg/i.test(String((acc && acc.nombre) || '')) ||
+         String((acc && acc.key) || '').toUpperCase() === 'BTG';
+}
+
+function btgPct(n) { return (n >= 0 ? '+' : '') + fmt(n); }
+
+function renderBtg(data) {
+  var box = document.getElementById('accBtg');
+  if (!box) return;
+  box.hidden = false;
+  var u = data && data.ultimo;
+  if (!u) {
+    box.innerHTML = '<p class="detlbl">No month-end snapshot yet. Load the balances of the ' +
+      'last day of the month, when your salary has already gone out.</p>' +
+      '<div class="detedit"><button type="button" class="ghostbtn" id="btgAbrir">Load balances</button></div>';
+    wireBtgAbrir();
+    return;
+  }
+  var t = u.totales;
+  var c = data.cambio;
+  var html = '<div class="detgrid">' +
+    '<span><span class="detlbl">Liquid</span><b>' + fmt(t.liquido) + '</b></span>' +
+    '<span><span class="detlbl">Fixed deposit</span><b>' + fmt(t.plazo) + '</b></span>' +
+    '<span><span class="detlbl">Total</span><b>' + fmt(t.total) + '</b></span>' +
+    '</div>' +
+    '<p class="detlbl" style="margin-top:6px">Snapshot of ' + esc(u.fecha) + '</p>';
+  if (c) {
+    // Las dos mitades del cambio. El flujo es plata que entro o salio; el
+    // efecto del peso es lo que se movio el dolar sobre lo que ya estaba.
+    // Separarlas es lo que evita que una transferencia parezca ganancia.
+    html += '<div class="detgrid" style="margin-top:10px">' +
+      '<span><span class="detlbl">Since ' + esc(c.desde) + '</span><b class="' + (c.delta >= 0 ? 'up' : 'down') + '">' + btgPct(c.delta) + '</b></span>' +
+      '<span><span class="detlbl">You put in / took out</span><b>' + btgPct(c.flujo) + '</b></span>' +
+      '<span><span class="detlbl">Peso vs dollar</span><b class="' + (c.efectoFx >= 0 ? 'up' : 'down') + '">' + btgPct(c.efectoFx) + '</b></span>' +
+      '</div>' +
+      '<p class="detlbl" style="margin-top:8px">Almost everything that moves here month to month is ' +
+      'your own money coming and going, not return: the deposit interest is small next to the salary.</p>';
+  }
+  html += '<div class="detedit"><button type="button" class="ghostbtn" id="btgAbrir">Load a new snapshot</button></div>';
+  box.innerHTML = html;
+  wireBtgAbrir();
+}
+
+function wireBtgAbrir() {
+  var b = document.getElementById('btgAbrir');
+  if (!b) return;
+  b.onclick = function () {
+    var f = document.getElementById('accBtgForm');
+    if (!f) return;
+    f.hidden = false;
+    // La fecha propuesta es el fin del mes ANTERIOR si estamos en los
+    // primeros dias: si hoy es 5, el corte que falta es el del mes pasado.
+    var hoy = new Date();
+    var fin = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() + (hoy.getUTCDate() > 20 ? 1 : 0), 0));
+    document.getElementById('btgFecha').value = fin.toISOString().slice(0, 10);
+    document.getElementById('btgMsg').textContent = '';
+  };
+}
+
+(function () {
+  var g = document.getElementById('btgGuardar');
+  var c = document.getElementById('btgCancelar');
+  if (c) c.onclick = function () { document.getElementById('accBtgForm').hidden = true; };
+  if (!g) return;
+  g.onclick = function () {
+    var msg = document.getElementById('btgMsg');
+    var num = function (id) {
+      var v = document.getElementById(id).value;
+      return v === '' ? null : Number(v);
+    };
+    var saldos = [];
+    var pares = [['btgLiqUsd', 'liquido', 'USD'], ['btgLiqUyu', 'liquido', 'UYU'],
+                 ['btgPfUsd', 'plazo', 'USD'], ['btgPfUyu', 'plazo', 'UYU']];
+    for (var i = 0; i < pares.length; i++) {
+      var v = num(pares[i][0]);
+      // Vacio = "no tengo de eso". Cero tambien es un dato (vaciaste el plazo
+      // fijo), y por eso se distingue de vacio en vez de tratarlos igual.
+      if (v === null) continue;
+      if (!isFinite(v) || v < 0) { msg.textContent = 'Check the amounts.'; return; }
+      saldos.push({ tipo: pares[i][1], moneda: pares[i][2], monto: v });
+    }
+    if (!saldos.length) { msg.textContent = 'Load at least one balance.'; return; }
+    g.disabled = true;
+    msg.textContent = 'Saving...';
+    google.script.run.withSuccessHandler(function (r) {
+      g.disabled = false;
+      if (!r || !r.ok) { msg.textContent = msgBackend(r) || 'It could not be saved.'; return; }
+      msg.textContent = (r.mensajes || []).join(' ');
+      document.getElementById('accBtgForm').hidden = true;
+      if (lastAcc) showAccount(lastAcc, accountReturnView);
+      if (typeof sincronizarTodo === 'function') sincronizarTodo();
+    }).withFailureHandler(function (err) {
+      g.disabled = false;
+      msg.textContent = msgErr ? msgErr(err, 'The snapshot') : 'It could not be saved.';
+    }).guardarBtg({
+      fecha: document.getElementById('btgFecha').value,
+      saldos: saldos,
+      registrarFlujo: !!document.getElementById('btgFlujo').checked
+    });
+  };
+})();
+
+// Prepara la pantalla de cuenta para BTG: su detalle NO es una tabla de
+// posiciones sino dos saldos, así que la tabla se esconde y aparece su bloque.
+function mostrarBtg() {
+  var tabla = document.getElementById('accTabla');
+  if (tabla) tabla.hidden = true;
+  var itau = document.getElementById('accItau');
+  if (itau) itau.hidden = true;
+  var fondo = document.getElementById('accFondo');
+  if (fondo) fondo.hidden = true;
+  var box = document.getElementById('accBtg');
+  if (box) { box.hidden = false; box.innerHTML = '<p class="detlbl">Loading...</p>'; }
+  document.getElementById('accTotal').textContent = 'Loading...';
+  document.getElementById('accLiq').textContent = '';
+  google.script.run.withSuccessHandler(function (d) {
+    if (accPedida !== 'BTG') return;   // ya se abrio otra cuenta
+    var t = (d && d.ultimo && d.ultimo.totales) || null;
+    document.getElementById('accTotal').textContent = t ? fmt(t.total) : '--';
+    document.getElementById('accLiq').textContent = t ? ('Liquid: ' + fmt(t.liquido)) : '';
+    renderBtg(d);
+  }).withFailureHandler(function (err) {
+    if (accPedida !== 'BTG') return;
+    document.getElementById('accTotal').textContent = '--';
+    errorEnVista('accError', err, 'los saldos de BTG');
+  }).getBtg();
+}
+
+// Al abrir cualquier OTRA cuenta hay que devolver la tabla y esconder BTG: sin
+// esto, entrar a BTG y salir a Schwab dejaba la pantalla sin posiciones.
+function restaurarVistaCuenta() {
+  var tabla = document.getElementById('accTabla');
+  if (tabla) tabla.hidden = false;
+  var box = document.getElementById('accBtg');
+  if (box) box.hidden = true;
+  var form = document.getElementById('accBtgForm');
+  if (form) form.hidden = true;
 }

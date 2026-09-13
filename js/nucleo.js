@@ -149,7 +149,7 @@ function apiCall(fn, args) {
 }
 // Shim compatible con google.script.run: el resto del codigo no cambia.
 (function () {
-  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getOperaciones: 'operaciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar', estadoIA: 'ia_estado', guardarClaveIA: 'ia_config', estadoFinnhub: 'finnhub_estado', guardarClaveFinnhub: 'finnhub_config', getResultados: 'resultados', analizarConIA: 'ia_analizar', buscarTicker: 'buscar', estadoIBKR: 'ibkr_estado', guardarConfigIBKR: 'ibkr_config', sincronizarIBKR: 'ibkr_sync', sincronizarBNB: 'bnb_sync', estadoCS: 'cs_estado', guardarConfigCS: 'cs_config', portalCS: 'cs_portal', sincronizarCS: 'cs_sync', getDividendos: 'dividendos', getDividendosProyectados: 'dividendos_proyectados', getAportes: 'aportes', getAnalisis: 'analisis', guardarPerfil: 'perfil_set', getFundamentales: 'fundamentales', listarBackups: 'backups', restaurarBackup: 'restaurar', getSalud: 'salud', getWatchlist: 'watchlist', agregarWatchlist: 'watchlist_agregar', quitarWatchlist: 'watchlist_quitar', alertaWatchlist: 'watchlist_alerta', registrarPush: 'push_registrar', editarPrecioManual: 'posicion_editar', probarPush: 'push_probar', getPodcast: 'podcast', itauPedir: 'itau_pedir', itauEstado: 'itau_estado', itauAportado: 'itau_aportado' };
+  var MAP = { getPortfolioData: 'portfolio', getAccountData: 'account', getNoticias: 'noticias', getOperaciones: 'operaciones', registrarOperacion: 'trade', registrarMovimientoCash: 'cash', refrescarPrecios: 'refrescar', getPlataformas: 'plataformas', agregarPlataforma: 'plataforma_agregar', editarPlataforma: 'plataforma_editar', quitarPlataforma: 'plataforma_quitar', estadoIA: 'ia_estado', guardarClaveIA: 'ia_config', estadoFinnhub: 'finnhub_estado', guardarClaveFinnhub: 'finnhub_config', getResultados: 'resultados', analizarConIA: 'ia_analizar', buscarTicker: 'buscar', estadoIBKR: 'ibkr_estado', guardarConfigIBKR: 'ibkr_config', sincronizarIBKR: 'ibkr_sync', sincronizarBNB: 'bnb_sync', estadoCS: 'cs_estado', guardarConfigCS: 'cs_config', portalCS: 'cs_portal', sincronizarCS: 'cs_sync', getDividendos: 'dividendos', getDividendosProyectados: 'dividendos_proyectados', getAportes: 'aportes', getAnalisis: 'analisis', guardarPerfil: 'perfil_set', getFundamentales: 'fundamentales', listarBackups: 'backups', restaurarBackup: 'restaurar', getSalud: 'salud', getWatchlist: 'watchlist', agregarWatchlist: 'watchlist_agregar', quitarWatchlist: 'watchlist_quitar', alertaWatchlist: 'watchlist_alerta', registrarPush: 'push_registrar', editarPrecioManual: 'posicion_editar', probarPush: 'push_probar', getPodcast: 'podcast', itauPedir: 'itau_pedir', itauEstado: 'itau_estado', itauAportado: 'itau_aportado', getBtg: 'btg', guardarBtg: 'btg_guardar' };
   function mk(ok, fail) {
     var o = {
       withSuccessHandler: function (f) { return mk(f, fail); },
@@ -231,7 +231,11 @@ var ACCOUNTS = [
 { key: 'CS', nombre: 'Charles Schwab' },
 { key: 'IB', nombre: 'Interactive Brokers' },
 { key: 'BNB', nombre: 'Binance' },
-{ key: 'ITAU', nombre: 'Itau Assets' }
+{ key: 'ITAU', nombre: 'Itau Assets' },
+// BTG entra en la lista el 13/09/2026 para que se pueda TOCAR desde la torta
+// y abrir su pantalla. No tiene hoja de posiciones: su detalle son los saldos
+// cortados a fin de mes, que trae la fn btg.
+{ key: 'BTG', nombre: 'BTG' }
 ];
 var PIE_COLORS = ['#d4af37', '#5b8def', '#22c55e', '#a78bfa', '#38bdf8', '#f59e0b', '#f43f5e'];
 // Colores del diseño leídos de la variable CSS viva: los gráficos se dibujan
