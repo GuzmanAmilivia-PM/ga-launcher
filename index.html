@@ -154,10 +154,21 @@
      compiten por el ancho con el numero, que es lo que no se puede achicar. -->
 <div class="tr-val">
 <p class="lbl">Total value <button class="eyebtn" id="eyeBtn" aria-label="Hide amounts"></button><button class="depositbtn" id="btnDepositHome">Deposit</button></p>
+<!-- El % viaja PEGADO al numero (13/09/2026, pedido de Guzman: "que este al
+     lado de USD 120.., chico verde transparente"). Vivia en .tr-pct, la
+     columna de la derecha, que desaparecio: lo que sobra ahora es del
+     dibujo. Va adentro de .tr-val y alineado por BASE con el numero, que es
+     lo unico que lo pone "al lado" de verdad — como hermano de fila
+     quedaria centrado contra el alto de las dos lineas, no contra el. -->
+<div class="tr-num">
 <p class="total" id="total">&mdash;</p>
+<!-- El % y su periodo van envueltos JUNTOS en un solo hijo: son una unidad
+     ("+32.55% in YTD") y sueltos la fila los separaba — el periodo bajaba de
+     renglon solo, dejando un "in YTD" huerfano debajo del numero. -->
+<span class="tr-pct-par"><span class="rangepct" id="rangePct"></span><span class="totalpct-per" id="rangeNombre"></span></span>
+</div>
 </div>
 <div class="evomini" id="evoMini" role="button" tabindex="0" title="Tap to see the chart"></div>
-<div class="tr-pct"><span class="rangepct" id="rangePct"></span><span class="totalpct-per" id="rangeNombre"></span></div>
 </div>
 <!-- La comparacion contra el indice va en su PROPIO renglon, ancho completo
      (01/09/2026). Nacio dentro de .tr-pct, que es la columna angosta de la

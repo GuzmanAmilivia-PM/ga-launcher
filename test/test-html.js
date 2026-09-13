@@ -436,10 +436,20 @@ ok(!/class="topstats"/.test(html), 'el bloque de arriba ya no existe: el total s
 var panel1 = (html.match(/<div class="sweeppanel">[\s\S]*?(?=<div class="sweeppanel">)/) || [''])[0];
 ok(!!panel1, 'se puede aislar el primer panel del carrusel');
 ok(!/<h2>Evoluci/.test(panel1), 'la tarjeta ya NO se titula Evolucion');
-// El orden IMPORTA: es el mismo que una fila de posiciones — nombre, dibujo, %.
+// El orden IMPORTA. Era nombre-dibujo-% (el de una fila de posiciones); desde
+// el 13/09/2026 el % va PEGADO al numero y el dibujo cierra la fila, asi que
+// es total-%-dibujo. Este assert esta DADO VUELTA a proposito: si alguien
+// devuelve el % al final, la fila vuelve a tener tres columnas y el dibujo
+// pierde el ancho que esta mudanza le dio.
 var iVal = panel1.indexOf('id="total"'), iMini = panel1.indexOf('id="evoMini"'), iPct = panel1.indexOf('id="rangePct"');
-ok(iVal !== -1 && iMini !== -1 && iPct !== -1 && iVal < iMini && iMini < iPct,
-  'total, dibujo y % van en ese orden, como una fila de la tabla de posiciones');
+ok(iVal !== -1 && iMini !== -1 && iPct !== -1 && iVal < iPct && iPct < iMini,
+  'el % va pegado al numero y el dibujo cierra la fila');
+// Y "pegado" significa DENTRO de la celda del numero, no como hermano de fila:
+// solo asi comparte la linea de base con el total.
+ok(panel1.indexOf('class="tr-num"') !== -1 &&
+   panel1.indexOf('class="tr-num"') < iVal && iPct < panel1.indexOf('class="evomini"'),
+  'el % vive adentro de .tr-num, junto al numero');
+ok(!/class="tr-pct"/.test(html), 'y la columna del % de la derecha ya no existe');
 // Que compartan UNA fila se comprueba sobre el BLOQUE de la fila, no por
 // cuán cerca están en el texto. Antes era una ventana de 400 caracteres desde
 // `class="totalrow"`, y eso medía otra cosa: el 27/08/2026 un comentario nuevo
@@ -773,15 +783,38 @@ ok(graficosSrc2.indexOf('de 305px de ancho a 87') === -1,
 
 // 7) .rangepct la comparten Dividendos, Aportes y el modal: el tamano grande es
 //    solo el de la fila del total.
-ok(/\.totalrow \.rangepct \{[^}]*font-size: 15px/.test(html),
-  'el tamano grande esta acotado a la fila del total');
+// Bajo a 13px el 13/09/2026 al mudarse al lado del numero: ahi la posicion ya
+// lo hace encontrar y a 15px en negrita competia con el total. Sigue acotado a
+// .totalrow, que es lo que este assert cuida.
+ok(/\.totalrow \.rangepct \{[^}]*font-size: 13px/.test(html),
+  'el % de la fila del total mide 13px, sin competir con el numero');
+// Y el apagado se hace MEZCLANDO color, no con opacidad: la opacidad lo
+// despinta contra cualquier fondo y se rompe entre tema claro y oscuro.
+ok(/\.totalrow \.rangepct\.up \{[^}]*color-mix/.test(html) &&
+   /\.totalrow \.rangepct\.down \{[^}]*color-mix/.test(html),
+  'el verde/rojo va apagado por color-mix, como .vsbench');
+ok(!/\.totalrow \.rangepct[^}]*opacity:/.test(html),
+  'y NO por opacity, que lo despintaria contra el fondo');
 ok(/^\.rangepct \{[^}]*font-size: 13px/m.test(html),
   'y el ano de Dividendos/Aportes vuelve a su tamano, que no compite con su titulo');
 
-// 8) La celda del % puede encoger: en 2A/5A el texto llega a "+245,67% ·
-//    +31,2% anual" y con flex-shrink 0 empujaba la fila fuera de la tarjeta.
-ok(/\.totalrow \.tr-pct \{ flex: 0 1 auto;/.test(html),
-  'la celda del % cede ancho en vez de desbordar');
+// 8) ASSERTS DADOS VUELTA (13/09/2026). .tr-pct era la columna del % a la
+//    derecha de la fila y dejo de existir cuando el % se mudo al lado del
+//    numero. Sus dos asserts (podia encoger; quedaba anclada a la derecha con
+//    margin-left:auto) no se borran: pasan a exigir que la columna NO vuelva.
+//    Reponerla sin pensar devolveria la fila a tres celdas y el dibujo
+//    perderia otra vez el ancho.
+ok(!/\.totalrow \.tr-pct \{/.test(html),
+  'la columna del % a la derecha ya no existe en el CSS');
+// La que ahora puede ceder —y la que absorbe el caso largo de 2A/5A, donde el
+// texto llega a "+245,67% · +31,2% anual"— es .tr-num, que ENVUELVE: el %
+// baja a un segundo renglon en vez de empujar la fila fuera de la tarjeta.
+ok(/\.totalrow \.tr-num \{[^}]*flex-wrap: wrap/.test(html),
+  'el % baja de renglon en vez de desbordar cuando el texto es largo');
+// Y comparte la linea de BASE con el numero: centrado flotaria contra el alto
+// de la linea del total, que es mucho mas grande.
+ok(/\.totalrow \.tr-num \{[^}]*align-items: baseline/.test(html),
+  'el % se alinea por base con el numero, no por centro');
 
 // 8a) Y queda pegada al borde DERECHO aunque el dibujo desaparezca.
 //
@@ -795,8 +828,11 @@ ok(/\.totalrow \.tr-pct \{ flex: 0 1 auto;/.test(html),
 // reporte de Guzman con captura). Tampoco daba desborde horizontal, asi que
 // la prueba obvia habria dado verde con la pantalla rota — la misma trampa
 // que ya esta anotada dos veces en este archivo.
-ok(/\.totalrow \.tr-pct \{[^}]*margin-left: auto/.test(html),
-  'el % se ancla a la derecha aunque .evomini se esconda al abrir el grafico');
+// DADO VUELTA (13/09/2026): con el % pegado al numero, la fila ya no tiene una
+// celda a la derecha que anclar, y el hueco de 67px que este margen tapaba no
+// puede volver a aparecer — al esconderse .evomini no queda nada a su derecha.
+ok(!/margin-left: auto/.test((html.match(/\.totalrow [^{]*\{[^}]*\}/g) || []).join(' ')),
+  'ninguna celda de la fila del total se ancla ya a la derecha: no hay columna derecha');
 
 // 8b) La celda del NUMERO, al reves: NO puede encoger.
 //
@@ -813,14 +849,27 @@ ok(/\.totalrow \.tr-pct \{[^}]*margin-left: auto/.test(html),
 // siete cifras, y a 320px la etiqueta "Valor total" se partia en dos renglones.
 // Nada de eso producia desborde horizontal de la pagina, que era lo unico que
 // se habia medido: la medicion daba verde midiendo la propiedad equivocada.
-ok(/\.totalrow \.tr-val \{ flex: 0 0 auto; \}/.test(html),
-  'la celda del numero NO cede ancho: el numero no se derrama sobre el dibujo');
+// Desde el 13/09/2026 el candado no es `flex: 0 0 auto` sino el PISO: la celda
+// puede ceder (`0 1 auto`) pero nunca por debajo de `min-content`, que con
+// .tr-num envolviendo es su hijo mas ancho, o sea el numero. Efecto igual al
+// de antes para lo que importa —el numero no se derrama— y ademas deja que el
+// % baje de renglon en vez de empujar la fila. El par es indivisible: sin el
+// min-width, `0 1 auto` devuelve exactamente el derrame de la auditoria.
+ok(/\.totalrow \.tr-val \{ flex: 0 1 auto; min-width: min-content; \}/.test(html),
+  'la celda del numero no baja de min-content: el numero no se derrama sobre el dibujo');
 ok(!/\.totalrow \.tr-val \{[^}]*min-width: 0/.test(html),
   'y no vuelve el min-width:0, que es lo que la dejaba encoger por debajo de su contenido');
 // El que cede es el dibujo, y tiene piso: si el piso sube, a 320px la fila se
 // pasa de ancho y el % de la derecha queda recortado.
 ok(/\.evomini \{[^}]*min-width: 40px/.test(html),
   'el que cede ancho es el mini-grafico, con piso de 40px');
+// Y su BASE es 40px, no `auto` (13/09/2026). Con `auto` el dibujo reclamaba el
+// ancho de su contenido antes de repartir y empujaba el % de renglon aun
+// sobrando lugar (medido a 393px: la celda del numero pedia 272 y le quedaban
+// 254). ALCANCE: mira la regla escrita. Lo medido de verdad quedo en
+// HISTORIAL.md — 393/375/320px en Chrome, con el index.html real.
+ok(/\.evomini \{[^}]*flex: 1 1 40px/.test(html),
+  'y pide su piso como base, asi la celda del numero entra entera antes de repartir');
 
 // 9) img-src: la app no carga ni una imagen de afuera.
 ok(/img-src 'self' data:/.test(csp),

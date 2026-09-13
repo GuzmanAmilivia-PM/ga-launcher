@@ -131,9 +131,16 @@ html[data-paleta="violeta"] .galogo-img { filter: hue-rotate(209deg) saturate(1.
    sigue existiendo para datos reales (el cash de una cuenta) e instrucciones
    de formulario, que no son decorativas y necesitan su tamaño de siempre. */
 .rangepct { font-size: 13px; font-weight: 700; margin-left: 8px; }
-/* El tamano grande es solo el de la fila del total (v100), no el del ano de
-   Dividendos/Aportes, que comparten esta clase. Auditoria del 23/08/2026. */
-.totalrow .rangepct { font-size: 15px; margin-left: 0; }
+/* Baja de 15px a 13px y pierde el verde/rojo pleno (13/09/2026, pedido de
+   Guzman: "chico verde transparente"). Ahora que esta PEGADO al numero ya no
+   necesita tamano para que se lo encuentre — la posicion lo hace —, y a 15px
+   en negrita competia con el total en vez de acompanarlo. El apagado es el
+   mismo recurso que .vsbench: mezclar el verde/rojo con el gris de la
+   tonalidad, no bajar la opacidad (bajar opacidad lo despinta contra
+   CUALQUIER fondo y se rompe entre tema claro y oscuro). */
+.totalrow .rangepct { font-size: 13px; margin-left: 0; }
+.totalrow .rangepct.up { color: color-mix(in srgb, var(--green) 66%, var(--muted)); }
+.totalrow .rangepct.down { color: color-mix(in srgb, var(--red) 66%, var(--muted)); }
 /* El % del periodo vive al lado del TOTAL (pedido de Guzman, 22/08/2026): es
    la lectura que uno busca al abrir, y ahi no compite con nada. */
 .totalpct-per { font-size: 11.5px; color: var(--muted); font-weight: 600; }
@@ -173,6 +180,35 @@ html[data-paleta="violeta"] .galogo-img { filter: hue-rotate(209deg) saturate(1.
 
 /* --- Cards y tablas --- */
 .card { background: var(--navy2); border: 1px solid var(--border); border-radius: 18px; padding: 18px; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.18); min-width: 0; }
+/* --- El Inicio sin marcos, a todo ancho (13/09/2026) --- Pedido de Guzman
+   despues de comparar con la app de Binance: "aprovecha mejor la pantalla, los
+   widget no tienen marco". El marco de .card cuesta 38px de ancho por tarjeta
+   (18 de padding a cada lado + los dos bordes): el 10% de una pantalla de
+   375px, y se lo comia justo la columna que mas lo necesita — la descripcion
+   de cada posicion, que se cortaba en "VANECK SEMIC...". Lo que separaba el
+   marco lo hace ahora una hairline a todo ancho; la separacion real la da el
+   aire, la linea solo la ancla.
+   TRES cosas de esta regla:
+   1) Es SOLO del Inicio y SOLO en telefono. .card la comparten Portfolio,
+      Analysis, Settings y el detalle de cuenta, donde si hay grillas de
+      widgets chicos y distintos y el marco se gana el lugar. Y arriba de
+      760px .grid2 pone dos tarjetas LADO A LADO: sin marco se derramarian
+      una sobre otra, porque ahi no hay una hairline horizontal que las
+      separe.
+   2) La hairline va como borde SUPERIOR y se le saca a la primera, no como
+      borde inferior. Las tarjetas del Inicio cuelgan de dos padres distintos
+      (.grid2 y el view), asi que no hay un :last-child que valga para todas,
+      y ademas macroCard se esconde cuando no hay noticias: con borde inferior
+      quedaria una linea colgada al final de la nada.
+   3) El margen negativo es exactamente el padding lateral de .mainarea. Si
+      ese padding cambia, este numero cambia con el o la tarjeta deja de
+      llegar al borde. */
+@media (max-width: 760px) {
+  #view-inicio .card { background: none; border: none; border-radius: 0; box-shadow: none;
+    margin: 0 -16px; padding: 18px 16px; border-top: 1px solid var(--border); }
+  #view-inicio .grid2 { gap: 0; }
+  #view-inicio .grid2 > .card:first-child { border-top: none; padding-top: 4px; }
+}
 /* .card h2 comparte estilo con .viewtitle (definido arriba, junto a
    .subtotal): mismo tamaño chico, mayúscula, traslúcido con el color de la
    tonalidad — pedido de Guzmán, 26/08/2026. El TÍTULO es .viewtitle (arriba
@@ -346,22 +382,34 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
    del dibujo en el telefono de Guzman y hasta 68% en pantallas de 320px. No
    habia desborde horizontal de la pagina, asi que la unica medicion que se le
    habia hecho daba verde: medía la propiedad equivocada. Auditoria 25/08/2026. */
-.totalrow .tr-val { flex: 0 0 auto; }
-/* El `margin-left: auto` es lo que mantiene el % pegado al borde DERECHO
-   cuando el grafico esta desplegado (02/09/2026, reporte de Guzman con captura).
-   Al abrir el grafico, pintarBotonEvo esconde .evomini — que era el UNICO
-   hijo con flex-grow de la fila. Sin el, ni .tr-val ni .tr-pct crecen, asi
-   que las dos se amontonaban a la izquierda y quedaban 67px muertos a la
-   derecha con el porcentaje colgado en el medio de la nada. Medido a 375px.
-   Con el mini visible este margen no cambia NADA: el dibujo se come el
-   espacio libre y el auto resuelve a cero (verificado: el dibujo sigue
-   midiendo 55px). */
-.totalrow .tr-pct { flex: 0 1 auto; margin-left: auto; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
-.totalrow .tr-pct .totalpct-per { margin-top: 1px; }
+/* `0 1 auto` + `min-width: min-content`, y el par NO se puede separar
+   (13/09/2026, con la mudanza del % al lado del numero).
+   El piso `min-content` de .tr-num —que envuelve— es su hijo mas ancho, o sea
+   EL NUMERO: la celda nunca baja de ahi, asi que `.total` (que es `nowrap`)
+   sigue sin poder derramarse sobre el dibujo. Lo unico que cede es el %, que
+   baja a un segundo renglon en pantallas angostas. Con el `flex: 0 0 auto` de
+   antes no cedia nada y el % se llevaba puesto al mini-grafico; con
+   `min-width: 0` volveria el derrame del numero de la auditoria del
+   25/08/2026. Es una cosa O la otra: el piso tiene que ser min-content. */
+.totalrow .tr-val { flex: 0 1 auto; min-width: min-content; }
+/* El % pegado al numero y alineado por BASE, no por centro: centrado flotaria
+   contra el alto de la linea del numero, que es mucho mas grande. */
+.totalrow .tr-num { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+/* El % y su periodo, UN solo hijo de la fila: asi envuelven juntos. Sueltos, el
+   periodo bajaba de renglon por su cuenta y quedaba un "in YTD" huerfano
+   debajo del numero (visto a 393px el 13/09/2026). */
+.totalrow .tr-pct-par { display: inline-flex; align-items: baseline; gap: 5px; }
 /* El piso baja de 54 a 40: ahora que la celda del numero no se encoge, es el
    dibujo el que tiene que ceder en pantallas angostas. Con 54 el renglon se
    pasaba de ancho a 320px y el % de la derecha quedaba recortado. */
-.evomini { cursor: pointer; flex: 1 1 auto; min-width: 40px; }
+/* La BASE es 40px, no `auto` (13/09/2026). Con `auto` el dibujo reclamaba el
+   ancho de su contenido antes de repartir, y con el % ya pegado al numero eso
+   alcanzaba para empujarlo de renglon aun sobrando lugar: a 393px la celda del
+   numero pedia 272 y solo le quedaban 254. Con base 40 el dibujo pide su piso,
+   la celda del numero entra entera y el dibujo se queda con TODO lo que sobra
+   (medido a 393px: 77px, contra los 55 que tenia antes de este cambio). Es la
+   regla de siempre puesta donde se cumple: el que cede ancho es el dibujo. */
+.evomini { cursor: pointer; flex: 1 1 40px; min-width: 40px; }
 .evomini svg { width: 100%; height: 40px; display: block; }
 .evomini-vacio { color: var(--muted); font-size: 11px; }
 /* Los controles del grafico: solo con el grafico abierto (ver el html). */
