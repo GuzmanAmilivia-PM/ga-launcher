@@ -52,7 +52,10 @@ function correr(nombre, cfg) {
               withFailureHandler: function (f) { fails.push(f); return api; },
               sincronizarIBKR: function () { resolver('ibkr', cfg.ibkr); },
               sincronizarCS: function () { resolver('cs', cfg.cs); },
-              refrescarPrecios: function () { estado.refrescos++; resolver('refrescar', cfg.refrescar); }
+              refrescarPrecios: function () { estado.refrescos++; resolver('refrescar', cfg.refrescar); },
+              // Itau no lo sincroniza ni el telefono ni el Worker: se deja un PEDIDO y
+              // la PC de Guzman lo atiende. La cadena lo pide primero y NO lo espera.
+              itauPedir: function () { resolver('itau', cfg.itau || { estado: 'pedido' }); }
             };
             function resolver(nom, r) {
               estado.llamadas.push(nom);
@@ -74,7 +77,7 @@ function correr(nombre, cfg) {
   var fn = new Function(nombres.join(','), codigo + '\nreturn { sincronizarTodo: sincronizarTodo, syncTodoEnCurso: function () { return syncTodoEnCurso; } };');
   var api = fn.apply(null, nombres.map(function (n) { return ctx[n]; }));
   estado.api = api;
-  api.sincronizarTodo();
+  api.sincronizarTodo(cfg.opts);
   return new Promise(function (res) {
     setTimeout(function () { console.log('\n' + nombre); res(estado); }, 400);
   });
@@ -88,7 +91,7 @@ var OK1 = { ok: true, cambios: [{ tipo: 'qty', symbol: 'VOO' }] };
   var e = await correr('A) los tres brokers configurados y sin errores', {
     ibkr: OK1, cs: OKV, bnbConfigurado: true, bnb: OK1, refrescar: {}
   });
-  ok(JSON.stringify(e.llamadas) === '["ibkr","cs","bnb","refrescar"]',
+  ok(JSON.stringify(e.llamadas) === '["itau","ibkr","cs","bnb","refrescar"]',
      'orden esperado, fue ' + JSON.stringify(e.llamadas));
   ok(e.refrescos === 1, 'refrescarPrecios corre una vez');
   ok(e.menuCerrado, 'cierra el menú al terminar');
@@ -112,9 +115,13 @@ var OK1 = { ok: true, cambios: [{ tipo: 'qty', symbol: 'VOO' }] };
     ibkr: { ok: false, sinConfig: true }, cs: { ok: false, sinConfig: true },
     bnbConfigurado: false, refrescar: {}
   });
-  ok(JSON.stringify(e.llamadas) === '["ibkr","cs","refrescar"]',
+  ok(JSON.stringify(e.llamadas) === '["itau","ibkr","cs","refrescar"]',
      'saltea los no configurados, fue ' + JSON.stringify(e.llamadas));
-  ok(e.avisos.length === 0, 'sin avisos cuando no hay nada configurado');
+  // Itau NO depende de que haya brokers configurados: se pide igual, y por eso
+  // hay un aviso aunque no haya nada mas. Apretar Sync y no ver nada seria
+  // peor que una linea de mas.
+  ok(e.avisos.length === 1 && /Itaú: update requested/.test(e.avisos[0].msg),
+     'queda la linea de Itau, que es lo unico que se pidio');
   ok(e.loadData === 1, 'igual refresca precios y recarga');
 
   // B2) IBKR sincronizo pero la clave de Binance no esta en el telefono: se
@@ -167,6 +174,34 @@ var OK1 = { ok: true, cambios: [{ tipo: 'qty', symbol: 'VOO' }] };
   });
   ok(e.llamadas.length === 0, 'no dispara nada');
   ok(e.avisos.length === 0, 'ni avisa');
+
+  // H) Itau en la cadena (13/09/2026). Pedido de Guzman: "pero cuando le doy
+  // sync en el panel lateral tmb?". Va PRIMERO y no se espera: lo escribe su
+  // PC hasta un minuto despues.
+  e = await correr('H) Itau va primero y se dice, sin esperarlo', {
+    ibkr: OK1, cs: OKV, bnbConfigurado: true, bnb: OKV, refrescar: {}
+  });
+  ok(e.llamadas[0] === 'itau', 'Itau es lo primero: la PC trabaja mientras corren los brokers');
+  ok(/Ita\u00fa: update requested/.test(e.avisos[0].msg), 'se dice que quedo PEDIDO, no sincronizado');
+  ok(!/Ita\u00fa: (no changes|[0-9]+ change)/.test(e.avisos[0].msg),
+     'y nunca se reporta como un broker mas: su resultado llega despues');
+
+  // H2) Con la PC apagada el Worker lo dice, y la linea lo pasa tal cual: es
+  // la diferencia entre "espera" y "prende la maquina".
+  e = await correr('H2) la PC no contesta', {
+    ibkr: OKV, cs: OKV, bnbConfigurado: false, refrescar: {}, itau: { estado: 'sin-respuesta' }
+  });
+  ok(/your PC has not answered/.test(e.avisos[0].msg), 'avisa que la PC no contesto');
+
+  // H3) EL CICLO. Cuando la actualizacion de Itau termina bien, la pantalla de
+  // la cuenta llama a sincronizarTodo para mostrar el numero nuevo. Si esa
+  // llamada volviera a pedir Itau, habria un login al banco cada minuto para
+  // siempre. Este assert esta dado vuelta a proposito: verifica que NO pase.
+  e = await correr('H3) la llamada que viene de Itau NO vuelve a pedir Itau', {
+    ibkr: OKV, cs: OKV, bnbConfigurado: false, refrescar: {}, opts: { sinItau: true }
+  });
+  ok(e.llamadas.indexOf('itau') === -1, 'no se pide Itau: fue ' + JSON.stringify(e.llamadas));
+  ok(e.llamadas[0] === 'ibkr', 'la cadena arranca directo en los brokers');
 
   console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
   process.exit(fallos ? 1 : 0);

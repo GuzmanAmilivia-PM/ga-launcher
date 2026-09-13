@@ -604,7 +604,10 @@ function itauSeguir() {
     } else if (itauActivo && e && e.estado === 'listo') {
       // Terminó bien: que la pantalla muestre el número nuevo, que es el
       // punto de haber apretado.
-      if (typeof sincronizarTodo === 'function') sincronizarTodo();
+      // sinItau: esta llamada VIENE de Itau. Sin la bandera, la cadena volveria
+      // a pedir Itau, que volveria a terminar, que volveria a llamar: un login al
+      // banco cada minuto para siempre (13/09/2026).
+      if (typeof sincronizarTodo === 'function') sincronizarTodo({ sinItau: true });
     }
   }).withFailureHandler(function () {
     var msg = document.getElementById('accItauMsg');

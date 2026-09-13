@@ -245,7 +245,10 @@ ok(soloPwa.length === 0, 'la PWA no llama fns inexistentes' + (soloPwa.length ? 
 // 'itau_atender' la llama la PC de Guzmán, no la PWA (13/09/2026): la app
 // pide con itau_pedir y mira con itau_estado; atender es del otro lado del
 // relevo, el que de verdad entra al banco.
-var SOLO_BACKEND = ['mail', 'noticias_semana', 'foto', 'itau_atender'];
+// 'itau_compra' es del mismo lado del relevo: la llama el script de la PC
+// cuando ve mas cuotapartes en el banco que en la app, para registrar la
+// compra. La app nunca la llama — no tiene como saber que Guzman compro.
+var SOLO_BACKEND = ['mail', 'noticias_semana', 'foto', 'itau_atender', 'itau_compra'];
 var soloApi = fnsApi.filter(function (f) { return fnsPwa.indexOf(f) === -1 && SOLO_BACKEND.indexOf(f) === -1; });
 ok(soloApi.length === 0, 'ninguna fn del backend quedo sin mapear' + (soloApi.length ? ': ' + soloApi.join(', ') : ''));
 SOLO_BACKEND.forEach(function (f) {

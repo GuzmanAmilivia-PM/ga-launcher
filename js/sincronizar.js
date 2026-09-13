@@ -48,18 +48,32 @@ alError: function (msg) { if (msg === BNB_AVISO_EARN) avisoInicio('&#9888; ' + m
 }
 
 // ---------- Sincronizar todo (menu) ----------
-// Corre en cadena IBKR -> Schwab -> Binance -> refrescar precios. Cada broker
-// que no este configurado se saltea en silencio (sinConfig del backend, o
-// bnbConfig() vacio en el caso de Binance, que se lee desde el telefono).
+// Corre en cadena Itau -> IBKR -> Schwab -> Binance -> refrescar precios. Cada
+// broker que no este configurado se saltea en silencio (sinConfig del backend,
+// o bnbConfig() vacio en el caso de Binance, que se lee desde el telefono).
 // Nunca corre en paralelo con las sincronizaciones manuales de cada plataforma.
 // syncTodoEnCurso es el UNICO candado de la cadena: las sincronizaciones
 // manuales ya lo miran en su guarda de entrada. Antes esta funcion ponia y
 // sacaba a mano los tres candados ajenos en 11 puntos, y cada rama de error
 // nueva era una chance de dejar uno trabado para siempre.
+//
+// ITAU VA PRIMERO Y NO SE ESPERA (13/09/2026, pedido de Guzman: "pero cuando
+// le doy sync en el panel lateral tmb?"). Es el unico que no lo hace este
+// telefono ni el Worker: se deja un PEDIDO y la PC de Guzman lo atiende hasta
+// un minuto despues. Asi que la cadena lo pide, lo dice, y sigue con los
+// brokers mientras la PC trabaja — esperarlo dejaria el boton girando un
+// minuto por algo que termina solo.
+//
+// `opts.sinItau` ROMPE EL CICLO, y no es un detalle: cuando la actualizacion
+// de Itau termina bien, la pantalla de la cuenta llama a esta funcion para
+// mostrar el numero nuevo. Sin esa bandera, esa llamada volveria a pedir Itau,
+// que volveria a terminar, que volveria a llamar... un login al banco cada
+// minuto para siempre.
 var syncTodoEnCurso = false;
-function sincronizarTodo() {
+function sincronizarTodo(opts) {
 if (syncEnCurso()) return;
 syncTodoEnCurso = true;
+var pedirItau = !(opts && opts.sinItau);
 var txt = document.getElementById('mRefrescarTxt');
 var lineas = [], huboError = false;
 function paso(n) { txt.textContent = n; }
@@ -118,7 +132,27 @@ alError: function (msg) { error('Binance', msg); precios(); }
 function schwab() {
 paso1Broker({ nombre: 'Schwab', fn: 'sincronizarCS', alOk: refrescarVistaCS }, binance);
 }
-paso1Broker({ nombre: 'IBKR', fn: 'sincronizarIBKR', alOk: refrescarVistaIBKR }, schwab);
+// Itau: se deja el PEDIDO y se sigue. No se espera el resultado —lo escribe la
+// PC de Guzman hasta un minuto despues— y por eso la linea dice "requested" y
+// no "synced": prometer lo segundo seria mentir el estado de la cartera. La
+// pantalla de Itau es la que sigue el pedido hasta el final.
+function itauEnCadena(sig) {
+if (!pedirItau) { sig(); return; }
+paso('Asking Ita\u00fa...');
+google.script.run.withSuccessHandler(function (e) {
+// `estado` viene del Worker; cualquier estado es una respuesta buena: el
+// pedido quedo anotado. Con la PC apagada, la pantalla de Itau lo dice.
+lineas.push('&#8226; Ita\u00fa: update requested' + (e && e.estado === 'sin-respuesta'
+  ? ' (your PC has not answered &mdash; is it on?)' : ' (your PC does it in a minute)'));
+sig();
+}).withFailureHandler(function (err) {
+error('Ita\u00fa', msgErr(err, 'The request'));
+sig();
+}).itauPedir();
+}
+itauEnCadena(function () {
+  paso1Broker({ nombre: 'IBKR', fn: 'sincronizarIBKR', alOk: refrescarVistaIBKR }, schwab);
+});
 }
 // Las pantallas de estado de cada broker solo se refrescan si estan a la
 // vista: si no, es un viaje al backend (y en Schwab una llamada externa a
