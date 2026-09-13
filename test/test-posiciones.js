@@ -679,6 +679,35 @@ ok(dRel.indexOf('M2.0,') === 0 && / L2\.0,40 Z$/.test(dRel), 'y apoya en el piso
 ok(chico.indexOf('sparkarea') === -1 && chico.indexOf('<circle') === -1, 'la tabla de posiciones sigue siendo solo la linea');
 ok(anchoSvg.indexOf('sparkarea') === -1, 'y sin pedir area tampoco aparece en el tamano ancho');
 
+console.log('\nG3) el eje horizontal reparte por FECHA cuando se le pasan (opts.xs)');
+// El bug del 13/09/2026: en YTD la mini de Evolucion mostraba "un escalon
+// gigante al principio y despues casi recto". No era el dibujo: el historico
+// tiene 8 cierres MENSUALES hasta julio y uno DIARIO desde agosto, y al
+// repartir el ancho por POSICION EN LA LISTA siete meses entraban en el primer
+// sexto y seis semanas planas ocupaban todo el resto. El grafico grande nunca
+// lo tuvo porque su eje X siempre fue la fecha.
+var DIA = 86400000, T0 = Date.UTC(2026, 0, 1);
+// Tres puntos: dos separados por 90 dias y el ultimo un dia despues.
+var fx = [T0, T0 + 90 * DIA, T0 + 91 * DIA];
+function xsDe(svg) {
+  return (svg.match(/points="([^"]+)"/) || ['', ''])[1].split(' ')
+    .map(function (par) { return parseFloat(par.split(',')[0]); });
+}
+var porFecha = xsDe(api.sparkSvg([10, 20, 30], 100, 40, 'x', { xs: fx }));
+var porIndice = xsDe(api.sparkSvg([10, 20, 30], 100, 40, 'x'));
+ok(Math.abs(porIndice[1] - 50) < 1, 'sin fechas, el punto del medio cae al MEDIO (reparto por indice)');
+ok(porFecha[1] > 90, 'con fechas, el punto de +90 dias cae casi al final, no al medio (' + porFecha[1] + ')');
+ok(porFecha[0] < porFecha[1] && porFecha[1] < porFecha[2], 'y el orden se conserva');
+ok(Math.abs(porFecha[2] - porIndice[2]) < 0.01 && Math.abs(porFecha[0] - porIndice[0]) < 0.01,
+  'el primero y el ultimo siguen apoyados en los bordes');
+// Un arreglo de fechas que no sirve no puede romper el dibujo: se vuelve al
+// reparto por indice en vez de escupir NaN.
+[[T0, T0, T0], [T0, T0 - DIA], null, [T0]].forEach(function (mal, i) {
+  var xs = xsDe(api.sparkSvg([10, 20, 30], 100, 40, 'x', { xs: mal }));
+  ok(xs.length === 3 && xs.every(function (v) { return isFinite(v); }),
+    'fechas invalidas (caso ' + (i + 1) + ') caen al reparto por indice, no a NaN');
+});
+
 console.log('\nH) el precio en es-UY, como el resto de la plata en la app');
 // fmtNum era el UNICO numero de toda la app sin pasar por es-UY: un precio de
 // 1763.76 salia con la puntuacion de JS al reves de como se lee ahi.

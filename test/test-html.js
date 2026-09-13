@@ -416,7 +416,7 @@ ok(/function toggleEvo\(\)[\s\S]{0,600}ajustarAlturaDeck/.test(graficosSrcH),
   'y reajusta el alto de la tarjeta, que sigue al panel visible');
 // La mini se dibuja con la MISMA funcion que las filas de posiciones: una sola
 // implementacion probada, no dos parecidas.
-ok(/renderEvoMini[\s\S]{0,600}sparkSvg\(/.test(graficosSrcH),
+ok(/renderEvoMini[\s\S]{0,1400}sparkSvg\(/.test(graficosSrcH),
   'la mini usa sparkSvg, el mismo dibujo que las posiciones');
 ok(/renderEvoMini\(\);/.test(graficosSrcH.match(/btn\.onclick = function \(\)[\s\S]{0,300}/) || ''),
   'al cambiar de periodo la mini se repinta');

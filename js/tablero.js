@@ -460,9 +460,24 @@ var rango = max - min;
 // Un mes plano (o un solo precio repetido) se dibuja como una raya al medio,
 // no como una division por cero.
 var pad = 2, alto = H - pad * 2, ancho = W - pad * 2;
+// `opts.xs` = la FECHA de cada valor, y con ella el eje horizontal se reparte
+// por TIEMPO y no por posicion en la lista (13/09/2026). Sin esto la mini de
+// Evolucion mentia en YTD: el historico guarda 8 cierres MENSUALES hasta julio
+// y uno DIARIO desde agosto, asi que siete meses (+25%) se apretaban en el
+// primer sexto del ancho —el "escalon gigante"— y las ultimas seis semanas,
+// casi planas, se estiraban por todo el resto. El grafico grande nunca tuvo el
+// problema porque su eje X siempre fue la fecha. Los cierres por posicion NO
+// mandan xs: son dias seguidos, donde repartir por indice da lo mismo.
+var xsDato = (o.xs && o.xs.length === serie.length) ? o.xs : null;
+var xIni = xsDato ? Number(xsDato[0]) : 0;
+var xSpan = xsDato ? (Number(xsDato[serie.length - 1]) - xIni) : 0;
+// Fechas iguales, al reves o no numericas: se vuelve al reparto por indice en
+// vez de dibujar una division por cero.
+if (!(xSpan > 0)) xsDato = null;
 var pts = [], xs = [];
 for (var j = 0; j < serie.length; j++) {
-var x = pad + (j * ancho) / (serie.length - 1);
+var x = xsDato ? pad + ((Number(xsDato[j]) - xIni) / xSpan) * ancho
+              : pad + (j * ancho) / (serie.length - 1);
 var y = pad + (rango === 0 ? alto / 2 : alto - ((serie[j] - min) / rango) * alto);
 xs.push(x);
 pts.push(x.toFixed(1) + ',' + y.toFixed(1));

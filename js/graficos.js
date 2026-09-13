@@ -473,7 +473,8 @@ function datasetsEvolucion(dataPoints, serie, cupo) {
   //
   // Plegado NO queda un hueco: se dibuja la MISMA mini grafica que las filas
   // de posiciones (sparkSvg), asi la tarjeta dice algo aunque este compacta.
-  // La eleccion se recuerda; la primera vez arranca compacta.
+  // Arranca compacta CADA VEZ que se entra a la app; dentro de la sesion se
+  // recuerda lo que elegiste (ver el pie de este bloque, 13/09/2026).
   // 100x40, "apenas un poco mas grande" que los 80x32 de las filas de
   // posiciones (23/08/2026). El tamano NO es decoracion: a 305px de ancho —lo
   // que medía cuando ocupaba la tarjeta entera— una semana daba 50px por tramo
@@ -487,15 +488,19 @@ function datasetsEvolucion(dataPoints, serie, cupo) {
   var el = document.getElementById('evoMini');
   if (!el) return;
   var serie = filterSerie(currentRangeDias) || [];
-  var vals = serie.map(function (p) { return p.valor; });
   // Mas de ~120 puntos en 300 de ancho es ruido: se muestrea parejo.
-  if (vals.length > 120) {
-    var paso = vals.length / 120, m = [];
-    for (var i = 0; i < 120; i++) m.push(vals[Math.floor(i * paso)]);
-    m.push(vals[vals.length - 1]);
-    vals = m;
+  //
+  // Se muestrea la SERIE, no los valores sueltos: el dibujo ahora reparte el
+  // eje por fecha (opts.xs) y un valor sin su fecha lo desalinea (13/09/2026).
+  if (serie.length > 120) {
+    var paso = serie.length / 120, m = [];
+    for (var i = 0; i < 120; i++) m.push(serie[Math.floor(i * paso)]);
+    m.push(serie[serie.length - 1]);
+    serie = m;
   }
-  el.innerHTML = sparkSvg(vals, EVO_W, EVO_H, 'over the period', { area: true }) ||
+  var vals = serie.map(function (p) { return p.valor; });
+  var fechas = serie.map(function (p) { return p.fecha; });
+  el.innerHTML = sparkSvg(vals, EVO_W, EVO_H, 'over the period', { area: true, xs: fechas }) ||
     '<span class="evomini-vacio">No data yet</span>';
   }
   function pintarBotonEvo() {
@@ -518,7 +523,6 @@ function datasetsEvolucion(dataPoints, serie, cupo) {
   if (!box) return;
   var abrir = evoPlegado();
   box.style.display = abrir ? '' : 'none';
-  try { localStorage.setItem('ga_evo_abierto', abrir ? '1' : '0'); } catch (e) {}
   pintarBotonEvo();
   // Se dibuja DESPUES de mostrar la caja: sobre un canvas de alto cero la
   // escala sale mal.
@@ -553,12 +557,12 @@ function datasetsEvolucion(dataPoints, serie, cupo) {
   // si alguna vez se mueve adentro un clic en el no debe plegar el grafico.
   if (_ampBtn) _ampBtn.onclick = function (e) { if (e && e.stopPropagation) e.stopPropagation(); openChartModal(); };
   document.getElementById('chartModalClose').onclick = closeChartModal;
-  try {
-  if (localStorage.getItem('ga_evo_abierto') === '1') {
-    var _box = document.getElementById('evoChartBox');
-    if (_box) _box.style.display = '';
-  }
-  } catch (e) {}
+  // AL ENTRAR SIEMPRE ARRANCA COMPACTA (13/09/2026, pedido de Guzman: "la
+  // grafica minimizada deberia ser el estandar cuando ingreso a la app"). Antes
+  // se recordaba la eleccion entre sesiones y quedaba desplegada para siempre
+  // desde la unica vez que se abrio. Desplegarla sigue siendo un toque, y
+  // dentro de la sesion el estado se mantiene: lo que se solto es que la
+  // preferencia sobreviva al cierre de la app.
   pintarBotonEvo();
 
 // ---------- Aportes (estado compartido) ----------
