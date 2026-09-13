@@ -495,13 +495,14 @@ function datasetsEvolucion(dataPoints, serie, cupo) {
   // se decide CUANTOS entran.
   var vals = serie.map(function (p) { return p.valor; });
   var fechas = serie.map(function (p) { return p.fecha; });
-  // El cupo sale del ancho MEDIDO de la celda, no de EVO_W: el viewBox son 100
-  // unidades pero en el iPhone la celda mide ~57px, asi que contar sobre 100
-  // dejaria el doble de puntos de los que entran. Misma regla que el grafico
-  // grande (PX_POR_SEGMENTO). Sin medida —la tarjeta todavia oculta—, 14, que
-  // es lo que da esa celda.
+  // DOCE PUNTOS, TOPE (13/09/2026, Guzman mirandolo en el iPhone: "unos 12
+  // puntos maximo, equidistantes en fecha"). Es un numero visto en pantalla, no
+  // calculado: en una celda de ~57px doce tramos son ~5px cada uno, que es
+  // donde la linea se lee como una tendencia. La celda igual se mide, por si
+  // algun dia es mas angosta que eso; nunca sube de 12. El reparto en tramos
+  // iguales de CALENDARIO lo hace sparkSvg, que es quien tiene las fechas.
   var anchoReal = (el.getBoundingClientRect && el.getBoundingClientRect().width) || 0;
-  var cupoMini = anchoReal ? Math.max(8, Math.min(40, Math.round(anchoReal / PX_POR_SEGMENTO))) : 14;
+  var cupoMini = anchoReal ? Math.max(6, Math.min(12, Math.round(anchoReal / PX_POR_SEGMENTO))) : 12;
   el.innerHTML = sparkSvg(vals, EVO_W, EVO_H, 'over the period', { area: true, xs: fechas, cupo: cupoMini }) ||
     '<span class="evomini-vacio">No data yet</span>';
   }

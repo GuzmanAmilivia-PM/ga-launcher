@@ -484,12 +484,43 @@ var xsDato = (o.xs && o.xs.length === serie.length) ? o.xs : null;
 // como el grafico grande porque estas celdas se dibujan MAS CHICAS de lo que
 // dice su viewBox (se estiran con preserveAspectRatio="none").
 var cupo = (o.cupo >= 3) ? o.cupo : Math.max(3, Math.round(W / 6));
-if (serie.length > cupo && typeof submuestrearLTTB === 'function') {
-  var _pares = submuestrearLTTB(serie.map(function (v, i) {
-    return { x: xsDato ? Number(xsDato[i]) : i, y: v };
-  }), cupo);
-  serie = _pares.map(function (q) { return q.y; });
-  if (xsDato) xsDato = _pares.map(function (q) { return q.x; });
+if (serie.length > cupo) {
+  // CON FECHAS, equidistantes EN EL CALENDARIO (13/09/2026, Guzman: "al final
+  // pone varios puntos... unos 12 puntos maximo, equidistantes en fecha"). LTTB
+  // reparte por DETALLE, no por tiempo: como el historico tiene 8 cierres
+  // mensuales hasta julio y uno diario desde agosto, amontonaba casi todos los
+  // puntos elegidos en el ultimo mes. Ahora se parte el periodo en tramos
+  // iguales y se toma el cierre MAS CERCANO a cada marca — sigue siendo un
+  // valor real que tuviste ese dia, nunca un promedio. Si dos marcas caen sobre
+  // el mismo cierre (donde hay un solo dato al mes) se dibuja una vez sola:
+  // mejor menos puntos que repetir uno y fingir una densidad que no existe.
+  if (xsDato) {
+    var _x0 = Number(xsDato[0]), _x1 = Number(xsDato[serie.length - 1]);
+    var _sv = [], _sx = [], _ult = -1;
+    for (var _i = 0; _i < cupo; _i++) {
+      var _meta = _x0 + ((_x1 - _x0) * _i) / (cupo - 1);
+      var _mejor = 0, _dist = Infinity;
+      for (var _k = 0; _k < serie.length; _k++) {
+        var _d = Math.abs(Number(xsDato[_k]) - _meta);
+        if (_d < _dist) { _dist = _d; _mejor = _k; }
+      }
+      // Los dos extremos se clavan: el ultimo es el valor de HOY y el primero
+      // la base, y de esos dos sale el % que se lee al lado del dibujo.
+      if (_i === cupo - 1) _mejor = serie.length - 1;
+      if (_i === 0) _mejor = 0;
+      if (_mejor === _ult) continue;
+      _ult = _mejor;
+      _sv.push(serie[_mejor]); _sx.push(xsDato[_mejor]);
+    }
+    serie = _sv; xsDato = _sx;
+  } else if (typeof submuestrearLTTB === 'function') {
+    // Sin fechas —los cierres por posicion, que son dias seguidos y ya estan
+    // parejos— sigue LTTB, que ademas conserva los picos del mes.
+    var _pares = submuestrearLTTB(serie.map(function (v, i) {
+      return { x: i, y: v };
+    }), cupo);
+    serie = _pares.map(function (q) { return q.y; });
+  }
 }
 // La escala vertical se mide sobre lo que SE DIBUJA (despues del submuestreo):
 // si se midiera sobre la serie entera y LTTB dejara afuera el maximo, la linea

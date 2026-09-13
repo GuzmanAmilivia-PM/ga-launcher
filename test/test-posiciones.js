@@ -742,6 +742,40 @@ var svgPico = api.sparkSvg(conPico, 80, 32, 'x');
 var ysPico = svgPico.match(/points="([^"]+)"/)[1].split(' ').map(function (par) { return parseFloat(par.split(',')[1]); });
 ok(Math.min.apply(null, ysPico) === 2, 'el punto mas alto de lo dibujado toca el borde de arriba');
 
+console.log('\nG5) con fechas, los puntos quedan equidistantes EN EL CALENDARIO');
+// Guzman, en el iPhone: "al final pone varios puntos... unos 12 puntos maximo,
+// equidistantes en fecha". LTTB reparte por DETALLE: con 8 cierres mensuales
+// hasta julio y uno diario desde agosto, amontonaba lo elegido en el ultimo
+// mes — justo la parte plana. Con fechas, el periodo se parte en tramos
+// iguales de calendario.
+var DIA2 = 86400000, T02 = Date.UTC(2026, 0, 1);
+// La forma REAL del historico: 8 mensuales y despues 39 diarios.
+var fMix = [], vMix = [];
+for (var iA = 0; iA < 8; iA++) { fMix.push(T02 + iA * 30 * DIA2); vMix.push(100 + iA * 3); }
+for (var iB = 1; iB <= 39; iB++) { fMix.push(T02 + 240 * DIA2 + iB * DIA2); vMix.push(124 + (iB % 3)); }
+var mix = api.sparkSvg(vMix, 100, 40, 'x', { xs: fMix, cupo: 12 });
+var xsMix = mix.match(/points="([^"]+)"/)[1].split(' ').map(function (par) { return parseFloat(par.split(',')[0]); });
+ok(xsMix.length <= 12, 'nunca mas de 12 puntos (' + xsMix.length + ')');
+ok(xsMix.length >= 8, 'y no se queda en cuatro: se aprovecha el cupo (' + xsMix.length + ')');
+// Equidistantes: ningun tramo puede ser mas del doble del promedio. Con LTTB
+// los ultimos tramos median 2 unidades y el primero 40.
+var tramos = [];
+for (var iC = 1; iC < xsMix.length; iC++) tramos.push(xsMix[iC] - xsMix[iC - 1]);
+var prom = tramos.reduce(function (a, b2) { return a + b2; }, 0) / tramos.length;
+ok(Math.max.apply(null, tramos) <= prom * 2,
+  'ningun tramo mide mas del doble del promedio (max ' + Math.max.apply(null, tramos).toFixed(1) + ' vs ' + prom.toFixed(1) + ')');
+// El tramo mas corto queda donde el historico CAMBIA de mensual a diario: ahi
+// la marca del reparto cae entre dos cierres que no existen y el siguiente dato
+// disponible esta mas cerca. Un tercio del promedio es el piso; con LTTB los
+// ultimos tramos median 2 unidades contra 40 del primero.
+ok(Math.min.apply(null, tramos) >= prom / 3,
+  'ni se amontonan al final (min ' + Math.min.apply(null, tramos).toFixed(1) + ' vs ' + prom.toFixed(1) + ')');
+// Ningun punto repetido: donde hay un solo dato al mes se dibuja una vez sola.
+var repes = xsMix.filter(function (v, iD) { return iD > 0 && v === xsMix[iD - 1]; });
+ok(repes.length === 0, 'ningun punto dibujado dos veces para rellenar el cupo');
+// Los extremos siguen siendo los de verdad: el ultimo es HOY.
+ok(mix.indexOf('class="spark sube"') !== -1, 'y el color sigue saliendo del primero contra el ultimo reales');
+
 console.log('\nH) el precio en es-UY, como el resto de la plata en la app');
 // fmtNum era el UNICO numero de toda la app sin pasar por es-UY: un precio de
 // 1763.76 salia con la puntuacion de JS al reves de como se lee ahi.
