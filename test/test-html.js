@@ -240,7 +240,12 @@ ok(soloPwa.length === 0, 'la PWA no llama fns inexistentes' + (soloPwa.length ? 
 // programada del informe semanal de los lunes. 'mail' manda el informe;
 // 'noticias_semana' lee el archivo de titulares que el cron viene juntando dia
 // a dia (la app muestra las de hoy y no tiene donde poner una semana).
-var SOLO_BACKEND = ['mail', 'noticias_semana'];
+// 'foto' es la foto de la cartera para el chat de claude.ai (10/09/2026): la
+// pide una rutina de la nube con su propia clave, la app no la usa.
+// 'itau_atender' la llama la PC de Guzmán, no la PWA (13/09/2026): la app
+// pide con itau_pedir y mira con itau_estado; atender es del otro lado del
+// relevo, el que de verdad entra al banco.
+var SOLO_BACKEND = ['mail', 'noticias_semana', 'foto', 'itau_atender'];
 var soloApi = fnsApi.filter(function (f) { return fnsPwa.indexOf(f) === -1 && SOLO_BACKEND.indexOf(f) === -1; });
 ok(soloApi.length === 0, 'ninguna fn del backend quedo sin mapear' + (soloApi.length ? ': ' + soloApi.join(', ') : ''));
 SOLO_BACKEND.forEach(function (f) {

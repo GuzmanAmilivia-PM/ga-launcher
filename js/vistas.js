@@ -39,6 +39,10 @@
 // Google (corte a D1 del 29/08/2026). El comentario de la era-1 decía "el 2
 // sería salir de la planilla" — salió, y este número lo cuenta.
 var VERSION_GENERACION = '2';
+// El 14: actualizar Itaú desde su propia pantalla (13/09/2026). Es capacidad
+// nueva, no un arreglo: el botón deja un pedido que atiende la PC de Guzmán
+// —la clave del banco vive cifrada allá y un banco no habilita CORS—, y el
+// fondo de Itaú Assets dejó de escribirse a mano.
 // El 13: las dos lecturas de cartera que faltaban (31/08/2026) — la
 // asignacion con look-through dentro de los ETFs en el tablero de
 // escritorio, y el ingreso por dividendos de los proximos doce meses al pie
@@ -55,7 +59,7 @@ var VERSION_GENERACION = '2';
 // El 8 fue editar a mano los precios del fondo de Itau desde su pagina
 // (29/08/2026, V16); el 7, la Watchlist con alertas y push; el 6, los
 // indicadores del detalle.
-var VERSION_FUNCION = '13';
+var VERSION_FUNCION = '14';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre
@@ -236,6 +240,18 @@ accountReturnView = fromView || 'portafolio';
 setView('account');
 document.getElementById('accTitle').textContent = nombrePlataforma(acc.nombre);
 var accErr = document.getElementById('accError'); if (accErr) accErr.innerHTML = '';
+// El bloque de Itau solo en Itau, y al abrirlo se mira como quedo la ultima
+// vez: si hay una actualizacion en curso (la pediste y cerraste la app), se
+// retoma el seguimiento en vez de arrancar mudo.
+var itauBox = document.getElementById('accItau');
+if (itauBox) {
+  itauParar();
+  itauBox.hidden = !itauEsCuenta(acc);
+  if (!itauBox.hidden) {
+    var im = document.getElementById('accItauMsg'); if (im) im.innerHTML = '';
+    itauSeguir();
+  }
+}
 // Si es la misma cuenta de la ultima visita, se pinta lo ultimo visto al
 // instante y el pedido corre por atras (mismo criterio que cargarConCache).
 // Antes: "Cargando..." 1,5 s aunque hubieras salido hace 10 segundos.
@@ -487,3 +503,93 @@ renderAnual();
 renderMapaCalor();
 }
 
+
+// ---------------------------------------------------------------------------
+// Actualizar Itaú desde la app (13/09/2026)
+// ---------------------------------------------------------------------------
+// El botón NO entra al banco. No puede: la contraseña de Itaú vive cifrada en
+// la PC de Guzmán —a propósito, el backend es público— y un banco no habilita
+// que una página ajena le hable, así que el truco de Binance (que sincroniza
+// el propio teléfono) acá no sirve.
+//
+// Entonces deja un PEDIDO en el servidor y la PC lo atiende cuando lo ve. Por
+// eso esto muestra estado en vez de un spinner mudo: tarda, y con la PC
+// apagada no va a pasar nunca. Decir "prendé la PC" es más útil que girar.
+var ITAU_ESPERA_MS = 3000;
+var itauTimer = null;
+// Solo si el pedido lo hizo Guzman EN ESTA pantalla se recarga la cartera al
+// terminar. Sin esto, abrir la cuenta de Itau despues de una actualizacion
+// vieja disparaba una recarga entera por un resultado de hace dias.
+var itauActivo = false;
+
+function itauEsCuenta(acc) {
+  return /^itau/i.test(String((acc && acc.nombre) || '')) ||
+         /^itau/i.test(String((acc && acc.key) || ''));
+}
+
+// El texto de cada estado. `abandonado` y `sin_respuesta` son los dos que
+// explican algo que el usuario puede arreglar; los demás son informativos.
+function itauTexto(e) {
+  var m = (e && e.mensaje) || '';
+  switch (e && e.estado) {
+    case 'pendiente': return 'Requested. Waiting for your PC...';
+    case 'actualizando': return 'Reading Ita&uacute;...';
+    case 'listo': return '&#10003; ' + esc(m || 'Updated.');
+    case 'error': return '&#9888; ' + esc(m || 'It could not be updated.');
+    case 'sin_respuesta': return '&#9888; Your PC did not answer. Is it on?';
+    case 'abandonado': return '&#9888; It started and never finished. Check the PC.';
+    default: return '';
+  }
+}
+
+function itauParar() {
+  if (itauTimer) { clearTimeout(itauTimer); itauTimer = null; }
+  itauActivo = false;
+}
+
+function itauMostrar(e) {
+  var msg = document.getElementById('accItauMsg');
+  if (msg) msg.innerHTML = itauTexto(e);
+  var btn = document.getElementById('accItauBtn');
+  var enCurso = e && (e.estado === 'pendiente' || e.estado === 'actualizando');
+  if (btn) btn.disabled = !!enCurso;
+  return enCurso;
+}
+
+// Pregunta cómo viene hasta que termine. Se rinde sola: un pedido que nadie
+// toma llega a `sin_respuesta` y ahí corta, en vez de preguntar para siempre.
+function itauSeguir() {
+  itauParar();
+  google.script.run.withSuccessHandler(function (e) {
+    if (!document.getElementById('accItau') || document.getElementById('accItau').hidden) return;
+    var sigue = itauMostrar(e);
+    if (sigue) {
+      itauTimer = setTimeout(itauSeguir, ITAU_ESPERA_MS);
+    } else if (itauActivo && e && e.estado === 'listo') {
+      // Terminó bien: que la pantalla muestre el número nuevo, que es el
+      // punto de haber apretado.
+      if (typeof sincronizarTodo === 'function') sincronizarTodo();
+    }
+  }).withFailureHandler(function () {
+    var msg = document.getElementById('accItauMsg');
+    if (msg) msg.textContent = 'Could not check the status.';
+  }).itauEstado();
+}
+
+(function () {
+  var btn = document.getElementById('accItauBtn');
+  if (!btn) return;
+  btn.onclick = function () {
+    btn.disabled = true;
+    var msg = document.getElementById('accItauMsg');
+    if (msg) msg.textContent = 'Requesting...';
+    itauActivo = true;
+    google.script.run.withSuccessHandler(function (e) {
+      itauMostrar(e);
+      itauSeguir();
+    }).withFailureHandler(function (err) {
+      btn.disabled = false;
+      if (msg) msg.textContent = msgErr ? msgErr(err, 'The request') : 'It could not be requested.';
+    }).itauPedir();
+  };
+})();

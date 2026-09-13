@@ -292,6 +292,14 @@
 <p class="lbl" id="accTitle">Account</p>
 <p class="total" id="accTotal" style="font-size:clamp(26px,8vw,38px)">&mdash;</p>
 <p class="subtotal" id="accLiq"></p>
+<!-- Solo para Itau (13/09/2026). El boton NO entra al banco desde aca: deja
+     un pedido que atiende la PC de Guzman, porque la clave de Itau vive
+     cifrada alla y un banco no habilita CORS. Por eso hay un mensaje de
+     estado: esto tarda, y con la PC apagada no pasa nada. -->
+<div id="accItau" hidden style="margin-top:12px">
+<button class="ghostbtn" type="button" id="accItauBtn">Update from Ita&uacute;</button>
+<p class="detlbl" id="accItauMsg" style="margin-top:6px"></p>
+</div>
 <div class="card" style="margin-top:16px">
 <div style="overflow-x:auto">
 <table class="holdtable holdhome">
