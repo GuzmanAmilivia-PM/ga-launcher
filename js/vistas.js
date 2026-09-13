@@ -330,6 +330,13 @@ body.innerHTML = '';
 // estan en "Cash in account".
 data.posiciones.forEach(function (h) {
 if (esFilaCash(h)) return;
+// Las compras del fondo de Itau NO van en esta tabla (13/09/2026): son dos
+// filas de la MISMA cuotaparte y su precio esta en PESOS, que esta tabla
+// escribiria como si fueran dolares. Viven arriba, en el bloque del fondo,
+// con su fecha y su retorno. Si el bloque no se pudo dibujar (sin la funcion
+// cargada) se dejan: mejor una fila confusa que una cuenta vacia.
+if (itauEsCuenta(acc) && String(h.symbol || '').trim().toUpperCase() === 'ITAU' &&
+    typeof comprasItauHtml === 'function') return;
 h.cambioDia = cambioDiaDe(h.symbol);
 if (!h.nombre) h.nombre = h.descripcion || '';
 if (acc.key === 'BNB' && h.cripto === undefined) h.cripto = true;
@@ -455,6 +462,13 @@ function accountByName(nombre) {
 var n = String(nombre || '').trim().toLowerCase();
 for (var i = 0; i < ACCOUNTS.length; i++) {
 if (ACCOUNTS[i].nombre.toLowerCase() === n) return ACCOUNTS[i];
+// Los alias declarados (ver ACCOUNTS en nucleo.js): la misma cuenta se llama
+// distinto en el resumen y en su hoja de posiciones. Sin esto, la fila de
+// Itau en la torta de Portafolio no era clicable.
+var al = ACCOUNTS[i].alias || [];
+for (var j = 0; j < al.length; j++) {
+if (String(al[j]).toLowerCase() === n) return ACCOUNTS[i];
+}
 }
 return null;
 }
@@ -663,8 +677,78 @@ function renderFondoItau(acc, data) {
         ? 'The fund earned ' + signo(r.fondoPct) + ' in pesos; the peso took back ' + Math.abs(r.monedaPct).toFixed(2) + '% of that in dollars.'
         : 'The fund earned ' + signo(r.fondoPct) + ' in pesos, and the peso added to it.') +
     '</p>' +
+    comprasItauHtml(data, r) +
     '<div class="detedit"><button type="button" class="ghostbtn" id="accFondoSet">Change contributed</button></div>';
   wireFondoSet();
+}
+
+// ---------------------------------------------------------------------------
+// Las COMPRAS del fondo, una por una (13/09/2026)
+// ---------------------------------------------------------------------------
+// Pedido de Guzman: "ver el desglose de itau assets, con compras, fechas y
+// retorno". El fondo NO es una posicion: son dos compras de la misma
+// cuotaparte, hechas con tres meses de diferencia y a precios distintos. La
+// tabla de posiciones las mostraba como dos filas gemelas, con el precio en
+// PESOS escrito como si fueran dolares y la ganancia en guion.
+//
+// QUE RETORNO SE MUESTRA POR COMPRA, y por que solo ese. El retorno en PESOS
+// es exacto para cada compra: precio de hoy contra el precio que pagaste ese
+// dia. El retorno en DOLARES no se puede repartir por compra — haria falta el
+// tipo de cambio del dia de CADA una, y eso nadie lo guardo (por eso el
+// bloque de arriba pide los dolares aportados EN TOTAL). Se muestra entonces
+// lo que es cierto: el rendimiento del fondo en su moneda por compra, y el
+// valor de hoy en dolares, que si sale del tipo de cambio de hoy. Inventar un
+// retorno en dolares por compra seria dar un numero que no se puede sostener.
+function fechaCortaItau(iso) {
+  var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return '';
+  // Se arma con los componentes LOCALES: new Date('2026-05-27') es medianoche
+  // UTC y en Montevideo (UTC-3) se lee el 26. Un dia de menos en la fecha de
+  // una compra es un error que no se ve como error.
+  var d = new Date(+m[1], +m[2] - 1, +m[3]);
+  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function diasDesde(iso) {
+  var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  var d = new Date(+m[1], +m[2] - 1, +m[3]);
+  var hoy = new Date();
+  return Math.round((new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()) - d) / 86400000);
+}
+function comprasItauHtml(data, r) {
+  var filas = ((data && data.posiciones) || []).filter(function (h) {
+    return String(h.symbol || '').trim().toUpperCase() === 'ITAU' && Number(h.qty) > 0;
+  });
+  if (!filas.length) return '';
+  // El precio de hoy es UNO SOLO: es la misma cuotaparte. La hoja lo escribe
+  // en la primera compra y las demas lo espejan, asi que se toma el primero
+  // que exista en vez de suponer que esta en la fila que se esta dibujando.
+  var precioHoy = 0;
+  filas.forEach(function (h) { if (!precioHoy && Number(h.precioActual) > 0) precioHoy = Number(h.precioActual); });
+  var tc = (r && Number(r.tcHoy) > 0) ? Number(r.tcHoy) : 0;
+  var out = '<p class="detlbl" style="margin-top:14px">Purchases</p>' +
+    '<table class="itautable"><tbody>';
+  filas.forEach(function (h) {
+    var qty = Number(h.qty);
+    var costo = Number(h.precioCompra);
+    var pctUYU = (costo > 0 && precioHoy > 0) ? ((precioHoy / costo - 1) * 100) : null;
+    var valorUSD = (tc > 0 && precioHoy > 0) ? (qty * precioHoy / tc) : null;
+    var dias = diasDesde(h.fechaInicio);
+    out += '<tr>' +
+      '<td><b>' + esc(fechaCortaItau(h.fechaInicio) || '—') + '</b>' +
+        '<span class="pcmini">' + esc(fmtNum(qty)) + ' units @ ' + esc(fmtNum(costo)) + ' UYU' +
+        (dias !== null ? ' &middot; ' + dias + ' days' : '') + '</span></td>' +
+      '<td class="col-precio">' +
+        (pctUYU === null ? '<span class="detlbl">—</span>'
+          : '<span class="' + (pctUYU >= 0 ? 'up' : 'down') + '">' + signoPct(pctUYU, 2) + '</span>') +
+        (valorUSD !== null ? '<span class="pcmini">' + esc(fmt(valorUSD)) + '</span>' : '') +
+      '</td></tr>';
+  });
+  out += '</tbody></table>' +
+    '<p class="detlbl">Return per purchase is the fund in pesos: the unit is worth ' +
+    esc(fmtNum(precioHoy)) + ' UYU today. In dollars only the total can be split, and that is the block above: ' +
+    'nobody saved the exchange rate of each purchase day.</p>';
+  return out;
 }
 
 // Cargar o corregir los dólares aportados. Es el UNICO dato que la app no

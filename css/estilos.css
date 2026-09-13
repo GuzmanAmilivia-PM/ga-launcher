@@ -943,3 +943,11 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
   .asig-t span { letter-spacing: .02em; text-transform: none; font-size: 11px; opacity: .8; }
   .asig-nota { font-size: 11px; color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
 }
+
+/* Las compras del fondo de Itaú, una por línea (13/09/2026). Mismo peso
+   tipográfico que las filas de posiciones: fecha y unidades a la izquierda,
+   rendimiento y valor a la derecha. */
+.itautable { width: 100%; border-collapse: collapse; }
+.itautable td { padding: 7px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+.itautable tr:last-child td { border-bottom: 0; }
+.itautable .col-precio { text-align: right; white-space: nowrap; }

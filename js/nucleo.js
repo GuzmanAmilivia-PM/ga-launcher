@@ -231,7 +231,15 @@ var ACCOUNTS = [
 { key: 'CS', nombre: 'Charles Schwab' },
 { key: 'IB', nombre: 'Interactive Brokers' },
 { key: 'BNB', nombre: 'Binance' },
-{ key: 'ITAU', nombre: 'Itau Assets' },
+// 'alias': como se llama la MISMA cuenta en el resumen. La base la guarda
+// como "Itau" y la hoja de posiciones como "Itau Assets", asi que la fila de
+// la torta de Portafolio no encontraba su cuenta y NO SE PODIA ABRIR la
+// pantalla de Itau desde ahi (13/09/2026, Guzman: "me deberia dejar acceder
+// desde portafolio a la pagina de itau"). Se declara el alias en vez de
+// comparar por prefijo: "Itau" y "Itau Assets" son la misma, pero adivinarlo
+// por como empieza el nombre abriria la puerta a juntar dos cuentas distintas
+// que compartan las primeras letras.
+{ key: 'ITAU', nombre: 'Itau Assets', alias: ['Itau'] },
 // BTG entra en la lista el 13/09/2026 para que se pueda TOCAR desde la torta
 // y abrir su pantalla. No tiene hoja de posiciones: su detalle son los saldos
 // cortados a fin de mes, que trae la fn btg.
