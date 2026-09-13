@@ -488,19 +488,21 @@ function datasetsEvolucion(dataPoints, serie, cupo) {
   var el = document.getElementById('evoMini');
   if (!el) return;
   var serie = filterSerie(currentRangeDias) || [];
-  // Mas de ~120 puntos en 300 de ancho es ruido: se muestrea parejo.
-  //
-  // Se muestrea la SERIE, no los valores sueltos: el dibujo ahora reparte el
-  // eje por fecha (opts.xs) y un valor sin su fecha lo desalinea (13/09/2026).
-  if (serie.length > 120) {
-    var paso = serie.length / 120, m = [];
-    for (var i = 0; i < 120; i++) m.push(serie[Math.floor(i * paso)]);
-    m.push(serie[serie.length - 1]);
-    serie = m;
-  }
+  // MENOS PUNTOS DE LOS QUE HAY (13/09/2026, Guzman: "para YTD no deberia
+  // marcar todos los puntos... tanto punto no suma, resta"). Los 47 del YTD en
+  // una celda de ~57px dan poco mas de 1px por tramo: eso es ruido, no una
+  // tendencia. El submuestreo lo hace sparkSvg (LTTB, puntos reales); aca solo
+  // se decide CUANTOS entran.
   var vals = serie.map(function (p) { return p.valor; });
   var fechas = serie.map(function (p) { return p.fecha; });
-  el.innerHTML = sparkSvg(vals, EVO_W, EVO_H, 'over the period', { area: true, xs: fechas }) ||
+  // El cupo sale del ancho MEDIDO de la celda, no de EVO_W: el viewBox son 100
+  // unidades pero en el iPhone la celda mide ~57px, asi que contar sobre 100
+  // dejaria el doble de puntos de los que entran. Misma regla que el grafico
+  // grande (PX_POR_SEGMENTO). Sin medida —la tarjeta todavia oculta—, 14, que
+  // es lo que da esa celda.
+  var anchoReal = (el.getBoundingClientRect && el.getBoundingClientRect().width) || 0;
+  var cupoMini = anchoReal ? Math.max(8, Math.min(40, Math.round(anchoReal / PX_POR_SEGMENTO))) : 14;
+  el.innerHTML = sparkSvg(vals, EVO_W, EVO_H, 'over the period', { area: true, xs: fechas, cupo: cupoMini }) ||
     '<span class="evomini-vacio">No data yet</span>';
   }
   function pintarBotonEvo() {

@@ -454,9 +454,6 @@ function sparkSvg(serie, w, h, dicePct, opts) {
 if (!serie || serie.length < 2) return '';
 var o = opts || {};
 var W = w || SPARK_W, H = h || SPARK_H;
-var min = serie[0], max = serie[0];
-for (var i = 1; i < serie.length; i++) { if (serie[i] < min) min = serie[i]; if (serie[i] > max) max = serie[i]; }
-var rango = max - min;
 // Un mes plano (o un solo precio repetido) se dibuja como una raya al medio,
 // no como una division por cero.
 var pad = 2, alto = H - pad * 2, ancho = W - pad * 2;
@@ -469,6 +466,37 @@ var pad = 2, alto = H - pad * 2, ancho = W - pad * 2;
 // problema porque su eje X siempre fue la fecha. Los cierres por posicion NO
 // mandan xs: son dias seguidos, donde repartir por indice da lo mismo.
 var xsDato = (o.xs && o.xs.length === serie.length) ? o.xs : null;
+// MENOS PUNTOS DE LOS QUE HAY, a proposito (13/09/2026, Guzman: "para YTD no
+// deberia marcar todos los puntos... tanto punto no suma, resta"). Estos
+// dibujos miden ~60px EN PANTALLA: con 24 cierres —o los 47 del YTD— cada
+// tramo cae a 2px y el conjunto se lee como ruido, no como una tendencia. El
+// que llama pasa el cupo porque es el unico que sabe cuanto mide su celda.
+//
+// LTTB, el mismo del grafico grande: ELIGE PUNTOS REALES (cada valor dibujado
+// es plata que tuviste de verdad ese dia, no un promedio inventado) y conserva
+// los picos, que es lo que "uno cada N" se saltea. El primero y el ultimo
+// nunca se tocan. Si por lo que sea no esta cargado, se dibuja todo: menos
+// lindo, nunca mal.
+// Sin cupo pedido, sale del tamano del dibujo: ~6 unidades por tramo. Las
+// filas de posiciones (80 de ancho) pasan de 24 cierres a 13, y la watchlist
+// (64) a 11 — que es la captura que mando Guzman: los serruchos de VOO, QQQ y
+// SMH eran 24 tramos de menos de 3px en una celda de 66px. Seis y no cuatro
+// como el grafico grande porque estas celdas se dibujan MAS CHICAS de lo que
+// dice su viewBox (se estiran con preserveAspectRatio="none").
+var cupo = (o.cupo >= 3) ? o.cupo : Math.max(3, Math.round(W / 6));
+if (serie.length > cupo && typeof submuestrearLTTB === 'function') {
+  var _pares = submuestrearLTTB(serie.map(function (v, i) {
+    return { x: xsDato ? Number(xsDato[i]) : i, y: v };
+  }), cupo);
+  serie = _pares.map(function (q) { return q.y; });
+  if (xsDato) xsDato = _pares.map(function (q) { return q.x; });
+}
+// La escala vertical se mide sobre lo que SE DIBUJA (despues del submuestreo):
+// si se midiera sobre la serie entera y LTTB dejara afuera el maximo, la linea
+// nunca llegaria al borde de arriba y el dibujo perderia alto sin razon.
+var min = serie[0], max = serie[0];
+for (var i = 1; i < serie.length; i++) { if (serie[i] < min) min = serie[i]; if (serie[i] > max) max = serie[i]; }
+var rango = max - min;
 var xIni = xsDato ? Number(xsDato[0]) : 0;
 var xSpan = xsDato ? (Number(xsDato[serie.length - 1]) - xIni) : 0;
 // Fechas iguales, al reves o no numericas: se vuelve al reparto por indice en

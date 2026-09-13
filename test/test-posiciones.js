@@ -37,9 +37,15 @@ var cashSrc = (html.match(/var SIMBOLOS_CASH = \[[^\]]*\];/) || [''])[0] + '\n' 
   (html.match(/function esFilaCash[\s\S]*?\n\}/) || [''])[0];
 if (!pctHtmlSrc || !signoPctSrc || !escSrc || !fmtNumSrc) { console.log('  FALLA: no encuentro pctHtml/signoPct/esc/fmtNum en nucleo.js'); process.exit(1); }
 if (cashSrc.indexOf('function esFilaCash') === -1) { console.log('  FALLA: no encuentro esFilaCash/SIMBOLOS_CASH en nucleo.js'); process.exit(1); }
-var ctx = { Number: Number, isFinite: isFinite };
+// submuestrearLTTB vive en graficos.js, que en la app se carga ANTES que
+// tablero.js; sparkSvg la usa para no dibujar 24 cierres en una celda de 66px.
+// Se inyecta la REAL: con la funcion ausente sparkSvg dibuja todo, y estas
+// pruebas pasarian en verde probando el camino de emergencia (13/09/2026).
+var lttbSrc = (html.match(/function submuestrearLTTB[\s\S]*?\n\}/) || [''])[0];
+if (!lttbSrc) { console.log('  FALLA: no encuentro submuestrearLTTB en graficos.js'); process.exit(1); }
+var ctx = { Number: Number, isFinite: isFinite, Math: Math };
 var nombres = Object.keys(ctx);
-var fn = new Function(nombres.join(','), signoPctSrc + '\n' + pctHtmlSrc + '\n' + escSrc + '\n' + fmtNumSrc + '\n' + cashSrc + '\n' + codigo +
+var fn = new Function(nombres.join(','), lttbSrc + '\n' + signoPctSrc + '\n' + pctHtmlSrc + '\n' + escSrc + '\n' + fmtNumSrc + '\n' + cashSrc + '\n' + codigo +
   '\nreturn { daychgHtml: daychgHtml, gananciaHtml: gananciaHtml, filaHoldingHtml: filaHoldingHtml, logoUrl: logoUrl, sinLogo: _sinLogo, fmtNum: fmtNum, SPARK_H: SPARK_H, SPARK_W: SPARK_W, sparkSvg: sparkSvg, esFilaCash: esFilaCash };');
 var api = fn.apply(null, nombres.map(function (n) { return ctx[n]; }));
 
@@ -707,6 +713,34 @@ ok(Math.abs(porFecha[2] - porIndice[2]) < 0.01 && Math.abs(porFecha[0] - porIndi
   ok(xs.length === 3 && xs.every(function (v) { return isFinite(v); }),
     'fechas invalidas (caso ' + (i + 1) + ') caen al reparto por indice, no a NaN');
 });
+
+console.log('\nG4) menos puntos de los que hay: el dibujo chico se submuestrea');
+// Guzman, mirando las minis de VOO/QQQ/SMH: "para YTD no deberia marcar todos
+// los puntos... tanto punto no suma, resta". Un mes son 24 cierres y la celda
+// mide ~66px: menos de 3px por tramo, que se ve como un serrucho.
+function cuantos(svg) { return svg.match(/points="([^"]+)"/)[1].split(' ').length; }
+var mes = [];
+for (var iM = 0; iM < 24; iM++) mes.push(100 + (iM % 3) * 2 + iM * 0.4);
+var fila = api.sparkSvg(mes, 80, 32, 'x');
+ok(cuantos(fila) < 24, 'una fila de posiciones NO dibuja los 24 cierres (' + cuantos(fila) + ')');
+ok(cuantos(fila) >= 10, 'pero tampoco los reduce a un palito: queda la forma del mes (' + cuantos(fila) + ')');
+// El cupo sale del TAMANO: el mismo mes en un dibujo grande entra entero.
+ok(cuantos(api.sparkSvg(mes, 300, 44, 'x')) === 24, 'en un dibujo grande entran todos, no se recorta por gusto');
+// El que llama puede fijarlo (la mini de Evolucion lo mide sobre su celda).
+ok(cuantos(api.sparkSvg(mes, 80, 32, 'x', { cupo: 8 })) === 8, 'y el que llama puede fijar el cupo (8)');
+ok(cuantos(api.sparkSvg(mes, 80, 32, 'x', { cupo: 100 })) === 24, 'un cupo mas grande que la serie no inventa puntos');
+// Lo que NO puede cambiar: los extremos. El ultimo es el valor de HOY y el
+// primero es la base contra la que se calcula el % que se lee al lado.
+var ptsF = fila.match(/points="([^"]+)"/)[1].split(' ');
+ok(/^2.0,/.test(ptsF[0]) && /^78.0,/.test(ptsF[ptsF.length - 1]), 'el primero y el ultimo siguen en los bordes');
+ok(fila.indexOf('aria-label="' + ((mes[23] / mes[0] - 1) * 100 >= 0 ? '+' : '')) !== -1,
+  'y el % dicho sigue saliendo del primero y el ultimo de VERDAD');
+// La escala vertical se mide sobre lo dibujado: si el maximo quedara afuera,
+// la linea no llegaria arriba y el dibujo perderia alto sin razon.
+var conPico = [10, 10, 10, 10, 10, 10, 10, 99, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 12];
+var svgPico = api.sparkSvg(conPico, 80, 32, 'x');
+var ysPico = svgPico.match(/points="([^"]+)"/)[1].split(' ').map(function (par) { return parseFloat(par.split(',')[1]); });
+ok(Math.min.apply(null, ysPico) === 2, 'el punto mas alto de lo dibujado toca el borde de arriba');
 
 console.log('\nH) el precio en es-UY, como el resto de la plata en la app');
 // fmtNum era el UNICO numero de toda la app sin pasar por es-UY: un precio de
