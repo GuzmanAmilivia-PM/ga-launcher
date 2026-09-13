@@ -39,6 +39,10 @@
 // Google (corte a D1 del 29/08/2026). El comentario de la era-1 decía "el 2
 // sería salir de la planilla" — salió, y este número lo cuenta.
 var VERSION_GENERACION = '2';
+// El 15: el desglose del fondo de Itaú en su pantalla (13/09/2026): cuánto
+// aportaste, cuánto vale, y la ganancia partida entre lo que rindió el fondo
+// en pesos y lo que hizo el tipo de cambio. Antes esa fila mostraba un guion
+// porque el costo está en pesos y el valor en dólares.
 // El 14: actualizar Itaú desde su propia pantalla (13/09/2026). Es capacidad
 // nueva, no un arreglo: el botón deja un pedido que atiende la PC de Guzmán
 // —la clave del banco vive cifrada allá y un banco no habilita CORS—, y el
@@ -59,7 +63,7 @@ var VERSION_GENERACION = '2';
 // El 8 fue editar a mano los precios del fondo de Itau desde su pagina
 // (29/08/2026, V16); el 7, la Watchlist con alertas y push; el 6, los
 // indicadores del detalle.
-var VERSION_FUNCION = '14';
+var VERSION_FUNCION = '15';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre
@@ -247,6 +251,8 @@ var itauBox = document.getElementById('accItau');
 if (itauBox) {
   itauParar();
   itauBox.hidden = !itauEsCuenta(acc);
+  var fondoBox = document.getElementById('accFondo');
+  if (fondoBox && itauBox.hidden) fondoBox.hidden = true;
   if (!itauBox.hidden) {
     var im = document.getElementById('accItauMsg'); if (im) im.innerHTML = '';
     itauSeguir();
@@ -292,6 +298,12 @@ function renderAccount(acc, data) {
 lastAcc = acc; lastAccData = data;
 document.getElementById('accTotal').textContent = fmt(data.total);
 document.getElementById('accLiq').textContent = 'Cash in account: ' + fmt(data.liquidez);
+// El desglose del fondo, solo en Itau. OJO CON LA FORMA: dentro de esta
+// funcion NO puede haber una llave de cierre al principio de una linea, porque
+// test-cuenta-detalle extrae renderAccount con una expresion regular que corta
+// en la primera, y se quedaba con media funcion. Por eso va en UNA sola linea,
+// sin llaves, y quien decide que dibujar es renderFondoItau.
+if (typeof renderFondoItau === 'function') renderFondoItau(acc, data);
 var body = document.getElementById('accBody');
 body.innerHTML = '';
 // El mismo diseno que el Inicio y la lista de posiciones (pedido de Guzman,
@@ -593,3 +605,77 @@ function itauSeguir() {
     }).itauPedir();
   };
 })();
+
+// ---------------------------------------------------------------------------
+// El desglose del fondo de Itaú (13/09/2026)
+// ---------------------------------------------------------------------------
+// El fondo cotiza en PESOS y la cartera se mide en dólares, así que la
+// ganancia que ves mezcla dos cosas que se mueven por motivos distintos: lo
+// que rinde el fondo (letras del Banco Central) y lo que hace el tipo de
+// cambio. Guzmán aportó 6.000 y tiene 32 más; el fondo rindió 1,23% en pesos
+// y el peso se llevó 0,68 de esos puntos. Sin el desglose ese 0,54% parece
+// que el fondo no rinde, y no es eso.
+//
+// Antes esta fila mostraba un guion en la ganancia, y no por esconderla: la
+// app tiene el costo en pesos y el valor en dólares, y no puede restarlos.
+function renderFondoItau(acc, data) {
+  var box = document.getElementById('accFondo');
+  if (!box) return;
+  if (!itauEsCuenta(acc)) { box.hidden = true; return; }
+  var r = data && data.resumenItau;
+  if (!r) {
+    // Sin lo aportado cargado no se inventa nada: se ofrece cargarlo.
+    box.hidden = false;
+    box.innerHTML = '<p class="detlbl">Tell the app how many dollars you put into the fund ' +
+      'and it will show what the fund earned and what the peso did.</p>' +
+      '<div class="detedit"><button type="button" class="ghostbtn" id="accFondoSet">Set contributed</button></div>';
+    wireFondoSet();
+    return;
+  }
+  box.hidden = false;
+  var signo = function (n) { return (n >= 0 ? '+' : '') + n.toFixed(2) + '%'; };
+  var clase = function (n) { return n >= 0 ? 'up' : 'down'; };
+  box.innerHTML =
+    '<div class="detgrid">' +
+      '<span><span class="detlbl">Contributed</span><b>' + fmt(r.aportadoUSD) + '</b></span>' +
+      '<span><span class="detlbl">Value today</span><b>' + fmt(r.valorUSD) + '</b></span>' +
+      '<span><span class="detlbl">Gain</span><b class="' + clase(r.gananciaUSD) + '">' +
+        (r.gananciaUSD >= 0 ? '+' : '') + fmt(r.gananciaUSD) + ' &middot; ' + signo(r.rendimientoPct) + '</b></span>' +
+    '</div>' +
+    // Las dos mitades. Se multiplican para dar el total, no se suman, pero a
+    // esta escala la diferencia es invisible y "se reparte asi" se entiende.
+    '<div class="detgrid" style="margin-top:8px">' +
+      '<span><span class="detlbl">The fund (in UYU)</span><b class="' + clase(r.fondoPct) + '">' + signo(r.fondoPct) + '</b></span>' +
+      '<span><span class="detlbl">Peso vs dollar</span><b class="' + clase(r.monedaPct) + '">' + signo(r.monedaPct) + '</b></span>' +
+    '</div>' +
+    '<p class="detlbl" style="margin-top:8px">' +
+      (r.monedaPct < 0
+        ? 'The fund earned ' + signo(r.fondoPct) + ' in pesos; the peso took back ' + Math.abs(r.monedaPct).toFixed(2) + '% of that in dollars.'
+        : 'The fund earned ' + signo(r.fondoPct) + ' in pesos, and the peso added to it.') +
+    '</p>' +
+    '<div class="detedit"><button type="button" class="ghostbtn" id="accFondoSet">Change contributed</button></div>';
+  wireFondoSet();
+}
+
+// Cargar o corregir los dólares aportados. Es el UNICO dato que la app no
+// puede deducir: la base guarda el costo en pesos y nadie guardó el dólar del
+// día de la compra.
+function wireFondoSet() {
+  var b = document.getElementById('accFondoSet');
+  if (!b) return;
+  b.onclick = function () {
+    var actual = (lastAccData && lastAccData.resumenItau) ? lastAccData.resumenItau.aportadoUSD : '';
+    var v = window.prompt('How many dollars did you put into Ita\u00fa Assets, in total?', actual);
+    if (v === null) return;
+    var n = Number(String(v).replace(',', '.'));
+    if (!isFinite(n) || n <= 0) { alert('That is not an amount.'); return; }
+    b.disabled = true;
+    google.script.run.withSuccessHandler(function () {
+      b.disabled = false;
+      if (lastAcc) showAccount(lastAcc, accountReturnView);
+    }).withFailureHandler(function (err) {
+      b.disabled = false;
+      alert(msgErr ? msgErr(err, 'Saving the amount') : 'It could not be saved.');
+    }).itauAportado({ aportado: n });
+  };
+}
