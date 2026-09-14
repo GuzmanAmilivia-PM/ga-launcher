@@ -134,12 +134,13 @@ function falla(nombre) { return function () { var e = new Error('x'); e.name = n
   ok(r2.el('splashToken').style.display === '', 'aparece recien despues de desbloquear');
   ok(r2.el('lockErr').textContent === 'Clave incorrecta o vencida.', 'y dice por que la pide');
 
-  console.log('\nD) el intento automatico rechazado no es un error');
+  console.log('\nD) el intento automatico rechazado no es un fallo del sensor (pero deja el motivo a la vista)');
   var r3 = montar({ ga_token: 'tk', ga_sec: SEC_BIO }, falla('NotAllowedError'), true);
   await tick();
   r3.correrTimers();
   await tick();
-  ok(r3.el('secErr').textContent === '', 'no muestra error rojo');
+  ok(r3.el('secErr').textContent.indexOf('Tap anywhere') === 0 && r3.el('secErr').textContent.indexOf('NotAllowedError') !== -1,
+    'invita a tocar y dice el motivo real del rechazo (desde el 14/09/2026, para no adivinar desde la PC)');
   // Decia "Tocá para desbloquear" — un cartel que aparecia SOLO despues del
   // intento automatico fallido, o sea que el boton cambiaba solo delante de
   // Guzmán y parecia que algo se habia colgado (reporte del 22/08/2026). Ahora
@@ -236,11 +237,12 @@ function falla(nombre) { return function () { var e = new Error('x'); e.name = n
   ok(r7c.pedidos.length === 2 && r7c.pedidos[0].signal.abortado === true, 'el boton Desbloquear conserva el poder de destrabar');
 
 
-  console.log('\nG3) el intento automatico deja de repetirse donde el sistema pide un gesto');
-  // Reporte de Guzman (22/08/2026): "como que precarga la biometria antes pero
-  // igual tengo que dar click". En iOS, WebAuthn EXIGE un gesto del usuario, asi
-  // que el intento automatico se rechaza SIEMPRE con NotAllowedError. Repetirlo
-  // en cada apertura es un ciclo perdido y un cartel que cambia solo.
+  console.log('\nG3) el intento automatico se repite en cada apertura, aunque lo rechacen');
+  // Hasta el 14/09/2026 un NotAllowedError rapido del automatico se anotaba
+  // (ga_bio_auto = '0') y no se volvia a intentar nunca en el dispositivo:
+  // la regla era de iOS <= 17.3. Desde iOS 17.4 no hace falta gesto (Apple lo
+  // cambio por un limitador de frecuencia), y esa marca era lo que le dejaba a
+  // Guzman el boton en vez de Face ID directo.
   function rechazo(nombre) {
     return function () { var e = new Error('no'); e.name = nombre; return Promise.reject(e); };
   }
@@ -249,39 +251,42 @@ function falla(nombre) { return function () { var e = new Error('x'); e.name = n
   await tick();
   r8.correrTimers();        // el intento automatico corre y lo rechaza el sistema
   await tick(); await tick();
-  ok(r8.pedidos.length === 1, 'la primera vez SI lo intenta solo');
-  ok(store8.ga_bio_auto === '0', 'y al ser rechazado por falta de gesto lo anota');
+  ok(r8.pedidos.length === 1, 'la primera vez lo intenta solo');
+  ok(!('ga_bio_auto' in store8), 'y el rechazo NO se anota: nada apaga las proximas aperturas');
+  ok(r8.el('secErr').textContent.indexOf('NotAllowedError') !== -1,
+    'el motivo del rechazo queda a la vista en la pantalla de bloqueo');
   ok(r8.el('secBioGo').textContent.indexOf('Face ID') !== -1,
     'el boton queda claro sobre que hace, en vez de "Toca para desbloquear"');
 
-  // Segunda apertura en el MISMO dispositivo: ya no pierde el ciclo.
+  // Segunda apertura en el MISMO dispositivo: vuelve a intentar solo.
   var r8b = montar(store8, rechazo('NotAllowedError'), true);
   await tick();
   r8b.correrTimers();
   await tick(); await tick();
-  ok(r8b.pedidos.length === 0, 'la segunda vez NO lo vuelve a intentar solo: va derecho al boton');
-  // Pero el toque sigue funcionando igual.
+  ok(r8b.pedidos.length === 1, 'la segunda vez TAMBIEN lo intenta solo');
+  // Y el toque sigue funcionando igual, y limpia el motivo anterior.
   r8b.el('secBioGo').click();
   await tick();
-  ok(r8b.pedidos.length === 1, 'y tocar sigue pidiendo la biometria normalmente');
+  ok(r8b.pedidos.length === 2, 'y tocar sigue pidiendo la biometria normalmente');
 
-  // Donde el automatico SI funciona (Windows Hello, Android) no se anota nada.
-  var store9 = { ga_token: 'tk', ga_sec: SEC_BIO };
+  // La marca vieja grabada en el telefono se borra al arrancar y no frena nada.
+  var store9 = { ga_token: 'tk', ga_sec: SEC_BIO, ga_bio_auto: '0' };
   var r9 = montar(store9, function () { return Promise.resolve({}); }, true);
   await tick();
   r9.correrTimers();
   await tick(); await tick();
-  ok(!('ga_bio_auto' in store9), 'si el automatico funciona, no se anota nada');
+  ok(!('ga_bio_auto' in store9), 'la marca ga_bio_auto vieja se borra al arrancar');
+  ok(r9.pedidos.length === 1, 'y con la marca puesta igual intenta solo');
   ok(r9.estado().appBloqueada === false, 'y la app abre sin tocar nada');
 
-  // Un rechazo por OTRO motivo (el sensor no reconocio) NO apaga el automatico:
-  // apagarlo ahi seria castigar al usuario por una cara mal leida.
+  // Un rechazo por OTRO motivo tampoco apaga nada ni cuenta como fallo.
   var store10 = { ga_token: 'tk', ga_sec: SEC_BIO };
   var r10 = montar(store10, rechazo('InvalidStateError'), true);
   await tick();
   r10.correrTimers();
   await tick(); await tick();
-  ok(!('ga_bio_auto' in store10), 'otro error distinto no apaga el intento automatico');
+  ok(!('ga_bio_auto' in store10), 'otro error distinto tampoco se anota');
+  ok(r10.el('secErr').textContent.indexOf('InvalidStateError') !== -1, 'y su nombre queda a la vista');
 
   console.log('\nH) sin bloqueo configurado, el splash se va normal');
   var r8 = montar({ ga_token: 'tk' }, okBio, true);

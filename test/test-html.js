@@ -721,11 +721,13 @@ ok(analisisSrc.indexOf('(r.puntaje || 0)') === -1,
 ok(/function updateRangePct\(\)[\s\S]{0,800}rangeNombre[\s\S]{0,300}if \(!serie\.length/.test(graficosSrc2),
   'la etiqueta del periodo se escribe antes de cualquier return: no queda pegada la anterior');
 
-// 4) La bandera del intento automatico de biometria.
-ok(/'ga_bio_auto'\].concat\(GA_CACHES\)|ga_bio_auto'\]/.test(arranqueSrc2),
-  'ga_bio_auto se borra con el borrado de emergencia');
-ok(/Date\.now\(\) - t0\) < 1000/.test(arranqueSrc2),
-  'solo un rechazo INMEDIATO apaga el automatico: una cancelacion humana tarda segundos y no lo apaga');
+// 4) El intento automatico de biometria ya NO se apaga solo (14/09/2026): la
+//    marca vieja `ga_bio_auto` (iOS <= 17.3 exigia gesto) se borra al arrancar
+//    y nadie la vuelve a escribir.
+ok(/localStorage\.removeItem\('ga_bio_auto'\)/.test(arranqueSrc2),
+  'la marca ga_bio_auto se borra al arrancar (quedo grabada en el telefono en agosto)');
+ok(!/setItem\('ga_bio_auto'/.test(arranqueSrc2),
+  'y nadie la vuelve a escribir: un rechazo del automatico no apaga las proximas aperturas');
 
 // 5) El aviso de "no se pudo dibujar" tiene que ir donde se VE: la caja del
 //    grafico arranca plegada desde la v92.

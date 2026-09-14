@@ -170,8 +170,8 @@ appBloqueada = false;
 if (!mostrarLockPendiente()) hideSplash();
 }
 // Intento de biometria. `auto` = disparado solo al abrir la app, sin toque:
-// Safari exige un gesto del usuario para WebAuthn, asi que si ese intento se
-// rechaza no se muestra error, queda el boton para reintentar a mano.
+// si ese intento se rechaza NO cuenta como fallo del sensor; queda el boton
+// (y cualquier toque) para reintentar a mano, con el motivo a la vista.
 // `forzado` = el boton Desbloquear: el UNICO que puede abortar una peticion
 // viva y reintentar (la salida para una peticion colgada).
 // Con una hoja de Face ID YA abierta, un intento nuevo la abortaba y la
@@ -205,21 +205,18 @@ bioEnCurso = false;
 // fallo (el sensor ni llego a mirarlo).
 btn.textContent = auto ? 'Unlock with Face ID' : 'Retry';
 if (auto) {
-// NotAllowedError en un intento AUTOMATICO suele ser "el sistema pidio un
-// gesto". Se ANOTA para que las proximas aperturas no pierdan el ciclo \u2014 es
-// lo que Guzman veia como "parece que precarga la biometria pero igual tengo
-// que tocar" (22/08/2026).
-//
-// Pero el MISMO error lo tira el navegador cuando el usuario CANCELA la hoja
-// del sistema o cuando la peticion expira (timeout de 60 s). En Windows Hello
-// y Android \u2014donde el automatico si abre el dialogo\u2014 una sola cancelacion
-// apagaba el desbloqueo sin tocar nada para siempre, justo donde era util.
-// La senal barata para distinguirlos es el tiempo: un rechazo por falta de
-// gesto vuelve en milisegundos, una persona tarda segundos.
-// Auditoria del 23/08/2026.
-if (e && e.name === 'NotAllowedError' && (Date.now() - t0) < 1000) {
-  try { localStorage.setItem('ga_bio_auto', '0'); } catch (e2) {}
-}
+// El automatico se rechazo. Hasta el 14/09/2026 un NotAllowedError rapido
+// (< 1 s) se anotaba en localStorage (`ga_bio_auto`) como "este sistema exige
+// gesto" y NO se volvia a intentar nunca mas en el dispositivo. Esa regla era
+// de iOS <= 17.3: desde iOS 17.4 Apple SACO la exigencia del gesto para
+// WebAuthn y la cambio por un limitador de frecuencia con espera progresiva
+// (developer.apple.com/forums/thread/747036). El rechazo rapido que Guzman
+// vio en agosto era, casi seguro, ESE limitador tras los pedidos encimados
+// del 19/08, y quedo grabado para siempre como sentencia: por eso el boton.
+// Ahora un rechazo del automatico no apaga nada (la proxima apertura vuelve
+// a intentar: un pedido por apertura esta lejisimos del limite) y deja a la
+// vista el nombre del error y cuanto tardo, para no adivinar desde la PC.
+err.textContent = 'Tap anywhere to unlock with Face ID.' + ((e && e.name) ? ' (' + e.name + ', ' + (Date.now() - t0) + ' ms)' : '');
 return;
 }
 fallos++;
@@ -243,22 +240,30 @@ if (s.pin) { modoBio = false; pintarModo(); return; }
 document.getElementById('secErr').textContent = 'Biometrics is not available in this browser. Tap "I can\u2019t get in".';
 return;
 }
-// Arranque directo con la biometria, sin tocar el boton — DONDE SE PUEDA.
-// En iOS el sistema exige un gesto del usuario para WebAuthn, asi que ese
-// intento se rechaza SIEMPRE y lo unico que lograba era un ciclo perdido y un
-// cartel que cambiaba solo. En vez de adivinar el sistema operativo, se
-// APRENDE: al primer rechazo por falta de gesto se anota y no se vuelve a
-// intentar en este dispositivo. Donde si funciona (Windows Hello, Android),
-// sigue abriendo sin tocar nada.
-var autoSirve = true;
-try { autoSirve = localStorage.getItem('ga_bio_auto') !== '0'; } catch (e) {}
-if (autoSirve) setTimeout(function () { if (appBloqueada && modoBio) intentarBio(true); }, 350);
+// Arranque directo con la biometria, sin tocar el boton: Face ID apenas se
+// abre la app (lo que pidio Guzman el 14/09/2026). WebAuthn sin gesto vale en
+// iOS 17.4+ (el iPhone de Guzman tiene iOS 26), Android y Windows Hello.
+// La marca vieja `ga_bio_auto` (= "este sistema exige gesto", ver intentarBio)
+// se BORRA: quedo grabada en el telefono en agosto y era lo que mantenia el
+// boton. El pedido espera a que la app este EN PANTALLA: en iOS la PWA puede
+// correr el arranque detras de la imagen de lanzamiento, y un pedido con la
+// pagina oculta se rechaza al instante.
+try { localStorage.removeItem('ga_bio_auto'); } catch (e) {}
+function autoAlVerse() {
+if (document.visibilityState === 'hidden') {
+var una = function () { if (document.visibilityState === 'hidden') return; try { document.removeEventListener('visibilitychange', una); } catch (e) {} autoAlVerse(); };
+document.addEventListener('visibilitychange', una);
+return;
+}
+setTimeout(function () { if (appBloqueada && modoBio) intentarBio(true); }, 350);
+}
+autoAlVerse();
 });
 // El boton NUNCA se deshabilita y es el unico FORZADO: si la peticion quedo
 // colgada (el caso que dejaba la app trancada), tocarlo aborta y reintenta.
 document.getElementById('secBioGo').onclick = function () { intentarBio(false, true); };
-// Si iOS rechaza el intento automatico por falta de gesto, cualquier toque en
-// la pantalla de bloqueo sirve: no hay que apuntarle al boton.
+// Si el intento automatico se rechazo, cualquier toque en la pantalla de
+// bloqueo sirve: no hay que apuntarle al boton.
 // UN solo listener vivo: activarBloqueo() corre en cada vuelta del segundo
 // plano, y cada corrida apilaba OTRO listener con su propio closure (fallos,
 // modoBio, bioEnCurso independientes) — a los dias, un toque disparaba N
@@ -307,7 +312,7 @@ confirmarDosToques(l, 'This clears the lock and you\u2019ll have to enter the AP
 // con el portafolio (GA_CACHES, en paneles.js — la lista unica evita que un
 // cache nuevo quede vivo). Re-pegar la clave cuesta un minuto; dejarla, un riesgo.
 try {
-['ga_sec', 'ga_token', 'ga_bnb', 'ga_bnb_ultima', 'ga_bio_auto'].concat(GA_CACHES).forEach(function (k) { localStorage.removeItem(k); });
+['ga_sec', 'ga_token', 'ga_bnb', 'ga_bnb_ultima'].concat(GA_CACHES).forEach(function (k) { localStorage.removeItem(k); });
 } catch (e) {}
 try { location.reload(); } catch (e) {}
 });
