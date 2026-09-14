@@ -4,15 +4,15 @@
    (sw.js, ASSETS), asi que abren sin senal igual que antes. Los @font-face
    van al principio: las fuentes viven en ./fonts/. */
 
-@font-face { font-family: 'Manrope'; font-style: normal; font-weight: 400 800; font-display: swap; src: url('./fonts/manrope.woff2') format('woff2'); }
-@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 500; font-display: swap; src: url('./fonts/montserrat-500.woff2') format('woff2'); }
+@font-face { font-family: 'Manrope'; font-style: normal; font-weight: 400 800; font-display: swap; src: url('../fonts/manrope.woff2') format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 500; font-display: swap; src: url('../fonts/montserrat-500.woff2') format('woff2'); }
 /* El 700 es del 13/09/2026, para la palabra del splash (Guzman: "GUZMANA
    deberia ser un poco mas grueso, como Binance, misma tipologia"). Es un
    ARCHIVO aparte, no un `font-weight: 700` sobre el 500: sin el peso real el
    navegador finge la negrita engordando los trazos, y en una palabra con
    letra-espaciado ancho eso se nota como un borroneo. Subconjunto latino,
    18 KB. Va en ASSETS_ESTABLES del sw.js o no existe sin senal. */
-@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 700; font-display: swap; src: url('./fonts/montserrat-700.woff2') format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 700; font-display: swap; src: url('../fonts/montserrat-700.woff2') format('woff2'); }
 :root { --navy: #0d1420; --navy2: #17233a; --navy3: #1e2c47; --gold: #d4af37; --green: #22c55e; --red: #f43f5e; --text: #eef1f6; --muted: #90a0b8; --border: rgba(255,255,255,.07); --gold2: #f4d371; --on-gold: #241b02; --gold-rgb: 212,175,55; }
 /* --gold2 (el claro de los degradados), --on-gold (texto SOBRE el acento) y
    --gold-rgb (para los rgba con alpha) existen para que las paletas de Diseño
@@ -591,7 +591,6 @@ html.light .wl-detalle { background: rgba(20,40,80,.035); }
 /* La marca de "esto es estimado por cadencia, no una fecha anunciada". Se
    acompaña SIEMPRE de la nota de abajo: un simbolo suelto no explica nada. */
 .proyrow .pparcial { color: var(--muted); font-size: 11px; }
-.proynota { font-size: 11px; color: var(--muted); margin: 10px 0 0; line-height: 1.55; }
 /* --- El selector de periodo y la lista plegable (01/09/2026) --------------
    Pedido de Guzman: por defecto el proximo mes, con opcion hasta fin de ano,
    y la lista por activo desplegable en vez de estar siempre abierta.

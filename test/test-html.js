@@ -71,8 +71,31 @@ console.log('\nB3) las fuentes viven en la app y el shell va cache-first');
 // pasar por el service worker, y el shell versionado se revalidaba entero en
 // cada apertura compitiendo con el pedido de datos.
 ok(!/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(soloHtml), 'index.html ya no depende de Google Fonts');
-ok(/@font-face[^}]*Manrope[^}]*\.\/fonts\//.test(soloHtml.replace(/\n/g, ' ')), '@font-face de Manrope apunta a ./fonts/');
-ok(/@font-face[^}]*Montserrat[^}]*\.\/fonts\//.test(soloHtml.replace(/\n/g, ' ')), '@font-face de Montserrat apunta a ./fonts/');
+// CADA @font-face TIENE QUE RESOLVER A UN ARCHIVO QUE EXISTE (14/09/2026).
+//
+// Estos dos asserts exigian, textualmente, que las rutas dijeran `./fonts/` —
+// y esa era justo la ruta ROTA. El CSS vive en `css/estilos.css`, asi que el
+// navegador resuelve `./fonts/x.woff2` como `css/fonts/x.woff2`, que no
+// existe. Desde que el CSS salio del index.html (6/09/2026) la app venia
+// cargando con la tipografia del sistema, en local Y en la publicada: los
+// tres @font-face daban `status: "error"`. Ocho dias.
+//
+// El assert viejo no podia verlo porque miraba el TEXTO escrito en vez de si
+// el archivo resuelve. Este resuelve la ruta como lo hace el navegador —
+// relativa al archivo CSS— y exige que el archivo este en el repo. Es el
+// mismo estilo que el assert de img-src: derivar lo esperado del codigo real.
+var fontFaces = (soloHtml.replace(/\n/g, ' ').match(/@font-face[^}]*\}/g) || []);
+ok(fontFaces.length >= 2, 'hay @font-face declarados (' + fontFaces.length + ')');
+var rutasRotas = [];
+fontFaces.forEach(function (bloque) {
+  var m = bloque.match(/url\(['"]([^'"]+)['"]\)/);
+  if (!m) return;
+  // Relativa a css/estilos.css, que es donde viven los @font-face.
+  var destino = pathA.resolve(pathA.join(ruta.RUTA, 'css'), m[1]);
+  if (!fsA.existsSync(destino)) rutasRotas.push(m[1] + ' -> ' + destino);
+});
+ok(rutasRotas.length === 0,
+  'cada @font-face resuelve a un archivo que existe' + (rutasRotas.length ? ' — ROTAS: ' + rutasRotas.join(' | ') : ''));
 var dirFonts = pathA.join(ruta.RUTA, 'fonts');
 var woff2 = fsA.existsSync(dirFonts) ? fsA.readdirSync(dirFonts).filter(function (f) { return /\.woff2$/.test(f); }) : [];
 ok(woff2.length >= 2, 'los .woff2 estan en el repo (' + woff2.length + ')');

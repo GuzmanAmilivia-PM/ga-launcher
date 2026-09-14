@@ -380,8 +380,8 @@ function pintarFundamentales(r, caja) {
 // ---------- Principales posiciones (Inicio) ----------
 var holdingsExpanded = false;
 var lastHoldings = [];
-// Las filas pintadas ({symbol, tr}) y las cabeceras de seccion ({tr, idx de
-// su primera fila}), para poder actualizar EN EL LUGAR.
+// Las filas pintadas ({symbol, tr}), para poder actualizar EN EL LUGAR. Las
+// cabeceras de seccion se fueron el 13/09/2026 con los rotulos ETFs/Stocks.
 var holdFilas = [];
 // Tipo visual de una posicion; TIPO_LABELS (vistas.js) le pone el nombre.
 function tipoDe(h) {
@@ -786,7 +786,7 @@ tr.onclick = function () { toggleDetalle(tr, h); };
 if (!enLugar) { el.appendChild(tr); holdFilas.push({ symbol: h.symbol, tr: tr }); }
 });
 if (btn) {
-// El botón dice "Ver más", sin número. Antes decía `Ver todas (N)`, y las dos
+// El botón dice "See more", sin número. Antes decía `Ver todas (N)`, y las dos
 // mitades mentían: no son TODAS (la cripto y el cash nunca entran, y de las
 // acciones solo van las 5 más grandes) y N era el tamaño del recorte, no el de
 // la cartera — con 12 posiciones el botón anunciaba 8. Un número al lado de la

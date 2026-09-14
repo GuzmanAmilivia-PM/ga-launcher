@@ -666,30 +666,44 @@ function twrEnRango(serie) {
 // la MISMA plata puesta en las MISMAS fechas.
 var benchPuntos = [], benchNombre = '', benchLargo = 0;
 
-function limpiarBench() { benchPuntos = []; benchNombre = ''; benchLargo = 0; }
+// El molde que comparten aplicarBench y aplicarGrupo (14/09/2026). Las dos
+// funciones eran la MISMA escrita dos veces: la guarda de "una respuesta vacia
+// no borra lo que ya estaba", el chequeo de largo contra fullSerie y el
+// volcado punto a punto. Solo cambiaban la clave del payload, el trio de
+// variables y el nombre por defecto. Auditoria del 14/09/2026.
+//
+// Devuelve {puntos, nombre, largo} para reemplazar, o NULL para no tocar nada.
+// Esa distincion es el corazon de la fn y por eso no devuelve un objeto vacio:
+// "conservar lo que hay" y "limpiar" son decisiones distintas.
+//
+// El pegamento es el INDICE del arreglo: valores[i] corresponde a
+// fullSerie[i]. Si el backend cambiara una sin la otra, esto se desalinea, y
+// por eso la longitud se verifica antes de usar nada.
+function _alinearContraSerie(payload, nombrePorDefecto, largoActual, hayPuntos) {
+  var vacio = { puntos: [], nombre: '', largo: 0 };
+  if (!payload || !payload.valores || !payload.valores.length) {
+    // Mientras el backend se llena, varias respuestas seguidas vienen sin el
+    // dato, y borrarlo hacia que la linea apareciera y desapareciera sola.
+    if (hayPuntos && (fullSerie || []).length === largoActual) return null;
+    return vacio;
+  }
+  if (payload.valores.length !== (fullSerie || []).length) return vacio;
+  var puntos = [];
+  fullSerie.forEach(function (pt, i) {
+    var v = payload.valores[i];
+    if (v !== null && isFinite(v)) puntos.push({ ts: pt.fecha, valor: v });
+  });
+  return { puntos: puntos, nombre: payload.nombre || nombrePorDefecto, largo: payload.valores.length };
+}
 
 function aplicarBench(data) {
-  var b = data && data.bench;
-  if (!b || !b.valores || !b.valores.length) {
-    // Una respuesta SIN indice no borra el que ya estaba, siempre que siga
-    // alineado a la misma serie. Mientras la hoja del backend se llena, varias
-    // respuestas seguidas vienen sin indice, y borrarlo hacia que la linea
-    // apareciera y desapareciera sola.
-    if (benchPuntos.length && (fullSerie || []).length === benchLargo) return;
-    limpiarBench();
-    return;
-  }
-  // El pegamento es el INDICE del arreglo: bench.valores[i] corresponde a
-  // fullSerie[i]. Si el backend cambiara una sin la otra, esto se desalinea, y
-  // por eso la longitud se verifica antes de usar nada.
-  if (b.valores.length !== (fullSerie || []).length) { limpiarBench(); return; }
-  limpiarBench();
-  benchNombre = b.nombre || 'el indice';
-  benchLargo = b.valores.length;
-  fullSerie.forEach(function (p, i) {
-    var v = b.valores[i];
-    if (v !== null && isFinite(v)) benchPuntos.push({ ts: p.fecha, valor: v });
-  });
+  // El respaldo va en INGLES como toda la interfaz: decia 'el indice', y como
+  // el español ya es truthy, el 'the index' de pintarVsBench no podia ganarle
+  // nunca. Hoy no se ve —el Worker siempre manda el nombre— pero era una
+  // cadena en español a un toque de pantalla.
+  var r = _alinearContraSerie(data && data.bench, 'the index', benchLargo, benchPuntos.length > 0);
+  if (!r) return;
+  benchPuntos = r.puntos; benchNombre = r.nombre; benchLargo = r.largo;
 }
 
 // El cierre del indice en una fecha: el ultimo anterior o igual (no cotiza
@@ -712,25 +726,10 @@ function benchEn(ts) {
 // Arranca el 17/08/2026: antes de eso no hay historia por cuenta que leer.
 var grupoPuntos = [], grupoNombre = '', grupoLargo = 0;
 
-function limpiarGrupo() { grupoPuntos = []; grupoNombre = ''; grupoLargo = 0; }
-
 function aplicarGrupo(data) {
-  var g = data && data.serieGrupo;
-  if (!g || !g.valores || !g.valores.length) {
-    // Igual que el indice: una respuesta sin el dato no borra el que ya estaba,
-    // mientras siga alineado a la misma serie.
-    if (grupoPuntos.length && (fullSerie || []).length === grupoLargo) return;
-    limpiarGrupo();
-    return;
-  }
-  if (g.valores.length !== (fullSerie || []).length) { limpiarGrupo(); return; }
-  limpiarGrupo();
-  grupoNombre = g.nombre || '';
-  grupoLargo = g.valores.length;
-  fullSerie.forEach(function (p, i) {
-    var v = g.valores[i];
-    if (v !== null && isFinite(v)) grupoPuntos.push({ ts: p.fecha, valor: v });
-  });
+  var r = _alinearContraSerie(data && data.serieGrupo, '', grupoLargo, grupoPuntos.length > 0);
+  if (!r) return;
+  grupoPuntos = r.puntos; grupoNombre = r.nombre; grupoLargo = r.largo;
 }
 
 // Medianoche local del dia de `ts` — para comparar aportes (que solo traen

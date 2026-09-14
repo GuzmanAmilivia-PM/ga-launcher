@@ -171,7 +171,7 @@ var cont = document.getElementById('bakList');
 if (!cont) return;
 cont.innerHTML = '<p class="loadingtxt">Loading...</p>';
 google.script.run.withSuccessHandler(function (r) {
-if (!r || !r.ok) { errorEnVista('bakList', null, 'las copias'); return; }
+if (!r || !r.ok) { errorEnVista('bakList', null, 'the backups'); return; }
 if (!r.backups.length) { cont.innerHTML = '<div class="vacio"><span class="vic">&#128190;</span><b>No backups yet</b>They save automatically before each sync or operation.</div>'; return; }
 cont.innerHTML = r.backups.map(function (b) {
 return '<div class="row"><span>' + esc(nombrePlataforma(b.hoja)) +
@@ -182,7 +182,7 @@ Array.prototype.forEach.call(cont.querySelectorAll('.bakBtn'), function (btn) {
 btn.onclick = function () { restaurarHoja(btn.getAttribute('data-hoja'), btn.getAttribute('data-cuando')); };
 });
 }).withFailureHandler(function (err) {
-errorEnVista('bakList', err, 'las copias');
+errorEnVista('bakList', err, 'the backups');
 }).listarBackups();
 }
 function restaurarHoja(hoja, cuando) {

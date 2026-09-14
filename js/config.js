@@ -180,7 +180,7 @@ document.getElementById('platResultado').innerHTML = html ? '<div class="tmsg ' 
 }
 function cargarPlataformas() {
 google.script.run.withSuccessHandler(renderPlataformas)
-.withFailureHandler(function (err) { errorEnVista('platList', err, 'las plataformas'); }).getPlataformas();
+.withFailureHandler(function (err) { errorEnVista('platList', err, 'the platforms'); }).getPlataformas();
 }
 function renderPlataformas(lista) {
 var el = document.getElementById('platList');
