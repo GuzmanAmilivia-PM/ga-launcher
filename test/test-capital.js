@@ -254,8 +254,12 @@ console.log('\nAA) el año contra el indice (Portafolio): descuenta los aportes'
 // Pedido de Guzman (22/08/2026): "que aparezcan comparaciones vs sp500 ytd".
 // El riesgo de este numero NO es el calculo, es confundirlo con el cambio del
 // patrimonio — que incluye la plata que uno puso y siempre da mas.
-function dic(d) { return new Date(2025, 11, d).getTime(); }
-function ene(d) { return new Date(2026, 0, d).getTime(); }
+// Anios RELATIVOS a hoy (14/09/2026): comparacionAnual lee new Date().getFullYear(),
+// y con 2025/2026 escritos a mano estos 13 asserts se ponian rojos solos el
+// 1 de enero. Lo encontro una auditoria por agentes.
+var ANIO = new Date().getFullYear();
+function dic(d) { return new Date(ANIO - 1, 11, d).getTime(); }
+function ene(d) { return new Date(ANIO, 0, d).getTime(); }
 var serieA = [
   { fecha: dic(31), valor: 1000 },   // cierre del año pasado: la BASE
   { fecha: ene(10), valor: 1100 },   // +10% real
@@ -270,7 +274,7 @@ A.aplicarBench({ bench: { nombre: 'S&P 500', valores: [100, 105, 105, 110] } });
 // cambio BRUTO (+142%) presentado como rendimiento.
 ok(A.comparacionAnual() === null, 'sin los aportes cargados no devuelve nada (mejor nada que un numero inflado)');
 
-A.aplicarAportes({ lista: [{ fecha: '2026-01-15', grupo: 1000, total: 1000 }] });
+A.aplicarAportes({ lista: [{ fecha: (ANIO + '-01-15'), grupo: 1000, total: 1000 }] });
 var r = A.comparacionAnual();
 ok(r !== null, 'con los aportes cargados ya calcula');
 ok(Math.abs(r.pct - 21) < 0.01, 'el rendimiento REAL encadena los tramos y descuenta el aporte: +21% (' + (r ? r.pct.toFixed(2) : '-') + ')');
@@ -278,7 +282,7 @@ ok(Math.abs(r.bruto - 131) < 0.01, 'y guarda aparte el cambio BRUTO del patrimon
 ok(r.pct < r.bruto, 'el rendimiento SIEMPRE es menor que el bruto cuando hubo aportes: es la trampa que este numero evita');
 ok(r.aportes === 1000, 'informa cuanto se aporto, para poder explicar la diferencia');
 ok(Math.abs(r.idxPct - 10) < 0.01, 'el indice va del cierre del año pasado a hoy: +10% (' + (r ? r.idxPct.toFixed(2) : '-') + ')');
-ok(new Date(r.desde).getFullYear() === 2025, 'la base es el ultimo punto del año PASADO, no el primero de este');
+ok(new Date(r.desde).getFullYear() === ANIO - 1, 'la base es el ultimo punto del año PASADO, no el primero de este');
 
 // Una serie que arranca dentro del año no tiene punto de partida: no se
 // inventa uno (seria comparar contra el primer dato que haya, no contra el
@@ -290,7 +294,7 @@ ok(B.comparacionAnual() === null, 'sin un punto del año pasado no hay con que c
 // Sin indice alineado el numero propio SIGUE valiendo; lo que falta es el
 // termino de comparacion.
 var C = montar({ fullSerie: serieA });
-C.aplicarAportes({ lista: [{ fecha: '2026-01-15', grupo: 1000, total: 1000 }] });
+C.aplicarAportes({ lista: [{ fecha: (ANIO + '-01-15'), grupo: 1000, total: 1000 }] });
 var rc = C.comparacionAnual();
 ok(rc !== null && rc.idxPct === null, 'sin indice, el rendimiento propio se calcula igual y el indice queda en null');
 
@@ -306,7 +310,7 @@ var serieD = [
 ];
 var D = montar({ fullSerie: serieD });
 D.aplicarBench({ bench: { nombre: 'S&P 500', valores: [100, 105, 105, 110] } });
-D.aplicarAportes({ lista: [{ fecha: '2026-01-15', grupo: 0, total: 1500 }] });
+D.aplicarAportes({ lista: [{ fecha: (ANIO + '-01-15'), grupo: 0, total: 1500 }] });
 var rd = D.comparacionAnual();
 ok(rd !== null && Math.abs(rd.pct - 21) < 0.01, 'el deposito a BTG se descuenta de la serie total: +21%, no +186% (' + (rd ? rd.pct.toFixed(2) : '-') + ')');
 ok(rd && rd.aportes === 1500, 'e informa los 1.500 puestos, aunque el grupo diga 0');

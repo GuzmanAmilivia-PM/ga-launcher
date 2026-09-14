@@ -23,6 +23,23 @@ return !!t && d >= 0 && d < VENTANA_SIN_PEDIR_MS;
 } catch (e) { return false; }
 }
 function anotarDesbloqueo() { try { localStorage.setItem('ga_desbloqueo', String(Date.now())); } catch (e) {} }
+// PRE-ARMADO: fallar CERRADO (14/09/2026, auditoria por agentes). El bloqueo
+// se arma en la ULTIMA linea de este archivo, despues de veinte cableados de
+// pantalla sin guarda. Si uno de esos IDs desaparece del HTML, el archivo
+// muere a la mitad, activarBloqueo() nunca corre, appBloqueada queda en
+// false y arranque.js —que es otro script y sigue igual— pinta todos los
+// montos sin pedir nada. Y desde v215 seria peor de forma enganosa: la hoja
+// de Face ID igual aparece (vive en el <head>), Guzman pone la cara, y parece
+// que el bloqueo funciono. Por eso, ANTES de cualquier cableado, si hay
+// bloqueo configurado y la ventana no esta vigente, el splash queda frenado
+// (hideSplash no hace nada con appBloqueada en true). activarBloqueo lo toma
+// desde ahi. Si el archivo muere, queda el logo en pantalla: molesto, pero
+// cerrado. Misma familia que el IIFE de agosto que dejo a Guzman afuera.
+var _preArmado = false;
+try {
+var _s0 = secLeer();
+if ((_s0.pin || _s0.bio) && getApiToken() && !desbloqueoVigente()) { appBloqueada = true; _preArmado = true; }
+} catch (e) {}
 function b64u(buf) { var a = new Uint8Array(buf), s = ''; for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
 function b64uBytes(b) { b = b.replace(/-/g, '+').replace(/_/g, '/'); var s = atob(b), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
 function hashPinLegacy(pin) { return crypto.subtle.digest('SHA-256', new TextEncoder().encode('ga-sec|' + pin)).then(b64u); }
@@ -143,15 +160,23 @@ segMsg('segPinMsg', '&#10003; Passcode removed.', true);
 // volver entraba directo a los montos. Segunda auditoria del 22/08/2026.
 var _listenersDelBloqueo = false;
 var _clickDelBloqueo = null;   // el listener de toque-para-Face-ID vivo (uno solo)
-function activarBloqueo() {
+// `desdeFondo`: la llamada que hace visibilitychange al volver del segundo
+// plano tras BLOQUEO_TRAS_MS. La ventana de 12 h vale SOLO para abrir en frio
+// (decision de Guzman, 14/09/2026): dejar el telefono sobre la mesa mas de 5
+// minutos vuelve a pedir Face ID aunque haya entrado hace una hora. En v216
+// la ventana anulaba tambien este camino, y el re-bloqueo por segundo plano
+// —lo unico que cubria el telefono desbloqueado y olvidado— quedaba apagado
+// 12 de cada 24 horas. Lo encontro una auditoria por agentes.
+function activarBloqueo(desdeFondo) {
 var s = secLeer();
-if (!(s.pin || s.bio) || !getApiToken()) return;
-if (appBloqueada) return;   // ya esta pidiendo entrar
-if (desbloqueoVigente()) return;   // entro hace menos de 12 h: no se pide
+if (!(s.pin || s.bio) || !getApiToken()) { if (_preArmado) { appBloqueada = false; _preArmado = false; } return; }
+if (appBloqueada && !_preArmado) return;   // ya esta pidiendo entrar
+if (!desdeFondo && desbloqueoVigente()) { if (_preArmado) { appBloqueada = false; _preArmado = false; } return; }   // entro hace menos de 12 h: al abrir no se pide
 // El bloqueo vive DENTRO del splash: una sola pantalla de arranque. Mientras
 // appBloqueada este en true, hideSplash() no hace nada (nucleo.js), asi que el
 // logo no se va hasta que se entra.
 appBloqueada = true;
+_preArmado = false;
 var el = document.getElementById('splash');
 var caja = document.getElementById('splashLock');
 caja.style.display = '';
@@ -356,9 +381,8 @@ activarBloqueo();
 
 // Y al volver del segundo plano, si estuvo afuera un rato. El umbral es corto
 // a proposito: cambiar de app un segundo para copiar un dato no tiene que
-// pedir Face ID, pero dejar el telefono sobre la mesa si. Desde v216 manda
-// ademas la ventana de 12 h (activarBloqueo la consulta): si entro hace menos,
-// volver del segundo plano tampoco pide.
+// pedir Face ID, pero dejar el telefono sobre la mesa si. La ventana de 12 h
+// NO manda aca (14/09/2026): es solo para abrir en frio. Ver activarBloqueo.
 var BLOQUEO_TRAS_MS = 5 * 60 * 1000;
 var _seFueALasSombras = 0;
 document.addEventListener('visibilitychange', function () {
@@ -366,5 +390,5 @@ if (document.visibilityState === 'hidden') { _seFueALasSombras = Date.now(); ret
 if (!_seFueALasSombras) return;
 var afuera = Date.now() - _seFueALasSombras;
 _seFueALasSombras = 0;
-if (afuera >= BLOQUEO_TRAS_MS) activarBloqueo();
+if (afuera >= BLOQUEO_TRAS_MS) activarBloqueo(true);
 });

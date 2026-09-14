@@ -89,10 +89,15 @@ function montar(respuesta) {
 
 function values(sel) { return sel.options.map(function (o) { return o.value; }).join('|'); }
 
-console.log('\nA) el selector de cuentas: las 4 operables, con sus etiquetas');
+console.log('\nA) el selector de cuentas: las 3 que se operan por este camino, con sus etiquetas');
 var m = montar();
 m.api.buildTradeForm();
-ok(values(m.elem('tCuenta')) === 'CS|IB|BNB|ITAU', 'las 4 cuentas (' + values(m.elem('tCuenta')) + ')');
+// ITAU NO se ofrece (14/09/2026): su cuotaparte cotiza en PESOS y este
+// formulario resta qty x precio del cash en DOLARES (500 x 120,93 = 60.465
+// "USD" descontados). Va por la compra del fondo, en su pantalla; el Worker
+// tambien la rechaza. Lo encontro una auditoria por agentes.
+ok(values(m.elem('tCuenta')) === 'CS|IB|BNB', 'las 3 cuentas que se operan aca (' + values(m.elem('tCuenta')) + ')');
+ok(!m.elem('tCuenta').options.some(function (o) { return o.value === 'ITAU'; }), 'ITAU no esta: su precio esta en pesos y este camino lo restaria en dolares');
 ok(m.elem('tCuenta').options.some(function (o) { return o.textContent === 'IBKR'; }), 'IBKR se muestra con su etiqueta');
 
 console.log('\nB) validarForm rechaza lo inválido ANTES de tocar el backend');

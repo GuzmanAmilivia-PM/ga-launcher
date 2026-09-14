@@ -13,7 +13,10 @@ document.getElementById('btnVenta').onclick = function () { setTipo('venta'); };
 function buildTradeForm() {
 var sel = document.getElementById('tCuenta');
 sel.innerHTML = '';
-ACCOUNTS.forEach(function (a) {
+// ITAU no se ofrece aca (14/09/2026): su cuotaparte cotiza en PESOS y este
+// formulario resta qty x precio del cash en DOLARES. Su camino es la compra
+// del fondo, en la pantalla de Itau. El Worker tambien la rechaza.
+ACCOUNTS.filter(function (a) { return a.key !== 'ITAU'; }).forEach(function (a) {
 var o = document.createElement('option');
 o.value = a.key; o.textContent = nombrePlataforma(a.nombre);
 sel.appendChild(o);

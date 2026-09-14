@@ -92,7 +92,8 @@ function montar(store, bioGet, bioDispo, antes) {
   var fn = new Function('__c', 'with (__c) {\n' + NUCLEO + '\n' + SEG + '\n' +
     '__c.__estado = function () { return { appBloqueada: appBloqueada, lockPendiente: lockPendiente }; };\n' +
     '__c.__mostrarLock = function (m) { return mostrarLock(m); };\n' +
-    '__c.__hideSplash = function () { return hideSplash(); };\n}');
+    '__c.__hideSplash = function () { return hideSplash(); };\n' +
+    '__c.__activarBloqueo = function (f) { return activarBloqueo(f); };\n}');
   fn(ctx);
   return {
     els: els, pedidos: pedidos, ctx: ctx,
@@ -361,6 +362,58 @@ function falla(nombre) { return function () { var e = new Error('x'); e.name = n
   var store18 = { ga_token: 'tk', ga_sec: SEC_BIO, ga_desbloqueo: 'ayer' };
   var r18 = montar(store18, okBio, true);
   ok(r18.estado().appBloqueada === true, 'un valor que no es un numero no abre nada');
+
+  console.log('\nG6) la ventana de 12 h vale SOLO al abrir en frio: volver del fondo tras 5 min pide igual (14/09/2026)');
+  // Entro hace 1 minuto: abrir no pide (G5). Pero el visibilitychange llama a
+  // activarBloqueo(true) al volver del segundo plano, y ESE camino no mira la
+  // ventana. En v216 si la miraba, y el re-bloqueo por segundo plano —lo unico
+  // que cubria el telefono desbloqueado sobre la mesa— quedaba apagado 12 de
+  // cada 24 horas. Lo encontro una auditoria por agentes; decision de Guzman.
+  var store19 = { ga_token: 'tk', ga_sec: SEC_BIO, ga_desbloqueo: String(Date.now() - 60 * 1000) };
+  var r19 = montar(store19, okBio, true);
+  await tick(); r19.correrTimers(); await tick();
+  ok(r19.estado().appBloqueada === false, 'al abrir, dentro de la ventana, no pide');
+  r19.ctx.__activarBloqueo(true);
+  ok(r19.estado().appBloqueada === true && r19.el('splashLock').style.display === '',
+    'al volver del segundo plano (desdeFondo), pide aunque haya entrado hace 1 minuto');
+  var r19b = montar({ ga_token: 'tk', ga_sec: SEC_BIO, ga_desbloqueo: String(Date.now() - 60 * 1000) }, okBio, true);
+  await tick(); r19b.correrTimers(); await tick();
+  r19b.ctx.__activarBloqueo(false);
+  ok(r19b.estado().appBloqueada === false, 'y la misma llamada SIN desdeFondo (abrir en frio) respeta la ventana');
+  // Anclado al listener del RE-BLOQUEO (document.addEventListener con una
+  // funcion inline): hay otro 'visibilitychange' antes, el de autoAlVerse
+  // (v214), que pasa `una` por nombre y no es este.
+  ok(/activarBloqueo\(true\)/.test((SEG.match(/document\.addEventListener\('visibilitychange', function \(\) \{[\s\S]*?\}\);/) || [''])[0]),
+    'y el listener de visibilitychange es el que pasa desdeFondo=true (si alguien lo saca, la ventana vuelve a apagar el re-bloqueo)');
+
+  console.log('\nG7) si seguridad.js muere a la mitad, la app queda CERRADA, no abierta (14/09/2026)');
+  // El bloqueo se arma en la ULTIMA linea del archivo, despues de veinte
+  // cableados de pantalla. Se monta el archivo CORTADO justo antes del primer
+  // cableado, como si un getElementById hubiera tirado: appBloqueada tiene que
+  // estar ya en true (pre-armado) y hideSplash no puede irse. Antes quedaba
+  // en false y arranque.js pintaba todos los montos sin pedir nada.
+  var SEG_ENTERO = SEG;
+  var corte = SEG.indexOf("document.getElementById('segBack')");
+  ok(corte > 0, 'encuentro el primer cableado de pantalla para cortar ahi');
+  SEG = SEG.slice(0, corte);
+  var r20 = montar({ ga_token: 'tk', ga_sec: SEC_BIO }, okBio, true);
+  ok(r20.estado().appBloqueada === true, 'con el archivo muerto antes de armar el bloqueo, appBloqueada ya esta en true');
+  r20.ctx.__hideSplash();
+  ok(!r20.el('splash').classList.contains('hide'), 'y el splash NO se va: falla cerrado');
+  // Con la ventana vigente no hay nada que pre-armar: abrir no debe frenarse.
+  var r20b = montar({ ga_token: 'tk', ga_sec: SEC_BIO, ga_desbloqueo: String(Date.now() - 60 * 1000) }, okBio, true);
+  ok(r20b.estado().appBloqueada === false, 'dentro de la ventana no se pre-arma nada: la app abre');
+  // Sin bloqueo configurado tampoco.
+  var r20c = montar({ ga_token: 'tk' }, okBio, true);
+  ok(r20c.estado().appBloqueada === false, 'sin bloqueo configurado no se pre-arma nada');
+  SEG = SEG_ENTERO;
+  // Y con el archivo ENTERO, el pre-armado se entrega a activarBloqueo sin
+  // dejar la app trabada: el caso normal sigue pidiendo y abriendo igual.
+  var r21 = montar({ ga_token: 'tk', ga_sec: SEC_BIO }, okBio, true);
+  ok(r21.estado().appBloqueada === true && r21.el('splashLock').style.display === '',
+    'archivo entero: el bloqueo se muestra (la caja splashLock esta visible), no queda solo el logo');
+  await tick(); r21.correrTimers(); await tick();
+  ok(r21.estado().appBloqueada === false, 'y con la biometria OK, abre');
 
   console.log('\nH) sin bloqueo configurado, el splash se va normal');
   var r8 = montar({ ga_token: 'tk' }, okBio, true);
