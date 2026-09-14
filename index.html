@@ -33,7 +33,7 @@
      real contra embeber la app es que sin la clave no muestra un numero. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
-  script-src 'self' 'sha256-eCEv2Xtk/d4etq+pER4EYyojYMTusYCys+IfxZyAxE0=' 'sha256-9WSSGaumgjkKKOTBiFySD8x13PMHImZGev+ylyjyj4I=';
+  script-src 'self' 'sha256-eCEv2Xtk/d4etq+pER4EYyojYMTusYCys+IfxZyAxE0=' 'sha256-yjzHEvXpD5RVtYR6yQzBhc7GEhnpgKoXgRDe/EyecKM=';
   style-src 'self' 'unsafe-inline';
   font-src 'self' data:;
   img-src 'self' data: https://assets.parqet.com https://assets.coincap.io https://*.finnhub.io;
@@ -50,10 +50,11 @@
      biometria sale ACA, antes del CSS y de los 17 archivos de js/, para que la
      hoja de iOS aparezca lo antes posible al abrir la app. Es el MISMO pedido
      que bioVerificar (seguridad.js) y la misma condicion que activarBloqueo
-     (bloqueo biometrico + clave de la API); seguridad.js lo ADOPTA en vez de
+     (bloqueo biometrico + clave de la API + ventana de 12 h vencida, v216);
+     seguridad.js lo ADOPTA en vez de
      pedir otro (dos peticiones vivas se rechazan entre si). Permitido por su
      hash en la CSP: si se edita, recalcular. test-html.js vigila las dos cosas. -->
-<script>(function(){try{var s=JSON.parse(localStorage.getItem('ga_sec')||'{}');if(!s.bio||!localStorage.getItem('ga_token')||document.visibilityState==='hidden'||!window.PublicKeyCredential||!navigator.credentials||!window.AbortController)return;var b=s.bio.replace(/-/g,'+').replace(/_/g,'/'),r=atob(b),a=new Uint8Array(r.length);for(var i=0;i<r.length;i++)a[i]=r.charCodeAt(i);var c=new AbortController(),p=navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rpId:location.hostname,allowCredentials:[{type:'public-key',id:a}],userVerification:'required',timeout:60000},signal:c.signal});p.catch(function(){});window.__bioArranque={promesa:p,abort:c,t0:Date.now()};}catch(e){}})();</script>
+<script>(function(){try{var s=JSON.parse(localStorage.getItem('ga_sec')||'{}');if(!s.bio||!localStorage.getItem('ga_token')||document.visibilityState==='hidden'||!window.PublicKeyCredential||!navigator.credentials||!window.AbortController)return;var u=parseInt(localStorage.getItem('ga_desbloqueo'),10)||0,d=Date.now()-u;if(u&&d>=0&&d<43200000)return;var b=s.bio.replace(/-/g,'+').replace(/_/g,'/'),r=atob(b),a=new Uint8Array(r.length);for(var i=0;i<r.length;i++)a[i]=r.charCodeAt(i);var c=new AbortController(),p=navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rpId:location.hostname,allowCredentials:[{type:'public-key',id:a}],userVerification:'required',timeout:60000},signal:c.signal});p.catch(function(){});window.__bioArranque={promesa:p,abort:c,t0:Date.now()};}catch(e){}})();</script>
 <base target="_top">
 <!-- viewport-fit=cover: sin esto las variables env(safe-area-inset-*) que usa
      el CSS valen 0 en iOS y el contenido se mete bajo el notch y bajo la barra

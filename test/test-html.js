@@ -377,6 +377,13 @@ ok(/rpId:location\.hostname/.test(snipBio) && /userVerification:'required'/.test
   'pide lo MISMO que bioVerificar: rpId del host, la credencial guardada, userVerification required, 60 s');
 ok(/getItem\('ga_sec'\)/.test(snipBio) && /getItem\('ga_token'\)/.test(snipBio) && /visibilityState==='hidden'/.test(snipBio),
   'y solo con bloqueo biometrico, clave de la API y la pagina a la vista (la condicion de activarBloqueo)');
+// La ventana de 12 h (v216): el snippet aplica el MISMO numero que seguridad.js,
+// o la hoja de Face ID saltaria en una apertura que no va a pedir nada.
+var segVentana = fsA.readFileSync(pathA.join(ruta.RUTA, 'js', 'seguridad.js'), 'utf8');
+var ventanaSeg = (segVentana.match(/var VENTANA_SIN_PEDIR_MS = (\d+);/) || [])[1];
+ok(ventanaSeg === '43200000', 'la ventana de seguridad.js es de 12 h (' + ventanaSeg + ')');
+ok(new RegExp("getItem\\('ga_desbloqueo'\\)[\\s\\S]{0,80}d<" + ventanaSeg + "\\)return").test(snipBio),
+  'el snippet del head respeta la misma ventana de ' + ventanaSeg + ' ms que seguridad.js');
 ok(/p\.catch\(function\(\)\{\}\)/.test(snipBio) && /signal:c\.signal/.test(snipBio),
   'con catch vacio (nadie la adopta si no hay sensor) y abortable (el boton la tiene que poder cortar)');
 var segH2 = fsA.readFileSync(pathA.join(ruta.RUTA, 'js', 'seguridad.js'), 'utf8');
@@ -755,6 +762,8 @@ ok(/localStorage\.removeItem\('ga_bio_auto'\)/.test(arranqueSrc2),
   'la marca ga_bio_auto se borra al arrancar (quedo grabada en el telefono en agosto)');
 ok(!/setItem\('ga_bio_auto'/.test(arranqueSrc2),
   'y nadie la vuelve a escribir: un rechazo del automatico no apaga las proximas aperturas');
+ok(/'ga_desbloqueo'\]\.concat\(GA_CACHES\)/.test(arranqueSrc2),
+  'la hora del ultimo ingreso (ga_desbloqueo) se borra con el borrado de emergencia');
 
 // 5) El aviso de "no se pudo dibujar" tiene que ir donde se VE: la caja del
 //    grafico arranca plegada desde la v92.

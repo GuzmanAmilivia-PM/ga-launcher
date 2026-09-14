@@ -5,6 +5,24 @@
 // dispositivo; los datos siguen protegidos por la clave de la API.
 function secLeer() { try { return JSON.parse(localStorage.getItem('ga_sec') || '{}'); } catch (e) { return {}; } }
 function secGuardar(s) { try { localStorage.setItem('ga_sec', JSON.stringify(s)); } catch (e) {} }
+// La ventana sin volver a pedir (v216, pedido de Guzman del 14/09/2026): una
+// vez que entro, la app no vuelve a pedir Face ID ni clave por 12 horas en
+// este dispositivo. iOS obliga a un toque en su hoja de Face ID para cualquier
+// web app y no bloquea apps web por su cuenta, asi que pedir menos seguido es
+// la unica forma de que casi todas las aperturas del dia sean de cero toques.
+// La hora del ultimo ingreso vive en ga_desbloqueo; el snippet del <head> de
+// index.html aplica la MISMA ventana (con el numero escrito: 43200000), para
+// que no salte la hoja de Face ID por una apertura que no va a pedir nada.
+// Un reloj que fue para atras (t en el futuro) no vale: se pide igual.
+var VENTANA_SIN_PEDIR_MS = 43200000;   // 12 h
+function desbloqueoVigente() {
+try {
+var t = parseInt(localStorage.getItem('ga_desbloqueo'), 10) || 0;
+var d = Date.now() - t;
+return !!t && d >= 0 && d < VENTANA_SIN_PEDIR_MS;
+} catch (e) { return false; }
+}
+function anotarDesbloqueo() { try { localStorage.setItem('ga_desbloqueo', String(Date.now())); } catch (e) {} }
 function b64u(buf) { var a = new Uint8Array(buf), s = ''; for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
 function b64uBytes(b) { b = b.replace(/-/g, '+').replace(/_/g, '/'); var s = atob(b), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
 function hashPinLegacy(pin) { return crypto.subtle.digest('SHA-256', new TextEncoder().encode('ga-sec|' + pin)).then(b64u); }
@@ -70,7 +88,7 @@ var partes = [];
 if (s.bio) partes.push('biometrics');
 if (s.pin) partes.push('passcode');
 document.getElementById('segEstado').textContent = partes.length
-? 'Lock enabled with ' + partes.join(' and ') + '. It\u2019s requested every time you open the app on this device.'
+? 'Lock enabled with ' + partes.join(' and ') + '. It\u2019s requested when you open the app, at most once every 12 hours on this device.'
 : 'No lock: the app opens directly. Enable biometrics or a passcode.';
 document.getElementById('segPinQuitar').style.display = s.pin ? '' : 'none';
 document.getElementById('segPinBtn').textContent = s.pin ? 'Change passcode' : 'Save passcode';
@@ -129,6 +147,7 @@ function activarBloqueo() {
 var s = secLeer();
 if (!(s.pin || s.bio) || !getApiToken()) return;
 if (appBloqueada) return;   // ya esta pidiendo entrar
+if (desbloqueoVigente()) return;   // entro hace menos de 12 h: no se pide
 // El bloqueo vive DENTRO del splash: una sola pantalla de arranque. Mientras
 // appBloqueada este en true, hideSplash() no hace nada (nucleo.js), asi que el
 // logo no se va hasta que se entra.
@@ -162,6 +181,7 @@ var olvTxt = s.pin ? 'I forgot my passcode' : 'I can\u2019t get in';
 olv.textContent = olvTxt;
 olv.style.display = '';
 function abrir() {
+anotarDesbloqueo();
 caja.style.display = 'none';
 document.getElementById('secErr').textContent = '';
 appBloqueada = false;
@@ -324,7 +344,7 @@ confirmarDosToques(l, 'This clears the lock and you\u2019ll have to enter the AP
 // con el portafolio (GA_CACHES, en paneles.js — la lista unica evita que un
 // cache nuevo quede vivo). Re-pegar la clave cuesta un minuto; dejarla, un riesgo.
 try {
-['ga_sec', 'ga_token', 'ga_bnb', 'ga_bnb_ultima'].concat(GA_CACHES).forEach(function (k) { localStorage.removeItem(k); });
+['ga_sec', 'ga_token', 'ga_bnb', 'ga_bnb_ultima', 'ga_desbloqueo'].concat(GA_CACHES).forEach(function (k) { localStorage.removeItem(k); });
 } catch (e) {}
 try { location.reload(); } catch (e) {}
 });
@@ -336,7 +356,9 @@ activarBloqueo();
 
 // Y al volver del segundo plano, si estuvo afuera un rato. El umbral es corto
 // a proposito: cambiar de app un segundo para copiar un dato no tiene que
-// pedir Face ID, pero dejar el telefono sobre la mesa si.
+// pedir Face ID, pero dejar el telefono sobre la mesa si. Desde v216 manda
+// ademas la ventana de 12 h (activarBloqueo la consulta): si entro hace menos,
+// volver del segundo plano tampoco pide.
 var BLOQUEO_TRAS_MS = 5 * 60 * 1000;
 var _seFueALasSombras = 0;
 document.addEventListener('visibilitychange', function () {

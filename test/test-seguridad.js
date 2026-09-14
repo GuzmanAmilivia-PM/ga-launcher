@@ -331,6 +331,37 @@ function falla(nombre) { return function () { var e = new Error('x'); e.name = n
   ok(r13.pedidos.length === 0 && r13.el('secErr').textContent.indexOf('NotAllowedError') !== -1 && r13.estado().appBloqueada === true,
     'un rechazo de la del head se trata como el del automatico: motivo a la vista, sigue bloqueada, sin pedir otra');
 
+  console.log('\nG5) la ventana de 12 horas: entro hace poco, no se vuelve a pedir (v216)');
+  var H12 = 12 * 60 * 60 * 1000;
+  // Al entrar se anota la hora.
+  var store14 = { ga_token: 'tk', ga_sec: SEC_BIO };
+  var r14 = montar(store14, okBio, true);
+  await tick(); r14.correrTimers(); await tick();
+  ok(r14.estado().appBloqueada === false && Math.abs(Date.now() - parseInt(store14.ga_desbloqueo, 10)) < 5000,
+    'al entrar queda anotada la hora del ingreso (ga_desbloqueo)');
+  // Con un ingreso reciente, abrir no pide nada: ni bloqueo ni Face ID.
+  var store15 = { ga_token: 'tk', ga_sec: SEC_BIO, ga_desbloqueo: String(Date.now() - 60 * 1000) };
+  var r15 = montar(store15, okBio, true);
+  await tick(); r15.correrTimers(); await tick();
+  ok(r15.estado().appBloqueada === false && r15.pedidos.length === 0 && r15.el('splashLock').style.display !== '',
+    'entro hace 1 minuto: la app abre sin bloqueo y sin pedir la biometria');
+  // Con la clave tambien: la ventana es del bloqueo, no de la biometria.
+  var store15b = { ga_token: 'tk', ga_sec: JSON.stringify({ pin: 'h' }), ga_desbloqueo: String(Date.now() - 11 * 60 * 60 * 1000) };
+  var r15b = montar(store15b, okBio, true);
+  ok(r15b.estado().appBloqueada === false, 'con solo clave y 11 h desde el ingreso, tampoco pide');
+  // Vencida la ventana, pide como siempre.
+  var store16 = { ga_token: 'tk', ga_sec: SEC_BIO, ga_desbloqueo: String(Date.now() - H12 - 1000) };
+  var r16 = montar(store16, okBio, true);
+  ok(r16.estado().appBloqueada === true, 'a las 12 h y un segundo, vuelve a pedir');
+  // Un reloj que fue para atras (hora anotada en el futuro) no vale.
+  var store17 = { ga_token: 'tk', ga_sec: SEC_BIO, ga_desbloqueo: String(Date.now() + 60 * 60 * 1000) };
+  var r17 = montar(store17, okBio, true);
+  ok(r17.estado().appBloqueada === true, 'una hora anotada en el futuro no cuenta: pide igual');
+  // Basura en la clave tampoco.
+  var store18 = { ga_token: 'tk', ga_sec: SEC_BIO, ga_desbloqueo: 'ayer' };
+  var r18 = montar(store18, okBio, true);
+  ok(r18.estado().appBloqueada === true, 'un valor que no es un numero no abre nada');
+
   console.log('\nH) sin bloqueo configurado, el splash se va normal');
   var r8 = montar({ ga_token: 'tk' }, okBio, true);
   ok(r8.estado().appBloqueada === false, 'no se bloquea nada');
