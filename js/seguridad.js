@@ -185,12 +185,22 @@ function intentarBio(auto, forzado) {
 if (bioEnCurso && !forzado) return;
 var mio = ++bioIntento;
 bioEnCurso = true;
-var t0 = Date.now();
+// El arranque adelantado (v215): un snippet en el <head> de index.html ya
+// pidio Face ID con esta misma credencial antes de que cargaran el CSS y los
+// 17 archivos, y dejo la promesa en window.__bioArranque. Se ADOPTA en vez de
+// pedir otra: dos peticiones vivas se rechazan entre si. Vale para el
+// automatico y para un toque; el boton (forzado) la aborta y pide de cero,
+// como con cualquier peticion colgada. Se consume una sola vez.
+var previa = null;
+try { previa = window.__bioArranque || null; if (previa) window.__bioArranque = null; } catch (e) {}
+if (previa) bioAbort = previa.abort;
+var adoptada = !!(previa && !forzado);
+var t0 = adoptada ? previa.t0 : Date.now();
 var err = document.getElementById('secErr');
 if (!auto) err.textContent = '';
 var btn = document.getElementById('secBioGo');
 if (!auto) btn.textContent = 'Verifying...';
-return bioVerificar(s.bio).then(function () {
+return (adoptada ? previa.promesa : bioVerificar(s.bio)).then(function () {
 // Un intento abortado por el boton puede responder tarde: se ignora entero
 // (su exito o su error son de una peticion que ya no existe para el user).
 if (mio !== bioIntento) return;
@@ -255,7 +265,9 @@ var una = function () { if (document.visibilityState === 'hidden') return; try {
 document.addEventListener('visibilitychange', una);
 return;
 }
-setTimeout(function () { if (appBloqueada && modoBio) intentarBio(true); }, 350);
+// Sin espera (era 350 ms hasta v214): cada milisegundo acá es demora visible
+// antes de la hoja de Face ID. El setTimeout queda solo para salir del hilo.
+setTimeout(function () { if (appBloqueada && modoBio) intentarBio(true); }, 0);
 }
 autoAlVerse();
 });

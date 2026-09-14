@@ -23,16 +23,17 @@
      esperando el dia que lo cambie. Si se agrega otra fuente de logos, va ACA
      o las imagenes se bloquean en silencio.
      script-src SIN 'unsafe-inline' (desde v39): todo el codigo vive en js/*.js
-     y el unico inline es el snippet del tema, permitido por su hash sha256.
-     OJO: si se EDITA ese snippet hay que recalcular el hash o el tema deja de
-     aplicarse antes del primer pintado.      test-html.js verifica que coincidan.
+     y los unicos inline son DOS snippets del head, cada uno permitido por su
+     hash sha256: el del tema y, desde v215, el arranque adelantado de Face ID.
+     OJO: si se EDITA uno hay que recalcular su hash o deja de correr en
+     silencio.      test-html.js verifica que TODOS los inline tengan su hash.
      frame-ancestors NO esta (4/09/2026): en un <meta> el navegador la ignora
      y solo deja un error en consola en cada carga; solo vale por cabecera
      HTTP, que GitHub Pages no manda. Nunca protegio nada — la proteccion
      real contra embeber la app es que sin la clave no muestra un numero. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
-  script-src 'self' 'sha256-eCEv2Xtk/d4etq+pER4EYyojYMTusYCys+IfxZyAxE0=';
+  script-src 'self' 'sha256-eCEv2Xtk/d4etq+pER4EYyojYMTusYCys+IfxZyAxE0=' 'sha256-9WSSGaumgjkKKOTBiFySD8x13PMHImZGev+ylyjyj4I=';
   style-src 'self' 'unsafe-inline';
   font-src 'self' data:;
   img-src 'self' data: https://assets.parqet.com https://assets.coincap.io https://*.finnhub.io;
@@ -45,6 +46,14 @@
   form-action 'self'">
 <title>Guzmana</title>
 <script>try{if(localStorage.getItem('ga_tema')==='claro')document.documentElement.classList.add('light');}catch(e){}</script>
+<!-- El arranque adelantado de Face ID (v215, 14/09/2026): el pedido de
+     biometria sale ACA, antes del CSS y de los 17 archivos de js/, para que la
+     hoja de iOS aparezca lo antes posible al abrir la app. Es el MISMO pedido
+     que bioVerificar (seguridad.js) y la misma condicion que activarBloqueo
+     (bloqueo biometrico + clave de la API); seguridad.js lo ADOPTA en vez de
+     pedir otro (dos peticiones vivas se rechazan entre si). Permitido por su
+     hash en la CSP: si se edita, recalcular. test-html.js vigila las dos cosas. -->
+<script>(function(){try{var s=JSON.parse(localStorage.getItem('ga_sec')||'{}');if(!s.bio||!localStorage.getItem('ga_token')||document.visibilityState==='hidden'||!window.PublicKeyCredential||!navigator.credentials||!window.AbortController)return;var b=s.bio.replace(/-/g,'+').replace(/_/g,'/'),r=atob(b),a=new Uint8Array(r.length);for(var i=0;i<r.length;i++)a[i]=r.charCodeAt(i);var c=new AbortController(),p=navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rpId:location.hostname,allowCredentials:[{type:'public-key',id:a}],userVerification:'required',timeout:60000},signal:c.signal});p.catch(function(){});window.__bioArranque={promesa:p,abort:c,t0:Date.now()};}catch(e){}})();</script>
 <base target="_top">
 <!-- viewport-fit=cover: sin esto las variables env(safe-area-inset-*) que usa
      el CSS valen 0 en iOS y el contenido se mete bajo el notch y bajo la barra

@@ -355,6 +355,33 @@ var snippetTema = (html.match(/<script>(try\{[\s\S]*?)<\/script>/) || [])[1];
 ok(!!snippetTema, 'el snippet del tema existe');
 var hashReal = 'sha256-' + cryptoH.createHash('sha256').update(snippetTema).digest('base64');
 ok(csp.indexOf(hashReal) !== -1, 'el hash de la CSP coincide con el snippet REAL (si editaste el snippet, recalculalo)');
+// Desde v215 hay un segundo inline (el arranque adelantado de Face ID): TODOS
+// los bloques inline tienen que tener su hash en la CSP, o corren en silencio
+// en ningun lado.
+// El archivo TAL CUAL: leerIndexCrudo() mete el CSS adentro del HTML y el
+// <link> de la hoja de estilos desaparece.
+var crudoH = fsA.readFileSync(ruta.INDEX, 'utf8');
+var reInline = /<script>([\s\S]*?)<\/script>/g, mInline, sinHash = [], nInline = 0;
+while ((mInline = reInline.exec(crudoH)) !== null) {
+  nInline++;
+  var hInline = 'sha256-' + cryptoH.createHash('sha256').update(mInline[1]).digest('base64');
+  if (csp.indexOf(hInline) === -1) sinHash.push(mInline[1].slice(0, 40));
+}
+ok(nInline >= 2 && sinHash.length === 0, 'TODOS los inline (' + nInline + ') tienen su hash en la CSP' + (sinHash.length ? ' — SIN HASH: ' + sinHash.join(' | ') : ''));
+
+console.log('\nH2) el arranque adelantado de Face ID sale del <head>, antes del CSS');
+var iBio = crudoH.indexOf('__bioArranque'), iCss = crudoH.indexOf('<link rel="stylesheet"'), iJs = crudoH.indexOf('<script src=');
+ok(iBio !== -1 && iBio < iCss && iBio < iJs, 'el snippet esta antes de la hoja de estilos y de los 17 archivos');
+var snipBio = (crudoH.match(/<script>(\(function\(\)\{try\{var s=JSON\.parse[\s\S]*?)<\/script>/) || [])[1] || '';
+ok(/rpId:location\.hostname/.test(snipBio) && /userVerification:'required'/.test(snipBio) && /allowCredentials:\[\{type:'public-key',id:/.test(snipBio) && /timeout:60000/.test(snipBio),
+  'pide lo MISMO que bioVerificar: rpId del host, la credencial guardada, userVerification required, 60 s');
+ok(/getItem\('ga_sec'\)/.test(snipBio) && /getItem\('ga_token'\)/.test(snipBio) && /visibilityState==='hidden'/.test(snipBio),
+  'y solo con bloqueo biometrico, clave de la API y la pagina a la vista (la condicion de activarBloqueo)');
+ok(/p\.catch\(function\(\)\{\}\)/.test(snipBio) && /signal:c\.signal/.test(snipBio),
+  'con catch vacio (nadie la adopta si no hay sensor) y abortable (el boton la tiene que poder cortar)');
+var segH2 = fsA.readFileSync(pathA.join(ruta.RUTA, 'js', 'seguridad.js'), 'utf8');
+ok(/window\.__bioArranque\b/.test(segH2) && /adoptada \? previa\.promesa : bioVerificar/.test(segH2),
+  'seguridad.js la adopta en vez de pedir una segunda');
 
 // ===========================================================================
 // I) EL RITUAL DEL BUMP TIENE CUSTODIA

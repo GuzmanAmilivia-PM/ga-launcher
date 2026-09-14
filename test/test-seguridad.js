@@ -50,7 +50,7 @@ function elemento(id) {
 }
 
 // Monta el escenario y devuelve con que mirarlo.
-function montar(store, bioGet, bioDispo) {
+function montar(store, bioGet, bioDispo, antes) {
   var els = {};
   var pedidos = [];      // cada llamada a navigator.credentials.get
   var timers = [];
@@ -88,6 +88,7 @@ function montar(store, bioGet, bioDispo) {
     parseInt: parseInt, isFinite: isFinite
   };
   ctx.window = ctx;
+  if (antes) antes(ctx);   // p. ej. dejar window.__bioArranque como lo deja el <head>
   var fn = new Function('__c', 'with (__c) {\n' + NUCLEO + '\n' + SEG + '\n' +
     '__c.__estado = function () { return { appBloqueada: appBloqueada, lockPendiente: lockPendiente }; };\n' +
     '__c.__mostrarLock = function (m) { return mostrarLock(m); };\n' +
@@ -287,6 +288,48 @@ function falla(nombre) { return function () { var e = new Error('x'); e.name = n
   await tick(); await tick();
   ok(!('ga_bio_auto' in store10), 'otro error distinto tampoco se anota');
   ok(r10.el('secErr').textContent.indexOf('InvalidStateError') !== -1, 'y su nombre queda a la vista');
+
+  console.log('\nG4) el arranque adelantado del <head> se adopta, no se duplica (v215)');
+  // index.html pide Face ID desde el <head> y deja la promesa en
+  // window.__bioArranque. Si seguridad.js pidiera OTRA, iOS rechazaria una de
+  // las dos: se adopta la que ya esta en vuelo.
+  function conHead(promesa) {
+    var ab = { abortado: false }; ab.abort = function () { ab.abortado = true; };
+    var head = { promesa: promesa, abort: ab, t0: 1 };
+    return { head: head, antes: function (ctx) { ctx.__bioArranque = head; } };
+  }
+  var resolverHead; var h1 = conHead(new Promise(function (res) { resolverHead = res; }));
+  var r11 = montar({ ga_token: 'tk', ga_sec: SEC_BIO }, okBio, true, h1.antes);
+  await tick();
+  r11.correrTimers();
+  await tick();
+  ok(r11.pedidos.length === 0, 'el automatico NO pide una segunda: adopta la del head');
+  ok(r11.ctx.__bioArranque === null, 'y la consume (no se adopta dos veces)');
+  ok(r11.estado().appBloqueada === true, 'mientras la hoja de iOS esta abierta, sigue bloqueada');
+  r11.el('splash').disparar('click', { target: { id: 'splash' } });
+  await tick();
+  ok(r11.pedidos.length === 0 && h1.head.abort.abortado === false, 'un toque perdido tampoco la aborta ni pide otra');
+  resolverHead({ id: 'AAAA' });
+  await tick(); await tick();
+  ok(r11.estado().appBloqueada === false, 'cuando Face ID responde, la app abre');
+  // El boton sigue siendo la salida de una peticion colgada: aborta la del head.
+  var h2 = conHead(new Promise(function () {}));
+  var r12 = montar({ ga_token: 'tk', ga_sec: SEC_BIO }, function () { return new Promise(function () {}); }, true, h2.antes);
+  await tick();
+  r12.correrTimers();
+  await tick();
+  r12.el('secBioGo').click();
+  await tick();
+  ok(h2.head.abort.abortado === true && r12.pedidos.length === 1, 'el boton aborta la del head y pide de cero');
+  // Si la del head fue rechazada, no cuenta como fallo y deja el motivo a la vista.
+  var eHead = new Error('no'); eHead.name = 'NotAllowedError';
+  var h3 = conHead(Promise.reject(eHead)); h3.head.promesa.catch(function () {});
+  var r13 = montar({ ga_token: 'tk', ga_sec: SEC_BIO }, okBio, true, h3.antes);
+  await tick();
+  r13.correrTimers();
+  await tick(); await tick();
+  ok(r13.pedidos.length === 0 && r13.el('secErr').textContent.indexOf('NotAllowedError') !== -1 && r13.estado().appBloqueada === true,
+    'un rechazo de la del head se trata como el del automatico: motivo a la vista, sigue bloqueada, sin pedir otra');
 
   console.log('\nH) sin bloqueo configurado, el splash se va normal');
   var r8 = montar({ ga_token: 'tk' }, okBio, true);
