@@ -51,7 +51,11 @@ var preambulo = 'var montosOcultos = false;\nvar sparksPorSym = {};\n' +
   fuente('EXT_UMBRAL_PCT', /var EXT_UMBRAL_PCT = [^;]*;/) + '\n' +
   fuente('extHtml', /function extHtml\(p\) \{[\s\S]*?\n\}/) + '\n' +
   fuente('daychgHtml', /function daychgHtml\(p\) \{[\s\S]*?\n\}/) + '\n' +
-  fuente('gananciaHtml', /function gananciaHtml\(p\) \{[\s\S]*?\n\}/) + '\n';
+  fuente('gananciaHtml', /function gananciaHtml\(p\) \{[\s\S]*?\n\}/) + '\n' +
+  // El respaldo que saca el tipo del payload del Inicio. Se ancla en su
+  // `return null;` final porque el `}` del for queda al principio de una linea
+  // y el patron de siempre cortaria la funcion por la mitad.
+  fuente('tipoDeSymbol', /function tipoDeSymbol\(symbol\) \{[\s\S]*?return null;\n\}/) + '\n';
 
 // ---- DOM de mentira (el mismo de test-vista-posiciones) ----
 function elemento(id) {
@@ -79,6 +83,10 @@ function armarCtx(extra) {
     },
     engancharLogos: function () {},
     toggleDetalle: function () {},
+    // El payload del Inicio. Vacio por defecto: asi la primera tanda prueba el
+    // caso normal (el tipo llega en el payload de la cuenta) sin ayuda de
+    // ningun respaldo.
+    lastData: { posiciones: [] },
     Number: Number, isFinite: isFinite, String: String, Math: Math, Object: Object
   };
   for (var k in extra) ctx[k] = extra[k];
@@ -120,6 +128,13 @@ var apiCuenta = evaluar(ctxCuenta, codigoCuenta, '{ renderAccount: renderAccount
 
 // Charles Schwab tal como llega del Worker: por valor descendente, con los
 // ETFs y las acciones MEZCLADOS y una fila de liquidez en el medio.
+//
+// OJO CON LA FORMA. El primer intento de esta pantalla se publico roto y
+// Guzman lo vio: el fixture traia `tipo` en cada posicion, pero el endpoint de
+// una CUENTA no lo mandaba —solo lo mandaba el del Inicio—, asi que en
+// produccion no habia dos grupos que separar y no se veia ninguna linea. El
+// contrato ahora esta clavado del lado que lo emite (Z2 en el Worker), y acá
+// abajo se prueban LAS DOS formas: con `tipo` y sin él.
 var schwab = {
   total: 72370, liquidez: 1947,
   posiciones: [
@@ -144,6 +159,28 @@ ok(clasesCS[2].indexOf('corte-grupo') !== -1,
    'y cae arriba de la PRIMERA accion (META), no abajo del ultimo ETF');
 ok(clasesCS[0].indexOf('corte-grupo') === -1, 'la primera fila de todas NO lleva linea: no abre un grupo nuevo, abre la tabla');
 ok(clasesCS.every(function (c) { return c.indexOf('asset-row') !== -1; }), 'todas las filas siguen siendo asset-row (se puede tocar para abrir el detalle)');
+
+// La MISMA cuenta servida por un cache viejo, SIN `tipo` en ninguna fila: el
+// respaldo la saca del payload del Inicio, que lista la cartera entera. Sin
+// esto la pantalla se veria como una lista sola hasta que venza ese cache.
+var sinTipo = { total: schwab.total, liquidez: schwab.liquidez,
+  posiciones: schwab.posiciones.map(function (p) {
+    var q = {}; for (var k in p) if (k !== 'tipo') q[k] = p[k];
+    return q;
+  }) };
+ctxCuenta.lastData = { posiciones: [
+  { symbol: 'VOO', tipo: 'etf' }, { symbol: 'QQQ', tipo: 'etf' },
+  { symbol: 'META', tipo: 'accion' }, { symbol: 'MSFT', tipo: 'accion' },
+  { symbol: 'LIQUIDEZ', tipo: 'cash' }
+] };
+var apiConInicio = evaluar(ctxCuenta, codigoCuenta, '{ renderAccount: renderAccount }');
+apiConInicio.renderAccount({ key: 'CS', nombre: 'CS' }, sinTipo);
+var simbolosSinTipo = ctxCuenta._els.accBody.children.map(simboloDe);
+var clasesSinTipo = clasesDe(ctxCuenta._els.accBody);
+ok(simbolosSinTipo.join(',') === 'VOO,QQQ,META,MSFT',
+   'sin `tipo` en el payload, el tipo sale del Inicio y el orden es el mismo (salio: ' + simbolosSinTipo.join(',') + ')');
+ok(clasesSinTipo[2].indexOf('corte-grupo') !== -1,
+   'y la doble linea sigue cayendo arriba de la primera accion');
 
 // IBKR HOY no tiene ETFs: sin cambio de tipo no hay linea. El dia que compre
 // uno, aparece sola — que es exactamente lo que pidio Guzman.

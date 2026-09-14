@@ -313,6 +313,18 @@ if (String(lista[i].symbol).toUpperCase() === s) return lista[i].cambioDia;
 }
 return null;
 }
+// El tipo de activo, buscado en el payload del Inicio. Es un RESPALDO: desde
+// el 14/09/2026 el propio payload de la cuenta trae `tipo`, pero una respuesta
+// guardada de antes no, y sin esto la pantalla volveria a verse como una lista
+// sola hasta que venza ese cache. Mismo camino que cambioDiaDe.
+function tipoDeSymbol(symbol) {
+var s = String(symbol || '').toUpperCase();
+var lista = (lastData && lastData.posiciones) || [];
+for (var i = 0; i < lista.length; i++) {
+if (String(lista[i].symbol).toUpperCase() === s) return lista[i].tipo || null;
+}
+return null;
+}
 function renderAccount(acc, data) {
 lastAcc = acc; lastAccData = data;
 document.getElementById('accTotal').textContent = fmt(data.total);
@@ -358,6 +370,7 @@ var pintables = (data.posiciones || []).filter(function (h) {
 // `ordenarPorTipo` y `tipoDe` viven en tablero.js, que carga DESPUES que este
 // archivo: por eso se piden ACA ADENTRO, en tiempo de ejecucion, y con guarda
 // — una referencia a ellas al cargar mataria vistas.js entero.
+pintables.forEach(function (h) { if (!h.tipo) h.tipo = tipoDeSymbol(h.symbol); });
 if (typeof ordenarPorTipo === 'function') pintables = ordenarPorTipo(pintables);
 var tipoPrevio = null;
 pintables.forEach(function (h) {
