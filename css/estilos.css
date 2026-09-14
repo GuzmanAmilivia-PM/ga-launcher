@@ -263,17 +263,19 @@ canvas { max-width: 100%; }
 .detfund-nota { font-size: 11px; color: var(--muted); line-height: 1.45; margin: 10px 0 0; }
 .tvwrap { margin-top: 12px; height: 190px; border-radius: 12px; overflow: hidden; }
 tr.asset-row { cursor: pointer; }
-/* La DOBLE LINEA entre grupos (14/09/2026, pedido de Guzman). Va arriba de la
-   primera fila del grupo nuevo y no abajo de la ultima del anterior: plegada
-   la tarjeta del Inicio, si las acciones no se ven no hay corte que marcar y
-   no queda una linea suelta al final de la tabla. Con border-collapse el
-   borde mas ancho gana, asi que estos 4px pisan el 1px de la fila de arriba.
-   El estilo `double` es literalmente lo pedido: el navegador dibuja dos.
-   NO usa var(--border): con el 7% de las rayas comunes las dos hairlines no
-   se distinguian de una separacion normal —probado en el telefono— y el corte
-   dejaba de leerse como corte. Con 26% del color del texto se ve el grupo sin
-   gritar, y sigue el tema (claro y oscuro) por venir de --text. */
-tr.asset-row.corte-grupo > td { border-top: 4px double color-mix(in srgb, var(--text) 26%, transparent); }
+/* La LINEA DE CORTE entre grupos (14/09/2026, pedido de Guzman). Va arriba de
+   la primera fila del grupo nuevo y no abajo de la ultima del anterior:
+   plegada la tarjeta del Inicio, si las acciones no se ven no hay corte que
+   marcar y no queda una linea suelta al final de la tabla. Con
+   border-collapse el borde mas ancho gana, asi que estos 2px pisan el 1px de
+   la fila de arriba.
+   Empezo siendo `double` —dos rayas, que era lo pedido al pie de la letra— y
+   Guzman la vio y prefirio "una sola un poco mas gruesa": las dos hairlines
+   juntas hacian mas ruido que corte. NO usa var(--border): con el 7% de las
+   rayas comunes no se distinguia de una separacion normal. Con 30% del color
+   del texto se lee el grupo sin gritar, y sigue el tema (claro y oscuro) por
+   venir de --text. */
+tr.asset-row.corte-grupo > td { border-top: 2px solid color-mix(in srgb, var(--text) 30%, transparent); }
 .chartbox { position: relative; height: 150px; }
 .chartbox-big { height: min(55vh, 420px); }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }

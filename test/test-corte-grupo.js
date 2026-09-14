@@ -1,6 +1,10 @@
-// La DOBLE LINEA entre ETFs y acciones (14/09/2026).
+// La LINEA DE CORTE entre ETFs y acciones (14/09/2026).
 //
-// Pedido de Guzman: "Que haya una doble linea entre etfs y acciones, en los
+// Nacio como una DOBLE linea —lo pedido al pie de la letra— y Guzman la vio
+// publicada y prefirio "una sola un poco mas gruesa": las dos rayas juntas
+// hacian mas ruido que corte. De ahi el nombre del archivo.
+//
+// Pedido original de Guzman: "Que haya una doble linea entre etfs y acciones, en los
 // portfolios de charles Schwab ahi si pone etfs y acciones separados tambien,
 // en IBKR no hay etfs pero si hubiera tambien".
 //
@@ -154,7 +158,7 @@ ok(simbolosCS.join(',') === 'VOO,QQQ,META,MSFT',
    'los ETFs van primero y despues las acciones, aunque el Worker los mande mezclados (salio: ' + simbolosCS.join(',') + ')');
 ok(simbolosCS.indexOf('LIQUIDEZ') === -1, 'la fila de liquidez no se lista: ya esta en "Cash in account"');
 var cortesCS = clasesCS.filter(function (c) { return c.indexOf('corte-grupo') !== -1; });
-ok(cortesCS.length === 1, 'hay UNA sola doble linea (salieron ' + cortesCS.length + ')');
+ok(cortesCS.length === 1, 'hay UNA sola linea de corte (salieron ' + cortesCS.length + ')');
 ok(clasesCS[2].indexOf('corte-grupo') !== -1,
    'y cae arriba de la PRIMERA accion (META), no abajo del ultimo ETF');
 ok(clasesCS[0].indexOf('corte-grupo') === -1, 'la primera fila de todas NO lleva linea: no abre un grupo nuevo, abre la tabla');
@@ -180,7 +184,7 @@ var clasesSinTipo = clasesDe(ctxCuenta._els.accBody);
 ok(simbolosSinTipo.join(',') === 'VOO,QQQ,META,MSFT',
    'sin `tipo` en el payload, el tipo sale del Inicio y el orden es el mismo (salio: ' + simbolosSinTipo.join(',') + ')');
 ok(clasesSinTipo[2].indexOf('corte-grupo') !== -1,
-   'y la doble linea sigue cayendo arriba de la primera accion');
+   'y la linea de corte sigue cayendo arriba de la primera accion');
 
 // IBKR HOY no tiene ETFs: sin cambio de tipo no hay linea. El dia que compre
 // uno, aparece sola — que es exactamente lo que pidio Guzman.
@@ -194,7 +198,7 @@ var ibkr = {
 apiCuenta.renderAccount({ key: 'IB', nombre: 'IB' }, ibkr);
 var clasesIB = clasesDe(ctxCuenta._els.accBody);
 ok(clasesIB.length === 2 && clasesIB.every(function (c) { return c.indexOf('corte-grupo') === -1; }),
-   'IBKR, que hoy es todo acciones, no lleva ninguna doble linea');
+   'IBKR, que hoy es todo acciones, no lleva ninguna linea de corte');
 
 ibkr.posiciones.unshift({ symbol: 'SMH', nombre: 'VanEck Semiconductor', tipo: 'etf', valor: 30000, qty: 55, precioActual: 545, precioCompra: 300 });
 apiCuenta.renderAccount({ key: 'IB', nombre: 'IB' }, ibkr);
@@ -236,7 +240,7 @@ var clasesPleg = clasesDe(ctxInicio._els.holdingsList);
 var visiblesPleg = clasesPleg.filter(function (c) { return c.indexOf('hidden-row') === -1; });
 ok(visiblesPleg.length === 3, 'plegada se ven los 3 ETFs (se ven ' + visiblesPleg.length + ')');
 ok(clasesPleg.every(function (c) { return c.indexOf('corte-grupo') === -1; }),
-   'PLEGADA no hay doble linea: si las acciones no se ven, una raya al final de la tabla no separaria nada');
+   'PLEGADA no hay linea de corte: si las acciones no se ven, una raya al final de la tabla no separaria nada');
 
 apiInicio.toggleHoldings();
 var clasesExp = clasesDe(ctxInicio._els.holdingsList);
@@ -245,27 +249,27 @@ clasesExp.forEach(function (c, i) { if (c.indexOf('corte-grupo') !== -1) cortesE
 ok(clasesExp.length === 6 && clasesExp.every(function (c) { return c.indexOf('hidden-row') === -1; }),
    'expandida se ven las 6');
 ok(cortesExp.length === 1 && cortesExp[0] === 3,
-   'y hay UNA doble linea, arriba de la primera accion (indices con linea: ' + JSON.stringify(cortesExp) + ')');
+   'y hay UNA linea de corte, arriba de la primera accion (indices con linea: ' + JSON.stringify(cortesExp) + ')');
 
 // ===========================================================================
 console.log('\nC) la regla de estilo que la dibuja');
 // ===========================================================================
 var regla = (html.match(/tr\.asset-row\.corte-grupo[^\n]*\n?/) || [''])[0];
 ok(!!regla, 'existe la regla .corte-grupo');
-// Se mira lo que TIENE QUE valer, no el numero exacto: el estilo `double` (dos
-// rayas, que es lo pedido) y un ancho de 3px o mas, porque por debajo de eso el
-// navegador dibuja `double` como una sola raya y ademas empataria con el 1px de
-// las filas comunes, que con border-collapse decide quien gana.
+// Se mira lo que TIENE QUE valer, no el numero exacto: UNA sola raya y mas
+// gruesa que las comunes. Empezo siendo `double` (dos rayas) y Guzman prefirio
+// una sola: el ancho no puede quedar en 1px porque ahi empata con el de las
+// filas normales, y con border-collapse el empate deja de distinguirse.
 var anchoLinea = Number((regla.match(/border-top:\s*(\d+(?:\.\d+)?)px/) || [0, 0])[1]);
-ok(/border-top:[^;]*\bdouble\b/.test(regla),
-   'es una DOBLE linea de verdad (border-style double), no una mas gruesa: ' + regla.trim());
-ok(anchoLinea >= 3,
-   'y con ' + anchoLinea + 'px de ancho: por debajo de 3px `double` se dibuja como una sola raya');
+ok(/border-top:[^;]*\bsolid\b/.test(regla),
+   'es UNA sola raya (border-style solid): ' + regla.trim());
+ok(anchoLinea > 1,
+   'y mas gruesa que las comunes: ' + anchoLinea + 'px contra el 1px de las filas normales');
 // Con border-collapse el borde mas ancho gana: 3px pisa el 1px de la fila de
 // arriba. Si alguien bajara el ancho a 1px, la linea de arriba empataria y la
-// doble no se veria.
+// linea de corte no se distinguiria.
 ok(/td \{[^}]*border-bottom: 1px solid var\(--border\)/.test(html),
-   'las filas comunes siguen con su raya simple de 1px (la doble gana por ancho)');
+   'las filas comunes siguen en 1px (la del corte gana por ancho, con border-collapse)');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

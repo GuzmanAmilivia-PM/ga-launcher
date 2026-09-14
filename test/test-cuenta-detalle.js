@@ -11,12 +11,12 @@ ok(/class="col-spark">' \+ sparkDe\(h\)/.test(src), 'y el mini-grafico del mes')
 ok(/daychgHtml\(h\) \+ esc\(fmtNum\(h\.precioActual\)\) \+ compra/.test(src), 'el % del dia arriba del precio, y el precio medio de compra debajo');
 ok(/class="pcmini">avg /.test(src), 'el precio medio va en chico, como "avg"');
 // Que las filas de cash (USDT, LIQUIDEZ) no se listen se prueba EJECUTANDO el
-// render, en test-doble-linea.js. Acá vivía un assert que exigía el texto
+// render, en test-corte-grupo.js. Acá vivía un assert que exigía el texto
 // `if (esFilaCash(h)) return;` y se puso rojo el 14/09 al mover ese mismo
 // filtro a un .filter() — sin que cambiara nada de lo que hace. Un assert que
 // se rompe con un cambio de forma y no con uno de conducta no está cuidando
 // nada: acá queda solo que el filtro SE CONSULTE.
-ok(/esFilaCash\(h\)/.test(src), 'la tabla consulta esFilaCash (la exclusión en sí la verifica test-doble-linea, ejecutando)');
+ok(/esFilaCash\(h\)/.test(src), 'la tabla consulta esFilaCash (la exclusión en sí la verifica test-corte-grupo, ejecutando)');
 ok(/engancharLogos\(tr\)/.test(src), 'los logos que no cargan caen a las iniciales');
 ok(/h\.cripto = true;/.test(src), 'en Binance las filas se marcan cripto para el logo y el tipo');
 var thead = (html.match(/<tbody id="accBody">/) || []).index;
