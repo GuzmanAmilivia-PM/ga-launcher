@@ -747,6 +747,14 @@ function _inicioDelDia(ts) {
  * - {pocos:true}: hay historia pero todavia no alcanza para un porcentaje.
  */
 function comparacionGrupo() {
+  // La MISMA guarda que pintarVsBench y comparacionAnual (14/09/2026). Aca no
+  // fallaba, pero solo por el ORDEN en que se pinta: el unico llamador
+  // (htmlComparacion) corta antes si el pedido fallo y llama a aplicarAportes
+  // primero. Eso es una proteccion por coreografia, no por chequeo: el dia que
+  // alguien llame a esta fn desde otra pantalla, `aportesLista` vacia se lee
+  // como 'no hubo aportes' y el rendimiento del grupo sale INFLADO, sin avisar.
+  // Es exactamente lo que paso con el vs S&P del Inicio el 13/09/2026.
+  if (!aportesCargados) return null;
   if (!grupoPuntos.length) return null;
   if (grupoPuntos.length < 2) return { pocos: true, dias: grupoPuntos.length, nombre: grupoNombre };
 

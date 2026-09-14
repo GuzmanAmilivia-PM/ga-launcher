@@ -125,6 +125,24 @@ api = montarK([null, 80000, 86000]);
 ok(api.grupo().length === 2, 'toma solo los dias con dato guardado (el null no cuenta)');
 var comp = api.comparacionGrupo();
 ok(comp && !comp.pocos, 'con dos dias ya calcula');
+
+// K2) SIN la lista de aportes cargada NO devuelve numero (14/09/2026).
+// Aca nunca fallo, pero solo por el ORDEN en que se pinta: htmlComparacion
+// corta antes si el pedido fallo y llama a aplicarAportes primero. Eso es
+// proteccion por coreografia, no por chequeo. Sin la bandera, la lista vacia
+// se lee como 'no hubo aportes': el capital queda en 80.000 en vez de 85.000
+// y el rendimiento del grupo sale INFLADO (+7,5% en vez de +1,2%), sin avisar.
+// Es el mismo defecto que el vs S&P del Inicio el 13/09/2026.
+//
+// El montaje es el MISMO de montarK pero sin aplicarAportes, asi la unica
+// diferencia con el caso de arriba es la bandera. Comprobado por mutacion: si
+// se saca la guarda de comparacionGrupo, este assert se pone rojo.
+var sinCargar = montar({ fullSerie: serieG });
+sinCargar.aplicarBench({ bench: { nombre: 'S&P 500', valores: [5000, 5250, 5500] } });
+sinCargar.aplicarGrupo({ serieGrupo: { nombre: 'Schwab + IBKR + Binance', valores: [null, 80000, 86000] } });
+ok(sinCargar.grupo().length === 2, 'el grupo SI quedo armado (si no, el assert de abajo pasaria por la razon equivocada)');
+ok(sinCargar.comparacionGrupo() === null,
+  'y aun asi no devuelve numero: sin los aportes no se puede saber el capital');
 ok(comp.desde === d2, 'la ventana arranca el primer dia guardado, no el de la serie');
 ok(comp.capital === 85000, 'capital = valor al arrancar (80.000) + aporte al grupo (5.000) (=' + comp.capital + ')');
 ok(comp.valor === 86000, 'el valor de hoy es el del grupo, no el patrimonio total');
