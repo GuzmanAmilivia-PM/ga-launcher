@@ -116,6 +116,20 @@ function pintarVsBench(serie, pctCartera) {
   // que es la comparacion honesta. El asterisco queda solo para el caso en
   // que no se puede desglosar.
   var m = movimientoDelSaldo(serie);
+  // SIN LA LISTA DE APORTES NO SE DIBUJA NADA (14/09/2026). Es la misma guarda
+  // que ya tenia comparacionAnual y que aca faltaba: aportesCargados arranca en
+  // false y la lista llega al abrir el panel de Aportes — o al arrancar, pero
+  // SOLO si el cache del servidor esta caliente. Sin ella no se puede descontar
+  // lo que Guzman deposito, y el % crudo contra el indice daba el DOBLE de
+  // ventaja: 21,6 pp en vez de 10,7 el 13/09/2026, con 8.500 aportados en el
+  // ano. Y era INTERMITENTE —el mismo numero salia bien o mal segun la
+  // temperatura del cache—, asi que no habia forma de saber cual se estaba
+  // leyendo. El asterisco de mas abajo NO cubre este caso y nunca pudo: para
+  // avisar "hubo aportes que no pude descontar" necesita la lista de aportes,
+  // que es justo lo que falta. Un hueco que se llena solo un segundo despues es
+  // mejor que un numero que miente a favor. Lo encontro Guzman mirando la
+  // pantalla, no la suite.
+  if (m && m.sinDatos === 'aportes') { el.textContent = ''; el.className = 'vsbench'; return; }
   var limpio = (m && !m.sinDatos && m.mercadoPct !== null && Math.abs(m.aportes) >= 1) ? m.mercadoPct : null;
   var base = (limpio !== null) ? limpio : pctCartera;
   var delta = base - pb;
@@ -885,4 +899,10 @@ function aplicarAportes(r) {
   // que ganaste algo que en realidad depositaste.
   aportesDesde = (r && r.desde) ? apISOaMs(r.desde) : null;
   if (r) aportesCargados = true;
+  // Repintar el "vs S&P" (14/09/2026). Mientras la lista no estaba, esa linea
+  // se escondia a proposito (ver pintarVsBench); ahora que llego, el numero se
+  // puede calcular bien y tiene que aparecer YA, no en el sondeo de dentro de
+  // un minuto. Es la MISMA fn que lo dibuja siempre, asi que no hay un segundo
+  // camino que pueda decir otra cosa.
+  try { if (typeof updateRangePct === 'function') updateRangePct(); } catch (e) {}
 }

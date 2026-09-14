@@ -383,7 +383,6 @@ var lastHoldings = [];
 // Las filas pintadas ({symbol, tr}) y las cabeceras de seccion ({tr, idx de
 // su primera fila}), para poder actualizar EN EL LUGAR.
 var holdFilas = [];
-var holdCabezas = [];
 // Tipo visual de una posicion; TIPO_LABELS (vistas.js) le pone el nombre.
 function tipoDe(h) {
 return (h.tipo === 'accion' || h.tipo === 'etf' || h.tipo === 'cripto' || h.tipo === 'cash') ? h.tipo : (h.cripto ? 'cripto' : 'accion');
@@ -751,7 +750,7 @@ var el = document.getElementById('holdingsList');
 var btn = document.getElementById('holdMoreBtn');
 if (btn && !btn._wired) { btn._wired = true; btn.addEventListener('click', toggleHoldings); }
 lastHoldings = list || [];
-if (!list || !list.length) { holdFilas = []; holdCabezas = []; el.innerHTML = '<tr><td colspan="4" class="newsempty">No positions.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
+if (!list || !list.length) { holdFilas = []; el.innerHTML = '<tr><td colspan="4" class="newsempty">No positions.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
 // Qué entra en la tabla y qué queda detrás del boton (ver repartoHoldings):
 // los ETFs siempre, y las 5 no-ETF mas grandes al expandir.
 var reparto = repartoHoldings(list);
@@ -762,43 +761,29 @@ var lista = ordenarPorTipo(reparto.lista);
 // reparto sí queda vacío, y la tarjeta terminaba siendo un rectángulo en blanco
 // bajo el título, sin el mensaje que existe justo para eso. Auditoría del
 // 25/08/2026.
-if (!lista.length) { holdFilas = []; holdCabezas = []; el.innerHTML = '<tr><td colspan="4" class="newsempty">No positions.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
+if (!lista.length) { holdFilas = []; el.innerHTML = '<tr><td colspan="4" class="newsempty">No positions.</td></tr>'; if (btn) btn.style.display = 'none'; return; }
 // Actualizacion EN EL LUGAR (R4): si la tabla ya muestra estos simbolos en
 // este orden, se refrescan las celdas de cada fila sin vaciar el tbody.
 // Vaciarlo en cada poll cerraba el detalle abierto (y recargaba su grafico
 // de TradingView) para pintar casi lo mismo. Si cambian los simbolos o el
 // orden (una compra, un sorpasso por valor), se reconstruye como siempre.
 var enLugar = holdFilas.length === lista.length && holdFilas.every(function (f, i) { return f.symbol === lista[i].symbol && f.tr.parentNode === el; });
-if (!enLugar) { el.innerHTML = ''; holdFilas = []; holdCabezas = []; }
-var tipoPrev = null;
+if (!enLugar) { el.innerHTML = ''; holdFilas = []; }
+// SIN cabeceras de seccion (13/09/2026, pedido de Guzman: "no es necesario
+// que diga stocks etf"). Rotulaban lo que el propio simbolo ya dice —nadie
+// necesita que le aclaren que VOO es un ETF— y costaban dos renglones de la
+// PRIMERA pantalla, que es justo lo que el rediseno sin marcos habia
+// recuperado. El ORDEN no cambia: el reparto sigue poniendo los ETFs antes
+// que las acciones, solo que ahora se lee como una lista sola.
+// La pantalla Positions completa SI las conserva: alla aparece Crypto, y con
+// tres grupos el rotulo deja de ser una obviedad.
 lista.forEach(function (h, idx) {
-var t = tipoDe(h);
-if (!enLugar && t !== tipoPrev) {
-var sec = document.createElement('tr');
-sec.innerHTML = '<td colspan="4">' + esc((typeof TIPO_LABELS !== 'undefined' && TIPO_LABELS[t]) || t) + '</td>';
-el.appendChild(sec);
-holdCabezas.push({ tr: sec, idx: idx });
-tipoPrev = t;
-}
 var tr = enLugar ? holdFilas[idx].tr : document.createElement('tr');
 tr.className = claseFila(h, visibles);
 tr.innerHTML = filaHoldingHtml(h);
 engancharLogos(tr);
 tr.onclick = function () { toggleDetalle(tr, h); };
 if (!enLugar) { el.appendChild(tr); holdFilas.push({ symbol: h.symbol, tr: tr }); }
-});
-// La cabecera de una seccion se esconde junto con sus filas: una cabecera
-// sobre cero filas es un titulo sobre nada.
-//
-// Alcanza con mirar la PRIMERA fila de la seccion porque el reparto las hace
-// homogeneas: los ETFs se ven todos o —plegada— se ven todos, y las acciones
-// se esconden todas juntas. Nunca hay una seccion mezclada. Eso es una
-// PROPIEDAD DEL REPARTO, no de este bucle, asi que el arnes la verifica
-// aparte: si algun dia el reparto deja una seccion a medias, esa prueba avisa
-// y hay que volver acá. Auditoria del 24/08/2026.
-holdCabezas.forEach(function (c) {
-var primeraOculta = claseFila(lista[c.idx], visibles).indexOf('hidden-row') !== -1;
-c.tr.className = 'holdsec' + (primeraOculta ? ' hidden-row' : '');
 });
 if (btn) {
 // El botón dice "Ver más", sin número. Antes decía `Ver todas (N)`, y las dos

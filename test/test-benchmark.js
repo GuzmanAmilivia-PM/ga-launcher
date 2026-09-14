@@ -146,7 +146,38 @@ ok(!!ds[1].borderDash, 'la del indice va PUNTEADA: se distingue aunque no se vea
 ok(ds[1].fill === false, 'y sin relleno, para no tapar la de la cartera');
 ok(ds[0].borderColor === '#d4af37', 'la cartera conserva el color del acento vivo');
 
+console.log('\nC2) SIN la lista de aportes no se pinta NADA (14/09/2026)');
+// El defecto que encontro Guzman mirando la pantalla el 13/09/2026: el Inicio
+// decia +21,6 pp vs S&P 500 cuando la ventaja real era 10,7. Sin la lista de
+// aportes no se pueden descontar los 8.500 que habia depositado, y el % crudo
+// contra el indice da el DOBLE. Era INTERMITENTE: la lista llega al abrir el
+// panel de Aportes, o al arrancar solo si el cache del servidor esta caliente,
+// asi que el mismo dia mostraba un numero u otro sin nada que los distinguiera.
+// Ahora se esconde hasta saberlo, que es la MISMA guarda que comparacionAnual
+// ya tenia y que aca faltaba. ESTE ASSERT ES EL CANDADO.
+var sinAportes = montar({ fullSerie: SERIE });
+sinAportes.aplicarBench({ bench: { nombre: 'S&P 500', valores: [5000, 5100, 5250] } });
+sinAportes.pintarVsBench(SERIE, 10);
+ok(sinAportes._pintado.texto === '',
+  'sin la lista de aportes la linea queda VACIA, no pinta el +10% crudo: ' + sinAportes._pintado.texto);
+// Y en cuanto la lista llega aparece sola, sin esperar el sondeo del minuto.
+sinAportes.aplicarAportes({ lista: [], desde: '2026-01-01' });
+sinAportes.pintarVsBench(SERIE, 10);
+ok(/5\.0 pp/.test(sinAportes._pintado.texto),
+  'y con la lista cargada ya pinta el delta: ' + sinAportes._pintado.texto);
+// Que ADEMAS se repinte sola al llegar la lista no lo puede ejecutar este
+// arnes: updateRangePct vive fuera del bloque que monta. ALCANCE: mira el
+// codigo escrito. Sin esa llamada la linea existe pero queda vacia hasta el
+// sondeo del minuto siguiente, y el hueco se leeria como un defecto nuevo.
+var iFlag = codigo.indexOf('if (r) aportesCargados = true;');
+var iRepinta = codigo.indexOf('updateRangePct()', iFlag);
+ok(iFlag !== -1 && iRepinta !== -1 && (iRepinta - iFlag) < 700,
+  'y aplicarAportes pide el repintado, para que aparezca sin esperar el sondeo');
+
 console.log('\nD) el delta va en PUNTOS porcentuales, no en porcentaje');
+// La lista vacia CARGADA no es lo mismo que la lista sin cargar (ver C2): aca
+// se sabe que no hubo aportes, asi que el % crudo SI es comparable.
+api.aplicarAportes({ lista: [], desde: '2026-01-01' });
 // Cartera: 100.000 -> 110.000 = +10%. Indice: 5000 -> 5250 = +5%. Delta = 5 pp.
 ok(Math.abs(api.benchPctEnRango(SERIE) - 5) < 0.001, 'el indice hizo +5% en el rango');
 api.pintarVsBench(SERIE, 10);

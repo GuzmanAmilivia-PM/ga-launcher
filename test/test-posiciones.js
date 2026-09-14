@@ -230,27 +230,30 @@ var fn2 = new Function(Object.keys(ctx2).join(','), codigo2 + '\nreturn { render
 var api2 = fn2.apply(null, Object.keys(ctx2).map(function (k) { return ctx2[k]; }));
 
 function holding(sym, precio, valor, tipo) { return { symbol: sym, nombre: sym, qty: 1, precioActual: precio, valor: valor, pct: 0.1, tipo: tipo }; }
-// Todas acciones: una sola cabecera de seccion arriba de todo.
+// ASSERTS DADOS VUELTA (13/09/2026): el Inicio ya no pinta cabeceras de
+// seccion. Rotulaban lo que el simbolo ya dice y costaban dos renglones de la
+// primera pantalla. Estos asserts pasan a exigir que NO vuelvan, y por eso los
+// indices de los hijos ya no tienen el corrimiento de la cabecera.
 var lista1 = [holding('VOO', 100, 1000), holding('QQQ', 200, 900), holding('NVDA', 300, 800), holding('AAPL', 50, 700), holding('MELI', 60, 600)];
 api2.renderHoldings(lista1);
-ok(elHold.children.length === 6 && /holdsec/.test(elHold.children[0].className), 'pinta 5 filas + 1 cabecera de seccion');
-ok(elHold.children[0].innerHTML.indexOf('Stocks') !== -1, 'la cabecera dice Acciones');
+ok(elHold.children.length === 5, 'pinta 5 filas y NINGUNA cabecera de seccion');
+ok(!/holdsec/.test(elHold.innerHTML), 'no queda rastro de cabeceras en el Inicio');
 // Se ven CINCO posiciones sin tocar nada (pedido de Guzman, 24/08/2026; eran
 // cuatro). Con una lista de cinco, entonces, no se oculta ninguna.
-ok(!/hidden-row/.test(elHold.children[5].className), 'con cinco posiciones se ven las cinco');
-var filaQQQ = elHold.children[2];
+ok(!/hidden-row/.test(elHold.children[4].className), 'con cinco posiciones se ven las cinco');
+var filaQQQ = elHold.children[1];
 filaQQQ.onclick();
-ok(elHold.children.length === 7 && elHold.children[3].className === 'detrow', 'el detalle se inserta despues de QQQ');
-var det = elHold.children[3];
+ok(elHold.children.length === 6 && elHold.children[2].className === 'detrow', 'el detalle se inserta despues de QQQ');
+var det = elHold.children[2];
 
 var lista2 = [holding('VOO', 101, 1001), holding('QQQ', 201, 901), holding('NVDA', 301, 801), holding('AAPL', 51, 701), holding('MELI', 61, 601)];
 api2.renderHoldings(lista2);
-ok(elHold.children[2] === filaQQQ, 'mismos simbolos y orden: la fila NO se recrea');
-ok(elHold.children[3] === det, 'el detalle abierto sigue donde estaba (el poll ya no lo cierra)');
+ok(elHold.children[1] === filaQQQ, 'mismos simbolos y orden: la fila NO se recrea');
+ok(elHold.children[2] === det, 'el detalle abierto sigue donde estaba (el poll ya no lo cierra)');
 ok(filaQQQ.innerHTML.indexOf('201') !== -1, 'y la fila muestra el precio nuevo');
 
 api2.toggleHoldings();
-ok(elHold.children[3] === det && !/hidden-row/.test(elHold.children[6].className), 'expandir tambien va en el lugar: detalle vivo y todas visibles');
+ok(elHold.children[2] === det && !/hidden-row/.test(elHold.children[5].className), 'expandir tambien va en el lugar: detalle vivo y todas visibles');
 api2.toggleHoldings();
 
 // Un sorpasso DE VERDAD (QQQ pasa a valer mas que VOO) reconstruye la tabla.
@@ -259,8 +262,8 @@ api2.toggleHoldings();
 // —que es lo correcto— y la prueba pasaba sin probar el sorpasso.
 var lista3 = [holding('VOO', 101, 900), holding('QQQ', 201, 1100), holding('NVDA', 301, 801), holding('AAPL', 51, 701), holding('MELI', 61, 601)];
 api2.renderHoldings(lista3);
-ok(elHold.children.length === 6, 'un sorpasso reconstruye (el detalle se cierra, como antes)');
-ok(elHold.children[1] !== filaQQQ && elHold.children[1].innerHTML.indexOf('QQQ') !== -1, 'y QQQ pasa a estar primera');
+ok(elHold.children.length === 5, 'un sorpasso reconstruye (el detalle se cierra, como antes)');
+ok(elHold.children[0] !== filaQQQ && elHold.children[0].innerHTML.indexOf('QQQ') !== -1, 'y QQQ pasa a estar primera');
 
 // Lo que se ve y lo que queda detras del boton (pedido de Guzman, 24/08/2026):
 // plegada, los ETFs; al expandir, los ETFs mas las CINCO no-ETF mas grandes.
@@ -335,32 +338,18 @@ ok(btnHold.style.display === 'block' && btnHold.textContent === 'See more',
   'plegada el boton dice exactamente "Ver mas": ' + btnHold.textContent);
 ok(!/\d/.test(btnHold.textContent),
   'y no lleva NINGUN numero al lado: ' + btnHold.textContent);
-// La cabecera de una seccion se esconde con TODAS sus filas. Plegada, "Acciones"
-// no tiene ni una fila a la vista: dejarla ahi seria un titulo sobre nada.
-ok(cabecerasDe('visibles').join(',') === 'ETFs',
-  'plegada se ve SOLO la cabecera de ETFs: ' + cabecerasDe('visibles').join(','));
-ok(cabecerasDe('ocultas').join(',') === 'Stocks',
-  'y la de Acciones esta escondida con sus filas: ' + cabecerasDe('ocultas').join(','));
-// La cabecera mira SOLO su primera fila, y eso es correcto porque el reparto
-// deja las secciones homogeneas. Esa propiedad se fija acá: si algun dia el
-// reparto deja una seccion a medias, este assert avisa y hay que volver al
-// codigo de la cabecera, que dejaria de alcanzar. Auditoria del 24/08/2026.
-(function seccionesHomogeneas() {
-  var seccionActual = null, mezclada = null;
-  for (var k = 0; k < elHold.children.length; k++) {
-    var f = elHold.children[k], cl = f.className || '';
-    if (/holdsec/.test(cl)) { seccionActual = { nombre: (f.innerHTML || '').replace(/<[^>]*>/g, '').trim(), oculta: null }; continue; }
-    if (!seccionActual) continue;
-    var oculta = /hidden-row/.test(cl);
-    if (seccionActual.oculta === null) seccionActual.oculta = oculta;
-    else if (seccionActual.oculta !== oculta) mezclada = seccionActual.nombre;
-  }
-  ok(mezclada === null, 'ninguna seccion queda con filas visibles y ocultas mezcladas' + (mezclada ? ' (' + mezclada + ')' : ''));
-})();
+// DADOS VUELTA (13/09/2026): el Inicio ya no tiene cabeceras, ni plegado ni
+// expandido. Con ellas habia que cuidar que una cabecera no quedara flotando
+// sobre cero filas (auditoria del 24/08/2026); sin ellas ese problema no
+// existe, y lo que estos asserts cuidan ahora es que no reaparezcan.
+ok(cabecerasDe('visibles').length === 0 && cabecerasDe('ocultas').length === 0,
+  'plegada no hay ninguna cabecera de seccion');
 api2.toggleHoldings();
-ok(cabecerasDe('visibles').join(',') === 'ETFs,Stocks',
-  'expandida se ven las dos: ' + cabecerasDe('visibles').join(','));
-ok(cabecerasDe('ocultas').length === 0, 'y no queda ninguna escondida');
+ok(cabecerasDe('visibles').length === 0 && cabecerasDe('ocultas').length === 0,
+  'y expandida tampoco');
+// El AGRUPAMIENTO en si no se fue con las cabeceras: los ETFs siguen yendo
+// antes que las acciones. Eso lo fija el assert de simbolosDe de aca abajo,
+// que es ahora el unico guardian del orden.
 ok(simbolosDe('visibles').join(',') === 'VOO,QQQ,SMH,ASML,MSFT,META,GOOG,KO',
   'expandida: los 3 ETFs + las 5 acciones, agrupadas por tipo: ' + simbolosDe('visibles').join(','));
 var ocultasTrasExpandir = 0;
@@ -443,11 +432,10 @@ api2.renderHoldings(cartera);
 // que el agrupado no pueda pasar "de casualidad" por el nombre.
 var lista4 = [holding('VOO', 100, 1000, 'etf'), holding('QQQ', 200, 900, 'accion'), holding('NVDA', 300, 800, 'accion')];
 api2.renderHoldings(lista4);
-ok(elHold.children.length === 5, '3 filas + 2 cabeceras');
-ok(/holdsec/.test(elHold.children[0].className) && elHold.children[0].innerHTML.indexOf('ETFs') !== -1, 'la primera cabecera es la de ETFs');
-ok(elHold.children[1].innerHTML.indexOf('VOO') !== -1 && elHold.children[1].innerHTML.indexOf('holdav etf') !== -1, 'el ETF va arriba, con el avatar de su tipo');
-ok(/holdsec/.test(elHold.children[2].className) && elHold.children[2].innerHTML.indexOf('Stocks') !== -1, 'y despues la cabecera de Acciones');
-ok(elHold.children[3].innerHTML.indexOf('QQQ') !== -1 && elHold.children[4].innerHTML.indexOf('NVDA') !== -1, 'las acciones abajo, conservando su orden por valor');
+ok(elHold.children.length === 3, '3 filas y ninguna cabecera');
+ok(!/holdsec/.test(elHold.innerHTML), 'el agrupamiento ya no se rotula (13/09/2026)');
+ok(elHold.children[0].innerHTML.indexOf('VOO') !== -1 && elHold.children[0].innerHTML.indexOf('holdav etf') !== -1, 'el ETF va arriba, con el avatar de su tipo');
+ok(elHold.children[1].innerHTML.indexOf('QQQ') !== -1 && elHold.children[2].innerHTML.indexOf('NVDA') !== -1, 'las acciones abajo, conservando su orden por valor');
 
 console.log('\nE) el rendimiento anualizado (V6): solo con mas de un año de datos');
 var pctSrc = (html.match(/function pctAnualizado[\s\S]*?\n\}/) || [''])[0];
