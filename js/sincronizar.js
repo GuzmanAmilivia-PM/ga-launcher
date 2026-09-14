@@ -142,7 +142,7 @@ paso('Asking Ita\u00fa...');
 google.script.run.withSuccessHandler(function (e) {
 // `estado` viene del Worker; cualquier estado es una respuesta buena: el
 // pedido quedo anotado. Con la PC apagada, la pantalla de Itau lo dice.
-lineas.push('&#8226; Ita\u00fa: update requested' + (e && e.estado === 'sin-respuesta'
+lineas.push('&#8226; Ita\u00fa: update requested' + (e && e.estado === 'sin_respuesta'
   ? ' (your PC has not answered &mdash; is it on?)' : ' (your PC does it in a minute)'));
 sig();
 }).withFailureHandler(function (err) {

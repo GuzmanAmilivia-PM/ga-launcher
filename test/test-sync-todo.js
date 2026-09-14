@@ -188,10 +188,23 @@ var OK1 = { ok: true, cambios: [{ tipo: 'qty', symbol: 'VOO' }] };
 
   // H2) Con la PC apagada el Worker lo dice, y la linea lo pasa tal cual: es
   // la diferencia entre "espera" y "prende la maquina".
+  //
+  // EL ESTADO SE ESCRIBE CON GUION BAJO, que es lo que emite el Worker
+  // (`ItauSync.js`, `_estadoDe`). Este fixture decia 'sin-respuesta' con guion
+  // normal —una forma que el backend no produce JAMAS— y sincronizar.js
+  // comparaba contra esa misma forma inventada: el assert pasaba en verde
+  // mientras en produccion el aviso NO salia nunca, justo en el unico caso en
+  // que Guzman tiene que hacer algo. Es la trampa de las sondas con la forma
+  // inventada, y aparecio tres veces en este proyecto. Lo encontro una
+  // auditoria por agentes el 14/09/2026.
   e = await correr('H2) la PC no contesta', {
-    ibkr: OKV, cs: OKV, bnbConfigurado: false, refrescar: {}, itau: { estado: 'sin-respuesta' }
+    ibkr: OKV, cs: OKV, bnbConfigurado: false, refrescar: {}, itau: { estado: 'sin_respuesta' }
   });
   ok(/your PC has not answered/.test(e.avisos[0].msg), 'avisa que la PC no contesto');
+  // Y la forma vieja NO puede volver a colarse: si alguien la repone, esta
+  // linea se pone roja en vez de pasar probando otra cosa.
+  ok(html.indexOf("estado === 'sin-respuesta'") === -1,
+     'nadie compara contra la forma con guion, que el Worker no emite');
 
   // H3) EL CICLO. Cuando la actualizacion de Itau termina bien, la pantalla de
   // la cuenta llama a sincronizarTodo para mostrar el numero nuevo. Si esa

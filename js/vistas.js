@@ -278,7 +278,16 @@ accPedida = acc.key;
 // BTG no tiene hoja de posiciones: su detalle son los saldos cortados a fin
 // de mes, que trae otra fn. Se atiende aparte y se sale; el resto de las
 // cuentas primero recupera la tabla, que BTG deja escondida.
-if (esBtg(acc)) { mostrarBtg(); return; }
+// Se anota cuál está abierta ANTES de salir (14/09/2026). `lastAcc` solo lo
+// escribía renderAccount, por donde BTG no pasa, y eso rompía tres cosas: al
+// guardar un corte, el `showAccount(lastAcc)` del final te llevaba a la cuenta
+// ANTERIOR (o, si BTG era la primera de la sesión, no hacía nada y te dejaba
+// mirando el corte viejo que acababas de cambiar); y cambiar el tema o la
+// paleta repintaba otra cuenta bajo el título de BTG. `lastAccData` va en null
+// a propósito: los tres repintados de config.js y arranque.js lo exigen para
+// dibujar, así que con BTG a la vista se abstienen en vez de pintar cualquier
+// cosa. Lo encontró una auditoría por agentes.
+if (esBtg(acc)) { lastAcc = acc; lastAccData = null; mostrarBtg(); return; }
 restaurarVistaCuenta();
 google.script.run.withSuccessHandler(function (data) {
 if (accPedida !== acc.key) return;   // respuesta tardia de una cuenta que ya no esta abierta

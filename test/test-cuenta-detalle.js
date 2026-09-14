@@ -18,5 +18,19 @@ var tabla = html.slice(Math.max(0, thead - 400), thead);
 ok(/<table class="holdtable holdhome">/.test(tabla), 'la tabla usa las clases del Inicio: tres columnas, sin cabecera visible');
 ok(/<th class="col-spark">Month<\/th>/.test(tabla), 'con la columna del mes en el encabezado');
 ok(/\.pcmini \{/.test(html) && /\.accval \.daychg \{ display: inline/.test(html), 'los estilos .pcmini y .accval existen (la ganancia va en linea)');
+
+// BTG tiene que dejar anotado que ES la cuenta abierta (14/09/2026).
+//
+// ALCANCE: esto mira el codigo escrito, no el resultado. No hay arnes que
+// ejecute showAccount (depende de google.script.run y de media pantalla), asi
+// que es un candado contra la regresion, no una medicion.
+//
+// Por que importa: `lastAcc` solo lo escribia renderAccount, por donde BTG no
+// pasa — sale antes por su propio camino. Con eso, guardar un corte de BTG te
+// llevaba a la cuenta anterior (o no hacia nada si BTG era la primera de la
+// sesion), y cambiar tema o paleta repintaba otra cuenta bajo su titulo.
+// Lo encontro una auditoria por agentes.
+ok(/if \(esBtg\(acc\)\) \{ lastAcc = acc; lastAccData = null; mostrarBtg\(\); return; \}/.test(html),
+   'la rama de BTG anota lastAcc (y deja lastAccData en null, para que los repintados se abstengan)');
 console.log(asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);
