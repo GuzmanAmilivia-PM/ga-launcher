@@ -337,15 +337,33 @@ body.innerHTML = '';
 // mes, precio. El valor en dolares y la ganancia acumulada van en el renglon
 // de abajo del simbolo. Las filas que son cash (USDT en Binance) no van: ya
 // estan en "Cash in account".
-data.posiciones.forEach(function (h) {
-if (esFilaCash(h)) return;
+// Los filtros van ANTES de ordenar y de marcar el corte: si se saltara una
+// fila despues, la doble linea podria caer donde no se ve nada.
 // Las compras del fondo de Itau NO van en esta tabla (13/09/2026): son dos
 // filas de la MISMA cuotaparte y su precio esta en PESOS, que esta tabla
 // escribiria como si fueran dolares. Viven arriba, en el bloque del fondo,
 // con su fecha y su retorno. Si el bloque no se pudo dibujar (sin la funcion
 // cargada) se dejan: mejor una fila confusa que una cuenta vacia.
-if (itauEsCuenta(acc) && String(h.symbol || '').trim().toUpperCase() === 'ITAU' &&
-    typeof comprasItauHtml === 'function') return;
+var pintables = (data.posiciones || []).filter(function (h) {
+  if (esFilaCash(h)) return false;
+  if (itauEsCuenta(acc) && String(h.symbol || '').trim().toUpperCase() === 'ITAU' &&
+      typeof comprasItauHtml === 'function') return false;
+  return true;
+});
+// El MISMO orden y el MISMO corte que el Inicio (14/09/2026, pedido de
+// Guzman: "en los portfolios de Charles Schwab ahi si pone etfs y acciones
+// separados tambien, en IBKR no hay etfs pero si hubiera tambien"). IBKR hoy
+// no tiene ETFs: no hay cambio de tipo, no hay doble linea, y el dia que
+// compre uno aparece sola.
+// `ordenarPorTipo` y `tipoDe` viven en tablero.js, que carga DESPUES que este
+// archivo: por eso se piden ACA ADENTRO, en tiempo de ejecucion, y con guarda
+// — una referencia a ellas al cargar mataria vistas.js entero.
+if (typeof ordenarPorTipo === 'function') pintables = ordenarPorTipo(pintables);
+var tipoPrevio = null;
+pintables.forEach(function (h) {
+var tipoAca = (typeof tipoDe === 'function') ? tipoDe(h) : '';
+var corte = tipoPrevio !== null && tipoAca !== tipoPrevio;
+tipoPrevio = tipoAca;
 h.cambioDia = cambioDiaDe(h.symbol);
 if (!h.nombre) h.nombre = h.descripcion || '';
 if (acc.key === 'BNB' && h.cripto === undefined) h.cripto = true;
@@ -354,7 +372,7 @@ var tr = document.createElement('tr');
 tr.innerHTML = '<td>' + celdaInstrumentoHtml(h, esc(fmt(h.valor)) + gananciaHtml(h)) + '</td>' +
 '<td class="col-spark">' + sparkDe(h) + '</td>' +
 '<td class="col-precio">' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + compra + '</td>';
-tr.className = 'asset-row';
+tr.className = corte ? 'corte-grupo asset-row' : 'asset-row';
 engancharLogos(tr);
 tr.onclick = function () { toggleDetalle(tr, { symbol: h.symbol, precioCompra: h.precioCompra, precioActual: h.precioActual, qty: h.qty, cripto: acc.key === 'BNB', cuenta: acc.key, gfTicker: h.gfTicker }); };
 body.appendChild(tr);

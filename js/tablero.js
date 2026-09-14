@@ -730,9 +730,28 @@ function repartoHoldings(list) {
 }
 // `ordenarPorTipo` reordena pero conserva los mismos objetos, así que comparar
 // por referencia sigue siendo válido después de ordenar.
-function claseFila(h, visibles) {
+function claseFila(h, visibles, corte) {
   var oculta = !holdingsExpanded && visibles.indexOf(h) === -1;
-  return (oculta ? 'hidden-row ' : '') + 'asset-row';
+  return (oculta ? 'hidden-row ' : '') + (corte ? 'corte-grupo ' : '') + 'asset-row';
+}
+// Dónde cambia el tipo, mirando SOLO las filas que se ven (14/09/2026, pedido
+// de Guzmán: "que haya una doble línea entre etfs y acciones"). Devuelve los
+// índices que ABREN un grupo nuevo, así la línea va arriba de la primera
+// acción y no abajo del último ETF: plegada la tarjeta, cuando las acciones
+// no se muestran, no queda una raya suelta cerrando la tabla.
+//
+// Reemplaza a los rótulos ETFs/Stocks que se fueron el 13/09: el corte que
+// marcaban sigue estando, pero sin gastar dos renglones de la primera
+// pantalla en decir lo que el propio símbolo ya dice.
+function cortesDeGrupo(lista, visibles) {
+  var out = {}, previo = null;
+  lista.forEach(function (h, i) {
+    if (!holdingsExpanded && visibles.indexOf(h) === -1) return;
+    var t = tipoDe(h);
+    if (previo !== null && t !== previo) out[i] = true;
+    previo = t;
+  });
+  return out;
 }
 // Si expandir falla, el botón vuelve a su texto normal y el detalle queda en la
 // consola: antes escribía `ERR <mensaje de excepción>` ENCIMA del botón, que le
@@ -774,12 +793,16 @@ if (!enLugar) { el.innerHTML = ''; holdFilas = []; }
 // necesita que le aclaren que VOO es un ETF— y costaban dos renglones de la
 // PRIMERA pantalla, que es justo lo que el rediseno sin marcos habia
 // recuperado. El ORDEN no cambia: el reparto sigue poniendo los ETFs antes
-// que las acciones, solo que ahora se lee como una lista sola.
+// que las acciones.
+// Y desde el 14/09/2026 ese corte se VE, sin gastar renglones: una DOBLE
+// LINEA donde terminan los ETFs (cortesDeGrupo + .corte-grupo). Es el mismo
+// limite que marcaban los rotulos, dicho con una raya en vez de una palabra.
 // La pantalla Positions completa SI las conserva: alla aparece Crypto, y con
 // tres grupos el rotulo deja de ser una obviedad.
+var cortes = cortesDeGrupo(lista, visibles);
 lista.forEach(function (h, idx) {
 var tr = enLugar ? holdFilas[idx].tr : document.createElement('tr');
-tr.className = claseFila(h, visibles);
+tr.className = claseFila(h, visibles, cortes[idx]);
 tr.innerHTML = filaHoldingHtml(h);
 engancharLogos(tr);
 tr.onclick = function () { toggleDetalle(tr, h); };
