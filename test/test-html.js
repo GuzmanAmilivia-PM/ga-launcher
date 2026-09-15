@@ -281,7 +281,12 @@ ok(soloPwa.length === 0, 'la PWA no llama fns inexistentes' + (soloPwa.length ? 
 // 'itau_compra' es del mismo lado del relevo: la llama el script de la PC
 // cuando ve mas cuotapartes en el banco que en la app, para registrar la
 // compra. La app nunca la llama — no tiene como saber que Guzman compro.
-var SOLO_BACKEND = ['mail', 'noticias_semana', 'foto', 'itau_atender', 'itau_compra'];
+// 'series' y 'series_restaurar' (14/09/2026) son el respaldo de la historia
+// de la base: la rutina de la nube baja el primero con la clave de la foto y
+// lo commitea en el repo de los papeles; el segundo lo corre un script de la
+// PC con la clave completa, simulando por defecto. La app no tiene pantalla
+// para ninguno de los dos, a proposito.
+var SOLO_BACKEND = ['mail', 'noticias_semana', 'foto', 'itau_atender', 'itau_compra', 'series', 'series_restaurar'];
 var soloApi = fnsApi.filter(function (f) { return fnsPwa.indexOf(f) === -1 && SOLO_BACKEND.indexOf(f) === -1; });
 ok(soloApi.length === 0, 'ninguna fn del backend quedo sin mapear' + (soloApi.length ? ': ' + soloApi.join(', ') : ''));
 SOLO_BACKEND.forEach(function (f) {
