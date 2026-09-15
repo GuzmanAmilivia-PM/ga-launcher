@@ -39,6 +39,12 @@
 // Google (corte a D1 del 29/08/2026). El comentario de la era-1 decía "el 2
 // sería salir de la planilla" — salió, y este número lo cuenta.
 var VERSION_GENERACION = '2';
+// El 17: el rendimiento historico de cada cuenta contra el SPY (15/09/2026,
+// V17): en la pagina de IBKR y de Schwab, MWR ("con mi plata, en mis fechas"),
+// la misma plata puesta en SPY, TWR ("sin depositos") contra el indice, los
+// flujos y el grafico, en YTD / 1 ano / 3 anos / desde el origen. Y el indice
+// de TODA la app paso a ser SPY con dividendos reinvertidos, que es contra lo
+// que compara IBKR.
 // El 16: la pantalla de BTG (13/09/2026), con los saldos cortados a FIN DE
 // MES. Es la cuenta del sueldo: mirarla el dia 5 es mirar el sueldo recien
 // caido, no el patrimonio. Muestra liquido y plazo fijo, en pesos y dolares
@@ -68,7 +74,7 @@ var VERSION_GENERACION = '2';
 // El 8 fue editar a mano los precios del fondo de Itau desde su pagina
 // (29/08/2026, V16); el 7, la Watchlist con alertas y push; el 6, los
 // indicadores del detalle.
-var VERSION_FUNCION = '16';
+var VERSION_FUNCION = '17';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre
@@ -287,6 +293,10 @@ accPedida = acc.key;
 // a propósito: los tres repintados de config.js y arranque.js lo exigen para
 // dibujar, así que con BTG a la vista se abstienen en vez de pintar cualquier
 // cosa. Lo encontró una auditoría por agentes.
+// El rendimiento historico contra el SPY (V17): la tarjeta se muestra solo en
+// IBKR y Schwab y se pide aparte (su cuenta es cara y viaja cacheada una hora
+// en el Worker). Va ANTES de la salida de BTG para que en BTG se esconda.
+if (typeof mostrarRendimiento === 'function') mostrarRendimiento(acc);
 if (esBtg(acc)) { lastAcc = acc; lastAccData = null; mostrarBtg(); return; }
 restaurarVistaCuenta();
 google.script.run.withSuccessHandler(function (data) {

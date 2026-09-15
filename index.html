@@ -349,6 +349,14 @@
 </div>
 <p class="detlbl" id="btgMsg" style="margin-top:6px"></p>
 </div>
+<!-- El rendimiento historico contra el SPY (V17, 15/09/2026), solo en IBKR y
+     Schwab: MWR, "la misma plata en SPY", TWR, los flujos y el grafico, por
+     rango. La cuenta la hace el Worker (rendimiento_cuenta); js/rendimiento.js
+     solo dibuja. -->
+<div id="accRend" hidden class="card" style="margin-top:12px">
+<p class="lbl">Historical performance</p>
+<div id="rendBody"></div>
+</div>
 <div class="card" id="accTabla" style="margin-top:16px">
 <div style="overflow-x:auto">
 <table class="holdtable holdhome">
@@ -829,6 +837,7 @@ Trades</button>
 <script src="./js/config.js"></script>
 <script src="./js/brokers.js"></script>
 <script src="./js/paneles.js"></script>
+<script src="./js/rendimiento.js"></script>
 <script src="./js/analisis.js"></script>
 <script src="./js/sincronizar.js"></script>
 <script src="./js/ia.js"></script>
