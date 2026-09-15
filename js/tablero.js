@@ -338,9 +338,22 @@ function pintarFundamentales(r, caja) {
     caja.innerHTML = h;
     return;
   }
+  // La ficha CURADA de un ETF (14/09/2026): datos cargados a mano en el
+  // Worker (EtfValuacion.js), asi que SIEMPRE se dice de cuando son y de
+  // donde salieron, y una ficha vieja se atenua en vez de leerse como actual.
+  // Primero que multiplo manda para ESTE fondo y por que: es lo que Guzman
+  // pidio ("analizado caso a caso"), y lo que ningun proveedor da.
+  var etf = r.etf || null;
+  var viejo = !!(etf && etf.viejo);
+  if (etf) {
+    h += '<p class="detfund-tit">What to read here</p>' +
+      '<p class="detfund-nota' + (viejo ? ' detfund-viejo' : '') + '"><b>' + esc(etf.manda) + '.</b> ' + esc(etf.porque) + '</p>' +
+      '<p class="detfund-asof">as of ' + esc(etf.asOf) + ', source ' + esc(etf.fuente) +
+      (viejo ? ' · <b>' + esc(etf.dias) + ' days old</b>' : '') + '</p>';
+  }
   var ind = r.indicadores || [];
   if (ind.length) {
-    h += '<div class="detfund-tabla">';
+    h += '<div class="detfund-tabla' + (viejo ? ' detfund-viejo' : '') + '">';
     ind.forEach(function (i) {
       h += '<div class="detfund-fila"><span>' + esc(i.nombre) + '</span><b>' + esc(i.valor) + '</b>' +
         (i.contexto ? '<em>' + esc(i.contexto) + '</em>' : '') + '</div>';
@@ -369,6 +382,22 @@ function pintarFundamentales(r, caja) {
         '<em>what other analysts publish, not a suggestion from this app</em></div>';
     }
     h += '</div>';
+  }
+  // Las tenencias principales del ETF, con fecha y fuente: para ver cuanto del
+  // fondo son tres nombres (SMH: NVDA ~22%). Sin top cargado se dice cuantas
+  // tenencias tiene y que el top no esta, no se inventa una lista.
+  if (etf && etf.tenencias) {
+    var ten = etf.tenencias;
+    if (ten.top && ten.top.length) {
+      h += '<p class="detfund-tit">Top holdings</p><div class="detfund-tabla' + (viejo ? ' detfund-viejo' : '') + '">';
+      ten.top.forEach(function (x) {
+        h += '<div class="detfund-fila"><span>' + esc(x.s) + '</span><b>' + esc(Number(x.peso).toFixed(2)) + '%</b></div>';
+      });
+      h += '</div><p class="detfund-asof">' + (ten.top10Pct !== null && ten.top10Pct !== undefined ? 'top 10 = ' + esc(ten.top10Pct) + '% · ' : '') +
+        esc(ten.total) + ' holdings · as of ' + esc(ten.fecha) + ', source ' + esc(ten.fuente) + '</p>';
+    } else if (ten.total) {
+      h += '<p class="detfund-asof">' + esc(ten.total) + ' holdings (as of ' + esc(ten.fecha) + ', source ' + esc(ten.fuente) + ') · top holdings not loaded</p>';
+    }
   }
   (r.notas || []).forEach(function (n) {
     h += '<p class="detfund-nota">' + esc(n) + '</p>';

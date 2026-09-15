@@ -158,5 +158,60 @@ m6.api.cargar('X', caja6);
 ok(caja6.innerHTML.indexOf('<img src=x') === -1 && /&lt;img/.test(caja6.innerHTML), 'el nombre se escapa');
 ok(caja6.innerHTML.indexOf('<script>robar') === -1, 'la nota tambien');
 
+console.log('\nH) la ficha CURADA de un ETF (14/09/2026): fecha y fuente siempre, vieja atenuada, top holdings');
+// El payload TAL CUAL lo arma fichaEtf (EtfValuacion.js, Worker) para SMH.
+var FICHA_ETF = {
+  ok: true, symbol: 'SMH', clase: 'etf_sector', claseLabel: 'Sector ETFs',
+  etf: {
+    manda: 'P/S vs. history; P/E only alongside',
+    porque: 'Cyclical: at the peak of the cycle earnings are inflated and the P/E looks reasonable.',
+    asOf: '2026-09-14', fuente: 'stockanalysis.com', actualizado: '2026-09-14', dias: 6, viejo: false,
+    tenencias: { total: 26, top: [{ s: 'NVDA', peso: 22.1 }, { s: 'TSM', peso: 9.75 }], top10Pct: null, fuente: 'stockanalysis.com', fecha: '2026-09-14' }
+  },
+  indicadores: [
+    { nombre: 'P/E (trailing)', valor: '42.5x', contexto: 'historical range not loaded' },
+    { nombre: 'P/S', valor: 'not loaded', contexto: null }
+  ],
+  estimaciones: {},
+  notas: ['Cyclical sector: P/E is unreliable at cycle extremes; read P/S and margins vs. history.']
+};
+var m7 = montar();
+var caja7 = m7.nuevoElem();
+m7.api.pintar(FICHA_ETF, caja7);
+var h7 = caja7.innerHTML;
+ok(/What to read here/.test(h7) && /P\/S vs\. history/.test(h7), 'arranca por que multiplo manda para ESTE fondo');
+// La linea de CABECERA exacta (la de las tenencias tambien dice "as of", asi que
+// un assert suelto pasaria con la cabecera borrada).
+ok(/<p class="detfund-asof">as of 2026-09-14, source stockanalysis\.com<\/p>/.test(h7), 'la fecha y la fuente van a la vista, arriba: son datos a mano');
+ok(/42\.5x/.test(h7) && /historical range not loaded/.test(h7), 'el PER con su contexto honesto');
+ok(/>not loaded</.test(h7), 'lo que no se vio dice "not loaded", no un numero');
+ok(/Top holdings/.test(h7) && /NVDA<\/span><b>22\.10%/.test(h7) && /TSM<\/span><b>9\.75%/.test(h7), 'el top 5 con sus pesos');
+ok(/26 holdings · as of 2026-09-14/.test(h7), 'y cuantas tenencias tiene, con fecha');
+ok(!/top 10 =/.test(h7), 'el peso del top 10 no se vio: no se escribe');
+ok(/Cyclical sector/.test(h7), 'el aviso ciclico llega como nota');
+ok(!/detfund-viejo/.test(h7), 'a los 6 dias nada se atenua');
+
+// La misma ficha, VIEJA: se atenua entera y dice cuantos dias tiene.
+var VIEJA = JSON.parse(JSON.stringify(FICHA_ETF));
+VIEJA.etf.viejo = true; VIEJA.etf.dias = 120;
+VIEJA.notas.push('ETF valuation data is 120 days old (loaded 2026-09-14): read it as history, not as today.');
+var caja8 = m7.nuevoElem();
+m7.api.pintar(VIEJA, caja8);
+ok(/120 days old/.test(caja8.innerHTML), 'una ficha vieja dice cuantos dias tiene arriba de todo');
+ok((caja8.innerHTML.match(/detfund-viejo/g) || []).length >= 3 && /detfund-tabla detfund-viejo/.test(caja8.innerHTML),
+   'y se atenua ENTERA: el "que leer", la tabla de indicadores y el top llevan la clase');
+
+// Sin top cargado: se dice cuantas tenencias hay y que el top no esta.
+var SIN_TOP = JSON.parse(JSON.stringify(FICHA_ETF));
+SIN_TOP.etf.tenencias.top = null;
+var caja9 = m7.nuevoElem();
+m7.api.pintar(SIN_TOP, caja9);
+ok(/26 holdings \(as of 2026-09-14, source stockanalysis\.com\) · top holdings not loaded/.test(caja9.innerHTML), 'sin top cargado no se inventa ninguna lista');
+
+// Una accion comun NO trae `etf`: su ficha sigue igual que antes.
+var caja10 = m7.nuevoElem();
+m7.api.pintar(FICHA, caja10);
+ok(!/as of/.test(caja10.innerHTML) && !/What to read here/.test(caja10.innerHTML), 'una accion no muestra nada de esto');
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);
