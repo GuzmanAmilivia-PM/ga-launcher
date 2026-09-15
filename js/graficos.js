@@ -648,13 +648,18 @@ function twrEnRango(serie) {
     var m = aporteTotalDelDia(r);
     if (isFinite(ts) && ts > t0 && ts <= tFin && isFinite(m) && m !== 0) flujos.push({ ts: ts, monto: m });
   });
+  // El flujo entra AL INICIO de su tramo y participa de su rendimiento
+  // (15/09/2026, V17): tramo = valor final / (valor anterior + flujo). Es la
+  // convención de IBKR, verificada contra PortfolioAnalyst tramo por tramo
+  // (Bench.crecimientoSinAportes tiene la explicación completa). Antes se
+  // descontaba al cierre, y el acumulado se apartaba 2,2 puntos.
   var twr = 1;
   for (var j = 1; j < serie.length; j++) {
     var vPrev = serie[j - 1].valor, vHoy = serie[j].valor;
     var flujo = 0;
     flujos.forEach(function (a) { if (a.ts > serie[j - 1].fecha && a.ts <= serie[j].fecha) flujo += a.monto; });
-    if (!(vPrev > 0) || !(vHoy - flujo > 0)) return null;
-    twr *= (vHoy - flujo) / vPrev;
+    if (!(vPrev > 0) || !(vPrev + flujo > 0) || !(vHoy > 0)) return null;
+    twr *= vHoy / (vPrev + flujo);
   }
   return { pct: (twr - 1) * 100, aportes: flujos.reduce(function (m, a) { return m + a.monto; }, 0) };
 }
@@ -821,9 +826,9 @@ function comparacionGrupo() {
     // dia sin punto de la serie (finde, snapshot perdido) igual se descuenta
     // de su tramo — si no, contaria como rendimiento.
     enVentana.forEach(function (a) { if (a.ts > tsPrev && a.ts <= tsHoy) flujo += a.monto; });
-    var vSinFlujo = vHoy - flujo;
-    if (!(vSinFlujo > 0)) { twrOk = false; break; }
-    twr *= vSinFlujo / vPrev;
+    // El flujo al INICIO del tramo (15/09/2026): la misma regla que twrEnRango.
+    if (!(vPrev + flujo > 0) || !(vHoy > 0)) { twrOk = false; break; }
+    twr *= vHoy / (vPrev + flujo);
   }
   if (twrOk) out.twrPct = (twr - 1) * 100;
 

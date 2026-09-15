@@ -212,13 +212,14 @@ console.log('\nR) "la cartera" vs "rindio": el rendimiento sin el efecto del tim
 // El caso que separa los dos numeros: la cartera sube 10%, entra un aporte
 // GRANDE, y despues cae 5%. La cartera como tal rindio 1.10 x 0.95 = +4,5%;
 // el inversor, que puso lo gordo justo antes de la caida, gano menos.
-// d1=100.000 -> d2=110.000 (+10%) -> aporte 100.000 -> d3 la cartera cae 5%:
-// 110.000x0,95 = 104.500 de lo viejo + 95.000?? NO: el aporte entra al cierre
-// de d3, asi que d3 = 110.000x0,95 + 100.000 = 204.500.
-api = montarK([100000, 110000, 204500], [{ fecha: '2026-03-04', grupo: 100000, total: 100000 }]);
+// d1=100.000 -> d2=110.000 (+10%) -> aporte 100.000 -> d3 la cartera cae 5%.
+// El aporte entra AL INICIO de su tramo y participa de la caida (la
+// convencion de IBKR desde el 15/09/2026): d3 = (110.000 + 100.000) x 0,95 =
+// 199.500.
+api = montarK([100000, 110000, 199500], [{ fecha: '2026-03-04', grupo: 100000, total: 100000 }]);
 comp = api.comparacionGrupo();
 ok(Math.abs(comp.twrPct - 4.5) < 0.001, 'la cartera rindio +4,5% (1.10 x 0.95) (=' + comp.twrPct.toFixed(2) + '%)');
-ok(Math.abs(comp.pct - 2.25) < 0.001, 'tu resultado fue +2,25% (204.500 / 200.000): lo gordo entro antes de la caida');
+ok(Math.abs(comp.pct - (-0.25)) < 0.001, 'tu resultado fue −0,25% (199.500 / 200.000): lo gordo entro justo antes de la caida');
 ok(comp.twrPct > comp.pct, 'los dos numeros cuentan historias distintas, y aca el timing costo plata');
 
 // Sin aportes en la ventana, los dos numeros son el mismo.
@@ -226,15 +227,21 @@ api = montarK([null, 80000, 86000], []);
 comp = api.comparacionGrupo();
 ok(Math.abs(comp.twrPct - comp.pct) < 0.001, 'sin aportes, cartera y resultado coinciden (=' + comp.twrPct.toFixed(2) + '%)');
 
-// Un retiro tambien se descuenta de su tramo (suma al valor sin flujo).
-api = montarK([100000, 110000, 60500], [{ fecha: '2026-03-04', grupo: -50000, total: -50000 }]);
+// Un retiro tambien sale al inicio de su tramo: la base del tramo queda en
+// 110.000 − 50.000 = 60.000, y 60.270 sobre eso es +0,45%.
+api = montarK([100000, 110000, 60270], [{ fecha: '2026-03-04', grupo: -50000, total: -50000 }]);
 comp = api.comparacionGrupo();
 ok(Math.abs(comp.twrPct - 10.5) < 0.01, 'con un retiro en el medio, la cartera rinde 1.10 x 1.0045 = +10,5% (=' + comp.twrPct.toFixed(2) + '%)');
 
 // Un tramo que no se puede medir con honestidad -> null, no un invento.
+// (Dado vuelta el 15/09/2026: con el flujo al inicio, un aporte nunca deja
+// la base en cero; lo imposible es un RETIRO mayor que el valor anterior.)
+api = montarK([null, 80000, 4000], [{ fecha: '2026-03-04', grupo: -90000, total: -90000 }]);
+comp = api.comparacionGrupo();
+ok(comp.twrPct === null, 'si el retiro del tramo se lleva mas que el valor anterior, twr viaja null');
 api = montarK([null, 80000, 4000], [{ fecha: '2026-03-04', grupo: 5000, total: 5000 }]);
 comp = api.comparacionGrupo();
-ok(comp.twrPct === null, 'si el aporte del tramo es mayor que el valor del dia, twr viaja null');
+ok(comp.twrPct !== null && comp.twrPct < -90, 'un aporte mayor que el valor del dia ya NO anula: la base es valor + aporte, y la caida es real');
 
 console.log('\nN) el rendimiento del panel sale del grupo, nunca del total');
 // El numero "total − inicio del año − aportes" se mostro y era FALSO (17/08):

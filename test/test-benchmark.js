@@ -206,12 +206,14 @@ conAportes.pintarVsBench(SERIE, 10);
 ok(!/\*/.test(conAportes._pintado.texto),
   'ya NO hace falta el asterisco: se descuenta y se dice el numero real');
 // Desde el 9/09/2026 el limpio es el ENCADENADO (twrEnRango), el mismo de la
-// tarjeta del año: tramo 1 (104.000 − 5.000) / 100.000 = 0,99; tramo 2
-// 110.000 / 104.000 = 1,0577; 0,99 × 1,0577 − 1 = +4,71%, contra +5% = −0,3 pp.
-// (Antes era (final−inicial−aportes)/(inicial+aportes) = 4,76%: otra cuenta,
-// y por eso el Inicio y Portfolio no coincidían.)
-ok(/−0\.3 pp/.test(conAportes._pintado.texto),
-  'el delta usa el rendimiento limpio encadenado (4,71% − 5%), no el +10% crudo: ' + conAportes._pintado.texto);
+// tarjeta del año. Y desde el 15/09/2026 el flujo entra AL INICIO de su
+// tramo (la convención de IBKR, verificada contra PortfolioAnalyst): tramo 1
+// 104.000 / (100.000 + 5.000) = 0,9905; tramo 2 110.000 / 104.000 = 1,0577;
+// 0,9905 × 1,0577 − 1 = +4,76%, contra +5% = −0,2 pp. (Con el flujo al
+// cierre daba 4,71%; la cuenta vieja "(final−inicial−aportes)/(inicial+aportes)"
+// coincide con esta solo por casualidad de dos puntos.)
+ok(/−0\.2 pp/.test(conAportes._pintado.texto),
+  'el delta usa el rendimiento limpio encadenado (4,76% − 5%), no el +10% crudo: ' + conAportes._pintado.texto);
 ok(/WITHOUT the/.test(conAportes._pintado.titulo) && /5,000/.test(conAportes._pintado.titulo),
   'y la explicacion dice cuanto se descuento: ' + conAportes._pintado.titulo.slice(0, 70));
 
