@@ -1056,3 +1056,14 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 .rendleyenda { font-size: 11px; color: var(--muted); margin: 6px 0 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .rendlin { display: inline-block; width: 18px; height: 0; border-top: 2px solid var(--gold); }
 .rendlin-idx { border-top: 2px dashed rgba(144,160,184,.85); }
+/* La tarjeta plegada (16/09/2026): cabecera con el desplegable, el titular
+   "vos vs el indice" y la tabla minima de dos columnas. */
+.rendcab { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rendtitular { font-size: 17px; font-weight: 700; margin: 6px 0 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; }
+.rendtitular .up { color: var(--green); } .rendtitular .down { color: var(--red); }
+.rendpp { font-size: 12px; font-weight: 700; padding: 1px 7px; border-radius: 8px; background: rgba(255,255,255,.06); margin-left: 4px; }
+.rendtabla { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.rendtabla th { text-align: right; color: var(--muted); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 0 0 4px; }
+.rendtabla th:first-child, .rendtabla td:first-child { text-align: left; color: var(--muted); }
+.rendtabla td { text-align: right; padding: 7px 0; border-top: 1px solid var(--border); white-space: nowrap; }
+.rendtabla td .up { color: var(--green); } .rendtabla td .down { color: var(--red); }

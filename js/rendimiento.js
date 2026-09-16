@@ -7,8 +7,15 @@
 //      fechas, puestos en el indice), con la diferencia en dolares.
 //   2. Mis elecciones le ganan al indice? -> el TWR (sin el efecto de los
 //      depositos) contra el SPY del mismo tramo.
-// Cuatro rangos: YTD, 1 ano, 3 anos, desde el origen. Un rango que excede la
-// historia disponible lo dice (U2) y nunca inventa la base.
+//
+// LA FORMA (pedido de Guzman del 16/09/2026): la tarjeta arranca PLEGADA y
+// muestra una sola cosa, el YTD contra el S&P 500, con una tabla minima de
+// dos columnas (vos / el indice). Un desplegable abre el resto: los rangos
+// (1M, YTD, 1Y, 5Y, desde el inicio), los anualizados, los flujos, el
+// efectivo promedio y el grafico. Solo se ofrecen los rangos MEDIBLES: uno
+// que pida mas historia de la que hay no se lista (para Schwab, cuya historia
+// arranca el 17/08/2026, quedan YTD y "All" y los dos dicen desde cuando).
+// Antes los cinco rangos de Schwab mostraban lo mismo sin explicar por que.
 //
 // TODA la cuenta la hace el Worker (`rendimiento_cuenta`, business/
 // Rendimiento.js): la historia por cuenta no viaja al telefono, y la leccion
@@ -18,16 +25,18 @@
 //
 // CARGA DESPUES de paneles.js y ANTES de arranque.js. Lo llama showAccount
 // (vistas.js) SIEMPRE dentro de una funcion, nunca al cargar; usa Chart
-// (gagraf.js), buildChartOptions/temaChart (graficos.js) y los formateadores
-// de nucleo.js, que ya estan cargados cuando alguien abre una cuenta.
+// (gagraf.js), buildChartOptions (graficos.js) y los formateadores de
+// nucleo.js, que ya estan cargados cuando alguien abre una cuenta.
 var rendDatos = null;        // la ultima respuesta del Worker
 var rendCuenta = null;       // la clave de la cuenta cuyo pedido esta EN VUELO / a la vista
-var rendRango = 'ytd';       // el rango elegido; se conserva entre cuentas
+var rendRango = 'ytd';       // el rango elegido; YTD es el estandar
+var rendAbierto = false;     // el desplegable: plegado al abrir una cuenta
 var rendChartInstance = null;
 var REND_RANGOS = [
+  { key: '1m', label: '1M' },
   { key: 'ytd', label: 'YTD' },
   { key: '1a', label: '1Y' },
-  { key: '3a', label: '3Y' },
+  { key: '5a', label: '5Y' },
   { key: 'origen', label: 'All' }
 ];
 
@@ -40,15 +49,30 @@ function rendEsCuenta(acc) {
   return k === 'IB' || k === 'CS';
 }
 
-// Al abrir una cuenta: muestra u oculta la tarjeta y pide los numeros. La
-// respuesta de OTRA cuenta (abrir IBKR, volver, abrir Schwab antes de que
-// conteste) se descarta: el mismo cuidado que accPedida en showAccount.
+// Los rangos que se pueden medir con la historia que hay: los que no piden
+// mas atras que el primer punto. YTD y "All" van siempre (YTD es el estandar
+// y dice desde cuando si es parcial; All es la historia entera por definicion).
+function rendRangosMedibles(r) {
+  return REND_RANGOS.filter(function (rg) {
+    var g = r && r.rangos && r.rangos[rg.key];
+    if (!g) return false;
+    if (rg.key === 'ytd' || rg.key === 'origen') return true;
+    return !g.pocos && !g.parcial;
+  });
+}
+
+// Al abrir una cuenta: muestra u oculta la tarjeta, la pliega, y pide los
+// numeros. La respuesta de OTRA cuenta (abrir IBKR, volver, abrir Schwab
+// antes de que conteste) se descarta: el mismo cuidado que accPedida en
+// showAccount.
 function mostrarRendimiento(acc) {
   var box = document.getElementById('accRend');
   if (!box) return;
   if (!rendEsCuenta(acc)) { box.hidden = true; rendCuenta = null; return; }
   box.hidden = false;
   rendCuenta = acc.key;
+  rendAbierto = false;
+  rendRango = 'ytd';
   var mismo = rendDatos && rendDatos.cuenta === acc.key;
   if (mismo) renderRendimiento();
   else {
@@ -66,19 +90,23 @@ function mostrarRendimiento(acc) {
   }).getRendimientoCuenta({ cuenta: acc.key });
 }
 
-function rendPctHtml(v, dec) {
-  if (v === null || v === undefined || !isFinite(v)) return '<p class="capval">&mdash;</p>';
-  return '<p class="capval ' + (v >= 0 ? 'up' : 'down') + '">' + signoPct(Number(v), dec === undefined ? 1 : dec) + '</p>';
+function rendPct(v, dec) {
+  if (v === null || v === undefined || !isFinite(v)) return '&mdash;';
+  return '<b class="' + (v >= 0 ? 'up' : 'down') + '">' + signoPct(Number(v), dec === undefined ? 1 : dec) + '</b>';
 }
 function rendUsdConSigno(v) {
   var n = Math.round(Number(v) || 0);
   return mask((n >= 0 ? '+' : '−') + 'US$ ' + Math.abs(n).toLocaleString('en-US'));
 }
-// "annualized x%" debajo del numero, solo cuando el Worker lo anualizo (rangos
-// de un ano o mas: los cortos van crudos, como en PortfolioAnalyst).
-function rendAnualHtml(m) {
+// "x% a year" solo cuando el Worker lo anualizo (rangos de un ano o mas: los
+// cortos van crudos, como en PortfolioAnalyst).
+function rendAnual(m) {
   if (!m || m.anualizado === null || m.anualizado === undefined) return '';
-  return '<p class="rendsub">' + signoPct(Number(m.anualizado), 1) + ' a year</p>';
+  return ' <span class="rendsub">' + signoPct(Number(m.anualizado), 1) + ' a year</span>';
+}
+function rendEtiqueta(key) {
+  for (var i = 0; i < REND_RANGOS.length; i++) if (REND_RANGOS[i].key === key) return REND_RANGOS[i].label;
+  return key;
 }
 
 function renderRendimiento() {
@@ -94,56 +122,67 @@ function renderRendimiento() {
     body.innerHTML = h;
     return;
   }
-  h += '<div class="rangebar" id="rendRangos">';
-  REND_RANGOS.forEach(function (rg) {
-    h += '<button type="button" class="rangebtn' + (rg.key === rendRango ? ' active' : '') + '" data-rango="' + rg.key + '">' + rg.label + '</button>';
-  });
-  h += '</div>';
+  var medibles = rendRangosMedibles(r);
+  if (!medibles.some(function (rg) { return rg.key === rendRango; })) rendRango = 'ytd';
   var g = r.rangos && r.rangos[rendRango];
+  var idx = (r.indice && r.indice.nombre) || 'S&P 500';
+  var mp = g && g.spy && g.spy.mismaPlata;
+
+  // La cabecera: que rango se esta mirando, y el desplegable.
+  h += '<div class="rendcab"><span class="detlbl">' + esc(rendEtiqueta(rendRango)) + ' vs ' + esc(idx) + '</span>' +
+    '<button type="button" class="expandbtn" id="rendToggle" title="' + (rendAbierto ? 'Less' : 'More') + '" aria-expanded="' + (rendAbierto ? 'true' : 'false') + '">' + (rendAbierto ? '&#9652;' : '&#9662;') + '</button></div>';
+
   if (!g || g.pocos) {
-    h += '<p class="capnota" style="margin-top:12px">Not enough history in this range yet' +
+    h += '<p class="capnota">Not enough history in this range yet' +
       (g && g.desdeDisponible ? ' (it starts ' + esc(fechaCortaMs(g.desdeDisponible)) + ')' : '') + '.</p>';
   } else {
-    var idx = (r.indice && r.indice.nombre) || 'S&P 500';
-    var mp = g.spy && g.spy.mismaPlata;
-    // Pregunta 1: mi plata, mis fechas.
-    h += '<p class="lbl" style="margin-top:12px">With your money, on your dates</p>';
-    h += '<div class="caprow">';
-    h += '<div><p class="detlbl">You</p>' + rendPctHtml(g.mwr && g.mwr.pct) + rendAnualHtml(g.mwr) + '</div>';
-    h += '<div><p class="detlbl">Same money in ' + esc(idx) + '</p>' + rendPctHtml(mp && mp.mwr && mp.mwr.pct) + rendAnualHtml(mp && mp.mwr) + '</div>';
-    h += '<div><p class="detlbl">Difference</p><p class="capval ' + ((g.spy && g.spy.diferenciaUsd >= 0) ? 'up' : 'down') + '">' +
-      (g.spy && g.spy.diferenciaUsd !== null ? esc(rendUsdConSigno(g.spy.diferenciaUsd)) : '&mdash;') + '</p></div>';
-    h += '</div>';
-    // Pregunta 2: sin el efecto de los depositos.
-    h += '<p class="lbl" style="margin-top:14px">Without deposits (your picks vs. the index)</p>';
-    h += '<div class="caprow">';
-    h += '<div><p class="detlbl">Your account</p>' + rendPctHtml(g.twr && g.twr.pct) + rendAnualHtml(g.twr) + '</div>';
-    h += '<div><p class="detlbl">' + esc(idx) + '</p>' + rendPctHtml(g.spy && g.spy.pct) + rendAnualHtml(g.spy) + '</div>';
-    h += '</div>';
-    // Los flujos y el efectivo: el contexto.
-    h += '<div style="margin-top:10px">';
-    h += '<div class="apostat"><span>Deposits</span><b>' + esc(fmtUsdEnt(g.depositos)) + '</b></div>';
-    h += '<div class="apostat"><span>Withdrawals</span><b>' + esc(fmtUsdEnt(g.retiros)) + '</b></div>';
-    h += '<div class="apostat"><span>Net</span><b>' + esc(fmtUsdEnt(g.neto)) + '</b></div>';
-    h += '<div class="apostat"><span>Now vs. same money in ' + esc(idx) + '</span><b>' + esc(mask(fmtUsdEnt(g.valor))) +
-      (mp ? ' <span class="desc">vs ' + esc(mask(fmtUsdEnt(mp.valor))) + '</span>' : '') + '</b></div>';
-    if (g.efectivo) {
-      h += '<div class="apostat"><span>Cash on average</span><b>' + esc(Number(g.efectivo.promedioPct).toFixed(1)) + '%' +
-        (g.efectivo.dias < g.dias ? ' <span class="desc">since ' + esc(fechaCortaMs(g.efectivo.desde)) + '</span>' : '') + '</b></div>';
+    // El titular: tus elecciones contra el indice, en puntos.
+    var pp = (g.twr.pct !== null && g.spy && g.spy.pct !== null) ? g.twr.pct - g.spy.pct : null;
+    h += '<p class="rendtitular">' + rendPct(g.twr.pct) + ' <span class="desc">you</span> &nbsp;vs&nbsp; ' +
+      rendPct(g.spy && g.spy.pct) + ' <span class="desc">' + esc(idx) + '</span>' +
+      (pp !== null ? ' <span class="rendpp ' + (pp >= 0 ? 'up' : 'down') + '">' + (pp >= 0 ? '+' : '−') + Math.abs(pp).toFixed(1) + ' pp</span>' : '') + '</p>';
+    // La tabla minima: vos / el indice.
+    h += '<table class="rendtabla"><thead><tr><th></th><th>You</th><th>' + esc(idx) + '</th></tr></thead><tbody>';
+    h += '<tr><td>Without deposits</td><td>' + rendPct(g.twr.pct) + (rendAbierto ? rendAnual(g.twr) : '') + '</td><td>' + rendPct(g.spy && g.spy.pct) + (rendAbierto ? rendAnual(g.spy) : '') + '</td></tr>';
+    h += '<tr><td>With your money</td><td>' + rendPct(g.mwr && g.mwr.pct) + (rendAbierto ? rendAnual(g.mwr) : '') + '</td><td>' + rendPct(mp && mp.mwr && mp.mwr.pct) + (rendAbierto ? rendAnual(mp && mp.mwr) : '') + '</td></tr>';
+    h += '<tr><td>Same money, today</td><td>' + esc(mask(fmtUsdEnt(g.valor))) + '</td><td>' + (mp ? esc(mask(fmtUsdEnt(mp.valor))) : '&mdash;') + '</td></tr>';
+    h += '<tr><td>Difference</td><td colspan="2"><b class="' + ((g.spy && g.spy.diferenciaUsd >= 0) ? 'up' : 'down') + '">' +
+      (g.spy && g.spy.diferenciaUsd !== null ? esc(rendUsdConSigno(g.spy.diferenciaUsd)) : '&mdash;') + '</b></td></tr>';
+    h += '</tbody></table>';
+    var desdeTxt = 'Since ' + fechaCortaMs(g.desde) + (g.parcial ? ' (that is where the history starts)' : '') + '.';
+    if (!rendAbierto) {
+      h += '<p class="capnota">' + esc(desdeTxt) + '</p>';
+    } else {
+      // Lo desplegado: los rangos medibles, los flujos, el efectivo, el grafico.
+      h += '<div class="rangebar" id="rendRangos" style="margin-top:12px">';
+      medibles.forEach(function (rg) {
+        h += '<button type="button" class="rangebtn' + (rg.key === rendRango ? ' active' : '') + '" data-rango="' + rg.key + '">' + rg.label + '</button>';
+      });
+      h += '</div>';
+      h += '<div style="margin-top:10px">';
+      h += '<div class="apostat"><span>Deposits</span><b>' + esc(fmtUsdEnt(g.depositos)) + '</b></div>';
+      h += '<div class="apostat"><span>Withdrawals</span><b>' + esc(fmtUsdEnt(g.retiros)) + '</b></div>';
+      h += '<div class="apostat"><span>Net</span><b>' + esc(fmtUsdEnt(g.neto)) + '</b></div>';
+      if (g.efectivo) {
+        h += '<div class="apostat"><span>Cash on average</span><b>' + esc(Number(g.efectivo.promedioPct).toFixed(1)) + '%' +
+          (g.efectivo.dias < g.dias ? ' <span class="desc">since ' + esc(fechaCortaMs(g.efectivo.desde)) + '</span>' : '') + '</b></div>';
+      }
+      h += '</div>';
+      h += '<div class="chartbox" style="margin-top:12px"><canvas id="rendChart"></canvas></div>';
+      h += '<p class="rendleyenda"><span class="rendlin rendlin-cta"></span>your account <span class="rendlin rendlin-idx"></span>same money in ' + esc(idx) + '</p>';
+      // La lectura en una frase (U1) y lo que falta, dicho en la cara (U2).
+      var nota = desdeTxt + ' From ' + fmtUsdEnt(g.base) + '.';
+      if (r.indice && r.indice.nota) nota += ' Index: ' + r.indice.nota + '.';
+      if (r.historia && r.historia.importado) nota += ' History before ' + fechaCortaMs(apISOaMs(r.historia.appDesde)) + ' comes from the broker’s own records.';
+      nota += ' Ranges that ask for more history than there is are not offered.';
+      h += '<p class="capnota">' + esc(nota) + '</p>';
     }
-    h += '</div>';
-    h += '<div class="chartbox" style="margin-top:12px"><canvas id="rendChart"></canvas></div>';
-    h += '<p class="rendleyenda"><span class="rendlin rendlin-cta"></span>your account <span class="rendlin rendlin-idx"></span>same money in ' + esc(idx) + '</p>';
-    // La lectura en una frase (U1) y lo que falta, dicho en la cara (U2).
-    var nota = 'Since ' + fechaCortaMs(g.desde) + ', from ' + fmtUsdEnt(g.base) + '.';
-    if (g.parcial) nota += ' This range asks for more history than there is: it starts where the data starts.';
-    if (r.indice && r.indice.nota) nota += ' Index: ' + r.indice.nota + '.';
-    if (r.historia && r.historia.importado) nota += ' History before ' + fechaCortaMs(apISOaMs(r.historia.appDesde)) + ' comes from the broker’s own records.';
-    h += '<p class="capnota">' + esc(nota) + '</p>';
   }
-  (r.avisos || []).forEach(function (a) { h += '<p class="newsempty" style="font-size:12px">&#9888; ' + esc(a) + '</p>'; });
+  if (rendAbierto) (r.avisos || []).forEach(function (a) { h += '<p class="newsempty" style="font-size:12px">&#9888; ' + esc(a) + '</p>'; });
   body.innerHTML = h;
-  // Los botones del rango: sin manejadores inline (la CSP los bloquea).
+  // Sin manejadores inline (la CSP los bloquea): el desplegable y los rangos.
+  var tg = document.getElementById('rendToggle');
+  if (tg) tg.addEventListener('click', function () { rendAbierto = !rendAbierto; renderRendimiento(); });
   var btns = body.querySelectorAll('#rendRangos .rangebtn');
   for (var i = 0; i < btns.length; i++) {
     btns[i].addEventListener('click', function (ev) {
@@ -151,7 +190,7 @@ function renderRendimiento() {
       renderRendimiento();
     });
   }
-  if (g && !g.pocos) dibujarRendimiento(g);
+  if (rendAbierto && g && !g.pocos) dibujarRendimiento(g);
 }
 
 // La cuenta (acento vivo) contra "la misma plata en SPY" (gris punteado, como
