@@ -107,6 +107,29 @@ function rendAnual(m) {
   if (!m || m.anualizado === null || m.anualizado === undefined) return '';
   return ' <span class="rendsub">' + signoPct(Number(m.anualizado), 1) + ' a year</span>';
 }
+// Año por año (22/09/2026, pedido de Guzman: "estos retornos que tuve
+// anualmente deberian guardarse en alguna pagina"). Sin depositos contra el
+// indice, en puntos. La cuenta la hace el Worker (aniosDe, Rendimiento.js) con
+// la misma de los rangos: el año en curso es el YTD de arriba. Los años a
+// medias (el primero, el actual) se dicen debajo, no en la celda: la columna
+// del año no tiene ancho para una fecha en el telefono.
+function rendTablaAnios(anios, idx) {
+  if (!anios || !anios.length) return '';
+  var h = '<p class="detlbl" style="margin-top:16px">Year by year, without deposits</p>';
+  h += '<table class="rendtabla"><thead><tr><th>Year</th><th>You</th><th>' + esc(idx) + '</th><th>vs</th></tr></thead><tbody>';
+  var notas = [];
+  anios.forEach(function (a) {
+    var marca = (a.enCurso || a.parcial) ? '*' : '';
+    if (a.enCurso) notas.push(a.anio + ' is year to date');
+    else if (a.parcial) notas.push(a.anio + ' counts from ' + fechaCortaMs(a.desde));
+    var pp = (a.pp === null || a.pp === undefined) ? '&mdash;'
+      : '<span class="rendpp ' + (a.pp >= 0 ? 'up' : 'down') + '">' + (a.pp >= 0 ? '+' : '−') + Math.abs(a.pp).toFixed(1) + ' pp</span>';
+    h += '<tr><td>' + a.anio + marca + '</td><td>' + rendPct(a.twr) + '</td><td>' + rendPct(a.spy) + '</td><td>' + pp + '</td></tr>';
+  });
+  h += '</tbody></table>';
+  if (notas.length) h += '<p class="capnota">* ' + esc(notas.join('; ')) + '.</p>';
+  return h;
+}
 function rendEtiqueta(key) {
   for (var i = 0; i < REND_RANGOS.length; i++) if (REND_RANGOS[i].key === key) return REND_RANGOS[i].label;
   return key;
@@ -173,6 +196,7 @@ function renderRendimiento() {
       h += '</div>';
       h += '<div class="chartbox" style="margin-top:12px"><canvas id="rendChart"></canvas></div>';
       h += '<p class="rendleyenda"><span class="rendlin rendlin-cta"></span>your account <span class="rendlin rendlin-idx"></span>same money in ' + esc(idx) + '</p>';
+      h += rendTablaAnios(r.anios, idx);
       // La lectura en una frase (U1) y lo que falta, dicho en la cara (U2).
       var nota = desdeTxt + ' From ' + fmtUsdEnt(g.base) + '.';
       if (r.indice && r.indice.nota) nota += ' Index: ' + r.indice.nota + '.';

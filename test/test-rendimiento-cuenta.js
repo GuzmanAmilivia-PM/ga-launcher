@@ -106,6 +106,11 @@ var PAYLOAD = {
     '5a': rango({ parcial: true }),
     origen: rango({ parcial: true })
   },
+  anios: [
+    { anio: 2026, parcial: false, enCurso: true, desde: HOY - 200 * DIA, hasta: HOY, twr: 14.56, mwr: 15.28, spy: 12.17, pp: 2.39, depositos: 0, retiros: 0 },
+    { anio: 2025, parcial: false, enCurso: false, desde: HOY - 600 * DIA, hasta: HOY - 250 * DIA, twr: 18.2, mwr: 17.9, spy: 20.1, pp: -1.9, depositos: 0, retiros: 0 },
+    { anio: 2023, parcial: true, enCurso: false, desde: Date.UTC(2023, 3, 11, 20), hasta: HOY - 900 * DIA, twr: 9.5, mwr: 9.1, spy: 15.3, pp: -5.8, depositos: 0, retiros: 0 }
+  ],
   avisos: ['IBKR: falta la consulta de actividad.']
 };
 
@@ -113,7 +118,7 @@ console.log('\nA) los nombres de campo que lee la pantalla existen en el Worker'
 if (fuenteWorker) {
   ['rangos', 'indice', 'historia', 'appDesde', 'importado', 'avisos', 'pocos', 'parcial', 'desdeDisponible',
    'depositos', 'retiros', 'neto', 'base', 'valor', 'twr', 'mwr', 'anualizado', 'spy', 'mismaPlata', 'diferenciaUsd',
-   'efectivo', 'promedioPct', 'serie', 'nota', 'nombre'].forEach(function (campo) {
+   'efectivo', 'promedioPct', 'serie', 'nota', 'nombre', 'anios', 'anio', 'enCurso', 'pp'].forEach(function (campo) {
     ok(fuenteWorker.indexOf(campo + ':') !== -1 || fuenteWorker.indexOf(campo + ' =') !== -1 || fuenteWorker.indexOf("'" + campo + "'") !== -1,
       "el Worker escribe el campo '" + campo + "'");
   });
@@ -140,6 +145,7 @@ ok(/<td>Same money, today<\/td><td>US\$ 31,100<\/td><td>US\$ 30,891<\/td>/.test(
 ok(/<td>Difference<\/td><td colspan="2"><b class="up">\+US\$ 210<\/b>/.test(html), 'fila 4: la diferencia en dolares');
 ok(!/class="rangebar"/.test(html) && !/Deposits/.test(html) && !/rendChart/.test(html), 'plegada NO hay rangos, ni flujos, ni grafico');
 ok(!/falta la consulta/.test(html), 'ni los avisos');
+ok(!/Year by year/.test(html), 'ni el año por año');
 ok(charts.length === 0, 'no se dibuja nada plegada');
 ok(/Since /.test(html), 'pero si dice desde cuando');
 ok(typeof toggle === 'function', 'el desplegable se engancha por addEventListener (nada inline)');
@@ -161,6 +167,13 @@ ok(charts.length === 1 && charts[0].data.datasets.length === 2, 'el grafico tien
 ok(charts[0].data.datasets[0].data.length === 12 && charts[0].data.datasets[1].data.length === 12, 'con los 12 puntos cada una');
 ok(charts[0].data.datasets[0].borderColor === '#abcdef' && charts[0].data.datasets[1].borderDash[0] === 5, 'la cuenta con el acento vivo, el indice punteado');
 ok(!/a year/.test(html), 'un rango corto NO se anualiza (como PortfolioAnalyst)');
+// Año por año (22/09/2026): desplegada, del mas nuevo al mas viejo.
+ok(/Year by year, without deposits/.test(html), 'desplegada aparece el año por año');
+var filasAnio = html.split('Year by year')[1] || '';
+ok(filasAnio.indexOf('<td>2026*</td><td><b class="up">+14.6%</b></td><td><b class="up">+12.2%</b></td><td><span class="rendpp up">+2.4 pp</span>') !== -1, '2026 con su marca, vos, el indice y los puntos');
+ok(filasAnio.indexOf('<td>2025</td>') !== -1 && filasAnio.indexOf('<span class="rendpp down">−1.9 pp</span>') !== -1, 'un año por debajo del indice va en rojo y con signo');
+ok(filasAnio.indexOf('2026') < filasAnio.indexOf('2025') && filasAnio.indexOf('2025') < filasAnio.indexOf('2023'), 'del mas nuevo al mas viejo');
+ok(filasAnio.indexOf('* 2026 is year to date; 2023 counts from ') !== -1, 'debajo dice que años son a medias');
 
 console.log('\nD) el rango de un ano anualiza; el origen parcial lo dice; el 5Y no se puede elegir');
 botones['1a']({ currentTarget: { getAttribute: function () { return '1a'; } } });
