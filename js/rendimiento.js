@@ -40,13 +40,16 @@ var REND_RANGOS = [
   { key: 'origen', label: 'All' }
 ];
 
-// Solo las cuentas cuyos depositos informa el broker: IBKR y Schwab. Binance
-// tiene la cuenta hecha en el Worker, pero sus flujos son los que Guzman carga
-// a mano y por ahora no se ofrece (decision del pedido: "empezando por IBKR y
-// Schwab").
+// IBKR, Schwab y, desde el 22/09/2026, Binance (pedido de Guzman: "lo de
+// Binance tambien comparalo"). La cuenta de Binance ya estaba hecha en el
+// Worker; sus flujos son los depositos que Guzman registra en la app (Binance
+// no los informa). Antes de sumarla se verifico que su historia no esconde
+// plata: valuando las cantidades de hoy con los precios de cada dia desde el
+// 17/08, el valor calza con lo estampado — el +36 % de ese mes fue mercado.
+// BTG e Itau no: el sueldo y el plazo fijo no se comparan contra un indice.
 function rendEsCuenta(acc) {
   var k = String((acc && acc.key) || '');
-  return k === 'IB' || k === 'CS';
+  return k === 'IB' || k === 'CS' || k === 'BNB';
 }
 
 // Los rangos que se pueden medir con la historia que hay: los que no piden

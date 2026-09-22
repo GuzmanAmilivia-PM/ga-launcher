@@ -207,6 +207,11 @@ respIB.ok(PAYLOAD);   // llega tarde la de IBKR con Schwab abierta
 ok(/Calculating your history/.test(elemento('rendBody').innerHTML), 'la respuesta tardia de IBKR NO se pinta bajo el titulo de Schwab');
 respuestaPendiente.ok(SCHWAB);
 ok(/YTD vs S&P 500/.test(elemento('rendBody').innerHTML), 'la de Schwab si');
+// Binance se sumo el 22/09/2026 (pedido de Guzman); la clave es la del
+// Worker (CUENTAS.BNB en Rendimiento.js).
+api.mostrar({ key: 'BNB', nombre: 'Binance' });
+ok(elemento('accRend').hidden === false && pedidos.length === 3 && pedidos[2].cuenta === 'BNB', 'Binance muestra la tarjeta y pide la suya');
+ok(/BNB:/.test(fuenteWorker), "el Worker conoce la clave 'BNB'");
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);
