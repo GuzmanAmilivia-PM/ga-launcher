@@ -287,8 +287,9 @@ ok(soloPwa.length === 0, 'la PWA no llama fns inexistentes' + (soloPwa.length ? 
 // PC con la clave completa, simulando por defecto. La app no tiene pantalla
 // para ninguno de los dos, a proposito.
 // ibkr_historial (15/09/2026, V17): la llama el script de la PC que carga el
-// historial anterior a la app, no el telefono.
-var SOLO_BACKEND = ['mail', 'noticias_semana', 'foto', 'itau_atender', 'itau_compra', 'series', 'series_restaurar', 'ibkr_historial'];
+// historial anterior a la app, no el telefono. cs_historial (22/09/2026, V18):
+// lo mismo para Schwab, con el estimado de SnapTrade.
+var SOLO_BACKEND = ['mail', 'noticias_semana', 'foto', 'itau_atender', 'itau_compra', 'series', 'series_restaurar', 'ibkr_historial', 'cs_historial'];
 var soloApi = fnsApi.filter(function (f) { return fnsPwa.indexOf(f) === -1 && SOLO_BACKEND.indexOf(f) === -1; });
 ok(soloApi.length === 0, 'ninguna fn del backend quedo sin mapear' + (soloApi.length ? ': ' + soloApi.join(', ') : ''));
 SOLO_BACKEND.forEach(function (f) {
