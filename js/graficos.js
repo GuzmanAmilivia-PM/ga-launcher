@@ -282,52 +282,96 @@ function cupoDePuntos(canvasId) {
   return Math.max(40, Math.min(240, Math.round(ancho / PX_POR_SEGMENTO)));
 }
 
-// ---------- La linea del indice sobre el grafico (31/08/2026) ----------
-// El dato del S&P ya viajaba en el payload y lo usaban comparacionGrupo y
-// comparacionAnual, pero NUNCA se dibujaba: el grafico tenia una sola serie.
-// Sale de comparar con IBKR (hasta 3 indices), Schwab (5) y Fidelity (26):
-// la comparacion contra un indice esta en 8 de cada 10 productos y era el
-// hueco mas grande del tablero.
+// ---------- La vista en % del grafico (22/09/2026) ----------
+// Hasta hoy el grafico en DOLARES llevaba punteada la linea del S&P, re-escalada
+// al valor de la cartera al principio del rango (serieBench, 31/08/2026). Se
+// saco a pedido de Guzman: la curva en dolares INCLUYE lo que depositaste, asi
+// que contra ella el indice nunca es comparable — y sumarle los depositos al
+// indice tambien los dibuja como saltos. "No la compares vs S&P 500 si tiene en
+// cuenta los depositos." El grafico en dolares queda con una sola curva.
 //
-// COMO se compara, que es la decision de fondo: el indice se re-escala para
-// ARRANCAR en el mismo valor que la cartera al principio del rango visible.
-// Asi las dos curvas comparten eje y se leen juntas — es lo que hace
-// Sharesight y lo que Schwab llama "value vs. net contributions". La lectura
-// es "si el mismo dinero hubiera estado en SPY".
+// La comparacion vive ahora en la vista en %: las dos curvas arrancan en 0 % al
+// principio del rango y miden CRECIMIENTO POR RENDIMIENTO — la cartera con el
+// MISMO encadenado sin depositos que el "pp vs S&P" del Inicio (_twrCadena,
+// abajo en el bloque de aportes) y el indice con su propio %. Por construccion,
+// la distancia entre las dos puntas es exactamente ese "pp vs S&P".
 //
-// LA TRAMPA, y por eso existe aportesEnRango(): si en el periodo hubo
-// aportes, la cartera sube en parte porque pusiste plata, no porque rindiera,
-// y contra un indice re-escalado eso se lee como que le ganaste. La app NO
-// puede callarse eso: cuando hay aportes en el rango, el delta se muestra
-// con un asterisco y la leyenda lo dice. La comparacion limpia de verdad
-// —la que descuenta los aportes— ya existe y es comparacionGrupo().
-function serieBench(serie) {
-  if (!benchPuntos.length || serie.length < 2) return [];
-  // El ancla es el primer punto que SE DIBUJA, no serie[0]. El grafico saltea
-  // fines de semana (getFilteredDataPoints), asi que si la serie empieza un
-  // sabado ese punto no existe en el dibujo: anclando ahi, las dos curvas
-  // arrancaban separadas por un escaloncito. Se veia poco y mentia igual.
-  var vistos = serie.filter(function (p, i) {
-    if (i === serie.length - 1) return true;
-    var d = new Date(p.fecha).getDay();
-    return d !== 0 && d !== 6;
+// Las guardas son las de movimientoDelSaldo, por la misma razon: sin la lista
+// de aportes, o con un rango que empieza antes de lo que la lista cubre, un
+// deposito se dibujaria como rendimiento. Ahi no se dibuja: se dice por que.
+var evoModo = 'valor';
+var EVO_MODOS = [
+  { key: '$', modo: 'valor', titulo: 'Value in dollars' },
+  { key: '%', modo: 'pct', titulo: 'Return without deposits vs the S&P 500' }
+];
+function buildModoBar(barId) {
+  var bar = document.getElementById(barId);
+  if (!bar) return;
+  bar.innerHTML = '';
+  EVO_MODOS.forEach(function (m) {
+    var btn = document.createElement('button');
+    btn.className = 'rangebtn' + (m.modo === evoModo ? ' active' : '');
+    btn.textContent = m.key;
+    btn.title = m.titulo;
+    btn.setAttribute('aria-label', m.titulo);
+    btn._modo = m.modo;
+    btn.onclick = function (e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      evoModo = m.modo;
+      syncModoBars();
+      drawLineChart(filterSerie(currentRangeDias));
+      if (document.getElementById('chartModal').style.display !== 'none') drawBigChart();
+    };
+    bar.appendChild(btn);
   });
-  var ancla = null;
-  for (var i = 0; i < vistos.length; i++) {
-    var bv = benchEn(vistos[i].fecha);
-    if (bv !== null && isFinite(bv) && bv !== 0 && vistos[i].valor) {
-      ancla = { valor: vistos[i].valor, bench: bv };
-      break;
-    }
+}
+function syncModoBars() {
+  document.querySelectorAll('.modobar .rangebtn').forEach(function (b) {
+    b.classList.toggle('active', b._modo === evoModo);
+  });
+}
+// Las dos curvas en %, o {sinDatos} con el motivo. El primer punto del rango
+// va SIEMPRE (es el 0 % de las dos); despues se saltean los fines de semana
+// igual que en la curva en dolares.
+function serieRendimientoPct(serie) {
+  if (!serie || serie.length < 2) return { sinDatos: 'serie' };
+  if (!aportesCargados) return { sinDatos: 'aportes' };
+  if (aportesDesde !== null && serie[0].fecha < aportesDesde - 86400000) {
+    return { sinDatos: 'rango', desde: aportesDesde };
   }
-  if (!ancla) return [];
-  var out = [];
-  vistos.forEach(function (p) {
+  var c = _twrCadena(serie);
+  if (!c) return { sinDatos: 'serie' };
+  var b0 = benchEn(serie[0].fecha);
+  var cartera = [], indice = [];
+  serie.forEach(function (p, i) {
+    if (i !== 0 && i !== serie.length - 1) {
+      var d = new Date(p.fecha).getDay();
+      if (d === 0 || d === 6) return;
+    }
+    cartera.push({ x: p.fecha, y: (c.factores[i] - 1) * 100 });
     var b = benchEn(p.fecha);
-    if (b === null || !isFinite(b)) return;
-    out.push({ x: p.fecha, y: ancla.valor * (b / ancla.bench) });
+    if (b0 && b !== null && isFinite(b)) indice.push({ x: p.fecha, y: (b / b0 - 1) * 100 });
   });
-  return out;
+  return { cartera: cartera, indice: indice };
+}
+// Lo que se dice debajo del dibujo en la vista en %: la leyenda cuando hay
+// grafico, el motivo cuando no. En dolares no se dice nada.
+function pintarNotaEvo(nota, r) {
+  if (!nota) return;
+  if (evoModo !== 'pct') { nota.hidden = true; nota.innerHTML = ''; return; }
+  nota.hidden = false;
+  var idx = esc(benchNombre || 'S&P 500');
+  if (!r || !r.sinDatos) {
+    nota.innerHTML = '<span class="rendlin"></span>your portfolio, without deposits ' +
+      '<span class="rendlin rendlin-idx"></span>' + idx + ' (dividends reinvested)';
+  } else if (r.sinDatos === 'aportes') {
+    nota.textContent = 'Loading your deposits to separate them from the return…';
+  } else if (r.sinDatos === 'rango') {
+    nota.textContent = 'Deposits are known back to ' + new Date(r.desde).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+      ': pick a shorter range to compare without them.';
+  } else {
+    nota.textContent = 'Not enough data to compare this range.';
+  }
 }
 
 // Cuanto se aporto DENTRO del rango visible. Devuelve 0 si no hubo, o si
@@ -401,51 +445,76 @@ function benchPctEnRango(serie) {
   if (!b0 || !bFin) return null;
   return (bFin / b0 - 1) * 100;
 }
-  function buildChartOptions(pts) {
+  function buildChartOptions(pts, enPct) {
   var TC = temaChart();
   var xMin = (pts && pts.length) ? pts[0].x : undefined;
   var xMax = (pts && pts.length) ? pts[pts.length - 1].x : undefined;
+  // En % el eje dice porcentajes y NO se oculta con el ojo: un % no revela
+  // cuanta plata hay (el mismo criterio que el % del rango, que se ve siempre).
+  var ejeY = enPct
+    ? function (v, paso) { var d = (paso && Math.abs(paso) < 1) ? 1 : 0; return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(d) + '%'; }
+    : function (v, paso) { return montosOcultos ? '' : montoCorto(v, paso); };
   return {
   responsive: true,
   maintainAspectRatio: false,
   plugins: { legend: { display: false } },
   scales: {
   x: { type: 'linear', min: xMin, max: xMax, bounds: 'data', ticks: { color: TC.tick, maxTicksLimit: 6, callback: function (value) { return etiquetaFechaEje(value, xMin, xMax); } }, grid: { color: TC.grid } },
-  y: { ticks: { color: TC.tick, callback: function (v, paso) { return montosOcultos ? '' : montoCorto(v, paso); } }, grid: { color: TC.grid } }
+  y: { ticks: { color: TC.tick, callback: ejeY }, grid: { color: TC.grid } }
   }
   };
   }
   // El grafico chico y el del modal eran la misma llamada copiada (E6).
-  function dibujarEvolucion(canvasId, prev, serie) {
+  // Desde el 22/09/2026 dibuja lo que diga evoModo: el patrimonio en dolares,
+  // o las dos curvas de rendimiento en %. Si la vista en % no se puede medir,
+  // no dibuja nada (devuelve null) y la nota dice por que.
+  function dibujarEvolucion(canvasId, prev, serie, notaId) {
   // El cupo se calcula ANTES de destruir el grafico anterior: el lienzo tiene
   // que estar en el documento para poder medirle el ancho.
   var cupo = cupoDePuntos(canvasId);
-  var dataPoints = submuestrearLTTB(getFilteredDataPoints(serie), cupo);
+  var nota = notaId ? document.getElementById(notaId) : null;
+  var dataPoints = null;
+  var ds = null;
+  if (evoModo === 'pct') {
+    var r = serieRendimientoPct(serie);
+    pintarNotaEvo(nota, r);
+    if (r.sinDatos) { if (prev) prev.destroy(); return null; }
+    dataPoints = submuestrearLTTB(r.cartera, cupo);
+    ds = datasetsRendimiento(dataPoints, submuestrearLTTB(r.indice, cupo));
+  } else {
+    pintarNotaEvo(nota, null);
+    dataPoints = submuestrearLTTB(getFilteredDataPoints(serie), cupo);
+    ds = datasetsEvolucion(dataPoints);
+  }
   if (prev) prev.destroy();
   return new Chart(document.getElementById(canvasId), {
   type: 'line',
   // El acento se lee VIVO (colorAcento, nucleo.js): con el hexadecimal
   // clavado, la línea de Evolución seguía dorada con cualquier paleta.
-  data: { datasets: datasetsEvolucion(dataPoints, serie, cupo) },
-  options: buildChartOptions(dataPoints)
+  data: { datasets: ds },
+  options: buildChartOptions(dataPoints, evoModo === 'pct')
   });
   }
-// La cartera SIEMPRE; el indice solo si hay dato. Va PUNTEADO y en gris, no
-// en otro color fuerte: es la referencia, no una segunda protagonista — y
-// ademas el punteado lo distingue sin depender del color (la misma razon por
-// la que las subas y bajas llevan signo y no solo verde/rojo).
-function datasetsEvolucion(dataPoints, serie, cupo) {
-  var ds = [{
+// En dolares, UNA sola curva: el patrimonio (22/09/2026; ver la vista en %).
+function datasetsEvolucion(dataPoints) {
+  return [{
     data: dataPoints, borderColor: colorAcento(), backgroundColor: acentoRgba(0.12),
     fill: true, tension: 0.3, pointRadius: 0
   }];
-  // El indice se submuestrea con el MISMO cupo: si una curva llevara todos
-  // sus puntos y la otra no, la comparacion visual seria entre dos niveles de
-  // detalle distintos y la mas densa pareceria mas volatil por el dibujo.
-  var b = submuestrearLTTB(serieBench(serie || []), cupo || 0);
-  if (b.length > 1) {
+}
+// En %, la cartera con el acento y SIN relleno (un relleno hasta el cero
+// pintaria de color las rachas negativas como si fueran area ganada), y el
+// indice PUNTEADO y en gris: es la referencia, no una segunda protagonista, y
+// el punteado lo distingue sin depender del color. Las dos con el MISMO cupo:
+// dos niveles de detalle harian parecer mas volatil a la curva mas densa.
+function datasetsRendimiento(cartera, indice) {
+  var ds = [{
+    data: cartera, borderColor: colorAcento(), backgroundColor: acentoRgba(0.12),
+    fill: false, tension: 0.3, pointRadius: 0
+  }];
+  if (indice && indice.length > 1) {
     ds.push({
-      data: b, borderColor: 'rgba(144,160,184,.85)', borderDash: [5, 4],
+      data: indice, borderColor: 'rgba(144,160,184,.85)', borderDash: [5, 4],
       borderWidth: 1.8, fill: false, tension: 0.3, pointRadius: 0
     });
   }
@@ -465,11 +534,11 @@ function datasetsEvolucion(dataPoints, serie, cupo) {
   }
   function drawLineChart(serie) {
   if (evoPlegado()) return;
-  lineChartInstance = dibujarEvolucion('lineChart', lineChartInstance, serie);
+  lineChartInstance = dibujarEvolucion('lineChart', lineChartInstance, serie, 'evoNota');
   }
   var bigChartInstance = null;
   function drawBigChart() {
-  bigChartInstance = dibujarEvolucion('lineChartBig', bigChartInstance, filterSerie(currentRangeDias));
+  bigChartInstance = dibujarEvolucion('lineChartBig', bigChartInstance, filterSerie(currentRangeDias), 'evoNotaBig');
   }
   function openChartModal() {
   document.getElementById('chartModal').style.display = 'flex';
@@ -640,6 +709,16 @@ function aporteTotalDelDia(a) {
 // Vive en ESTE bloque porque test-capital.js lo evalúa aislado y
 // comparacionAnual la necesita.
 function twrEnRango(serie) {
+  var c = _twrCadena(serie);
+  if (!c) return null;
+  return { pct: (c.factores[c.factores.length - 1] - 1) * 100, aportes: c.aportes };
+}
+// La cadena ENTERA, punto por punto (22/09/2026): factores[i] es lo que rindió
+// la cartera desde serie[0] hasta serie[i], sin los aportes. twrEnRango se
+// queda con la punta; la vista en % del grafico dibuja todos. Una sola cuenta
+// para los dos, asi la curva no puede terminar en otro numero que el "pp vs
+// S&P" que tiene arriba.
+function _twrCadena(serie) {
   if (!serie || serie.length < 2) return null;
   var t0 = serie[0].fecha, tFin = serie[serie.length - 1].fecha;
   var flujos = [];
@@ -653,15 +732,16 @@ function twrEnRango(serie) {
   // convención de IBKR, verificada contra PortfolioAnalyst tramo por tramo
   // (Bench.crecimientoSinAportes tiene la explicación completa). Antes se
   // descontaba al cierre, y el acumulado se apartaba 2,2 puntos.
-  var twr = 1;
+  var twr = 1, factores = [1];
   for (var j = 1; j < serie.length; j++) {
     var vPrev = serie[j - 1].valor, vHoy = serie[j].valor;
     var flujo = 0;
     flujos.forEach(function (a) { if (a.ts > serie[j - 1].fecha && a.ts <= serie[j].fecha) flujo += a.monto; });
     if (!(vPrev > 0) || !(vPrev + flujo > 0) || !(vHoy > 0)) return null;
     twr *= vHoy / (vPrev + flujo);
+    factores.push(twr);
   }
-  return { pct: (twr - 1) * 100, aportes: flujos.reduce(function (m, a) { return m + a.monto; }, 0) };
+  return { factores: factores, aportes: flujos.reduce(function (m, a) { return m + a.monto; }, 0) };
 }
 
 // ---------- El indice de referencia ----------
@@ -917,4 +997,12 @@ function aplicarAportes(r) {
   // un minuto. Es la MISMA fn que lo dibuja siempre, asi que no hay un segundo
   // camino que pueda decir otra cosa.
   try { if (typeof updateRangePct === 'function') updateRangePct(); } catch (e) {}
+  // La vista en % del grafico tiene la misma espera (22/09/2026): sin la lista
+  // decia "Loading your deposits…"; ahora se dibuja.
+  try {
+    if (typeof evoModo !== 'undefined' && evoModo === 'pct') {
+      drawLineChart(filterSerie(currentRangeDias));
+      if (document.getElementById('chartModal').style.display !== 'none') drawBigChart();
+    }
+  } catch (e2) {}
 }

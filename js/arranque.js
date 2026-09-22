@@ -25,6 +25,8 @@ pintarOjo();
 // ---------- Carga de datos ----------
 buildRangeBar('rangeBar');
 buildRangeBar('rangeBarBig');
+buildModoBar('modoBar');
+buildModoBar('modoBarBig');
 buildTradeForm();
 buildCashForm();
 // El presupuesto del poll se declara ANTES del arranque: la primera llamada a

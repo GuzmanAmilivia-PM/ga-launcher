@@ -1,5 +1,13 @@
-// Arnés de la línea del índice sobre el gráfico de Evolución (31/08/2026).
+// Arnés de la comparación contra el índice en el gráfico de Evolución.
 //
+// 22/09/2026: la línea del índice sobre el gráfico en DÓLARES se sacó (pedido
+// de Guzmán: esa curva incluye los depósitos y contra ella el índice nunca es
+// comparable). La comparación vive ahora en la vista en %: el rendimiento sin
+// depósitos de la cartera contra el % del índice, las dos desde 0 %. La
+// sección A se DIO VUELTA (custodia que el gráfico en dólares no vuelva a
+// dibujar el índice) y las B-C1c prueban la vista en %.
+//
+// Lo que sigue es la historia original (31/08/2026):
 // El dato del S&P ya viajaba en el payload y lo usaban comparacionGrupo y
 // comparacionAnual, pero el gráfico tenía UNA sola serie: nunca se dibujaba.
 // Sale de comparar con IBKR (hasta 3 índices), Schwab (5) y Fidelity (26) —
@@ -89,10 +97,10 @@ function montar(opts) {
   ctx.fullSerie = (opts.fullSerie || []).slice();
   var nombres = Object.keys(ctx);
   var salida = ['aplicarBench', 'benchEn', 'aplicarAportes', 'apISOaMs',
-    'serieBench', 'aportesEnRango', 'benchPctEnRango', 'pintarVsBench', 'datasetsEvolucion',
-    'movimientoDelSaldo'];
+    'aportesEnRango', 'benchPctEnRango', 'pintarVsBench', 'datasetsEvolucion',
+    'movimientoDelSaldo', 'serieRendimientoPct', 'datasetsRendimiento', 'pintarNotaEvo', 'twrEnRango'];
   var fn = new Function(nombres.join(','),
-    graficos + '\nreturn {' + salida.map(function (n) { return n + ':' + n; }).join(',') + '};');
+    graficos + '\nfunction __modo(m) { evoModo = m; }\nreturn {__modo: __modo,' + salida.map(function (n) { return n + ':' + n; }).join(',') + '};');
   var api = fn.apply(null, nombres.map(function (n) { return ctx[n]; }));
   api._pintado = pintado;
   api._mov = mov;
@@ -103,48 +111,68 @@ function montar(opts) {
 var d1 = dia(2026, 3, 2), d2 = dia(2026, 3, 3), d3 = dia(2026, 3, 4);
 var SERIE = [{ fecha: d1, valor: 100000 }, { fecha: d2, valor: 104000 }, { fecha: d3, valor: 110000 }];
 
-console.log('\nA) el indice se re-escala al MISMO punto de partida que la cartera');
+console.log('\nA) (dado vuelta el 22/09/2026) el grafico en DOLARES ya no dibuja el indice');
+// Hasta el 22/09/2026 aca se probaba que serieBench re-escalaba el indice al
+// valor de la cartera. Esa curva incluye los depositos: el indice encima nunca
+// fue comparable. Que no vuelva.
 var api = montar({ fullSerie: SERIE });
 api.aplicarBench({ bench: { nombre: 'S&P 500', valores: [5000, 5100, 5250] } });
-var b = api.serieBench(SERIE);
-ok(b.length === 3, 'un punto por cada dia de la serie (=' + b.length + ')');
-ok(b[0].y === 100000, 'ARRANCA en el valor de la cartera, no en el nivel del indice (=' + b[0].y + ')');
-// 5250/5000 = 1,05 -> 100000 * 1,05 = 105000
-ok(Math.abs(b[2].y - 105000) < 0.01, 'y sigue la FORMA del indice: +5% del indice = 105.000 (=' + b[2].y + ')');
-ok(b[0].x === d1 && b[2].x === d3, 'las fechas son las de la cartera, para que compartan eje X');
+ok(!/function serieBench\(/.test(graficos), 'serieBench ya no existe');
+var dsValor = api.datasetsEvolucion([{ x: d1, y: 1 }]);
+ok(dsValor.length === 1, 'con el indice CARGADO, el grafico en dolares tiene UNA sola curva (=' + dsValor.length + ')');
+ok(dsValor[0].fill === true && dsValor[0].borderColor === '#d4af37', 'la del patrimonio, con su relleno y el acento vivo');
 
-console.log('\nA2) el ancla es el primer punto DIBUJADO, no el primero de la serie');
-// El grafico saltea fines de semana. Si la serie arranca un sabado, ese punto
-// NO se dibuja: anclando ahi, las dos curvas empezaban separadas por un
-// escaloncito. Se veia poco y mentia igual.
+console.log('\nB) la vista en %: sin la lista de aportes no se dibuja');
+var pctSin = montar({ fullSerie: SERIE });
+pctSin.aplicarBench({ bench: { nombre: 'S&P 500', valores: [5000, 5100, 5250] } });
+ok(pctSin.serieRendimientoPct(SERIE).sinDatos === 'aportes', 'sin la lista, sinDatos = aportes (un deposito se dibujaria como rendimiento)');
+
+console.log('\nC) la vista en %: dos curvas desde 0 %, y la punta es el "pp vs S&P"');
+api.aplicarAportes({ lista: [{ fecha: '2026-03-03', grupo: 5000, total: 5000 }], desde: '2026-03-01' });
+var rp = api.serieRendimientoPct(SERIE);
+ok(!rp.sinDatos && rp.cartera.length === 3 && rp.indice.length === 3, 'un punto por dia en las dos curvas');
+ok(rp.cartera[0].y === 0 && rp.indice[0].y === 0, 'las dos ARRANCAN en 0 %');
+// Tramo 1: 104.000 / (100.000 + 5.000) = 0,99048; tramo 2: 110.000 / 104.000.
+ok(Math.abs(rp.cartera[1].y - (104000 / 105000 - 1) * 100) < 1e-9, 'el deposito NO es rendimiento: el dia 2 la cartera va en -0,95 %, no en +4 % (=' + rp.cartera[1].y.toFixed(3) + ')');
+ok(Math.abs(rp.cartera[2].y - api.twrEnRango(SERIE).pct) < 1e-9, 'la punta de la cartera es EXACTAMENTE twrEnRango (el % sin depositos de arriba)');
+ok(Math.abs(rp.indice[2].y - 5) < 1e-9, 'y la del indice, +5 %');
+api.pintarVsBench(SERIE, 10);
+var gap = rp.cartera[2].y - rp.indice[2].y;
+ok(/−0\.2 pp/.test(api._pintado.texto) && Math.abs(gap - (-0.24)) < 0.01, 'la distancia entre las puntas es el "pp vs S&P" del Inicio: ' + api._pintado.texto + ' / ' + gap.toFixed(2));
+var dsPct = api.datasetsRendimiento(rp.cartera, rp.indice);
+ok(dsPct.length === 2 && !!dsPct[1].borderDash && dsPct[1].fill === false, 'dos curvas; el indice PUNTEADO y sin relleno');
+ok(dsPct[0].fill === false && dsPct[0].borderColor === '#d4af37', 'la cartera con el acento y SIN relleno (las rachas negativas no se pintan como area ganada)');
+ok(api.datasetsRendimiento(rp.cartera, []).length === 1, 'sin dato del indice, solo la cartera: no se inventa una linea');
+
+console.log('\nC1) la vista en %: los fines de semana se saltean, pero el 0 % no');
 var sab = dia(2026, 3, 7), dom = dia(2026, 3, 8), lun = dia(2026, 3, 9), mar = dia(2026, 3, 10);
-var conFinde = [{ fecha: sab, valor: 90000 }, { fecha: dom, valor: 90000 },
-                { fecha: lun, valor: 100000 }, { fecha: mar, valor: 110000 }];
+var conFinde = [{ fecha: sab, valor: 90000 }, { fecha: dom, valor: 90000 }, { fecha: lun, valor: 100000 }, { fecha: mar, valor: 110000 }];
 var apiF = montar({ fullSerie: conFinde });
 apiF.aplicarBench({ bench: { nombre: 'S&P 500', valores: [4000, 4000, 5000, 5250] } });
-var bf = apiF.serieBench(conFinde);
-var dibujados = conFinde.filter(function (p, i) {
-  if (i === conFinde.length - 1) return true;
-  var d = new Date(p.fecha).getDay();
-  return d !== 0 && d !== 6;
-});
-ok(bf.length === dibujados.length, 'tantos puntos como dias dibujados (' + bf.length + ' vs ' + dibujados.length + ')');
-ok(bf[0].x === lun, 'arranca el LUNES, que es el primer dia que se ve');
-ok(Math.abs(bf[0].y - 100000) < 0.01,
-  'y en el valor de la cartera DE ESE DIA (100.000), no en el del sabado: ' + bf[0].y);
+apiF.aplicarAportes({ lista: [], desde: '2026-01-01' });
+var rf = apiF.serieRendimientoPct(conFinde);
+ok(rf.cartera.length === 3 && rf.cartera[0].x === sab && rf.cartera[1].x === lun, 'el primer punto (sabado) va igual —es la base—, el domingo no');
 
-console.log('\nB) sin dato del indice no se inventa una linea');
-var vacio = montar({ fullSerie: SERIE });
-ok(vacio.serieBench(SERIE).length === 0, 'sin bench cargado, ninguna linea');
-ok(vacio.datasetsEvolucion([{ x: d1, y: 1 }], SERIE).length === 1,
-  'y el grafico queda con UNA sola serie, como antes');
+console.log('\nC1b) la vista en %: un rango mas largo que la lista de aportes no se dibuja');
+var apiR = montar({ fullSerie: SERIE });
+apiR.aplicarBench({ bench: { nombre: 'S&P 500', valores: [5000, 5100, 5250] } });
+apiR.aplicarAportes({ lista: [], desde: '2026-03-20' });
+var rr = apiR.serieRendimientoPct(SERIE);
+ok(rr.sinDatos === 'rango' && rr.desde === apiR.apISOaMs('2026-03-20'), 'sinDatos = rango, y dice desde cuando se conocen los depositos');
 
-console.log('\nC) con dato, el grafico dibuja DOS series y la del indice se distingue sin color');
-var ds = api.datasetsEvolucion([{ x: d1, y: 1 }], SERIE);
-ok(ds.length === 2, 'dos datasets');
-ok(!!ds[1].borderDash, 'la del indice va PUNTEADA: se distingue aunque no se vea el color');
-ok(ds[1].fill === false, 'y sin relleno, para no tapar la de la cartera');
-ok(ds[0].borderColor === '#d4af37', 'la cartera conserva el color del acento vivo');
+console.log('\nC1c) la nota debajo del dibujo');
+var nota = { hidden: true, innerHTML: '', textContent: '' };
+api.__modo('pct');
+api.pintarNotaEvo(nota, rp);
+ok(nota.hidden === false && /without deposits/.test(nota.innerHTML) && /S&amp;P 500/.test(nota.innerHTML), 'en % la leyenda dice que es sin depositos y contra que indice: ' + nota.innerHTML.slice(0, 80));
+api.pintarNotaEvo(nota, { sinDatos: 'aportes' });
+ok(/Loading your deposits/.test(nota.textContent), 'sin la lista, dice que la esta esperando');
+api.pintarNotaEvo(nota, rr);
+ok(/shorter range/.test(nota.textContent) && /2026/.test(nota.textContent), 'con el rango largo, dice hasta donde llega y que hacer: ' + nota.textContent);
+api.__modo('valor');
+api.pintarNotaEvo(nota, null);
+ok(nota.hidden === true, 'en dolares la nota no se ve');
+api.aplicarAportes({ lista: [], desde: '2026-01-01' });
 
 console.log('\nC2) SIN la lista de aportes no se pinta NADA (14/09/2026)');
 // El defecto que encontro Guzman mirando la pantalla el 13/09/2026: el Inicio
@@ -229,25 +257,18 @@ ok(/same money/.test(fuera._pintado.titulo), 'y la explicacion es la limpia');
 console.log('\nH) las guardas: nada de dividir por cero ni pintar basura');
 var raro = montar({ fullSerie: [] });
 raro.aplicarBench({ bench: { nombre: 'X', valores: [] } });
-ok(raro.serieBench([]).length === 0, 'serie vacia');
+ok(raro.serieRendimientoPct([]).sinDatos === 'serie', 'serie vacia: la vista en % no dibuja');
 ok(raro.benchPctEnRango([]) === null, 'sin rango, null (no un cero)');
 raro.pintarVsBench([], 10);
 ok(raro._pintado.texto === '', 'sin dato no se pinta nada, y no queda texto viejo');
-// Un primer punto en cero NO tumba la linea: el ancla salta al primer punto
-// que sirve. Renunciar seria peor — el historico arranca en cero el dia que
-// se abrio la primera cuenta, y ahi la comparacion se perderia entera.
+// (22/09/2026) Aca se probaba que el ancla de serieBench saltaba un primer
+// punto en cero. En la vista en % un valor en cero no tiene rendimiento
+// medible: se dice, no se inventa una base.
 var enCero = [{ fecha: d1, valor: 0 }, { fecha: d2, valor: 100 }, { fecha: d3, valor: 110 }];
 var base0 = montar({ fullSerie: enCero });
 base0.aplicarBench({ bench: { nombre: 'X', valores: [10, 10, 11] } });
-var b0 = base0.serieBench(enCero);
-ok(b0.length > 0, 'una cartera que arranca en cero NO pierde la linea del indice');
-ok(Math.abs(b0[0].y - 100) < 0.01, 'ancla en el primer punto con valor (100), no en el cero: ' + b0[0].y);
-ok(Math.abs(b0[b0.length - 1].y - 110) < 0.01, 'y el indice +10% desde ahi da 110: ' + b0[b0.length - 1].y);
-// Lo que SI tiene que devolver vacio: cuando ningun punto sirve.
-var todoCero = [{ fecha: d1, valor: 0 }, { fecha: d2, valor: 0 }];
-var apiCero = montar({ fullSerie: todoCero });
-apiCero.aplicarBench({ bench: { nombre: 'X', valores: [10, 11] } });
-ok(apiCero.serieBench(todoCero).length === 0, 'con TODO en cero no hay de donde anclar: sin linea');
+base0.aplicarAportes({ lista: [], desde: '2026-01-01' });
+ok(base0.serieRendimientoPct(enCero).sinDatos === 'serie', 'un tramo desde cero no se mide: sinDatos = serie');
 
 // =========================================================================
 // D3 — "¿Qué movió mi saldo?": separar aportes de rendimiento.

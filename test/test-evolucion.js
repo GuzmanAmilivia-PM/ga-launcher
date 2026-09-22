@@ -173,8 +173,11 @@ ok(/getBoundingClientRect\(\)\.width/.test(src.match(/function cupoDePuntos[\s\S
   'y mide el lienzo de verdad en vez de suponer un ancho');
 ok(/submuestrearLTTB\(getFilteredDataPoints\(serie\), cupo\)/.test(src),
   'la cartera se submuestrea al dibujar');
-ok(/submuestrearLTTB\(serieBench\(serie \|\| \[\]\), cupo \|\| 0\)/.test(src),
-  'y el indice con el MISMO cupo: dos niveles de detalle harian parecer mas volatil a la curva mas densa');
+// (22/09/2026) El indice ya no va sobre la curva en dolares (serieBench se
+// saco): vive en la vista en %, y ahi tambien con el MISMO cupo que la cartera.
+ok(!/serieBench\(/.test(src), 'el grafico en dolares ya no dibuja el indice (serieBench no existe)');
+ok(/submuestrearLTTB\(r\.cartera, cupo\)/.test(src) && /submuestrearLTTB\(r\.indice, cupo\)/.test(src),
+  'y en la vista en % el indice va con el MISMO cupo que la cartera: dos niveles de detalle harian parecer mas volatil a la curva mas densa');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

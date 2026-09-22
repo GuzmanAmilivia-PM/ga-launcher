@@ -39,6 +39,11 @@
 // Google (corte a D1 del 29/08/2026). El comentario de la era-1 decía "el 2
 // sería salir de la planilla" — salió, y este número lo cuenta.
 var VERSION_GENERACION = '2';
+// El 18: la vista en % del grafico de Evolucion (22/09/2026). El selector $ / %:
+// en dolares el patrimonio solo (la linea del S&P que puso el 11 se saco, porque
+// contra una curva con depositos el indice nunca es comparable); en % el
+// rendimiento SIN depositos de la cartera contra el del S&P 500, las dos desde
+// 0 %, y la distancia entre las puntas es el "pp vs S&P" del Inicio.
 // El 17: el rendimiento historico de cada cuenta contra el SPY (15/09/2026,
 // V17): en la pagina de IBKR y de Schwab, MWR ("con mi plata, en mis fechas"),
 // la misma plata puesta en SPY, TWR ("sin depositos") contra el indice, los
@@ -74,7 +79,7 @@ var VERSION_GENERACION = '2';
 // El 8 fue editar a mano los precios del fondo de Itau desde su pagina
 // (29/08/2026, V16); el 7, la Watchlist con alertas y push; el 6, los
 // indicadores del detalle.
-var VERSION_FUNCION = '17';
+var VERSION_FUNCION = '18';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre

@@ -350,7 +350,10 @@ ok(/aporteTotalDelDia\(/.test(cuerpo('aportesEnRango')), 'aportesEnRango (serie 
 // Desde el 9/09/2026 comparacionAnual delega el encadenado en twrEnRango
 // (la misma cuenta que el "vs S&P" del Inicio): el aporte TOTAL se lee ahí.
 ok(/twrEnRango\(/.test(cuerpo('comparacionAnual')), 'comparacionAnual (serie total) encadena con twrEnRango');
-ok(/aporteTotalDelDia\(/.test(cuerpo('twrEnRango')), 'y twrEnRango descuenta el aporte TOTAL del día');
+// Desde el 22/09/2026 la cadena vive en _twrCadena (la comparte la vista en %
+// del grafico) y twrEnRango se queda con la punta.
+ok(/_twrCadena\(/.test(cuerpo('twrEnRango')), 'twrEnRango delega en _twrCadena');
+ok(/aporteTotalDelDia\(/.test(cuerpo('_twrCadena')), 'y _twrCadena descuenta el aporte TOTAL del día');
 ok(/\.grupo\b/.test(cuerpo('comparacionGrupo')) && !/aporteTotalDelDia\(|\.total\b/.test(cuerpo('comparacionGrupo')),
   'comparacionGrupo sigue con `grupo` y NO toca `total`: mide solo Schwab + IBKR + Binance');
 ok(/\.total\b/.test(cuerpo('aporteTotalDelDia')) && /\.grupo\b/.test(cuerpo('aporteTotalDelDia')),

@@ -193,8 +193,12 @@
      cuando no expando la grafica"). Baja debajo del dibujo y solo se ve con el
      grafico abierto. Plegado igual se sabe que periodo rige: el % de la fila
      dice "en 1S", "en YTD". -->
+<!-- $ / % (22/09/2026): en dolares el patrimonio solo; en % el rendimiento sin
+     depositos contra el S&P 500, las dos curvas desde 0 %. La nota dice la
+     leyenda o por que no se puede dibujar. -->
 <div class="evocontrols" id="evoControls" style="display:none">
-<div class="rangebar" id="rangeBar"></div><button class="expandbtn" id="evoAmpliarBtn" title="Full screen" aria-label="Full screen">&#9974;</button>
+<p class="evonota" id="evoNota" hidden></p>
+<div class="modobar" id="modoBar"></div><div class="rangebar" id="rangeBar"></div><button class="expandbtn" id="evoAmpliarBtn" title="Full screen" aria-label="Full screen">&#9974;</button>
 </div>
 <!-- Los dos bancos del atajo DEPOSIT: se muestran al tocarlo, en su propia
      fila. El deposito en si es el formulario de Banking de siempre. -->
@@ -806,7 +810,8 @@ Trades</button>
 <div class="chartmodal" id="chartModal" style="display:none">
 <div class="chartmodal-inner">
 <div class="chartmodal-top"><h2 style="margin:0">Performance</h2><button class="chartmodal-close" id="chartModalClose" aria-label="Close">&times;</button></div>
-<div class="rangebar" id="rangeBarBig" style="margin-bottom:14px"></div>
+<div class="evocontrols evocontrols-big"><div class="modobar" id="modoBarBig"></div><div class="rangebar" id="rangeBarBig"></div></div>
+<p class="evonota" id="evoNotaBig" hidden></p>
 <div class="chartbox chartbox-big"><canvas id="lineChartBig"></canvas></div>
 </div>
 </div>

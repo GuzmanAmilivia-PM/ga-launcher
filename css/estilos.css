@@ -439,6 +439,13 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .evomini-vacio { color: var(--muted); font-size: 11px; }
 /* Los controles del grafico: solo con el grafico abierto (ver el html). */
 .evocontrols { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+/* $ / % del grafico (22/09/2026): los mismos botones que los rangos, en su
+   propio grupo para que syncRangeBars no los apague. */
+.modobar { display: flex; gap: 4px; flex: 0 0 auto; }
+.evonota { flex-basis: 100%; margin: 0; font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.evonota[hidden] { display: none; }
+.evocontrols-big { margin: 0 0 10px; }
+.chartmodal .evonota { margin: 0 0 10px; }
 /* Cash discreto: era un bloque propio arriba a la derecha y competia con el
    total. Ahora es un renglon al pie de la tarjeta. */
 .cashline { display: flex; align-items: baseline; gap: 8px; margin: 13px 0 0; padding-top: 11px;
