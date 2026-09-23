@@ -14,6 +14,10 @@ function ok(cond, msg) {
   else console.log('  ok   ' + msg);
 }
 
+// La historia de este arnés pasa el 2026-06-15 (23/09/2026): con el año de
+// HOY se rompía solo en el cambio de año. Ver test/_reloj.js.
+require('./_reloj').fijarReloj('2026-06-15T15:00:00Z');
+
 var hoy = new Date();
 function iso(d) {
   return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);

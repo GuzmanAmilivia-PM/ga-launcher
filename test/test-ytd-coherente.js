@@ -12,6 +12,10 @@
 // cargada entera (_entorno.js) para tocar las funciones reales de graficos.js.
 var entorno = require('./_entorno');
 
+// La historia de este arnés pasa el 2026-06-15 (23/09/2026): con el año de
+// HOY se rompía solo en el cambio de año. Ver test/_reloj.js.
+require('./_reloj').fijarReloj('2026-06-15T15:00:00Z');
+
 var asserts = 0, fallos = 0;
 function ok(cond, msg) {
   asserts++;

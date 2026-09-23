@@ -4,6 +4,7 @@
   "private": true,
   "description": "GA Portfolio Tracker: la app (PWA). Sin dependencias; los arneses de test/ corren con Node pelado.",
   "scripts": {
-    "test": "node test/run.js"
+    "test": "node test/run.js && node test/_futuro.js",
+    "test:futuro": "node test/_futuro.js 45 100 200 400"
   }
 }
