@@ -51,11 +51,13 @@ function elemento(id) {
 }
 var charts = [];
 var pedidos = [];
+var pedidosAnual = [];
+var vistas = [];
 var respuestaPendiente = null;
 var sandbox = {
   document: { getElementById: function (id) {
     if (id === 'rendToggle') return /id="rendToggle"/.test(elemento('rendBody').innerHTML) ? elemento('rendToggle') : null;
-    return (id === 'accRend' || id === 'rendBody' || id === 'rendChart') ? elemento(id) : null;
+    return (id === 'accRend' || id === 'rendBody' || id === 'rendChart' || /^ran/.test(id)) ? elemento(id) : null;
   } },
   esc: function (s) { return String(s); },
   mask: function (s) { return s; },
@@ -72,12 +74,14 @@ var sandbox = {
   google: { script: { run: {
     withSuccessHandler: function (ok) { this._ok = ok; return this; },
     withFailureHandler: function (fail) { this._fail = fail; return this; },
-    getRendimientoCuenta: function (args) { pedidos.push(args); respuestaPendiente = { ok: this._ok, fail: this._fail }; }
+    getRendimientoCuenta: function (args) { pedidos.push(args); respuestaPendiente = { ok: this._ok, fail: this._fail }; },
+    getRendimientoAnual: function (args) { pedidosAnual.push(args); respuestaPendiente = { ok: this._ok, fail: this._fail }; }
   } } }
 };
-var cuerpo = src + '\nreturn { render: renderRendimiento, mostrar: mostrarRendimiento, medibles: rendRangosMedibles, setDatos: function (d) { rendDatos = d; }, setRango: function (r) { rendRango = r; }, rango: function () { return rendRango; }, abierto: function () { return rendAbierto; } };';
-var api = new Function('document', 'esc', 'mask', 'signoPct', 'fmtUsdEnt', 'fechaCortaMs', 'apISOaMs', 'msgErr', 'msgBackend', 'colorAcento', 'acentoRgba', 'buildChartOptions', 'Chart', 'google', cuerpo)(
-  sandbox.document, sandbox.esc, sandbox.mask, sandbox.signoPct, sandbox.fmtUsdEnt, sandbox.fechaCortaMs, sandbox.apISOaMs, sandbox.msgErr, sandbox.msgBackend, sandbox.colorAcento, sandbox.acentoRgba, sandbox.buildChartOptions, sandbox.Chart, sandbox.google);
+var cuerpo = src + '\nreturn { cargarAnual: cargarRendAnual, render: renderRendimiento, mostrar: mostrarRendimiento, medibles: rendRangosMedibles, setDatos: function (d) { rendDatos = d; }, setRango: function (r) { rendRango = r; }, rango: function () { return rendRango; }, abierto: function () { return rendAbierto; } };';
+var api = new Function('document', 'esc', 'mask', 'signoPct', 'fmtUsdEnt', 'fechaCortaMs', 'apISOaMs', 'msgErr', 'msgBackend', 'colorAcento', 'acentoRgba', 'buildChartOptions', 'Chart', 'google', 'nombrePlataforma', 'setView', cuerpo)(
+  sandbox.document, sandbox.esc, sandbox.mask, sandbox.signoPct, sandbox.fmtUsdEnt, sandbox.fechaCortaMs, sandbox.apISOaMs, sandbox.msgErr, sandbox.msgBackend, sandbox.colorAcento, sandbox.acentoRgba, sandbox.buildChartOptions, sandbox.Chart, sandbox.google,
+  function (n) { return n; }, function (v) { vistas.push(v); });
 
 // ---- el payload, con la forma del Worker ----
 var HOY = Date.now(), DIA = 86400000;
@@ -225,6 +229,39 @@ ok(/YTD vs S&P 500/.test(elemento('rendBody').innerHTML), 'la de Schwab si');
 api.mostrar({ key: 'BNB', nombre: 'Binance' });
 ok(elemento('accRend').hidden === false && pedidos.length === 3 && pedidos[2].cuenta === 'BNB', 'Binance muestra la tarjeta y pide la suya');
 ok(/BNB:/.test(fuenteWorker), "el Worker conoce la clave 'BNB'");
+
+console.log('\nF) la pagina Performance (22/09/2026): la cartera entera y cada broker, año por año');
+var ANUAL = {
+  ok: true, indice: { nombre: 'S&P 500', nota: 'SPY with dividends reinvested' },
+  cartera: [{ anio: 2026, twr: 18.93, spy: 14.1, pp: 4.83, desde: Date.UTC(2025, 11, 30, 15), hasta: HOY, parcial: false, enCurso: true, valor: 123574, aportes: 13500 }],
+  cuentas: [
+    { cuenta: 'IB', nombre: 'Interactive Brokers', desde: Date.UTC(2023, 3, 11, 20), importado: { desde: '2023-04-11', fuente: 'ibkr_flex' }, anios: PAYLOAD.anios },
+    { cuenta: 'CS', nombre: 'Charles Schwab', desde: Date.UTC(2025, 8, 24, 20), importado: null, anios: [PAYLOAD.anios[0]] }
+  ],
+  avisos: []
+};
+if (fuenteWorker) {
+  ['cartera', 'cuentas', 'importado'].forEach(function (campo) {
+    ok(fuenteWorker.indexOf(campo + ':') !== -1, "el Worker escribe '" + campo + "' en rendimiento_anual");
+  });
+}
+api.cargarAnual(false);
+ok(pedidosAnual.length === 1, 'abrir la pagina pide rendimiento_anual una vez');
+respuestaPendiente.ok(ANUAL);
+var hc = elemento('ranCartera').innerHTML, ha = elemento('ranCuentas').innerHTML;
+ok(hc.indexOf('you in 2026 so far') !== -1 && hc.indexOf('<span class="rendpp up">+4.8 pp</span>') !== -1, 'el titular: el año mas nuevo contra el indice, en puntos');
+ok(hc.indexOf('<td>2026*</td><td><b class="up">+18.9%</b></td><td><b class="up">+14.1%</b></td>') !== -1, 'la tabla de la cartera, con la misma forma que las tarjetas');
+ok(hc.indexOf('Year by year') === -1, 'sin repetir el titulo: la tarjeta ya dice que es');
+ok(/banks included, without deposits/.test(hc) && /a new year is added every January 1/.test(hc), 'dice que es TODO, sin depositos, y que cada año se suma solo');
+ok((ha.match(/class="card"/g) || []).length === 2 && ha.indexOf('Interactive Brokers') !== -1 && ha.indexOf('Charles Schwab') !== -1, 'una tarjeta por broker con historia');
+ok(ha.indexOf('2023*') !== -1 && ha.indexOf('broker’s own records') !== -1, 'IBKR con sus años viejos y de donde salen');
+api.cargarAnual(true);
+ok(pedidosAnual.length === 2 && pedidosAnual[1].forzar === true, 'el boton de refrescar pide sin cache');
+respuestaPendiente.fail(new Error('red'));
+ok(elemento('ranCartera').innerHTML === hc, 'un fallo de red con datos ya pintados no borra la pagina');
+var vacio = { ok: true, indice: { nombre: 'S&P 500' }, cartera: [], cuentas: [], avisos: [] };
+api.cargarAnual(true); respuestaPendiente.ok(vacio);
+ok(/closes on December 31/.test(elemento('ranCartera').innerHTML), 'sin ningun año todavia lo dice, no deja la tarjeta vacia');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

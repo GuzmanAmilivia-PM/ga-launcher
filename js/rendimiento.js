@@ -113,15 +113,23 @@ function rendAnual(m) {
 // la misma de los rangos: el año en curso es el YTD de arriba. Los años a
 // medias (el primero, el actual) se dicen debajo, no en la celda: la columna
 // del año no tiene ancho para una fecha en el telefono.
-function rendTablaAnios(anios, idx) {
+// titulo: undefined = el de la tarjeta; '' = sin titulo (la pagina Performance
+// ya lo dice en la cabecera de cada tarjeta).
+// En una tabla de AÑOS la fecha lleva el año y no la hora (fechaCortaMs da
+// "30/12 12:00": se leia como un dato cualquiera del año en curso).
+function rendFechaConAnio(ms) {
+  return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function rendTablaAnios(anios, idx, titulo) {
   if (!anios || !anios.length) return '';
-  var h = '<p class="detlbl" style="margin-top:16px">Year by year, without deposits</p>';
+  var t = (titulo === undefined) ? 'Year by year, without deposits' : titulo;
+  var h = t ? '<p class="detlbl" style="margin-top:16px">' + esc(t) + '</p>' : '';
   h += '<table class="rendtabla"><thead><tr><th>Year</th><th>You</th><th>' + esc(idx) + '</th><th>vs</th></tr></thead><tbody>';
   var notas = [];
   anios.forEach(function (a) {
     var marca = (a.enCurso || a.parcial) ? '*' : '';
     if (a.enCurso) notas.push(a.anio + ' is year to date');
-    else if (a.parcial) notas.push(a.anio + ' counts from ' + fechaCortaMs(a.desde));
+    else if (a.parcial) notas.push(a.anio + ' counts from ' + rendFechaConAnio(a.desde));
     var pp = (a.pp === null || a.pp === undefined) ? '&mdash;'
       : '<span class="rendpp ' + (a.pp >= 0 ? 'up' : 'down') + '">' + (a.pp >= 0 ? '+' : '−') + Math.abs(a.pp).toFixed(1) + ' pp</span>';
     h += '<tr><td>' + a.anio + marca + '</td><td>' + rendPct(a.twr) + '</td><td>' + rendPct(a.spy) + '</td><td>' + pp + '</td></tr>';
@@ -236,3 +244,76 @@ function dibujarRendimiento(g) {
   if (idx.length > 1) ds.push({ data: idx, borderColor: 'rgba(144,160,184,.85)', borderDash: [5, 4], borderWidth: 1.8, fill: false, tension: 0.3, pointRadius: 0 });
   rendChartInstance = new Chart(canvas, { type: 'line', data: { datasets: ds }, options: buildChartOptions(cta) });
 }
+
+// ---------- La pagina Performance (22/09/2026) ----------
+// Pedido de Guzman: "la visualizacion total de mi cartera vs S&P 500, una
+// pagina directa para ver todos los años, en el menu del costado"; y "lo
+// importante es que quede bien armado para los proximos años". Arriba la
+// cartera ENTERA, abajo cada broker que tiene historia, las dos con la MISMA
+// tabla que la tarjeta de cada cuenta (rendTablaAnios).
+//
+// Por que aguanta los años que vienen sin tocar nada: la cartera sale de
+// cierres_anuales (Worker, Anual.js), una fila por año que el cron pisa cada
+// dia y que el 1 de enero queda quieta; el indice, de la tabla bench del
+// mismo tramo. Las dos son permanentes y se respaldan todos los dias. Un año
+// nuevo aparece solo como una fila mas.
+var ranDatos = null;
+var ranPidiendo = false;
+function cargarRendAnual(forzar) {
+  if (ranDatos && !forzar) renderRendAnual();
+  if (ranPidiendo) return;
+  ranPidiendo = true;
+  google.script.run.withSuccessHandler(function (r) {
+    ranPidiendo = false;
+    ranDatos = r;
+    renderRendAnual();
+  }).withFailureHandler(function (err) {
+    ranPidiendo = false;
+    if (ranDatos) return;   // con datos ya pintados, un fallo de red no borra la pantalla
+    var el = document.getElementById('ranCartera');
+    if (el) el.innerHTML = '<p class="newsempty">' + esc(msgErr(err, 'Performance')) + '</p>';
+  }).getRendimientoAnual(forzar ? { forzar: true } : {});
+}
+function renderRendAnual() {
+  var elC = document.getElementById('ranCartera');
+  var elA = document.getElementById('ranCuentas');
+  if (!elC || !elA) return;
+  var r = ranDatos;
+  if (!r) return;
+  if (!r.ok) { elC.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>'; elA.innerHTML = ''; return; }
+  var idx = (r.indice && r.indice.nombre) || 'S&P 500';
+  var cartera = r.cartera || [];
+  var h = '';
+  if (!cartera.length) {
+    h += '<p class="capnota">The first year closes on December 31: until then there is nothing to compare.</p>';
+  } else {
+    // El titular: el año mas nuevo, en puntos contra el indice.
+    var a = cartera[0];
+    var pp = (a.pp === null || a.pp === undefined) ? null : a.pp;
+    h += '<p class="rendtitular">' + rendPct(a.twr) + ' <span class="desc">you in ' + a.anio + (a.enCurso ? ' so far' : '') + '</span> &nbsp;vs&nbsp; ' +
+      rendPct(a.spy) + ' <span class="desc">' + esc(idx) + '</span>' +
+      (pp !== null ? ' <span class="rendpp ' + (pp >= 0 ? 'up' : 'down') + '">' + (pp >= 0 ? '+' : '−') + Math.abs(pp).toFixed(1) + ' pp</span>' : '') + '</p>';
+    h += rendTablaAnios(cartera, idx, '');
+    var ultimo = cartera[cartera.length - 1];
+    h += '<p class="capnota">All accounts, banks included, without deposits. The whole portfolio is measured from ' +
+      esc(rendFechaConAnio(ultimo.desde)) + ', when the app started keeping it; a new year is added every January 1.' +
+      (r.indice && r.indice.nota ? ' Index: ' + esc(r.indice.nota) + '.' : '') + '</p>';
+  }
+  (r.avisos || []).forEach(function (x) { h += '<p class="newsempty" style="font-size:12px">&#9888; ' + esc(x) + '</p>'; });
+  elC.innerHTML = h;
+  // Cada broker con historia propia, en su tarjeta.
+  var hc = '';
+  (r.cuentas || []).forEach(function (c) {
+    hc += '<div class="card"><div class="cardtop"><h2>' + esc(nombrePlataforma(c.nombre)) + '</h2></div>';
+    hc += rendTablaAnios(c.anios, idx, '');
+    hc += '<p class="capnota">Since ' + esc(rendFechaConAnio(c.desde)) +
+      (c.importado ? ', with the broker’s own records before the app' : '') + '. Without deposits, like the whole portfolio.</p></div>';
+  });
+  elA.innerHTML = hc;
+}
+(function () {
+  var back = document.getElementById('ranBack');
+  if (back) back.onclick = function () { setView('inicio'); };
+  var ref = document.getElementById('ranRefresh');
+  if (ref) ref.onclick = function () { cargarRendAnual(true); };
+})();
