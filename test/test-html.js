@@ -853,7 +853,7 @@ ok(html.indexOf('id="macroList"') !== -1, 'y tiene donde pintar los titulares');
 // medios y es de los caros.
 var pedidos = (vistasSrcM.match(/\.getNoticias\(\)/g) || []).length;
 ok(pedidos === 1, 'las noticias se piden en UN solo lugar (' + pedidos + ')');
-ok(/function pedirNoticias\(\)[\s\S]{0,400}renderMacroInicio/.test(vistasSrcM),
+ok(/function pedirNoticias\(\)[\s\S]{0,3000}renderMacroInicio/.test(vistasSrcM),
   'y esa unica peticion alimenta tambien la tarjeta del Inicio');
 ok(/setTimeout\(pedirNoticias/.test(arranqueSrcM),
   'se pide DESPUES de pintar: no puede competir con el payload del arranque');

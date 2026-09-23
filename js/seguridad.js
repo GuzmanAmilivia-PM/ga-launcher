@@ -177,6 +177,19 @@ if (!desdeFondo && desbloqueoVigente()) { if (_preArmado) { appBloqueada = false
 // logo no se va hasta que se entra.
 appBloqueada = true;
 _preArmado = false;
+// Al volver del segundo plano el splash ya se habia ido (clase hide y, tras
+// el fundido, display:none): hay que volver a MOSTRARLO. Sin esto se pedia
+// Face ID con los montos a la vista, y cancelar la hoja dejaba la app
+// abierta y usable (auditoria del 23/09/2026; asi desde v81). Al abrir en
+// frio no cambia nada: el splash esta a la vista desde el HTML. Si estaba a
+// la vista el pedido de la clave de la API, espera su turno detras del
+// desbloqueo, igual que en mostrarLock.
+mostrarSplash();
+var tok = document.getElementById('splashToken');
+if (tok && tok.style.display !== 'none') {
+  if (lockPendiente === null) lockPendiente = document.getElementById('lockErr').textContent || '';
+  tok.style.display = 'none';
+}
 var el = document.getElementById('splash');
 var caja = document.getElementById('splashLock');
 caja.style.display = '';

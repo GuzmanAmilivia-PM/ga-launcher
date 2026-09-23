@@ -57,7 +57,9 @@ function pintarCache() {
   pintarBadges('cache');
   return true;
 }
-if (getApiToken()) { pintarCache(); loadData(); } else { mostrarLock(); }
+// Las noticias tambien salen de lo guardado (23/09/2026): la tarjeta del mundo
+// del Inicio aparece con la app y no segundos despues (vistas.js).
+if (getApiToken()) { pintarCache(); pintarNoticiasCache(); loadData(); } else { mostrarLock(); }
 // En pantalla ancha el carrusel del Inicio se despliega y los tres paneles se
 // ven de una: Dividendos y Aportes hay que pedirlos, porque su carga colgaba
 // del gesto de deslizar (paneles.js). En el telefono esto no hace nada.
@@ -73,8 +75,8 @@ document.getElementById('liquidezPct').textContent = (data.liquidezPct ? (data.l
 // La lista de cuentas del Inicio se fue el 02/09/2026 ("para mi esa info no
 // va ahi"). El valor por cuenta NO se perdio: pasa a la leyenda de la torta
 // de Portfolio, que ademas ya era el otro camino para abrir cada cuenta.
-// Las noticias del mundo del pie del Inicio. Se piden DESPUES de pintar y una
-// sola vez (pedirNoticias tiene su propia bandera): el pedido lee los feeds de
+// Las noticias del mundo del pie del Inicio. Se piden DESPUES de pintar y como
+// mucho cada media hora (pedirNoticias filtra solo): el pedido lee los feeds de
 // seis medios y es de los lentos, asi que no puede competir con el payload del
 // arranque, que es el momento mas sensible de la app. La tarjeta nace
 // escondida y aparece cuando el dato llega.

@@ -189,15 +189,15 @@ function falla(nombre) { return function () { var e = new Error('x'); e.name = n
   var storeF2 = {
     ga_token: 'tk', ga_sec: SEC_BIO_PIN, ga_bnb: 'clave-binance', ga_bnb_ultima: 'ayer',
     ga_cache_data: '{"data":1}', ga_cache_div: '{"data":1}', ga_cache_apo: '{"data":1}',
-    ga_cache_ops: '{"data":[500,"trades"]}', ga_cache_ana: '{"data":1}'
+    ga_cache_ops: '{"data":[500,"trades"]}', ga_cache_ana: '{"data":1}', ga_cache_news: '{"data":{"bruscos":[{"symbol":"NVDA"}]}}'
   };
   var rF2 = montar(storeF2, falla('NotAllowedError'), true);
   await tick();
   rF2.el('secOlvide').click();          // primer toque: pide confirmacion
-  ok(Object.keys(storeF2).length === 9, 'el primer toque solo confirma, no borra');
+  ok(Object.keys(storeF2).length === 10, 'el primer toque solo confirma, no borra');
   rF2.el('secOlvide').click();          // segundo toque: borra de verdad
   ['ga_sec', 'ga_token', 'ga_bnb', 'ga_bnb_ultima', 'ga_cache_data', 'ga_cache_div',
-   'ga_cache_apo', 'ga_cache_ops', 'ga_cache_ana'].forEach(function (k) {
+   'ga_cache_apo', 'ga_cache_ops', 'ga_cache_ana', 'ga_cache_news'].forEach(function (k) {
     ok(!(k in storeF2), 'borra ' + k);
   });
 
@@ -373,9 +373,26 @@ function falla(nombre) { return function () { var e = new Error('x'); e.name = n
   var r19 = montar(store19, okBio, true);
   await tick(); r19.correrTimers(); await tick();
   ok(r19.estado().appBloqueada === false, 'al abrir, dentro de la ventana, no pide');
+  // La app estaba EN USO: el splash ya se habia ido (clase hide y, tras el
+  // fundido, display:none). Sin esto el test pasaba con un splash que nunca
+  // se habia ocultado, y el re-bloqueo pedia Face ID con los montos a la
+  // vista desde v81 (auditoria del 23/09/2026).
+  r19.el('splash').parentNode = {};   // en la pagina real cuelga del body: el fundido termina en display:none
+  r19.ctx.__hideSplash(); r19.correrTimers();
+  ok(r19.el('splash').classList.contains('hide') && r19.el('splash').style.display === 'none',
+    'la app esta en uso: el splash se fue');
   r19.ctx.__activarBloqueo(true);
   ok(r19.estado().appBloqueada === true && r19.el('splashLock').style.display === '',
     'al volver del segundo plano (desdeFondo), pide aunque haya entrado hace 1 minuto');
+  ok(!r19.el('splash').classList.contains('hide') && r19.el('splash').style.display !== 'none',
+    'y el splash VUELVE a tapar la pantalla: pedir Face ID con los montos a la vista no es bloquear');
+  // Si estaba a la vista el pedido de la clave de la API, espera su turno.
+  var r19c = montar({ ga_token: 'tk', ga_sec: SEC_BIO, ga_desbloqueo: String(Date.now() - 60 * 1000) }, okBio, true);
+  await tick(); r19c.correrTimers(); await tick();
+  r19c.ctx.__mostrarLock('The saved passcode no longer works');
+  r19c.ctx.__activarBloqueo(true);
+  ok(r19c.el('splashToken').style.display === 'none' && r19c.estado().lockPendiente === 'The saved passcode no longer works',
+    'la pantalla de la clave de la API se esconde detras del desbloqueo y queda pendiente, con su mensaje');
   var r19b = montar({ ga_token: 'tk', ga_sec: SEC_BIO, ga_desbloqueo: String(Date.now() - 60 * 1000) }, okBio, true);
   await tick(); r19b.correrTimers(); await tick();
   r19b.ctx.__activarBloqueo(false);

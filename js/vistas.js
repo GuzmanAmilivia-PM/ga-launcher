@@ -220,13 +220,9 @@ if (name === 'rendanual') cargarRendAnual(false);
 if (name === 'ia') prepararIA();
 if (name === 'seguridad') prepararSeguridad();
 if (name === 'noticias') cargarResultados();
-if (name === 'noticias' && !noticiasCargadas) {
-// La bandera se marca ANTES de pedir, no en el handler de exito: si no, cada
-// toque en la pestana mientras el pedido esta en vuelo disparaba OTRA llamada
-// de hasta dos minutos. Si falla se revierte, para poder reintentar. Es el
-// mismo patron que ya usaba cargarOperaciones.
-pedirNoticias();
-}
+// pedirNoticias decide solo si hace falta (en vuelo, o fresco de menos de
+// media hora: no pide).
+if (name === 'noticias') pedirNoticias();
 if (name === 'trade' && !opsCargadas) cargarOperaciones(false);
 window.scrollTo(0, 0);
 }
@@ -245,19 +241,68 @@ var accPedida = null;
 // dos veces seria pagar dos veces por el mismo dato — y este pedido es de los
 // caros: lee los feeds de seis medios.
 //
-// La bandera se marca ANTES de pedir, no en el handler de exito: si no, cada
-// toque en la pestana mientras el pedido esta en vuelo disparaba OTRA llamada.
-// Si falla se revierte, para poder reintentar.
+// La bandera de vuelo se marca ANTES de pedir, no en el handler de exito: si
+// no, cada toque en la pestana mientras el pedido esta en vuelo disparaba OTRA
+// llamada. Si falla se revierte, para poder reintentar.
+//
+// Lo ultimo visto se guarda en el telefono y se pinta AL ABRIR (23/09/2026,
+// "la carga de news esta un poco lenta cuando abro la app"): era la unica
+// pantalla principal sin cache local, asi que la tarjeta del Inicio aparecia
+// recien con la respuesta — 1,2 s de espera a proposito mas el pedido, y
+// varios segundos cuando el cache del servidor esta frio (noches y fines de
+// semana: el cron que lo calienta corre solo en horario de mercado).
+//
+// Y el pedido se REPITE cada media hora (NOTICIAS_VIGENCIA_MS, la misma vida
+// que el cache del servidor: antes traeria lo mismo). La bandera valia por
+// toda la sesion, e iOS mantiene la PWA viva horas en segundo plano: a la
+// manana seguian los titulares de la noche anterior. El render del Inicio la
+// vuelve a llamar en cada poll de 60 s; esto filtra.
+var NOTICIAS_VIGENCIA_MS = 30 * 60 * 1000;
+var noticiasEnVuelo = false;
+var noticiasT = 0;   // cuando llego la ultima respuesta buena
+// Con los feeds de los medios caidos el servidor contesta sin titulares de
+// mercado ni macro. Eso no pisa lo guardado: seria cambiar noticias de hace
+// unas horas por una pantalla vacia.
+function noticiasConTitulares(d) {
+  return !!(d && ((d.mercado && d.mercado.length) || (d.macro && d.macro.length)));
+}
+function pintarNoticiasCache() {
+  var c = cacheLeer('ga_cache_news');
+  if (!c || !noticiasConTitulares(c.data)) return false;
+  renderNoticias(c.data);
+  if (typeof renderMacroInicio === 'function') renderMacroInicio(c.data);
+  // Los movimientos bruscos y los titulares pueden ser de ayer: la pestana
+  // lo dice hasta que llegue la respuesta (cada titular ya dice su edad).
+  marcaActualizando('newsCacheAviso', c.t);
+  return true;
+}
 function pedirNoticias() {
-  if (noticiasCargadas) return;
-  noticiasCargadas = true;
+  if (noticiasEnVuelo) return;
+  if (noticiasCargadas && Date.now() - noticiasT < NOTICIAS_VIGENCIA_MS) return;
+  noticiasEnVuelo = true;
   google.script.run.withSuccessHandler(function (d) {
+    noticiasEnVuelo = false;
+    var guardado = cacheLeer('ga_cache_news');
+    if (!noticiasConTitulares(d) && guardado) {
+      marcaActualizando('newsCacheAviso', guardado.t, 'could not update');
+      return;
+    }
+    noticiasCargadas = true;
+    noticiasT = Date.now();
+    if (noticiasConTitulares(d)) cacheGuardar('ga_cache_news', d);
+    limpiarMarca('newsCacheAviso');
     renderNoticias(d);
     // trade.js se carga DESPUES que este archivo, asi que la funcion existe
     // recien en tiempo de ejecucion. Se consulta en vez de suponerla.
     if (typeof renderMacroInicio === 'function') renderMacroInicio(d);
   }).withFailureHandler(function (err) {
-    noticiasCargadas = false;
+    noticiasEnVuelo = false;
+    // Con titulares ya pintados, un fallo de red no borra la pantalla.
+    var guardado = cacheLeer('ga_cache_news');
+    if (guardado && noticiasConTitulares(guardado.data)) {
+      marcaActualizando('newsCacheAviso', guardado.t, 'could not update');
+      return;
+    }
     errorEnVista('noticiasBody', err, 'the news');
   }).getNoticias();
 }
