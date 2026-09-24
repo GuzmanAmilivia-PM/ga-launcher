@@ -39,6 +39,9 @@
 // Google (corte a D1 del 29/08/2026). El comentario de la era-1 decía "el 2
 // sería salir de la planilla" — salió, y este número lo cuenta.
 var VERSION_GENERACION = '2';
+// El 20: la pagina Exposure en el menu del costado (24/09/2026, A28): las 10
+// empresas con mas exposicion, lo directo mas lo que hay dentro de cada fondo
+// (sus 25 mayores tenencias, con la fecha de cada lista).
 // El 19: la pagina Performance en el menu del costado (22/09/2026): la
 // cartera entera año por año contra el S&P 500 (de cierres_anuales, que suma
 // un año solo cada 1 de enero) y el año por año de cada broker.
@@ -82,7 +85,7 @@ var VERSION_GENERACION = '2';
 // El 8 fue editar a mano los precios del fondo de Itau desde su pagina
 // (29/08/2026, V16); el 7, la Watchlist con alertas y push; el 6, los
 // indicadores del detalle.
-var VERSION_FUNCION = '19';
+var VERSION_FUNCION = '20';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre
@@ -256,9 +259,11 @@ document.getElementById('mCash').onclick = function () { toggleMenu(false); setV
 document.getElementById('mRefrescar').onclick = function () { sincronizarTodo(); };
 // Performance (22/09/2026): la cartera y cada broker, año por año.
 document.getElementById('mPerf').onclick = function () { toggleMenu(false); setView('rendanual'); };
+// Exposure (24/09/2026, A28): las 10 empresas, fondos incluidos.
+document.getElementById('mExpo').onclick = function () { toggleMenu(false); setView('exposicion'); };
 
 // ---------- Navegación (barra inferior) ----------
-var VIEWS = ['inicio', 'portafolio', 'cash', 'watchlist', 'trade', 'noticias', 'account', 'posiciones', 'analisis', 'config', 'diseno', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb', 'cs', 'rendanual'];
+var VIEWS = ['inicio', 'portafolio', 'cash', 'watchlist', 'trade', 'noticias', 'account', 'posiciones', 'analisis', 'config', 'diseno', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb', 'cs', 'rendanual', 'exposicion'];
 // La barra no cambia nunca: se consulta el DOM una sola vez, no en cada setView.
 var NAVTABS = document.querySelectorAll('.navtab');
 var currentView = 'inicio';
@@ -315,6 +320,7 @@ if (name === 'ibkr') cargarEstadoIBKR();
 if (name === 'bnb') prepararBNB();
 if (name === 'cs') cargarEstadoCS();
 if (name === 'rendanual') cargarRendAnual(false);
+if (name === 'exposicion') cargarExposicion(false);
 if (name === 'ia') prepararIA();
 if (name === 'seguridad') prepararSeguridad();
 if (name === 'noticias') cargarResultados();

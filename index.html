@@ -132,6 +132,10 @@
      contra el S&P 500. Pedido de Guzman: "una pagina directa para ver todos
      los años", en el menu del costado. -->
 <button class="mtile" id="mPerf"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M4 19.5h16"/><path d="M6.5 16V11M11 16V7.5M15.5 16v-5.5M20 16V5"/></svg></span>Performance</button>
+<!-- Exposure (24/09/2026, A28): las 10 empresas con mas exposicion, lo
+     directo mas lo que cada fondo tiene adentro. Pedido de Guzman: aparte de
+     Portfolio, en el menu del costado. -->
+<button class="mtile" id="mExpo"><span class="mtile-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v8h8"/></svg></span>Exposure</button>
 <!-- Banking (la vista de depositar/retirar cash) vive ACA desde el
      27/08/2026: su lugar en la barra de abajo lo ocupa la Watchlist. -->
 <button class="mtile" id="mCash"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M8.5 10.5V4M8.5 4 5.5 7M8.5 4l3 3"/><path d="M15.5 13.5V20M15.5 20l-3-3M15.5 20l3-3"/></svg></span>Banking</button>
@@ -427,6 +431,18 @@
 <div id="ranCartera"><p class="loadingtxt">Loading your years...</p></div>
 </div>
 <div id="ranCuentas"></div>
+</div>
+
+<!-- ============ EXPOSURE: las 10 empresas con mas exposicion (24/09/2026, A28) ============ -->
+<!-- Lo directo mas lo que hay dentro de VOO, QQQ, SMH, IWM y SCHD. La cuenta
+     la hace el Worker (exposicion); aca solo se dibuja (js/exposicion.js). -->
+<div id="view-exposicion" style="display:none">
+<button type="button" class="backlink" id="expBack">&larr; Back</button>
+<p class="viewtitle">Exposure</p>
+<div class="card">
+<div class="cardtop"><h2>Top 10 companies, funds included</h2><button class="expandbtn" id="expRefresh" title="Refresh" aria-label="Refresh exposure">&#8635;</button></div>
+<div id="expBody"><p class="loadingtxt">Looking inside your funds...</p></div>
+</div>
 </div>
 
 <!-- ============ CONFIGURACIÓN (diseño: tema + acento + tonalidad) ============ -->
@@ -887,6 +903,7 @@ Trades</button>
 <script src="./js/seguridad.js"></script>
 <script src="./js/buscador.js"></script>
 <script src="./js/watchlist.js"></script>
+<script src="./js/exposicion.js"></script>
 <script src="./js/arranque.js"></script>
 </body>
 </html>
