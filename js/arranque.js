@@ -93,7 +93,7 @@ var acc = accountByName(c.nombre);
 var row = document.createElement('div');
 row.className = 'row' + (acc ? ' clickable' : '');
 row.innerHTML = '<span>' + esc(nombrePlataforma(c.nombre)) + '</span><span>' + fmt(c.liquido) + (acc ? '<span class="chev">&rsaquo;</span>' : '') + '</span>';
-if (acc) row.onclick = function () { showAccount(acc, 'cash'); };
+if (acc) { row.onclick = function () { showAccount(acc, 'cash'); }; if (typeof hacerTocable === 'function') hacerTocable(row); }
 cashListEl.appendChild(row);
 });
 buildCashForm(data.cuentas);

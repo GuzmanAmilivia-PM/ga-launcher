@@ -95,7 +95,9 @@ function renderWatchlist(data) {
   wlFilaAbierta = null;
   wlPanelEl = null; wlPanelSym = null; wlPanelTipo = null;
   body.innerHTML = '';
-  var items = data.items || [];
+  // Lo que se esta quitando (con su Undo vivo) no vuelve a aparecer si la
+  // lista se repinta mientras tanto (el cache, un sondeo).
+  var items = (data.items || []).filter(function (it) { return !(wlPendiente && it.symbol === wlPendiente.symbol); });
   if (!items.length) {
     body.innerHTML = '<div class="vacio"><span class="vic">&#9734;</span><b>Nothing here yet</b>Search a ticker with the magnifier and tap +.</div>';
     pintarEstadoPush();
@@ -193,6 +195,10 @@ function wlEngancharDeslizar(fila, alTocar) {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     x0 = e.clientX; y0 = e.clientY; dx = 0;
     arrastrando = false; decidido = false;
+    // Pegado al borde izquierdo el dedo es del menu (vistas.js, 24/09/2026):
+    // la fila no se corre. 'decidido' sin 'arrastrando' hace que ni el
+    // movimiento ni el toque la toquen.
+    if (e.pointerType !== 'mouse' && typeof MENU_BORDE_PX !== 'undefined' && e.clientX <= MENU_BORDE_PX) { decidido = true; return; }
     anchoAcciones();
   });
 
@@ -243,15 +249,57 @@ function wlEngancharDeslizar(fila, alTocar) {
   });
 }
 
+// Quitar se puede deshacer (24/09/2026, auditoria general A7). Antes el toque
+// borraba en el acto, y con la alerta armada adentro: un roce de mas al
+// deslizar la fila y habia que volver a buscar el simbolo y cargar el
+// objetivo de nuevo. Ahora la fila se va de la vista al instante, el aviso
+// flotante ofrece "Undo" durante WL_DESHACER_MS, y recien ahi se le pide al
+// Worker. Deshacer no le pide nada a nadie: la fila vuelve tal cual, con su
+// lugar y su alerta (volver a agregarla la mandaba al final y sin alerta).
+// Si la app se va al fondo antes, se borra en el momento: el gesto ya fue.
+var WL_DESHACER_MS = 6000;
+var wlPendiente = null;   // { symbol, fila, reloj }
 function wlQuitar(symbol, btn) {
-  btn.disabled = true;
+  wlConfirmarQuitar();   // uno por vez: el anterior se borra ya
+  var fila = btn && btn.closest ? btn.closest('.wlrow') : null;
+  if (fila) fila.style.display = 'none';
+  wlPendiente = { symbol: symbol, fila: fila, reloj: setTimeout(wlConfirmarQuitar, WL_DESHACER_MS) };
+  if (typeof avisoFlotante === 'function') {
+    avisoFlotante('Removed <b>' + esc(symbol) + '</b> from the watchlist.' +
+      '<button type="button" class="avisoflot-accion" id="wlDeshacer">Undo</button>', true);
+    var b = document.getElementById('wlDeshacer');
+    if (b) b.onclick = function () { wlDeshacerQuitar(); };
+  }
+}
+function wlDeshacerQuitar() {
+  var p = wlPendiente;
+  if (!p) return;
+  wlPendiente = null;
+  clearTimeout(p.reloj);
+  wlVolverFila(p);
+  if (typeof cerrarAvisoFlotante === 'function') cerrarAvisoFlotante();
+}
+// La fila vuelve: si sigue en la pagina, se muestra; si la lista se repinto
+// en el medio (la fila vieja ya no esta), se repinta de nuevo, ahora con ella.
+function wlVolverFila(p) {
+  if (p.fila && p.fila.parentNode) p.fila.style.display = '';
+  else if (wlData) renderWatchlist(wlData);
+}
+function wlConfirmarQuitar() {
+  var p = wlPendiente;
+  if (!p) return;
+  wlPendiente = null;
+  clearTimeout(p.reloj);
   google.script.run.withSuccessHandler(function () {
     cargarWatchlist(true);
   }).withFailureHandler(function (err) {
-    btn.disabled = false;
-    errorEnVista('wlAviso', err, 'removing ' + symbol);
-  }).quitarWatchlist({ symbol: symbol });
+    wlVolverFila(p);
+    errorEnVista('wlAviso', err, 'removing ' + p.symbol);
+  }).quitarWatchlist({ symbol: p.symbol });
 }
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') wlConfirmarQuitar();
+});
 
 // Cierra el panel que hubiera (detalle o alerta) y dice cual era. Los paneles
 // se crean y se borran POR REFERENCIA, no buscandolos por id: la lista se

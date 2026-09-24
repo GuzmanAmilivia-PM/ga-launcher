@@ -914,6 +914,7 @@ tr.className = claseFila(h, visibles, cortes[idx]);
 tr.innerHTML = filaHoldingHtml(h);
 engancharLogos(tr);
 tr.onclick = function () { toggleDetalle(tr, h); };
+if (typeof hacerTocable === 'function') hacerTocable(tr);
 if (!enLugar) { el.appendChild(tr); holdFilas.push({ symbol: h.symbol, tr: tr }); }
 });
 if (btn) {

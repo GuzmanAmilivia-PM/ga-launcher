@@ -407,6 +407,31 @@ el.innerHTML = html;
 el.hidden = false;
 if (esOk && !persistente) _avisoFlotanteT = setTimeout(cerrarAvisoFlotante, AVISO_FLOTANTE_MS);
 }
+// Una fila que se toca (una cuenta de la torta, una posicion, una cuenta de
+// Banking) tambien se alcanza con el teclado (24/09/2026, auditoria general
+// A11): Tab llega, Enter o espacio la abren, y un lector de pantalla la anuncia
+// como boton. Sin esto, en la computadora eran filas mudas para el teclado.
+function hacerTocable(el) {
+if (!el) return;
+el.tabIndex = 0;
+el.setAttribute('role', 'button');
+el.setAttribute('data-tecla', 'click');
+}
+document.addEventListener('keydown', function (e) {
+var t = e.target;
+if ((e.key === 'Enter' || e.key === ' ') && t && t.getAttribute && t.getAttribute('data-tecla') === 'click') {
+e.preventDefault();
+t.click();
+return;
+}
+// Esc cierra lo que este encima: el menu (su paso del historial se saca solo,
+// vistas.js) o el grafico / los dividendos ampliados.
+if (e.key === 'Escape') {
+var menu = document.getElementById('menuPanel');
+if (menu && menu.classList.contains('open') && typeof toggleMenu === 'function') { toggleMenu(false); return; }
+if (typeof navCerrarModales === 'function') navCerrarModales();
+}
+});
 function cerrarAvisoFlotante() {
 if (_avisoFlotanteT) { clearTimeout(_avisoFlotanteT); _avisoFlotanteT = null; }
 var el = document.getElementById('avisoFlotante');

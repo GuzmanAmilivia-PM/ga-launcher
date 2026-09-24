@@ -91,12 +91,16 @@ function fuentes() {
 function cargar(storage) {
   var store = Object.assign({}, storage || {});
   var oyentes = {};
+  var oyentesDoc = {};
   var doc = {
     getElementById: function () { return elemento(); },
     querySelector: function () { return elemento(); },
     querySelectorAll: function () { return []; },
     createElement: function () { return elemento(); },
-    addEventListener: function () {},
+    // Anotados (24/09/2026): el menu con el dedo y el teclado escuchan en el
+    // documento, y un arnes puede despertarlos con __disparar.
+    addEventListener: function (tipo, fn) { (oyentesDoc[tipo] = oyentesDoc[tipo] || []).push(fn); },
+    __disparar: function (tipo, ev) { (oyentesDoc[tipo] || []).forEach(function (f) { f(ev); }); },
     documentElement: elemento(),
     body: elemento(),
     visibilityState: 'visible'

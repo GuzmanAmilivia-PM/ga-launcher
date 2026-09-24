@@ -184,6 +184,14 @@ button.menu-banner:active { opacity: .8; }
 .vsbench.up { color: color-mix(in srgb, var(--green) 62%, var(--muted)); }
 .vsbench.down { color: color-mix(in srgb, var(--red) 62%, var(--muted)); }
 .vsbench:empty { display: none; }
+/* Las filas que se alcanzan con el teclado (hacerTocable, 24/09/2026): el
+   anillo aparece SOLO con teclado (:focus-visible), nunca al tocar con el dedo. */
+[data-tecla="click"]:focus, .vsbench:focus { outline: none; }
+[data-tecla="click"]:focus-visible, .vsbench:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; border-radius: 6px; }
+/* Tocable desde el 24/09/2026: abre Performance. La flecha dice que lleva a
+   algun lado (la misma › de "Positions" y de las cuentas). */
+.vsbench { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.vsbench:not(:empty)::after { content: ' \203A'; font-weight: 800; }
 .up { color: var(--green); font-weight: 700; }
 .down { color: var(--red); font-weight: 700; }
 /* caprow/capval/capnota: los numeros y la nota de la comparacion (V7).
@@ -622,6 +630,9 @@ html.light .wl-detalle { background: rgba(20,40,80,.035); }
   box-shadow: 0 8px 24px rgba(0,0,0,.35); cursor: pointer;
 }
 .avisoflot.err { border-left-color: var(--red); }
+/* La accion dentro del aviso ("Undo" al quitar de la Watchlist, 24/09/2026):
+   a la derecha, con area de toque de 44 px de alto. */
+.avisoflot-accion { float: right; margin: -12px -8px -12px 10px; min-height: 44px; padding: 0 10px; background: none; border: 0; color: var(--gold); font-family: inherit; font-size: 13.5px; font-weight: 800; letter-spacing: .02em; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .avisoflot[hidden] { display: none; }
 .confighelp { margin: 10px 0 2px; font-size: 13px; color: var(--muted); }
 .confighelp summary { cursor: pointer; color: var(--gold); -webkit-tap-highlight-color: transparent; }

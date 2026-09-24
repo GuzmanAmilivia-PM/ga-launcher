@@ -24,7 +24,7 @@ function ok(cond, msg) {
 
 // --- DOM de mentira, con filas que recuerdan lo que les colgaron ---
 function montar() {
-  var estado = { elems: {}, llamadas: [], creados: [] };
+  var estado = { elems: {}, llamadas: [], creados: [], oyentesDoc: {}, relojes: [], avisos: [] };
   function nuevoElem(id) {
     var el = {
       id: id, style: {}, innerHTML: '', textContent: '', value: '',
@@ -43,7 +43,10 @@ function montar() {
         if (!this._piezas[sel]) {
           this._piezas[sel] = {
             sel: sel, disabled: false, style: {}, className: '',
-            addEventListener: function () {}, offsetWidth: 148
+            addEventListener: function () {}, offsetWidth: 148,
+            // El boton de quitar busca su fila (24/09/2026: la esconde mientras
+            // corre el Undo).
+            closest: (function (fila) { return function () { return fila; }; })(this)
           };
         }
         return this._piezas[sel];
@@ -76,7 +79,11 @@ function montar() {
   var ctx = {
     document: {
       getElementById: function (id) { return elem(id); },
-      createElement: function (tag) { var e = nuevoElem('_' + tag + estado.creados.length); estado.creados.push(e); return e; }
+      createElement: function (tag) { var e = nuevoElem('_' + tag + estado.creados.length); estado.creados.push(e); return e; },
+      // Quitar se deshace (24/09/2026): al irse la app al fondo, lo pendiente
+      // se borra. El oyente se anota para poder dispararlo.
+      visibilityState: 'visible',
+      addEventListener: function (t, f) { (estado.oyentesDoc[t] = estado.oyentesDoc[t] || []).push(f); }
     },
     window: {},
     navigator: {},
@@ -107,7 +114,12 @@ function montar() {
     // pidió, para exigir que la watchlist REUSE el mismo detalle.
     cargarFundamentales: function (sym, caja) { estado.fundamentalesDe = sym; if (caja) caja.marcado = true; },
     crearTvWidget: function (caja, sym) { estado.graficoDe = sym; },
-    google: { script: { run: mkRun([], []) } }
+    google: { script: { run: mkRun([], []) } },
+    // Relojes a mano (el Undo espera WL_DESHACER_MS) y el aviso flotante espiado.
+    setTimeout: function (f, ms) { estado.relojes.push({ f: f, ms: ms }); return estado.relojes.length; },
+    clearTimeout: function (n) { if (estado.relojes[n - 1]) estado.relojes[n - 1].f = null; },
+    avisoFlotante: function (h, esOk) { estado.avisos.push({ html: h, ok: esOk }); },
+    cerrarAvisoFlotante: function () { estado.avisoCerrado = (estado.avisoCerrado || 0) + 1; }
   };
   var nombres = Object.keys(ctx);
   var fn = new Function(nombres.join(','), codigo +
@@ -116,6 +128,7 @@ function montar() {
   estado.elem = elem;
   estado.respuestas = respuestas;
   estado.ctx = ctx;
+  estado.correrRelojes = function () { estado.relojes.splice(0).forEach(function (t) { if (t.f) t.f(); }); };
   return estado;
 }
 
@@ -219,11 +232,51 @@ console.log('\nB) wlTiene dice la verdad (lo usa el + del buscador)');
 ok(m.api.wlTiene('aapl') === true, 'lo tiene, aunque venga en minuscula');
 ok(m.api.wlTiene('ZZZZ') === false, 'no lo tiene');
 
-console.log('\nC) quitar llama al backend con el simbolo y recarga');
+console.log('\nC) quitar se puede deshacer: la fila se va, el aviso ofrece Undo, y recien despues se borra (24/09/2026)');
+function quitadas(mm) { return mm.llamadas.filter(function (l) { return l.fn === 'quitarWatchlist'; }); }
 filas[0].querySelector('.wl-accion.quitar').onclick();
-var quitada = m.llamadas.filter(function (l) { return l.fn === 'quitarWatchlist'; })[0];
-ok(quitada && quitada.args.symbol === 'AAPL', 'quitarWatchlist({symbol:AAPL})');
+ok(filas[0].style.display === 'none', 'la fila se va de la vista al instante');
+ok(quitadas(m).length === 0, 'pero todavia no se le pide nada al Worker');
+var avQ = m.avisos[m.avisos.length - 1];
+ok(avQ && /Removed <b>AAPL<\/b>/.test(avQ.html) && /id="wlDeshacer"/.test(avQ.html), 'el aviso flotante ofrece Undo');
+ok(m.relojes.some(function (t) { return t.f && t.ms === 6000; }), 'y el borrado espera 6 s');
+m.elem('wlDeshacer').onclick();
+ok(filas[0].style.display === '', 'Undo devuelve la fila tal cual, con su lugar y su alerta');
+ok(m.avisoCerrado === 1, 'y cierra el aviso');
+m.correrRelojes();
+ok(quitadas(m).length === 0, 'deshecho: el Worker no se entera de nada');
+// Sin Undo: a los 6 s se borra de verdad y se recarga.
+filas[0].querySelector('.wl-accion.quitar').onclick();
+m.correrRelojes();
+var quitada = quitadas(m)[0];
+ok(quitada && quitada.args.symbol === 'AAPL', 'pasado el Undo, quitarWatchlist({symbol:AAPL})');
 ok(m.llamadas.some(function (l) { return l.fn === 'getWatchlist'; }), 'y tras quitar se recarga la lista');
+// Si la lista se repinta mientras corre el Undo, lo quitado no vuelve.
+// Como el DOM de verdad: vaciar la lista suelta las filas viejas.
+function vaciar(el) { el.hijos.forEach(function (f) { f.parentNode = null; }); el.hijos = []; }
+var mq = montar();
+mq.api.renderWatchlist({ ok: true, items: ITEMS });
+mq.elem('wlBody').hijos[1].querySelector('.wl-accion.quitar').onclick();
+vaciar(mq.elem('wlBody'));
+mq.api.renderWatchlist({ ok: true, items: ITEMS });
+ok(mq.elem('wlBody').hijos.length === 2 && !/VOO/.test(mq.elem('wlBody').hijos.map(function (f) { return f.innerHTML; }).join('')),
+  'un repintado durante el Undo no trae de vuelta lo quitado');
+vaciar(mq.elem('wlBody'));
+mq.elem('wlDeshacer').onclick();
+ok(mq.elem('wlBody').hijos.length === 3, 'y deshacer despues del repintado la trae igual (se repinta con ella)');
+// Si la app se va al fondo, lo pendiente se borra en el momento.
+mq = montar();
+mq.api.renderWatchlist({ ok: true, items: ITEMS });
+mq.elem('wlBody').hijos[0].querySelector('.wl-accion.quitar').onclick();
+mq.ctx.document.visibilityState = 'hidden';
+(mq.oyentesDoc.visibilitychange || []).forEach(function (f) { f(); });
+ok(quitadas(mq).length === 1, 'la app se va al fondo: el borrado sale ya, no se pierde');
+// Dos seguidos: el primero se confirma al quitar el segundo.
+mq = montar();
+mq.api.renderWatchlist({ ok: true, items: ITEMS });
+mq.elem('wlBody').hijos[0].querySelector('.wl-accion.quitar').onclick();
+mq.elem('wlBody').hijos[1].querySelector('.wl-accion.quitar').onclick();
+ok(quitadas(mq).length === 1 && quitadas(mq)[0].args.symbol === 'AAPL', 'quitar otro confirma el anterior: el Undo es de a uno');
 
 console.log('\nD) guardar la alerta manda objetivo Y referencia (el precio de pantalla)');
 m.llamadas.length = 0;

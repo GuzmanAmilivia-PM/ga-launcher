@@ -48,10 +48,14 @@ var indexHtml = ruta.leerIndexCrudo();
 function montar(opts) {
   opts = opts || {};
   var pintado = { texto: '', clase: '', titulo: '' };
+  var vistasPedidas = [];
   var elVs = {
     set textContent(v) { pintado.texto = v; }, get textContent() { return pintado.texto; },
     set className(v) { pintado.clase = v; }, get className() { return pintado.clase; },
-    set title(v) { pintado.titulo = v; }, get title() { return pintado.titulo; }
+    set title(v) { pintado.titulo = v; }, get title() { return pintado.titulo; },
+    // Desde el 24/09/2026 la linea se toca (abre Performance): graficos.js le
+    // engancha el click y el teclado al cargar. Se anotan para probarlos.
+    oyentes: {}, addEventListener: function (t, f) { this.oyentes[t] = f; }
   };
   var mov = { html: '', clase: '' };
   var elMov = {
@@ -91,6 +95,9 @@ function montar(opts) {
     fmt: function (v) { return 'USD ' + Math.round(v).toLocaleString('en-US'); },
     esc: function (s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); },
     signoPct: function (v, d) { return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(d) + '%'; },
+    // Tocar la linea abre Performance (24/09/2026): se anota a donde se fue.
+    setView: function (v) { vistasPedidas.push(v); },
+    huboSwipe: !!opts.huboSwipe,
     colorAcento: function () { return '#d4af37'; },
     acentoRgba: function () { return 'rgba(1,1,1,.1)'; }
   };
@@ -103,6 +110,8 @@ function montar(opts) {
     graficos + '\nfunction __modo(m) { evoModo = m; }\nreturn {__modo: __modo,' + salida.map(function (n) { return n + ':' + n; }).join(',') + '};');
   var api = fn.apply(null, nombres.map(function (n) { return ctx[n]; }));
   api._pintado = pintado;
+  api._vistas = vistasPedidas;
+  api._vs = elVs;
   api._mov = mov;
   return api;
 }
@@ -381,6 +390,28 @@ apiAntes.aplicarBench({ bench: { nombre: 'S&P 500', valores: [5000, 5100, 5250] 
 apiAntes.pintarVsBench(SERIE, 10);
 ok(/\*/.test(apiAntes._pintado.texto), 'con aportes que no se pueden separar, se advierte: ' + apiAntes._pintado.texto);
 ok(/could not be separated/.test(apiAntes._pintado.titulo), 'y la explicacion es honesta sobre por que');
+
+console.log('\nN) tocar la linea abre Performance (24/09/2026, auditoria A5/A7)');
+var apiT = montar({ fullSerie: SERIE });
+ok(typeof apiT._vs.oyentes.click === 'function' && typeof apiT._vs.oyentes.keydown === 'function', 'la linea escucha el toque y el teclado');
+apiT._vs.oyentes.click();
+ok(apiT._vistas.length === 0, 'vacia (sin comparacion que mostrar) no lleva a ningun lado');
+apiT.aplicarBench({ bench: { nombre: 'S&P 500', valores: [5000, 5100, 5250] } });
+apiT.aplicarAportes({ lista: [], desde: '2026-01-01' });
+apiT.pintarVsBench(SERIE, 10);
+apiT._vs.oyentes.click();
+ok(apiT._vistas[0] === 'rendanual', 'con texto, abre Performance: ' + apiT._vistas.join(','));
+var tecla = { key: 'Enter', preventDefault: function () {} };
+apiT._vs.oyentes.keydown(tecla);
+ok(apiT._vistas[1] === 'rendanual', 'y con Enter, desde el teclado');
+var apiS = montar({ fullSerie: SERIE, huboSwipe: true });
+apiS.aplicarBench({ bench: { nombre: 'S&P 500', valores: [5000, 5100, 5250] } });
+apiS.aplicarAportes({ lista: [], desde: '2026-01-01' });
+apiS.pintarVsBench(SERIE, 10);
+apiS._vs.oyentes.click();
+ok(apiS._vistas.length === 0, 'un dedo que venia deslizando el carrusel no cuenta como toque');
+ok(/\.vsbench:not\(:empty\)::after \{[^}]*content/.test(indexHtml + fs.readFileSync(path.join(ruta.RUTA, 'css', 'estilos.css'), 'utf8')), 'la flecha › aparece solo con texto (regla escrita)');
+ok(/id="vsBench" role="button" tabindex="0"/.test(indexHtml), 'y es un boton alcanzable con Tab');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

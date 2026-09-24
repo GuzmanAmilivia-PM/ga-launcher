@@ -105,6 +105,21 @@ pintarVsBench(serie, pct);
 // El asterisco no es decorativo: si hubo aportes en el rango, la cartera
 // crecio en parte por plata que pusiste, y contra un indice re-escalado eso
 // se lee como rendimiento. Se dice, no se esconde.
+//
+// Tocar la linea abre Performance (24/09/2026, auditoria general A5/A7): es
+// la misma comparacion, año por año y por broker. Vive dentro del carrusel,
+// asi que un dedo que venia deslizando hacia Dividendos no cuenta como toque
+// (huboSwipe, paneles.js). La flecha la pone el CSS solo cuando hay texto.
+(function () {
+  var vs = document.getElementById('vsBench');
+  if (!vs) return;
+  function abrir() {
+    if ((typeof huboSwipe !== 'undefined' && huboSwipe) || !vs.textContent) return;
+    setView('rendanual');
+  }
+  vs.addEventListener('click', abrir);
+  vs.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(); } });
+})();
 function pintarVsBench(serie, pctCartera) {
   var el = document.getElementById('vsBench');
   if (!el) return;

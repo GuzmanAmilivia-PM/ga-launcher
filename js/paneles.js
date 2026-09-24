@@ -53,7 +53,12 @@ var huboSwipe = false;
 var wrap = document.getElementById('sweepWrap');
 if (!wrap) return;
 var x0 = null, y0 = null;
-wrap.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+// Un dedo que arranca pegado al borde izquierdo es el del menu (vistas.js,
+// 'El menu con el dedo', 24/09/2026): el carrusel no se mueve con el.
+wrap.addEventListener('touchstart', function (e) {
+if (typeof MENU_BORDE_PX !== 'undefined' && e.touches[0].clientX <= MENU_BORDE_PX) { x0 = null; return; }
+x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+}, { passive: true });
 wrap.addEventListener('touchend', function (e) {
 if (x0 === null) return;
 var dx = e.changedTouches[0].clientX - x0;

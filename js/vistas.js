@@ -154,6 +154,82 @@ if (open) navAbrioMenu();
 else navCerroMenu();
 }
 document.getElementById('logoBtn').onclick = function () { toggleMenu(true); };
+
+// ---------- El menu con el dedo (24/09/2026) ----------
+// Pedido de Guzman: "que la ventana desplegable de inicio se pueda acceder y
+// cerrar desplazando el dedo". Se ABRE deslizando desde el borde izquierdo
+// —solo en una pestaña: en una pantalla secundaria ese mismo gesto es el de
+// volver de iOS (ver "El historial": las pestañas no tienen atras, asi que
+// ahi el sistema no lo usa)— y se CIERRA deslizandolo hacia la izquierda.
+// El panel sigue al dedo; al soltar termina de abrirse o cerrarse si paso
+// MENU_UMBRAL del ancho o fue un golpe rapido, y si no vuelve a su lugar.
+// El carrusel del Inicio y las filas de la Watchlist ignoran un toque que
+// arranca pegado al borde (paneles.js, watchlist.js), asi no se mueven los
+// dos a la vez. Un dedo que va mas vertical que horizontal es scroll: el menu
+// no lo toca.
+var MENU_BORDE_PX = 24;     // de donde tiene que arrancar el dedo para abrir
+var MENU_DECIDE_PX = 10;    // cuanto moverse antes de decidir si es horizontal
+var MENU_UMBRAL = 0.35;     // fraccion del ancho que hay que recorrer
+var MENU_RAPIDO = 0.5;      // px por ms: un golpe rapido alcanza aunque sea corto
+var menuGesto = null;       // { modo: 'abrir'|'cerrar', x0, y0, t0, decidido, w }
+function menuGestoEmpieza(x, y, ahora) {
+  menuGesto = null;
+  var panel = document.getElementById('menuPanel');
+  if (!panel || appBloqueada) return;
+  if (panel.classList.contains('open')) menuGesto = { modo: 'cerrar', x0: x, y0: y, t0: ahora, decidido: false };
+  else if (x <= MENU_BORDE_PX && navProf() === 0) menuGesto = { modo: 'abrir', x0: x, y0: y, t0: ahora, decidido: false };
+}
+function menuGestoMueve(x, y) {
+  var g = menuGesto;
+  if (!g) return;
+  var panel = document.getElementById('menuPanel');
+  var dx = x - g.x0, dy = y - g.y0;
+  if (!g.decidido) {
+    if (Math.abs(dx) < MENU_DECIDE_PX && Math.abs(dy) < MENU_DECIDE_PX) return;
+    if (Math.abs(dy) > Math.abs(dx)) { menuGesto = null; return; }   // vertical: scroll
+    g.decidido = true;
+    g.w = panel.offsetWidth || window.innerWidth || 375;
+    panel.style.transition = 'none';
+  }
+  var px = g.modo === 'abrir' ? Math.min(0, -g.w + dx) : Math.min(0, dx);
+  panel.style.transform = 'translateX(' + px + 'px)';
+}
+function menuGestoSuelta(x, ahora) {
+  var g = menuGesto;
+  menuGesto = null;
+  if (!g || !g.decidido) return;
+  var panel = document.getElementById('menuPanel');
+  var dx = x - g.x0;
+  var rapido = Math.abs(dx) / Math.max(1, ahora - g.t0) > MENU_RAPIDO && Math.abs(dx) > 30;
+  // Se devuelve el panel a su CSS y en el mismo turno se decide la clase: la
+  // transicion arranca desde donde lo dejo el dedo.
+  panel.style.transition = '';
+  panel.style.transform = '';
+  if (g.modo === 'abrir' && (dx > g.w * MENU_UMBRAL || (rapido && dx > 0))) toggleMenu(true);
+  if (g.modo === 'cerrar' && (-dx > g.w * MENU_UMBRAL || (rapido && dx < 0))) toggleMenu(false);
+}
+(function () {
+  if (typeof document.addEventListener !== 'function') return;
+  function t0(e) { return (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]); }
+  document.addEventListener('touchstart', function (e) {
+    var t = t0(e);
+    if (!t || e.touches.length > 1) { menuGesto = null; return; }
+    menuGestoEmpieza(t.clientX, t.clientY, Date.now());
+  }, { passive: true });
+  document.addEventListener('touchmove', function (e) {
+    var t = t0(e);
+    if (t) menuGestoMueve(t.clientX, t.clientY);
+  }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    var t = t0(e);
+    menuGestoSuelta(t ? t.clientX : 0, Date.now());
+  }, { passive: true });
+  document.addEventListener('touchcancel', function () {
+    var panel = document.getElementById('menuPanel');
+    if (menuGesto && panel) { panel.style.transition = ''; panel.style.transform = ''; }
+    menuGesto = null;
+  }, { passive: true });
+})();
 document.getElementById('menuBack').onclick = function () { toggleMenu(false); };
 document.getElementById('mIA').onclick = function () { toggleMenu(false); setView('ia'); };
 // Ojo con los nombres desde el 25/08/2026: el tile "Keys" abre view-config
@@ -616,6 +692,7 @@ tr.className = corte ? 'corte-grupo asset-row' : 'asset-row';
 engancharLogos(tr);
 // `valor` viaja desde el 23/09/2026: el detalle muestra la ganancia en
 // dolares y la saca del valor de la fila (ver toggleDetalle, tablero.js).
+if (typeof hacerTocable === 'function') hacerTocable(tr);
 tr.onclick = function () { toggleDetalle(tr, { symbol: h.symbol, precioCompra: h.precioCompra, precioActual: h.precioActual, qty: h.qty, valor: h.valor, cripto: acc.key === 'BNB', cuenta: acc.key, gfTicker: h.gfTicker }); };
 body.appendChild(tr);
 });
@@ -690,6 +767,7 @@ function renderPosiciones() {
     tr.className = 'asset-row';
     engancharLogos(tr);
     tr.onclick = function () { toggleDetalle(tr, h); };
+    if (typeof hacerTocable === 'function') hacerTocable(tr);
     body.appendChild(tr);
   });
 }
@@ -798,7 +876,7 @@ var row = document.createElement('div');
 row.className = 'pierow' + (c.acc ? ' clickable' : '');
 row.innerHTML = '<span class="lname"><span class="dot" style="background:' + coloresPie()[i % PIE_COLORS.length] + '"></span>' + esc(c.label) + '</span>' +
 '<span class="lpct">' + (total ? '<b>' + ((c.valor / total) * 100).toFixed(1) + '%</b><span class="lsep"></span>' : '') + esc(fmt(c.valor)) + (c.acc ? '<span class="chev">&rsaquo;</span>' : '') + '</span>';
-if (c.acc) row.onclick = function () { showAccount(c.acc, 'portafolio'); };
+if (c.acc) { row.onclick = function () { showAccount(c.acc, 'portafolio'); }; if (typeof hacerTocable === 'function') hacerTocable(row); }
 leg.appendChild(row);
 });
 // La tabla con TODAS las posiciones salio de esta vista el 17/08/2026 (pedido

@@ -207,5 +207,100 @@ var malos = backs.filter(function (b) { return !/menuBack/.test(b) && !/volver\(
 ok(backs.length >= 14 && malos.length === 0, 'los ' + backs.length + ' botones "Back" usan volver()' + (malos.length ? ': ' + malos.join(' | ') : ''));
 ok(/navTabPendiente = name; history\.go\(-p\)/.test(html), 'tocar una pestaña desde lo profundo vuelve el historial entero (go(-p)), no un paso');
 
+console.log('\nH) el menu con el dedo: se abre desde el borde y se cierra deslizando (24/09/2026)');
+// Pedido de Guzman: "que la ventana desplegable de inicio se pueda acceder y
+// cerrar desplazando el dedo". Los toques se disparan por los oyentes REALES
+// del documento (vistas.js los engancha al cargar).
+function toque(mm, tipo, x, y) {
+  var t = { clientX: x, clientY: y };
+  mm.g.document.__disparar(tipo, { touches: tipo === 'touchend' ? [] : [t], changedTouches: [t] });
+}
+// El reloj de la app, a mano: el gesto distingue un arrastre lento de un golpe
+// rapido (px por ms), y los toques de aca llegan todos en el mismo milisegundo.
+function reloj(mm, ms) {
+  vm.runInContext('if (typeof __t === "undefined") { var __t = 1000; Date.now = function () { return __t; }; } __t += ' + (ms || 0) + ';', mm.g);
+}
+function arrastre(mm, x0, x1, y, ms) {
+  reloj(mm, 0);
+  toque(mm, 'touchstart', x0, y || 300);
+  reloj(mm, ms === undefined ? 400 : ms);
+  toque(mm, 'touchmove', x0 + (x1 - x0) / 2, y || 300);
+  toque(mm, 'touchmove', x1, y || 300);
+}
+m = montar();
+var panelM = m.el('menuPanel');
+panelM.offsetWidth = 375;
+arrastre(m, 8, 160);
+ok(/translateX\(-2\d\dpx\)/.test(panelM.style.transform) && panelM.style.transition === 'none', 'el panel sigue al dedo mientras arrastra: ' + panelM.style.transform);
+toque(m, 'touchend', 160, 300);
+ok(panelM.classList.contains('open'), 'desde el borde, pasado un tercio: se abre');
+ok(panelM.style.transform === '' && panelM.style.transition === '', 'y el panel vuelve a su CSS (la transicion termina el recorrido)');
+ok(m.estado().menu === 1, 'abierto con el dedo es un paso del historial, igual que con el logo');
+// Cerrarlo deslizando hacia la izquierda.
+arrastre(m, 300, 120);
+toque(m, 'touchend', 120, 300);
+m.timers(); m.h.__resolver();
+ok(!panelM.classList.contains('open') && m.h.__indice() === 0, 'deslizando hacia la izquierda se cierra, y su paso se va');
+// Un arrastre corto y lento vuelve a su lugar.
+m = montar();
+panelM = m.el('menuPanel'); panelM.offsetWidth = 375;
+arrastre(m, 8, 70);
+toque(m, 'touchend', 70, 300);
+ok(!panelM.classList.contains('open') && panelM.style.transform === '', 'corto: no se abre y el panel vuelve');
+// Lejos del borde no es el menu (es el carrusel, una fila, la pagina).
+arrastre(m, 120, 330);
+toque(m, 'touchend', 330, 300);
+ok(!panelM.classList.contains('open') && panelM.style.transform === '', 'arrancando lejos del borde, el menu no se entera');
+// Vertical es scroll.
+toque(m, 'touchstart', 8, 300); toque(m, 'touchmove', 12, 400); toque(m, 'touchmove', 200, 420);
+toque(m, 'touchend', 200, 420);
+ok(!panelM.classList.contains('open') && panelM.style.transform === '', 'si el dedo arranca vertical, es scroll: el menu no se mueve');
+// En una pantalla secundaria el borde es del gesto de volver de iOS.
+m.g.setView('posiciones');
+arrastre(m, 8, 250);
+toque(m, 'touchend', 250, 300);
+ok(!panelM.classList.contains('open'), 'en una secundaria (Positions) el borde es para volver, no abre el menu');
+// Con la app bloqueada (Face ID), nada.
+m = montar();
+panelM = m.el('menuPanel'); panelM.offsetWidth = 375;
+m.g.appBloqueada = true;
+arrastre(m, 8, 250);
+toque(m, 'touchend', 250, 300);
+ok(!panelM.classList.contains('open'), 'con la app bloqueada no se abre');
+// El carrusel del Inicio y las filas de la Watchlist le ceden el borde.
+// ALCANCE: mira el codigo escrito (los dos gestos tienen sus propios arneses).
+ok(/clientX <= MENU_BORDE_PX\) \{ x0 = null; return; \}/.test(html), 'el carrusel ignora un toque que arranca en el borde');
+ok(/e\.clientX <= MENU_BORDE_PX\) \{ decidido = true; return; \}/.test(html), 'y las filas de la Watchlist tambien');
+
+// Un golpe rapido y corto (60 px en 40 ms) alcanza.
+m = montar();
+panelM = m.el('menuPanel'); panelM.offsetWidth = 375;
+arrastre(m, 8, 68, 300, 40);
+toque(m, 'touchend', 68, 300);
+ok(panelM.classList.contains('open'), 'un golpe rapido desde el borde abre aunque sea corto');
+
+console.log('\nI) el teclado en la computadora (A11): Esc cierra, Enter abre la fila');
+m = montar();
+panelM = m.el('menuPanel');
+m.g.toggleMenu(true);
+m.g.document.__disparar('keydown', { key: 'Escape', target: {} });
+ok(!panelM.classList.contains('open'), 'Esc cierra el menu');
+var fila = { tabIndex: -1, attrs: {}, clicks: 0,
+  setAttribute: function (k, v) { this.attrs[k] = v; }, getAttribute: function (k) { return this.attrs[k] === undefined ? null : this.attrs[k]; },
+  click: function () { this.clicks++; } };
+m.g.hacerTocable(fila);
+ok(fila.tabIndex === 0 && fila.attrs.role === 'button', 'una fila tocable se alcanza con Tab y se anuncia como boton');
+var prevenido = false;
+m.g.document.__disparar('keydown', { key: 'Enter', target: fila, preventDefault: function () { prevenido = true; } });
+ok(fila.clicks === 1 && prevenido, 'Enter la abre, como un toque');
+m.g.document.__disparar('keydown', { key: ' ', target: fila, preventDefault: function () {} });
+ok(fila.clicks === 2, 'y la barra espaciadora tambien');
+m.g.document.__disparar('keydown', { key: 'Enter', target: { getAttribute: function () { return null; } } });
+ok(fila.clicks === 2, 'Enter en otra cosa (un campo de texto) no hace nada raro');
+// Donde se arman las filas que se tocan. ALCANCE: el codigo escrito.
+['showAccount(c.acc, \'portafolio\'); }; if (typeof hacerTocable', 'showAccount(acc, \'cash\'); }; if (typeof hacerTocable']
+  .forEach(function (s) { ok(html.indexOf(s) !== -1, 'la usa: ' + s.slice(0, 32)); });
+ok((html.match(/hacerTocable\(tr\)/g) || []).length === 3, 'y las tres tablas de posiciones (Inicio, Positions, cada cuenta)');
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);
