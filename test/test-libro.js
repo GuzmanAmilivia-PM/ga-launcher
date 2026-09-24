@@ -75,7 +75,7 @@ function anioPayload(anio, extra) {
       { fecha: '2026-07-01', broker: 'Binance', symbol: 'ETH', qty: 0.1, precio: 3000, moneda: 'USD', importe: 300, resultado: null, comision: null, fuente: 'app' }
     ],
     totales: { dividendos: 82, retenciones: -4.5, neto: 77.5, importeVentas: 1100, resultado: 120 },
-    avisos: ['Schwab: dividends are as SnapTrade reports them; withholding taxes are not downloaded from Schwab.']
+    avisos: ['Sales without a realized result: the broker did not report it (or the sale was registered in the app), so only the proceeds are shown.']
   }, extra || {});
 }
 
@@ -99,13 +99,22 @@ ok(h.indexOf('<tr class="libtotal"><td>Total</td><td>US$ 82.00</td>') !== -1, 'e
 ok(h.indexOf('MSFT <em>IBKR</em><span class="libfecha">2026-04-10</span></td><td>US$ 800.00</td><td><b class="up">US$ 120.00</b></td>') !== -1, 'una venta con su fecha y su resultado');
 ok(h.indexOf('ETH <em>Binance · app</em><span class="libfecha">2026-07-01</span></td><td>US$ 300.00</td><td>—</td>') !== -1, 'la venta registrada en la app, sin resultado: guion');
 ok(/Dividends by holding \(2\)/.test(h) && h.indexOf('ASML <em>IBKR · EUR</em>') !== -1, 'el detalle por papel, con la moneda si no es USD');
-ok(/withholding taxes are not downloaded from Schwab/.test(h), 'los avisos del Worker');
+ok(/Sales without a realized result/.test(h), 'los avisos del Worker');
 ok(/A record, not a tax return/.test(h) && /kept IBKR since 2025-02-18/.test(h), 'dice que no es una declaracion y desde cuando guarda');
 ok(elemento('libCsv').onclick !== null || /id="libCsv"/.test(h), 'el boton del CSV');
+ok(!/ADR fees/.test(h), 'sin comisiones de ADR, no hay nota');
+api.cargar(2026, true); pendientes.shift().ok(anioPayload(2026, {
+  brokers: [{ broker: 'Schwab', dividendos: 50, retenciones: -15, gastos: -0.5, neto: 34.5 }],
+  simbolos: [{ broker: 'Schwab', symbol: 'BABA', dividendos: 50, retenciones: -15, gastos: -0.5, neto: 34.5, moneda: 'USD' }],
+  totales: { dividendos: 50, retenciones: -15, gastos: -0.5, neto: 34.5, importeVentas: 0, resultado: 0 } }));
+var hg = elemento('libBody').innerHTML;
+ok(hg.indexOf('<tr><td>Schwab</td><td>US$ 50.00</td><td>US$ -15.50</td><td>US$ 34.50</td></tr>') !== -1, 'Withheld suma la retencion y la comision del ADR');
+ok(hg.indexOf('Withheld includes US$ -0.50 of ADR fees') !== -1, 'y lo dice');
+ok(api.csv(anioPayload(2026, { simbolos: [{ broker: 'Schwab', symbol: 'BABA', dividendos: 50, retenciones: -15, gastos: -0.5, neto: 34.5, moneda: 'USD' }], ventas: [] })).split('\n')[1] === 'dividend,2026,,Schwab,BABA,USD,,50,-15,-0.5,34.5,,,broker', 'el CSV separa la comision');
 
 console.log('\nC) cambiar de año, y la respuesta vieja que llega tarde');
 botonesAnio.filter(function (b) { return b.getAttribute() === '2025'; })[0].click();
-ok(pedidos.length === 2 && pedidos[1].anio === 2025, 'tocar 2025 lo pide');
+ok(pedidos[pedidos.length - 1].anio === 2025, 'tocar 2025 lo pide');
 ok(/Loading 2025/.test(elemento('libBody').innerHTML), 'mientras tanto dice que carga');
 api.cargar(2026, true);
 var p2025 = pendientes.shift(), p2026 = pendientes.shift();
@@ -119,10 +128,10 @@ ok(elemento('libBody').innerHTML.indexOf('US$ 82.00') === -1 && elemento('libBod
 ocultos = false;
 var csv = api.csv(anioPayload(2026, { simbolos: [{ broker: 'IBKR', symbol: 'A,B', dividendos: 1, retenciones: 0, neto: 1, moneda: 'USD' }] }));
 var lineas = csv.trim().split('\n');
-ok(lineas[0] === 'type,year,date,broker,symbol,currency,quantity,dividends_usd,withheld_usd,net_usd,proceeds_usd,result_usd,source', 'el encabezado del CSV');
-ok(lineas[1] === 'dividend,2026,,IBKR,"A,B",USD,,1,0,1,,,broker', 'un dividendo por papel, con la coma escapada');
-ok(lineas[2] === 'sale,2026,2026-04-10,IBKR,MSFT,USD,2,,,,800,120,broker', 'una venta del broker');
-ok(lineas[3] === 'sale,2026,2026-07-01,Binance,ETH,USD,0.1,,,,300,,app', 'la venta de la app, sin resultado');
+ok(lineas[0] === 'type,year,date,broker,symbol,currency,quantity,dividends_usd,withheld_usd,fees_usd,net_usd,proceeds_usd,result_usd,source', 'el encabezado del CSV');
+ok(lineas[1] === 'dividend,2026,,IBKR,"A,B",USD,,1,0,0,1,,,broker', 'un dividendo por papel, con la coma escapada');
+ok(lineas[2] === 'sale,2026,2026-04-10,IBKR,MSFT,USD,2,,,,,800,120,broker', 'una venta del broker');
+ok(lineas[3] === 'sale,2026,2026-07-01,Binance,ETH,USD,0.1,,,,,300,,app', 'la venta de la app, sin resultado');
 api.cargar(2026, true); pendientes.shift().ok({ ok: false, mensajes: ['The tax book store is not available right now.'] });
 ok(/not available right now/.test(elemento('libBody').innerHTML), 'un rechazo del Worker se muestra tal cual');
 api.cargar(2026, true); pendientes.shift().fail(new Error('red'));

@@ -30,6 +30,9 @@ function cargarLibro(anio, forzar) {
 }
 
 function libMonto(n) { return (n === null || n === undefined) ? '—' : fmtUsd(n); }
+// Lo retenido en pantalla incluye la comision del ADR que cobra Schwab
+// (gastos, A32): las dos restan del dividendo. El CSV las separa.
+function libRetenido(x) { return Math.round(((Number(x.retenciones) || 0) + (Number(x.gastos) || 0)) * 100) / 100; }
 
 function renderLibro() {
   var el = document.getElementById('libBody');
@@ -49,9 +52,9 @@ function renderLibro() {
   // que informo el broker.
   h += '<table class="rendtabla libtabla"><tr><th></th><th>Dividends</th><th>Withheld</th><th>Net</th></tr>';
   (r.brokers || []).forEach(function (b) {
-    h += '<tr><td>' + esc(b.broker) + '</td><td>' + libMonto(b.dividendos) + '</td><td>' + libMonto(b.retenciones) + '</td><td>' + libMonto(b.neto) + '</td></tr>';
+    h += '<tr><td>' + esc(b.broker) + '</td><td>' + libMonto(b.dividendos) + '</td><td>' + libMonto(libRetenido(b)) + '</td><td>' + libMonto(b.neto) + '</td></tr>';
   });
-  h += '<tr class="libtotal"><td>Total</td><td>' + libMonto(t.dividendos) + '</td><td>' + libMonto(t.retenciones) + '</td><td>' + libMonto(t.neto) + '</td></tr></table>';
+  h += '<tr class="libtotal"><td>Total</td><td>' + libMonto(t.dividendos) + '</td><td>' + libMonto(libRetenido(t)) + '</td><td>' + libMonto(t.neto) + '</td></tr></table>';
 
   // Las ventas, con el resultado que informo el broker.
   var ventas = r.ventas || [];
@@ -78,11 +81,12 @@ function renderLibro() {
       '<table class="rendtabla libtabla"><tr><th></th><th>Dividends</th><th>Withheld</th><th>Net</th></tr>';
     sim.forEach(function (s) {
       h += '<tr><td>' + esc(s.symbol || '—') + ' <em>' + esc(s.broker) + (s.moneda && s.moneda !== 'USD' ? ' · ' + esc(s.moneda) : '') + '</em></td>' +
-        '<td>' + libMonto(s.dividendos) + '</td><td>' + libMonto(s.retenciones) + '</td><td>' + libMonto(s.neto) + '</td></tr>';
+        '<td>' + libMonto(s.dividendos) + '</td><td>' + libMonto(libRetenido(s)) + '</td><td>' + libMonto(s.neto) + '</td></tr>';
     });
     h += '</table></details>';
   }
 
+  if (Number(t.gastos)) h += '<p class="capnota">Withheld includes ' + libMonto(t.gastos) + ' of ADR fees (charged by the depositary bank, not a tax).</p>';
   (r.avisos || []).forEach(function (x) { h += '<p class="newsempty" style="font-size:12px">&#9888; ' + esc(x) + '</p>'; });
   var reg = (r.registro || []).map(function (x) { return esc(x.broker) + ' since ' + esc(x.desde); }).join(', ');
   h += '<p class="capnota">What the brokers reported, in USD at the broker’s exchange rate' + (reg ? ' — kept ' + reg : '') +
@@ -104,12 +108,12 @@ function libCsvTexto(r) {
     var s = (v === null || v === undefined) ? '' : String(v);
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
-  var filas = [['type', 'year', 'date', 'broker', 'symbol', 'currency', 'quantity', 'dividends_usd', 'withheld_usd', 'net_usd', 'proceeds_usd', 'result_usd', 'source']];
+  var filas = [['type', 'year', 'date', 'broker', 'symbol', 'currency', 'quantity', 'dividends_usd', 'withheld_usd', 'fees_usd', 'net_usd', 'proceeds_usd', 'result_usd', 'source']];
   (r.simbolos || []).forEach(function (s) {
-    filas.push(['dividend', r.anio, '', s.broker, s.symbol, s.moneda, '', s.dividendos, s.retenciones, s.neto, '', '', 'broker']);
+    filas.push(['dividend', r.anio, '', s.broker, s.symbol, s.moneda, '', s.dividendos, s.retenciones, s.gastos || 0, s.neto, '', '', 'broker']);
   });
   (r.ventas || []).forEach(function (v) {
-    filas.push(['sale', r.anio, v.fecha, v.broker, v.symbol, v.moneda, v.qty, '', '', '', v.importe, v.resultado, v.fuente]);
+    filas.push(['sale', r.anio, v.fecha, v.broker, v.symbol, v.moneda, v.qty, '', '', '', '', v.importe, v.resultado, v.fuente]);
   });
   return filas.map(function (f) { return f.map(c).join(','); }).join('\n') + '\n';
 }
