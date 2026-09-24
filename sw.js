@@ -1,6 +1,6 @@
 // Service worker: cachea el "cascarón" de la app para carga instantánea.
 // Los datos (POST a la API) nunca se cachean.
-var CACHE = 'ga-pwa-v240';
+var CACHE = 'ga-pwa-v241';
 // './' y NO también './index.html' (24/09/2026): son la misma página, y con
 // las dos cada versión nueva la bajaba dos veces (50 KB de más). Quien pida
 // index.html por su nombre recibe './' (ver el fetch, abajo).

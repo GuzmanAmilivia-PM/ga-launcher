@@ -71,7 +71,7 @@ function anioPayload(anio, extra) {
       { broker: 'IBKR', symbol: 'ASML', dividendos: 22, retenciones: -3.3, neto: 18.7, moneda: 'EUR' }
     ],
     ventas: [
-      { fecha: '2026-04-10', broker: 'IBKR', symbol: 'MSFT', qty: 2, precio: 400, moneda: 'USD', importe: 800, resultado: 120, comision: -1, fuente: 'broker' },
+      { fecha: '2026-04-10', broker: 'IBKR', symbol: 'MSFT', qty: 2, precio: 400, moneda: 'USD', importe: 800, resultado: 120, comision: -1, fuente: 'broker', resultadoFuente: 'broker' },
       { fecha: '2026-07-01', broker: 'Binance', symbol: 'ETH', qty: 0.1, precio: 3000, moneda: 'USD', importe: 300, resultado: null, comision: null, fuente: 'app' }
     ],
     totales: { dividendos: 82, retenciones: -4.5, neto: 77.5, importeVentas: 1100, resultado: 120 },
@@ -82,7 +82,7 @@ function anioPayload(anio, extra) {
 console.log('\nA) la forma del Worker');
 if (fuenteWorker) {
   ['anio', 'anios', 'registro', 'brokers', 'simbolos', 'ventas', 'totales', 'avisos', 'enCurso', 'dividendos', 'retenciones', 'neto',
-    'importeVentas', 'resultado', 'importe', 'fuente', 'desde'].forEach(function (c) {
+    'importeVentas', 'resultado', 'importe', 'fuente', 'desde', 'ingresos', 'resultadoFuente'].forEach(function (c) {
     ok(new RegExp('\\b' + c + ':').test(fuenteWorker) || new RegExp('\\.' + c + ' =').test(fuenteWorker), "el Worker escribe '" + c + "'");
   });
 } else console.log('  (sin el repo del Worker al lado: se saltea el cruce)');
@@ -110,7 +110,7 @@ api.cargar(2026, true); pendientes.shift().ok(anioPayload(2026, {
 var hg = elemento('libBody').innerHTML;
 ok(hg.indexOf('<tr><td>Schwab</td><td>US$ 50.00</td><td>US$ -15.50</td><td>US$ 34.50</td></tr>') !== -1, 'Withheld suma la retencion y la comision del ADR');
 ok(hg.indexOf('Withheld includes US$ -0.50 of ADR fees') !== -1, 'y lo dice');
-ok(api.csv(anioPayload(2026, { simbolos: [{ broker: 'Schwab', symbol: 'BABA', dividendos: 50, retenciones: -15, gastos: -0.5, neto: 34.5, moneda: 'USD' }], ventas: [] })).split('\n')[1] === 'dividend,2026,,Schwab,BABA,USD,,50,-15,-0.5,34.5,,,broker', 'el CSV separa la comision');
+ok(api.csv(anioPayload(2026, { simbolos: [{ broker: 'Schwab', symbol: 'BABA', dividendos: 50, retenciones: -15, gastos: -0.5, neto: 34.5, moneda: 'USD' }], ventas: [] })).split('\n')[1] === 'dividend,2026,,Schwab,BABA,USD,,50,-15,-0.5,34.5,,,broker,,', 'el CSV separa la comision');
 
 console.log('\nC) cambiar de año, y la respuesta vieja que llega tarde');
 botonesAnio.filter(function (b) { return b.getAttribute() === '2025'; })[0].click();
@@ -128,10 +128,10 @@ ok(elemento('libBody').innerHTML.indexOf('US$ 82.00') === -1 && elemento('libBod
 ocultos = false;
 var csv = api.csv(anioPayload(2026, { simbolos: [{ broker: 'IBKR', symbol: 'A,B', dividendos: 1, retenciones: 0, neto: 1, moneda: 'USD' }] }));
 var lineas = csv.trim().split('\n');
-ok(lineas[0] === 'type,year,date,broker,symbol,currency,quantity,dividends_usd,withheld_usd,fees_usd,net_usd,proceeds_usd,result_usd,source', 'el encabezado del CSV');
-ok(lineas[1] === 'dividend,2026,,IBKR,"A,B",USD,,1,0,0,1,,,broker', 'un dividendo por papel, con la coma escapada');
-ok(lineas[2] === 'sale,2026,2026-04-10,IBKR,MSFT,USD,2,,,,,800,120,broker', 'una venta del broker');
-ok(lineas[3] === 'sale,2026,2026-07-01,Binance,ETH,USD,0.1,,,,,300,,app', 'la venta de la app, sin resultado');
+ok(lineas[0] === 'type,year,date,broker,symbol,currency,quantity,dividends_usd,withheld_usd,fees_usd,net_usd,proceeds_usd,result_usd,source,result_source,income_usd', 'el encabezado del CSV');
+ok(lineas[1] === 'dividend,2026,,IBKR,"A,B",USD,,1,0,0,1,,,broker,,', 'un dividendo por papel, con la coma escapada');
+ok(lineas[2] === 'sale,2026,2026-04-10,IBKR,MSFT,USD,2,,,,,800,120,broker,broker,', 'una venta del broker');
+ok(lineas[3] === 'sale,2026,2026-07-01,Binance,ETH,USD,0.1,,,,,300,,app,,', 'la venta de la app, sin resultado');
 api.cargar(2026, true); pendientes.shift().ok({ ok: false, mensajes: ['The tax book store is not available right now.'] });
 ok(/not available right now/.test(elemento('libBody').innerHTML), 'un rechazo del Worker se muestra tal cual');
 api.cargar(2026, true); pendientes.shift().fail(new Error('red'));
@@ -144,6 +144,26 @@ ok(/'exposicion', 'libro'\]/.test(vistasSrc) && /if \(name === 'libro'\) cargarL
 ok(/getElementById\('mLibro'\)\.onclick = function \(\) \{ toggleMenu\(false\); setView\('libro'\); \}/.test(vistasSrc), 'el boton abre la vista');
 elemento('libBack').onclick();
 ok(vueltas[0] === 'inicio', 'Back vuelve');
+
+console.log('\nF) lo estimado y los premios (A33)');
+api.cargar(2026, true); pendientes.shift().ok(anioPayload(2026, {
+  ventas: [
+    { fecha: '2026-03-01', broker: 'Binance', symbol: 'BTC', qty: 0.01, moneda: 'USD', importe: 700, resultado: 550, fuente: 'broker', resultadoFuente: 'costo promedio' },
+    { fecha: '2026-04-10', broker: 'IBKR', symbol: 'MSFT', qty: 2, moneda: 'USD', importe: 800, resultado: 120, fuente: 'broker', resultadoFuente: 'broker' }
+  ],
+  ingresos: [{ broker: 'Binance', symbol: 'USDT', qty: 2.75, monto: 2.75 }, { broker: 'Binance', symbol: 'BTC', qty: 0.0001, monto: 6 }],
+  totales: { dividendos: 82, retenciones: -4.5, neto: 77.5, importeVentas: 1500, resultado: 670, ingresos: 8.75 } }));
+var he = elemento('libBody').innerHTML;
+ok(he.indexOf('<b class="up">≈ US$ 550.00</b>') !== -1, 'lo estimado lleva ≈');
+ok(he.indexOf('<b class="up">US$ 120.00</b>') !== -1, 'lo que informa el broker, sin ≈');
+ok(/≈ estimated: the broker does not report it/.test(he), 'y se explica');
+ok(he.indexOf('Crypto rewards') !== -1 && he.indexOf('US$ 8.75 <span class="desc">from Binance Earn and distributions') !== -1, 'los premios, aparte');
+ok(/Rewards by asset \(2\)/.test(he) && he.indexOf('USDT <em>Binance</em></td><td>2.75</td><td>US$ 2.75</td>') !== -1, 'por activo, plegados');
+var csvE = api.csv(anioPayload(2026, { simbolos: [], ventas: [{ fecha: '2026-03-01', broker: 'Binance', symbol: 'BTC', qty: 0.01, moneda: 'USD', importe: 700, resultado: 550, fuente: 'broker', resultadoFuente: 'costo promedio' }], ingresos: [{ broker: 'Binance', symbol: 'USDT', qty: 2.75, monto: 2.75 }] })).trim().split('\n');
+ok(csvE[1] === 'sale,2026,2026-03-01,Binance,BTC,USD,0.01,,,,,700,550,broker,costo promedio,', 'el CSV dice de donde sale el resultado');
+ok(csvE[2] === 'reward,2026,,Binance,USDT,USD,2.75,,,,,,,broker,,2.75', 'y trae los premios');
+api.cargar(2026, true); pendientes.shift().ok(anioPayload(2026));
+ok(elemento('libBody').innerHTML.indexOf('Crypto rewards') === -1 && elemento('libBody').innerHTML.indexOf('≈ estimated') === -1, 'sin premios ni estimados, nada de eso');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

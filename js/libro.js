@@ -67,11 +67,17 @@ function renderLibro() {
     h += '<table class="rendtabla libtabla"><tr><th></th><th>Proceeds</th><th>Result</th></tr>';
     ventas.forEach(function (v) {
       var res = v.resultado;
+      // ≈: lo estimo el Worker (costo promedio o la hoja Ventas de Guzman), no
+      // lo informo el broker (A33). El aviso de abajo dice de donde sale.
+      var aprox = res !== null && res !== undefined && v.resultadoFuente && v.resultadoFuente !== 'broker';
       h += '<tr><td>' + esc(v.symbol) + ' <em>' + esc(v.broker) + (v.fuente === 'app' ? ' · app' : '') + '</em><span class="libfecha">' + esc(v.fecha) + '</span></td>' +
         '<td>' + libMonto(v.importe) + '</td>' +
-        '<td>' + (res === null || res === undefined ? '—' : '<b class="' + (res >= 0 ? 'up' : 'down') + '">' + libMonto(res) + '</b>') + '</td></tr>';
+        '<td>' + (res === null || res === undefined ? '—' : '<b class="' + (res >= 0 ? 'up' : 'down') + '">' + (aprox ? '≈ ' : '') + libMonto(res) + '</b>') + '</td></tr>';
     });
     h += '<tr class="libtotal"><td>Total</td><td>' + libMonto(t.importeVentas) + '</td><td>' + libMonto(t.resultado) + '</td></tr></table>';
+    if (ventas.some(function (v) { return v.resultadoFuente && v.resultadoFuente !== 'broker'; })) {
+      h += '<p class="capnota">≈ estimated: the broker does not report it (see the notes below).</p>';
+    }
   }
 
   // Dividendos por papel, plegado: es el detalle que pide el contador.
@@ -82,6 +88,19 @@ function renderLibro() {
     sim.forEach(function (s) {
       h += '<tr><td>' + esc(s.symbol || '—') + ' <em>' + esc(s.broker) + (s.moneda && s.moneda !== 'USD' ? ' · ' + esc(s.moneda) : '') + '</em></td>' +
         '<td>' + libMonto(s.dividendos) + '</td><td>' + libMonto(libRetenido(s)) + '</td><td>' + libMonto(s.neto) + '</td></tr>';
+    });
+    h += '</table></details>';
+  }
+
+  // Los premios de Binance Earn y sus distribuciones (A33): ingreso, aparte
+  // de los dividendos, en USD al precio de cada dia.
+  var ing = r.ingresos || [];
+  if (ing.length) {
+    h += '<p class="libsub">Crypto rewards</p><p class="rendtitular" style="font-size:15px">' + libMonto(t.ingresos) +
+      ' <span class="desc">from Binance Earn and distributions, at each day’s price</span></p>';
+    h += '<details class="libdet"><summary>Rewards by asset (' + ing.length + ')</summary><table class="rendtabla libtabla"><tr><th></th><th>Units</th><th>USD</th></tr>';
+    ing.forEach(function (x) {
+      h += '<tr><td>' + esc(x.symbol) + ' <em>' + esc(x.broker) + '</em></td><td>' + esc(x.qty) + '</td><td>' + libMonto(x.monto) + '</td></tr>';
     });
     h += '</table></details>';
   }
@@ -108,12 +127,15 @@ function libCsvTexto(r) {
     var s = (v === null || v === undefined) ? '' : String(v);
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
-  var filas = [['type', 'year', 'date', 'broker', 'symbol', 'currency', 'quantity', 'dividends_usd', 'withheld_usd', 'fees_usd', 'net_usd', 'proceeds_usd', 'result_usd', 'source']];
+  var filas = [['type', 'year', 'date', 'broker', 'symbol', 'currency', 'quantity', 'dividends_usd', 'withheld_usd', 'fees_usd', 'net_usd', 'proceeds_usd', 'result_usd', 'source', 'result_source', 'income_usd']];
   (r.simbolos || []).forEach(function (s) {
-    filas.push(['dividend', r.anio, '', s.broker, s.symbol, s.moneda, '', s.dividendos, s.retenciones, s.gastos || 0, s.neto, '', '', 'broker']);
+    filas.push(['dividend', r.anio, '', s.broker, s.symbol, s.moneda, '', s.dividendos, s.retenciones, s.gastos || 0, s.neto, '', '', 'broker', '', '']);
   });
   (r.ventas || []).forEach(function (v) {
-    filas.push(['sale', r.anio, v.fecha, v.broker, v.symbol, v.moneda, v.qty, '', '', '', '', v.importe, v.resultado, v.fuente]);
+    filas.push(['sale', r.anio, v.fecha, v.broker, v.symbol, v.moneda, v.qty, '', '', '', '', v.importe, v.resultado, v.fuente, v.resultadoFuente || '', '']);
+  });
+  (r.ingresos || []).forEach(function (x) {
+    filas.push(['reward', r.anio, '', x.broker, x.symbol, 'USD', x.qty, '', '', '', '', '', '', 'broker', '', x.monto]);
   });
   return filas.map(function (f) { return f.map(c).join(','); }).join('\n') + '\n';
 }
