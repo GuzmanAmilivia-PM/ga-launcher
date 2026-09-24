@@ -194,16 +194,33 @@ function horaDelDato(ms, ahora) {
   var mismoDia = d.getFullYear() === h.getFullYear() && d.getMonth() === h.getMonth() && d.getDate() === h.getDate();
   return mismoDia ? hora : (d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + hora);
 }
+// "· updating" al lado de la hora (23/09/2026, A6): la misma marca que ya
+// tienen Dividendos, Aportes y News ("Data from … · updating"). Solo cuando
+// lo que se ve tiene mas de ACTUALIZANDO_VIEJO_MS y hay un pedido en camino
+// (loadData, arranque.js): con el sondeo de cada minuto, marcar SIEMPRE
+// haria parpadear la palabra sesenta veces por hora sobre datos frescos.
+var datosActualizando = false;
+var ACTUALIZANDO_VIEJO_MS = 2 * 60000;
+function textoHoraDato(ms, actualizando, ahora) {
+  var cuando = horaDelDato(ms, ahora);
+  var viejo = !cuando || ((ahora || Date.now()) - Number(ms) > ACTUALIZANDO_VIEJO_MS);
+  var partes = [];
+  if (cuando) partes.push(cuando);
+  if (actualizando && viejo) partes.push('updating…');
+  return partes.length ? '· ' + partes.join(' · ') : '';
+}
+function pintarHoraDato(ms) {
+  var hora = document.getElementById('hoyHora');
+  if (hora) hora.textContent = textoHoraDato(ms, datosActualizando);
+}
 function pintarHoy(data) {
   var linea = document.getElementById('hoyLinea');
   if (!linea) return;
   var val = document.getElementById('hoyVal');
   var pct = document.getElementById('hoyPct');
   var nota = document.getElementById('hoyNota');
-  var hora = document.getElementById('hoyHora');
   var k = calcularKpis(data);
-  var cuando = horaDelDato(data && data.actualizado);
-  if (hora) hora.textContent = cuando ? '· ' + cuando : '';
+  pintarHoraDato(data && data.actualizado);
   linea.hidden = false;
   if (k.diaUsd === null) {
     val.textContent = '—'; val.className = '';

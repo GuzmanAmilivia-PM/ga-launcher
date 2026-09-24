@@ -595,6 +595,9 @@ try { aplicarAportes(r); } catch (e) {}
 // cambio bruto del patrimonio. Si ya estabas parado en Portafolio, aparece
 // sola en cuanto llegan.
 try { if (typeof renderAnual === 'function') renderAnual(); } catch (e) {}
+// El mapa de calor tiene la misma espera desde el 23/09/2026 (sin aportes no
+// descuenta nada): cuando llegan, se dibuja.
+try { if (typeof renderMapaCalor === 'function') renderMapaCalor(); } catch (e) {}
 var html = '';
 html += '<div class="apostat"><span>Went into your apps</span><b>' + esc(fmtUsdEnt(r.aportes)) + '</b></div>';
 html += '<div class="apostat"><span>Came out of your apps</span><b>' + esc(fmtUsdEnt(r.retiros)) + '</b></div>';

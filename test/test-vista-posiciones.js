@@ -176,7 +176,9 @@ ok(/id="posTitulo"[^>]*role="button"/.test(indexCrudo) && /id="posTitulo"[^>]*ta
 ok(indexCrudo.indexOf('id="view-posiciones"') !== -1 && indexCrudo.indexOf('id="posBody"') !== -1, 'la vista nueva existe con su tabla');
 // "Compra" y no "P. compra": esa cabecera era lo MAS ANCHO de su columna y le
 // robaba ~22px a la del nombre, que es la unica flexible (medido a 375px).
-ok(/<table class="holdtable postable">\s*\n?<thead><tr><th>Instr\.<\/th><th>Buy<\/th><th>Price<\/th><th>Value<\/th><\/tr><\/thead>\s*\n?<tbody id="posBody">/.test(indexCrudo),
+// "Avg" y no "Buy" desde el 23/09/2026 (A8): la columna es el precio MEDIO
+// de compra, y "Buy" se leia como un boton de comprar. Mismo ancho.
+ok(/<table class="holdtable postable">\s*\n?<thead><tr><th>Instr\.<\/th><th>Avg<\/th><th>Price<\/th><th>Value<\/th><\/tr><\/thead>\s*\n?<tbody id="posBody">/.test(indexCrudo),
   'las columnas pedidas sobre la tabla con el estilo del Inicio (.holdtable)');
 ok(/\.postable th \{[^}]*white-space:\s*nowrap/.test(indexCrudo), 'las cabeceras no se parten en dos renglones');
 ok(/\.postable \.col-pc \{[^}]*nowrap/.test(indexCrudo) && /\.postable \.col-valor \{[^}]*nowrap/.test(indexCrudo),

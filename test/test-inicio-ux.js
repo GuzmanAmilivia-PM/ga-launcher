@@ -171,5 +171,66 @@ function px(regla, lado) { var mm = regla.match(new RegExp(lado + ':\\s*(-?\\d+)
   ok(alto >= 44, p[0] + ': el area de toque llega a ' + alto + ' px de alto (el dibujo sigue en ' + p[1] + ')');
 });
 
+console.log('\nE) "updating" al lado de la hora mientras se refresca (A6, 23/09/2026)');
+m = montar(true);
+m.g.apoCargado = true;
+// El reloj de la APP (el del contexto de vm), no el de este proceso: con
+// npm test a +100 dias (_futuro.js) el de aca esta adelantado y el de la app
+// no, y "hace 10 minutos" quedaba en el futuro para la app.
+var ahoraApp = require('vm').runInContext('Date.now()', m.g);
+var viejoMs = ahoraApp - 10 * 60000;
+var pl = payload(); pl.actualizado = viejoMs;
+m.g.render(pl);
+var pedidoOk = null, pedidoFail = null;
+m.g.google = { script: { run: {
+  withFailureHandler: function (f) { pedidoFail = f; return this; },
+  withSuccessHandler: function (f) { pedidoOk = f; return this; },
+  getPortfolioData: function () {}
+} } };
+m.g.loadData();
+ok(/updating/.test(m.el('hoyHora').textContent), 'con el dato de hace 10 min y el pedido en camino, dice "updating": ' + m.el('hoyHora').textContent);
+// La respuesta trae el MISMO dato viejo (el servidor sirve lo guardado): la
+// marca se tiene que apagar igual. Con un dato fresco se apagaria sola por
+// frescura y la prueba no diria nada del apagado.
+var otraVieja = payload(); otraVieja.actualizado = viejoMs;
+pedidoOk(otraVieja);
+ok(!/updating/.test(m.el('hoyHora').textContent), 'al llegar la respuesta se apaga, aunque el dato siga viejo: ' + m.el('hoyHora').textContent);
+m.g.loadData();
+ok(/updating/.test(m.el('hoyHora').textContent), 'el pedido siguiente la vuelve a prender');
+pedidoFail(new Error('sin red'));
+ok(!/updating/.test(m.el('hoyHora').textContent), 'y si el pedido falla tambien se apaga (no queda "updating" para siempre)');
+
+console.log('\nE2) cuando llegan los aportes, el mapa de calor se dibuja solo');
+m = montar(true);
+m.g.aportesCargados = false;
+// Dos meses (el mapa necesita el cierre del anterior), con el reloj de la app.
+var hoyApp = new (require('vm').runInContext('Date', m.g))();
+m.g.fullSerie = [
+  { fecha: new Date(hoyApp.getFullYear(), hoyApp.getMonth() - 1, 15).getTime(), valor: 990 },
+  { fecha: hoyApp.getTime(), valor: 1000 }
+];
+m.g.renderMapaCalor();
+ok(/Loading your deposits/.test(m.el('mapaCalor').innerHTML), 'sin la lista, el mapa la espera');
+m.g.renderAportes({ ok: true, anio: 2026, aportes: 0, retiros: 0, neto: 0, lista: [], desde: '2025-09-01', crecimiento: null, cierresAnuales: [] });
+ok(/mc-fila/.test(m.el('mapaCalor').innerHTML), 'renderAportes lo repinta en cuanto llega la lista');
+
+console.log('\nF) la tarjeta del año dice la verdad sobre el indice, en ingles');
+m = montar(true);
+m.g.comparacionAnual = function () {
+  return { pct: 5, idxPct: 4, idxNombre: 'S&P 500', desde: new Date(2025, 11, 30).getTime(), bruto: 8, aportes: 1000 };
+};
+m.g.renderAnual();
+var anual = m.el('anualBody').innerHTML;
+ok(/Your portfolio/.test(anual) && !/Tu cartera/.test(anual), 'el rotulo en ingles ("Tu cartera" se habia escapado)');
+ok(!/doesn.t pay dividends/.test(anual), 'ya no afirma que el indice no paga dividendos (falso desde V17)');
+ok(/dividends reinvested/.test(anual), 'dice que el indice cuenta sus dividendos reinvertidos, como las cuentas');
+
+console.log('\nG) el banner "GA platforms ›" del menu lleva a algun lado (A7)');
+// ALCANCE: el onclick se engancha AL CARGAR vistas.js, antes de que este
+// arnes cambie el DOM de mentira; asi que se mira el codigo escrito.
+ok(/getElementById\('mPlataformas'\)\.onclick = function \(\) \{ toggleMenu\(false\); setView\('config'\); \}/.test(html),
+  'cierra el menu y abre las plataformas (Keys)');
+ok(/<button type="button" class="menu-banner" id="mPlataformas">/.test(html), 'y es un <button> (teclado y lector de pantalla)');
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

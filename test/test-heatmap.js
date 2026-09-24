@@ -1,20 +1,19 @@
-// Arnés de D10: retornos mes a mes (1/09/2026).
+// Arnés de D10 (1/09/2026), DADO VUELTA el 23/09/2026.
 //
-// Lo que hace que estos números no mientan es restar los APORTES. Medido con
-// los datos reales de Guzmán: junio daba **+0,56% en crudo y fue −0,81%** —el
-// signo dado vuelta— y enero pasaba de +3,91% a +1,16%. Un heatmap sin esa
-// resta pinta de verde un mes en el que perdió plata, que es la peor forma
-// posible de equivocarse en una grilla que se lee de un vistazo.
+// D10 era la grilla "Month by month" de la pagina Analysis: los retornos mes
+// a mes netos de aportes, con (fin − aportes) / inicio. Convivia con el mapa
+// de calor de Portfolio, que NO los restaba: la app mostraba dos grillas mes a
+// mes que se contradecian (junio −0,81 % en una y +0,56 % en la otra). Quedo
+// UNA: el mapa de calor de Portfolio, ahora sin depositos y con LA cuenta de
+// la app (_twrCadena). Los casos con numeros reales que custodiaba este arnes
+// se mudaron a test-mapacalor.js, contra la grilla que quedo.
 //
-// Y si la lista de aportes no está CARGADA (bandera aportesCargados), NO se
-// dibuja nada: mostrar los crudos como si fueran retornos sería exactamente
-// ese error. Cargada y vacía es otra cosa: sin aportes, el crudo ES el
-// retorno, y se dibuja.
+// Regla de la casa: al sacar una funcion, sus asserts no se borran, se dan
+// vuelta. Estos verifican que la segunda grilla no vuelva sin querer.
+var fs = require('fs');
+var path = require('path');
 var ruta = require('./_ruta');
 var html = ruta.leerIndex();
-var codigo = ruta.bloque(html,
-  '// ---------- D10: retornos mes a mes (1/09/2026) ----------',
-  '// ---------- D9: distancia al maximo (1/09/2026) ----------');
 
 var asserts = 0, fallos = 0;
 function ok(cond, msg) {
@@ -23,136 +22,21 @@ function ok(cond, msg) {
   else console.log('  ok   ' + msg);
 }
 
-var ctx = {
-  Number: Number, isFinite: isFinite, Math: Math, String: String, Date: Date, Object: Object,
-  parseInt: parseInt,
-  esc: function (s) { return String(s === null || s === undefined ? '' : s); }
-};
-var nombres = Object.keys(ctx);
-var fn = new Function(nombres.join(','), codigo +
-  '\nreturn { retornosMensuales: retornosMensuales, anaHeatmapHtml: anaHeatmapHtml };');
-var api = fn.apply(null, nombres.map(function (n) { return ctx[n]; }));
+var analisis = fs.readFileSync(path.join(ruta.RUTA, 'js', 'analisis.js'), 'utf8');
+var css = fs.readFileSync(path.join(ruta.RUTA, 'css', 'estilos.css'), 'utf8');
 
-function cierre(anio, mes, valor) {
-  // Ultimo dia del mes, en hora LOCAL: el codigo agrupa con getFullYear() y
-  // getMonth(), que son locales. Armado en UTC, en Montevideo un cierre de
-  // fin de mes cae en el mes anterior y el agrupado se corre entero.
-  return { fecha: new Date(anio, mes, 0, 18, 0, 0).getTime(), valor: valor };
-}
+console.log('\nA) la segunda grilla mes a mes no existe');
+ok(!/function retornosMensuales\(/.test(html), 'retornosMensuales (la otra cuenta de "sin depositos") no esta');
+ok(!/function anaHeatmapHtml\(/.test(html), 'anaHeatmapHtml (la grilla de Analysis) no esta');
+ok(analisis.indexOf('anaHeatmapHtml(') === -1, 'y la pagina Analysis no la llama');
+ok(analisis.indexOf('Month by month') === -1, 'ni dibuja un titulo "Month by month"');
+ok(!/\.heat\s*\{|\.heatwrap\s*\{/.test(css), 'su CSS se fue con ella');
 
-// Los números REALES del 1/09/2026, con los aportes de cada mes.
-var SERIE = [
-  cierre(2025, 12, 90867), cierre(2026, 1, 94418), cierre(2026, 2, 93618),
-  cierre(2026, 3, 90082), cierre(2026, 4, 102572)
-];
-var APORTES = [
-  { fecha: '2026-01-15', grupo: 2500, total: 2500 },
-  { fecha: '2026-02-10', grupo: 1500, total: 1500 },
-  { fecha: '2026-03-05', grupo: 1500, total: 1500 }
-];
-
-// Tercer argumento `cargados` (1/09/2026, tarde): la bandera aportesCargados
-// de graficos.js, que distingue "todavia no se cargaron" de "no hubo ninguno".
-console.log('\nA) los retornos van NETOS de aportes');
-var c = api.retornosMensuales(SERIE, APORTES, true);
-var porMes = {};
-c.forEach(function (x) { porMes[x.mes] = x; });
-// Enero: (94418 − 2500) / 90867 − 1 = +1,16%. En crudo daria +3,91%.
-ok(Math.abs(porMes[1].pct - 1.16) < 0.02, 'enero: +1,16% neto, no el +3,91% crudo (dio ' + porMes[1].pct.toFixed(2) + ')');
-ok(Math.abs(porMes[2].pct - (-2.44)) < 0.02, 'febrero: −2,44% (dio ' + porMes[2].pct.toFixed(2) + ')');
-ok(Math.abs(porMes[3].pct - (-5.38)) < 0.02, 'marzo: −5,38% (dio ' + porMes[3].pct.toFixed(2) + ')');
-// Abril sin aportes: crudo y neto coinciden.
-ok(Math.abs(porMes[4].pct - 13.87) < 0.02, 'abril, sin aportes: +13,87% (dio ' + porMes[4].pct.toFixed(2) + ')');
-ok(porMes[1].conAporte && porMes[2].conAporte && !porMes[4].conAporte, 'marca cuales tuvieron movimiento de plata');
-
-console.log('\nB) el caso que justifica todo: el signo dado vuelta');
-// Junio real: cierra 110500 desde 109885 con 1500 de aporte. Crudo +0,56%,
-// neto −0,81%. Sin la resta, la grilla lo pinta VERDE.
-var junio = api.retornosMensuales(
-  [cierre(2026, 5, 109885), cierre(2026, 6, 110500)],
-  [{ fecha: '2026-06-11', grupo: 1500, total: 1500 }], true
-);
-ok(junio[0].pct < 0, 'junio da NEGATIVO una vez restado el aporte (dio ' + junio[0].pct.toFixed(2) + ')');
-ok(Math.abs(junio[0].pct - (-0.81)) < 0.02, 'y da −0,81%, no +0,56%');
-var hJunio = api.anaHeatmapHtml(
-  [cierre(2026, 5, 109885), cierre(2026, 6, 110500)],
-  [{ fecha: '2026-06-11', grupo: 1500, total: 1500 }], true
-);
-ok(/239,68,68/.test(hJunio) && !/16,185,129/.test(hJunio), 'y la celda se pinta ROJA, no verde');
-
-console.log('\nB2) un deposito a BTG (grupo 0, total 1.500) tambien se resta: la serie es la del patrimonio entero');
-// El caso real del 7/09/2026. BTG no es del grupo comparable, asi que el
-// backend lo manda con grupo 0 y total 1.500. Leyendo `grupo`, junio quedaba
-// VERDE con plata que Guzman acababa de depositar.
-var btg = api.retornosMensuales(
-  [cierre(2026, 5, 109885), cierre(2026, 6, 110500)],
-  [{ fecha: '2026-06-11', grupo: 0, total: 1500 }], true
-);
-ok(btg[0].pct < 0 && Math.abs(btg[0].pct - (-0.81)) < 0.02, 'lee `total`: junio da −0,81%, no +0,56% (dio ' + btg[0].pct.toFixed(2) + ')');
-ok(btg[0].conAporte, 'y el mes queda marcado con movimiento de plata');
-// Un cache local anterior al campo (sin `total`) cae a `grupo`.
-var viejo = api.retornosMensuales(
-  [cierre(2026, 5, 109885), cierre(2026, 6, 110500)],
-  [{ fecha: '2026-06-11', grupo: 1500 }], true
-);
-ok(Math.abs(viejo[0].pct - (-0.81)) < 0.02, 'sin `total` (cache viejo) sigue leyendo `grupo`');
-
-console.log('\nC) sin la lista de aportes CARGADA no se dibuja nada; cargada y vacia SI');
-// La lista no viaja en el payload del Inicio: la pide el panel de Aportes.
-// Si todavia no llego, los crudos NO se muestran como si fueran retornos.
-// Pero "cargada y VACIA" es otra cosa: significa que no hubo aportes, y ahi
-// el crudo ES el retorno — suprimirlo era esconder un dato valido
-// (observacion de la re-auditoria del 1/09/2026).
-ok(api.retornosMensuales(SERIE, [], false) === null, 'sin cargar no calcula');
-ok(api.anaHeatmapHtml(SERIE, APORTES, false) === '', 'ni con lista a medias: manda la bandera, no el largo');
-ok(api.retornosMensuales(SERIE, [], true) !== null, 'cargada y vacia SI calcula (sin aportes, crudo = neto)');
-ok(/Month by month/.test(api.anaHeatmapHtml(SERIE, [], true)), 'y se dibuja');
-ok(api.anaHeatmapHtml([], APORTES, true) === '', 'sin serie tampoco');
-ok(api.retornosMensuales([cierre(2026, 4, 100)], APORTES, true) === null, 'con un solo mes no hay retorno que calcular');
-
-console.log('\nC2) el mes en curso se declara a medias');
-var hoyT = new Date();
-var mesHoy = hoyT.getMonth() + 1, anioHoy = hoyT.getFullYear();
-var mesPrevio = mesHoy === 1 ? 12 : mesHoy - 1;
-var anioPrevio = mesHoy === 1 ? anioHoy - 1 : anioHoy;
-var hCurso = api.anaHeatmapHtml(
-  [cierre(anioPrevio, mesPrevio, 100000), { fecha: hoyT.getTime(), valor: 101000 }],
-  [], true
-);
-ok(/still in progress/.test(hCurso), 'la nota del mes en curso aparece');
-ok(!/still in progress/.test(api.anaHeatmapHtml(SERIE, APORTES, true)), 'y NO aparece cuando el ultimo mes es viejo');
-
-console.log('\nD) la grilla dice cuanta historia hay, en vez de aparentar años');
-var h = api.anaHeatmapHtml(SERIE, APORTES, true);
-ok(/Month by month/.test(h), 'tiene su titulo');
-ok(/there are 4 months/.test(h), 'dice cuantos meses hay, con el verbo en plural');
-// "there is 9 months" fue la primera version: lo caza el arnes, no la vista.
-ok(!/there is \d+ months/.test(h), 'y nunca dice "there is N months"');
-var hUno = api.anaHeatmapHtml([cierre(2026, 4, 100000), cierre(2026, 5, 105000)], [{ fecha: '2025-01-01', grupo: 500 }], true);
-ok(/there is 1 month here/.test(hUno), 'y con un solo mes va en singular');
-ok(/not years yet/.test(h), 'y aclara que todavia no son años');
-ok(/history starts Jan 2026/.test(h), 'con el mes en que arranca');
-ok(/Net of deposits and withdrawals/.test(h), 'y que estan netos de aportes y retiros');
-ok(/The dot marks months/.test(h), 'explica el punto de los meses con movimiento');
-
-console.log('\nE) la forma de grilla: doce columnas aunque falten meses');
-// 14: la esquina vacia + los doce meses + el rotulo del año de la fila.
-ok((h.match(/<th>/g) || []).length === 14, 'un encabezado por mes, la esquina y el año (dio ' +
-  (h.match(/<th>/g) || []).length + ')');
-ok((h.match(/class="vacia"/g) || []).length === 8, 'los meses sin dato quedan vacios, no en cero (dio ' +
-  (h.match(/class="vacia"/g) || []).length + ')');
-// Un cero pintado seria "ese mes no se movio", que es una afirmacion.
-ok(!/vacia[^>]*>0/.test(h), 'y un mes vacio no muestra 0.0');
-ok(/<div class="heatwrap">/.test(h), 'va en su propio contenedor, que es el que se desplaza de costado');
-
-console.log('\nF) sin aportes en ningun mes, el punto no se menciona');
-h = api.anaHeatmapHtml([cierre(2026, 4, 100000), cierre(2026, 5, 105000)], [{ fecha: '2025-01-01', grupo: 500 }], true);
-ok(!/The dot marks/.test(h), 'un aviso que aparece siempre se aprende a ignorar');
-
-console.log('\nG) la interfaz va en INGLES (regla del proyecto)');
-h = api.anaHeatmapHtml(SERIE, APORTES, true);
-['Mes a mes', 'aportes', 'meses', 'historia', 'retiros']
-  .forEach(function (p) { ok(h.indexOf(p) === -1, 'no se colo "' + p + '"'); });
+console.log('\nB) la grilla que queda es la de Portfolio, sin depositos');
+ok(/function mapaCalorMensual\(serie\)/.test(html), 'el mapa de calor de Portfolio sigue');
+var calor = fs.readFileSync(path.join(ruta.RUTA, 'js', 'calor.js'), 'utf8');
+ok(/_twrCadena\(tramo\)/.test(calor), 'y mide cada mes con _twrCadena: la MISMA cuenta que el "pp vs S&P" y la tarjeta del año');
+ok(/if \(!aportesCargados\)/.test(calor), 'y sin la lista de aportes no se dibuja (los crudos mentirian)');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

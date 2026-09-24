@@ -157,6 +157,10 @@ document.getElementById('mIA').onclick = function () { toggleMenu(false); setVie
 // view-diseno (tema, acento y tonalidad).
 document.getElementById('mConfig').onclick = function () { toggleMenu(false); setView('config'); };
 document.getElementById('mDiseno').onclick = function () { toggleMenu(false); setView('diseno'); };
+// El banner "GA platforms ›" del pie del menu prometia ir a algun lado con
+// su flecha y no hacia nada (A7, 23/09/2026): lleva a las plataformas, que
+// son la primera tarjeta de Keys.
+document.getElementById('mPlataformas').onclick = function () { toggleMenu(false); setView('config'); };
 // Settings era la unica pagina del menu sin volver (auditoria del 23/09/2026).
 document.getElementById('disBack').onclick = function () { setView('inicio'); };
 document.getElementById('mSeguridad').onclick = function () { toggleMenu(false); setView('seguridad'); };

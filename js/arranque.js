@@ -208,9 +208,18 @@ bnbAutoSync();
     }
     return estable(d, true);
   }
+  // La marca "updating" del renglon Today (tablero.js) sigue a este pedido:
+  // se prende al salir y se apaga con la respuesta, buena o mala.
+  function finActualizando() {
+    datosActualizando = false;
+    pintarHoraDato(lastData && lastData.actualizado);
+  }
   function loadData(){
     var completa = !fullSerie || !fullSerie.length || (Date.now() - ultimaCargaCompleta > CARGA_COMPLETA_MS);
+    datosActualizando = true;
+    pintarHoraDato(lastData && lastData.actualizado);
     google.script.run.withFailureHandler(function(err){
+      finActualizando();
       // OJO con el orden: cuando el servidor rechaza la clave, apiCall ya
       // llamo a mostrarLock() y la pantalla para escribir la clave nueva
       // ESTA arriba. Un hideSplash() aca la tapaba de inmediato, asi que
@@ -239,6 +248,7 @@ bnbAutoSync();
       }
       var t=document.getElementById('total'); if(t){ t.textContent='ERR: '+err.message; }
     }).withSuccessHandler(function(data){
+      finActualizando();
       if (!data) return;
       var vinoSerie = !!(data.serie && data.serie.length);
       if (vinoSerie) ultimaCargaCompleta = Date.now();

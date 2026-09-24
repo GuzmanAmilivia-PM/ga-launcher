@@ -185,7 +185,7 @@ function montarHoy() {
   });
   var n2 = Object.keys(c2);
   var f2 = new Function(n2.join(','), cashSrc + '\n' + codigo +
-    '\nreturn { pintarHoy: pintarHoy, horaDelDato: horaDelDato };');
+    '\nreturn { pintarHoy: pintarHoy, horaDelDato: horaDelDato, textoHoraDato: textoHoraDato, VIEJO: ACTUALIZANDO_VIEJO_MS };');
   return { api: f2.apply(null, n2.map(function (n) { return c2[n]; })), els: els };
 }
 var mh = montarHoy();
@@ -223,6 +223,17 @@ ok(mh.els.hoyNota.hidden === true, 'y la nota de "excluye" no aparece sobre un n
 ok(mh.api.horaDelDato(hoyMs, new Date(2026, 8, 23, 18, 0).getTime()) === '2:32 PM', 'mismo dia: ' + mh.api.horaDelDato(hoyMs, new Date(2026, 8, 23, 18, 0).getTime()));
 ok(mh.api.horaDelDato(hoyMs, new Date(2026, 8, 24, 9, 0).getTime()) === 'Sep 23, 2:32 PM', 'otro dia, con la fecha: ' + mh.api.horaDelDato(hoyMs, new Date(2026, 8, 24, 9, 0).getTime()));
 ok(mh.api.horaDelDato(null) === '' && mh.api.horaDelDato(0) === '', 'sin dato, nada');
+
+// "· updating" (23/09/2026, A6): solo con un pedido en camino Y datos de mas
+// de dos minutos. Con el sondeo de cada minuto, marcarlo siempre haria
+// parpadear la palabra sobre datos frescos.
+var ahoraH = new Date(2026, 8, 23, 14, 40).getTime();
+ok(mh.api.textoHoraDato(hoyMs, true, ahoraH) === '· 2:32 PM · updating…', 'dato de hace 8 min + pedido en camino: dice que actualiza: ' + mh.api.textoHoraDato(hoyMs, true, ahoraH));
+ok(mh.api.textoHoraDato(hoyMs, false, ahoraH) === '· 2:32 PM', 'sin pedido en camino, solo la hora');
+ok(mh.api.textoHoraDato(ahoraH - 30000, true, ahoraH).indexOf('updating') === -1, 'dato de hace 30 s: no parpadea aunque haya un pedido');
+ok(mh.api.textoHoraDato(null, true, ahoraH) === '· updating…', 'sin ningun dato todavia, solo "updating"');
+ok(mh.api.textoHoraDato(null, false, ahoraH) === '', 'y sin pedido, nada');
+ok(mh.api.VIEJO === 2 * 60000, 'el umbral es de dos minutos');
 
 // El renglon esta en el Inicio ARRIBA de Cash, lo pinta render(), y en
 // escritorio se apaga (la tira ya lo muestra). ALCANCE: mira el codigo

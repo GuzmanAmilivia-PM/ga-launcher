@@ -220,7 +220,10 @@ ok(/<p class="viewtitle">Keys<\/p>/.test(indexCrudo), 'la ex Configuracion ahora
   var trozo = indexCrudo.slice(desde, indexCrudo.indexOf('============', desde));
   ok(desde !== -1 && trozo.indexOf('viewtitle') === -1, v + ': sin titulo de pagina (la pestaña ya lo dice)');
 });
-['Positions', 'Settings', 'IBKR', 'Binance', 'Charles Schwab', 'Search asset', 'AI Insights', 'Security', 'Banking'].forEach(function (t) {
+// Las tres de conexion se llaman "... connection" desde el 23/09/2026: habia
+// dos paginas "IBKR" (la cuenta y su sincronizacion) y no se sabia en cual
+// estabas (auditoria general, A8).
+['Positions', 'Settings', 'IBKR connection', 'Binance connection', 'Schwab connection', 'Search asset', 'AI Insights', 'Security', 'Banking'].forEach(function (t) {
   ok(indexCrudo.indexOf('<p class="viewtitle">' + t + '</p>') !== -1, t + ': las paginas secundarias conservan su titulo');
 });
 // Y ese titulo es una ETIQUETA discreta, no un titular (26/08/2026, dos

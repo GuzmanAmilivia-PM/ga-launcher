@@ -136,7 +136,7 @@
      27/08/2026: su lugar en la barra de abajo lo ocupa la Watchlist. -->
 <button class="mtile" id="mCash"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M8.5 10.5V4M8.5 4 5.5 7M8.5 4l3 3"/><path d="M15.5 13.5V20M15.5 20l-3-3M15.5 20l3-3"/></svg></span>Banking</button>
 </div>
-<div class="menu-banner"><span class="mb-logo galogo-img"></span><span><b>GA</b> platforms</span><span class="mb-go">&rsaquo;</span></div>
+<button type="button" class="menu-banner" id="mPlataformas"><span class="mb-logo galogo-img"></span><span><b>GA</b> platforms</span><span class="mb-go">&rsaquo;</span></button>
 </div>
 
 <div class="mainarea">
@@ -319,7 +319,7 @@
 <div class="card">
 <h2>Monthly performance</h2>
 <div id="mapaCalor"></div>
-<p class="capnota">Month over month, on total net worth. A large deposit or withdrawal counts as movement.</p>
+<p class="capnota">Month over month, net of deposits and withdrawals: money you put in doesn&rsquo;t count as a gain.</p>
 </div>
 </div>
 
@@ -391,7 +391,7 @@
 <div class="card">
 <div style="overflow-x:auto">
 <table class="holdtable postable">
-<thead><tr><th>Instr.</th><th>Buy</th><th>Price</th><th>Value</th></tr></thead>
+<thead><tr><th>Instr.</th><th>Avg</th><th>Price</th><th>Value</th></tr></thead>
 <tbody id="posBody"></tbody>
 </table>
 </div>
@@ -569,7 +569,7 @@
 <!-- ============ IBKR (se entra desde Configuracion > Plataformas) ============ -->
 <div id="view-ibkr" style="display:none">
 <button type="button" class="backlink" id="ibkrBack">&larr; Back</button>
-<p class="viewtitle">IBKR</p>
+<p class="viewtitle">IBKR connection</p>
 <p class="pagesub">Interactive Brokers &middot; read-only connection</p>
 <div class="card">
 <h2>Status</h2>
@@ -613,7 +613,7 @@
 <!-- ============ BINANCE (se entra desde Configuracion > Plataformas) ============ -->
 <div id="view-bnb" style="display:none">
 <button type="button" class="backlink" id="bnbBack">&larr; Back</button>
-<p class="viewtitle">Binance</p>
+<p class="viewtitle">Binance connection</p>
 <p class="pagesub">Balances read live from your phone &middot; read-only key</p>
 <div class="card">
 <h2>Status</h2>
@@ -653,7 +653,7 @@
 <!-- ============ SCHWAB (se entra desde Configuracion > Plataformas) ============ -->
 <div id="view-cs" style="display:none">
 <button type="button" class="backlink" id="csBack">&larr; Back</button>
-<p class="viewtitle">Charles Schwab</p>
+<p class="viewtitle">Schwab connection</p>
 <p class="pagesub">Automatic read-only connection via SnapTrade</p>
 <div class="card">
 <h2>Status</h2>
