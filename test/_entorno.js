@@ -135,6 +135,8 @@ function cargar(storage) {
     WebSocket: function () { return { close: function () {}, addEventListener: function () {} }; },
     TextEncoder: function () { return { encode: function () { return new Uint8Array(0); } }; },
     AbortController: function () { return { abort: function () {}, signal: {} }; },
+    // El CSV del Tax book (24/09/2026): un archivo que se baja desde la app.
+    Blob: function (partes, opts) { this.partes = partes; this.type = opts && opts.type; },
     isSecureContext: true,
     PublicKeyCredential: { isUserVerifyingPlatformAuthenticatorAvailable: function () { return Promise.resolve(false); } },
     btoa: function (s) { return Buffer.from(s, 'binary').toString('base64'); },

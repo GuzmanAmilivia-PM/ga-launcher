@@ -1,10 +1,10 @@
 // Service worker: cachea el "cascarón" de la app para carga instantánea.
 // Los datos (POST a la API) nunca se cachean.
-var CACHE = 'ga-pwa-v238';
+var CACHE = 'ga-pwa-v239';
 // './' y NO también './index.html' (24/09/2026): son la misma página, y con
 // las dos cada versión nueva la bajaba dos veces (50 KB de más). Quien pida
 // index.html por su nombre recibe './' (ver el fetch, abajo).
-var ASSETS = ['./', './css/estilos.css',   './js/gagraf.js', './js/analisis.js', './js/arranque.js', './js/brokers.js', './js/buscador.js', './js/calor.js', './js/config.js', './js/graficos.js', './js/ia.js', './js/nucleo.js', './js/paneles.js', './js/rendimiento.js', './js/seguridad.js', './js/sincronizar.js', './js/tablero.js', './js/trade.js', './js/bancos.js', './js/vistas.js', './js/watchlist.js', './js/exposicion.js',
+var ASSETS = ['./', './css/estilos.css',   './js/gagraf.js', './js/analisis.js', './js/arranque.js', './js/brokers.js', './js/buscador.js', './js/calor.js', './js/config.js', './js/graficos.js', './js/ia.js', './js/nucleo.js', './js/paneles.js', './js/rendimiento.js', './js/seguridad.js', './js/sincronizar.js', './js/tablero.js', './js/trade.js', './js/bancos.js', './js/vistas.js', './js/watchlist.js', './js/exposicion.js', './js/libro.js',
   './manifest.json'];
 // Lo ESTABLE (5/09/2026): fuentes e iconos, ~110 KB que no cambian desde agosto
 // y se volvian a bajar con CADA version (entre 2 y 9 por dia). Viven en un cache

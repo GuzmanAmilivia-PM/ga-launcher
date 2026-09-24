@@ -105,7 +105,7 @@ ok(api.fecha('2026-08-31') === 'Aug 31' && api.fecha('2026-12-05') === 'Dec 5', 
 console.log('\nD) el menu, la vista y la vuelta');
 ok(/<button class="mtile" id="mExpo">[\s\S]*?Exposure<\/button>/.test(html), 'el boton Exposure en el menu del costado');
 ok(/<div id="view-exposicion" style="display:none">/.test(html) && /id="expBody"/.test(html) && /id="expBack"/.test(html), 'la vista con su cuerpo y su Back');
-ok(/'rendanual', 'exposicion'\]/.test(vistasSrc), 'exposicion esta en VIEWS');
+ok(/'rendanual', 'exposicion'/.test(vistasSrc), 'exposicion esta en VIEWS');
 ok(/if \(name === 'exposicion'\) cargarExposicion\(false\);/.test(vistasSrc), 'entrar a la vista la carga');
 ok(/getElementById\('mExpo'\)\.onclick = function \(\) \{ toggleMenu\(false\); setView\('exposicion'\); \}/.test(vistasSrc), 'el boton cierra el menu y abre la vista');
 elemento('expBack').onclick();

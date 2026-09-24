@@ -1155,3 +1155,14 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 .expdet { margin: 0 0 0 26px; font-size: 11.5px; color: var(--muted); line-height: 1.4; }
 .expdet span { white-space: nowrap; }
 html.light .expbar { background: rgba(20,40,80,.08); }
+/* Tax book (24/09/2026, A27): los años como botones, las tablas de la
+   pagina Performance con cuatro columnas, y el total resaltado. */
+.libanios { flex-wrap: wrap; margin: 2px 0 6px; }
+.libtabla td em { font-style: normal; color: var(--muted); font-size: 11px; }
+.libtabla tr.libtotal td { font-weight: 700; color: var(--text); }
+.libsub { font-size: 12px; color: var(--gold); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin: 16px 0 4px; }
+.libdet { margin: 14px 0 4px; font-size: 13px; }
+.libdet summary { cursor: pointer; color: var(--gold); font-weight: 600; padding: 6px 0; }
+.libcsv { margin-top: 12px; }
+.libanios .tipobtn { flex: 0 0 auto; padding: 6px 16px; }
+.libfecha { display: block; color: var(--muted); font-size: 11px; }

@@ -136,6 +136,10 @@
      directo mas lo que cada fondo tiene adentro. Pedido de Guzman: aparte de
      Portfolio, en el menu del costado. -->
 <button class="mtile" id="mExpo"><span class="mtile-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v8h8"/></svg></span>Exposure</button>
+<!-- Tax book (24/09/2026, A27): el libro fiscal de cada año, lo que
+     informaron los brokers (dividendos, retenciones, ventas), guardado para
+     que no se pierda al salir de la ventana de 365 dias. -->
+<button class="mtile" id="mLibro"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M5 5.5a2 2 0 0 1 2-2h12v14H7a2 2 0 0 0-2 2z"/><path d="M5 19.5a2 2 0 0 0 2 2h12v-4"/><path d="M9 8h6M9 11h4"/></svg></span>Tax book</button>
 <!-- Banking (la vista de depositar/retirar cash) vive ACA desde el
      27/08/2026: su lugar en la barra de abajo lo ocupa la Watchlist. -->
 <button class="mtile" id="mCash"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M8.5 10.5V4M8.5 4 5.5 7M8.5 4l3 3"/><path d="M15.5 13.5V20M15.5 20l-3-3M15.5 20l3-3"/></svg></span>Banking</button>
@@ -442,6 +446,18 @@
 <div class="card">
 <div class="cardtop"><h2>Top 10 companies, funds included</h2><button class="expandbtn" id="expRefresh" title="Refresh" aria-label="Refresh exposure">&#8635;</button></div>
 <div id="expBody"><p class="loadingtxt">Looking inside your funds...</p></div>
+</div>
+</div>
+
+<!-- ============ TAX BOOK: el libro fiscal de un año (24/09/2026, A27) ============ -->
+<!-- Lo arma el Worker (libro_fiscal) de la tabla libro, que solo crece; aca
+     se dibuja y se baja en CSV (js/libro.js). -->
+<div id="view-libro" style="display:none">
+<button type="button" class="backlink" id="libBack">&larr; Back</button>
+<p class="viewtitle">Tax book</p>
+<div class="card">
+<div class="cardtop"><h2>Dividends, withholding and sales</h2><button class="expandbtn" id="libRefresh" title="Refresh" aria-label="Refresh tax book">&#8635;</button></div>
+<div id="libBody"><p class="loadingtxt">Loading the year...</p></div>
 </div>
 </div>
 
@@ -904,6 +920,7 @@ Trades</button>
 <script src="./js/buscador.js"></script>
 <script src="./js/watchlist.js"></script>
 <script src="./js/exposicion.js"></script>
+<script src="./js/libro.js"></script>
 <script src="./js/arranque.js"></script>
 </body>
 </html>
