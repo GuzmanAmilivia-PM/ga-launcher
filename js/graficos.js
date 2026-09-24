@@ -136,8 +136,8 @@ function pintarVsBench(serie, pctCartera) {
   // false y la lista llega al abrir el panel de Aportes — o al arrancar, pero
   // SOLO si el cache del servidor esta caliente. Sin ella no se puede descontar
   // lo que Guzman deposito, y el % crudo contra el indice daba el DOBLE de
-  // ventaja: 21,6 pp en vez de 10,7 el 13/09/2026, con 8.500 aportados en el
-  // ano. Y era INTERMITENTE —el mismo numero salia bien o mal segun la
+  // ventaja: 21,6 pp en vez de 10,7 el 13/09/2026, con varios miles aportados
+  // en el ano. Y era INTERMITENTE —el mismo numero salia bien o mal segun la
   // temperatura del cache—, asi que no habia forma de saber cual se estaba
   // leyendo. El asterisco de mas abajo NO cubre este caso y nunca pudo: para
   // avisar "hubo aportes que no pude descontar" necesita la lista de aportes,
@@ -191,13 +191,13 @@ function getFilteredDataPoints(serie) {
 // Parte del mismo pedido ("que se vea mas pro"), y las dos son de lectura,
 // no de dato: el grafico dibuja exactamente lo mismo.
 //
-// EJE Y: "120K" en vez de "120000". Seis cifras repetidas cinco veces roban
+// EJE Y: "80K" en vez de "80000". Seis cifras repetidas cinco veces roban
 // ancho al dibujo y no agregan precision — el numero exacto vive arriba, en
 // el total, que es donde se lo busca. Por debajo de 10.000 se escribe entero:
 // ahi el "K" con decimal (9,4K) es MENOS legible que 9.400.
 // Cuantos decimales necesita una escala para que dos marcas VECINAS no se
 // escriban igual (06/09/2026). Sale del PASO, que es el unico dato que lo
-// sabe: con paso 200 sobre 120.000, "120K" se repetia cinco veces.
+// sabe: con paso 200 sobre 80.000, "80K" se repetia cinco veces.
 function _decimalesPara(paso, div) {
   var p = Math.abs(Number(paso)) / div;
   if (!isFinite(p) || p <= 0) return 0;
@@ -954,8 +954,8 @@ function comparacionGrupo() {
 //
 // LA TRAMPA, y por que este calculo no es una resta:
 // el cambio bruto del patrimonio en el año INCLUYE la plata que Guzman puso.
-// Con sus numeros del 22/08/2026: el patrimonio subio 30,8% pero 7.000 de esos
-// los aporto el; el rendimiento de verdad fue 21,6%. Poner el 30,8% al lado
+// Con sus numeros del 22/08/2026: el patrimonio subio 30,8% pero una parte de
+// eso la aporto el; el rendimiento de verdad fue 21,6%. Poner el 30,8% al lado
 // del S&P seria exactamente el error que este proyecto ya cometio y saco en
 // v58 ("Rendimiento del año" = total - inicio - aportes netos).
 //

@@ -14,11 +14,12 @@ var ctx = { Number: Number, isFinite: isFinite, String: String, esc: function (s
   fmtUsdEnt: function (n) { return 'US$ ' + Math.round(Number(n)).toLocaleString('en-US'); }, fechaCortaMs: function () { return '30/01'; } };
 vm.createContext(ctx); vm.runInContext(src, ctx);
 
-var h = ctx.htmlCrecimientoTotal({ anio: 2026, crecimiento: { pct: 20.78, desde: 1, hasta: 2, base: 94418, valor: 120980.61, aportes: 6000, dias: 41 }, cierresAnuales: [] });
+// Numeros INVENTADOS (24/09/2026: este repo es publico; eran los reales).
+var h = ctx.htmlCrecimientoTotal({ anio: 2026, crecimiento: { pct: 20.78, desde: 1, hasta: 2, base: 60000, valor: 76800.40, aportes: 4000, dias: 41 }, cierresAnuales: [] });
 ok(/Whole portfolio, without contributions/.test(h), 'el titulo');
 ok(/2026 so far/.test(h) && /capval up">\+20\.8%/.test(h), 'el % del anio en curso, en verde');
-ok(/US\$ 94,418/.test(h) && /US\$ 120,981/.test(h), 'de donde arranco y donde esta');
-ok(/US\$ 6,000 net this year/.test(h), 'los flujos descontados, dichos');
+ok(/US\$ 60,000/.test(h) && /US\$ 76,800/.test(h), 'de donde arranco y donde esta');
+ok(/US\$ 4,000 net this year/.test(h), 'los flujos descontados, dichos');
 // Nota corta desde el 9/09/2026: todas las cuentas, neto de flujos, y nada mas.
 ok(/all accounts, net of deposits and withdrawals/.test(h), 'la nota dice que es todo, neto de flujos');
 ok(!/year-end value is saved|banks included/.test(h), 'sin la explicacion larga de antes');

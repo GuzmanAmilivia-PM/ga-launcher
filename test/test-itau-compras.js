@@ -3,9 +3,9 @@
 // la página de itau y ver el desglose de itau assets, con compras, fechas y
 // retorno".
 //
-// Los números son los REALES de la base ese día: 1.674,43 cuotapartes a 119,51
-// compradas el 27/05, 330,84 a 120,49 el 13/08, la cuotaparte a 121,03 y el
-// dólar a 40,27.
+// Los precios de la cuotaparte y del dólar son los de ese día (119,51 el 27/05,
+// 120,49 el 13/08, 121,03 hoy, el dólar a 40,27); las CANTIDADES son
+// inventadas (las reales se sacaron el 24/09/2026: este repo es público).
 var ruta = require('./_ruta');
 var html = ruta.leerIndex();
 var asserts = 0, fallos = 0;
@@ -27,8 +27,8 @@ var api = new Function('Number,String,Date,Math,isFinite',
 )(Number, String, Date, Math, isFinite);
 
 var DATOS = { posiciones: [
-  { symbol: 'ITAU', qty: 1674.43, precioCompra: 119.51, precioActual: 121.03, fechaInicio: '2026-05-27' },
-  { symbol: 'ITAU', qty: 330.84, precioCompra: 120.49, precioActual: null, fechaInicio: '2026-08-13' },
+  { symbol: 'ITAU', qty: 1000.5, precioCompra: 119.51, precioActual: 121.03, fechaInicio: '2026-05-27' },
+  { symbol: 'ITAU', qty: 250.25, precioCompra: 120.49, precioActual: null, fechaInicio: '2026-08-13' },
   { symbol: 'LIQUIDEZ', qty: null, valor: 0 }
 ] };
 var RESUMEN = { tcHoy: 40.270978 };
@@ -39,7 +39,7 @@ ok(out.indexOf('May 27, 2026') !== -1, 'la compra de mayo lleva su fecha');
 ok(out.indexOf('Aug 13, 2026') !== -1, 'y la de agosto la suya');
 ok((out.match(/<tr>/g) || []).length === 2, 'son DOS filas: las compras no se promedian en una');
 ok(out.indexOf('LIQUIDEZ') === -1 && (out.match(/units @/g) || []).length === 2, 'la fila de cash no es una compra');
-ok(out.indexOf('1674.43 units @ 119.51 UYU') !== -1, 'las unidades y el precio pagado, en pesos y dicho');
+ok(out.indexOf('1000.5 units @ 119.51 UYU') !== -1, 'las unidades y el precio pagado, en pesos y dicho');
 
 console.log('\nB) el retorno POR COMPRA es el del fondo en pesos');
 // 121.03 / 119.51 - 1 = +1.27% ; 121.03 / 120.49 - 1 = +0.45%
@@ -48,8 +48,8 @@ ok(out.indexOf('+0.45%') !== -1, 'la de agosto, +0.45%: cada una contra SU preci
 // El precio de hoy es uno solo y la hoja lo escribe en la primera fila: la
 // segunda lo espeja. Si se leyera de la fila, la de agosto quedaria sin dato.
 ok((out.match(/%<\/span>/g) || []).length === 2, 'las DOS compras tienen retorno: la segunda no queda en blanco por no traer el precio de hoy');
-// Valor de hoy en dolares: 1674.43 x 121.03 / 40.270978 = 5032.1
-ok(out.indexOf('USD 5032.') !== -1, 'y el valor de hoy en dolares, que si sale del tipo de cambio de hoy');
+// Valor de hoy en dolares: 1000.5 x 121.03 / 40.270978 = 3006.89
+ok(out.indexOf('USD 3006.') !== -1, 'y el valor de hoy en dolares, que si sale del tipo de cambio de hoy');
 ok(/In pesos/.test(out), 'la pantalla dice que ese retorno es en pesos, no en dolares');
 // Corto a proposito (13/09/2026, Guzman: "hay mucha info tuya, minimalizaria
 // un poco nomas"). Lo unico que no se puede sacar es que el retorno es en

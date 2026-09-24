@@ -389,7 +389,7 @@ button.backlink { background: none; border: 0; padding: 0; font-family: inherit;
 .holdtable .col-precio { font-size: 18px; font-weight: 600; white-space: nowrap; }
 /* La pantalla Posiciones: mismas filas que la tarjeta del Inicio (por eso
    comparte .holdtable) mas las dos columnas de estado de cuenta. TODO en
-   nowrap: "USD 23.204" partido en tres renglones era lo que afeaba la primera
+   nowrap: "USD 12.345" partido en tres renglones era lo que afeaba la primera
    version (captura de Guzman, 25/08/2026); el ancho lo cede la celda del
    nombre (max-width:0), nunca los numeros. */
 .postable th { white-space: nowrap; }
@@ -515,7 +515,7 @@ button.backlink { background: none; border: 0; padding: 0; font-family: inherit;
 /* En el TELEFONO la fila se apila (02/09/2026). El monto entro en esta
    leyenda al sacar la tarjeta "Account detail" del Inicio, y en una sola
    linea no entra: .lname cede (ellipsis) y .lpct es nowrap e irreducible, asi
-   que el bloque "USD 97,512 45.6% >" se queda con todo. Medido a 393px, el
+   que el bloque "USD 12,345 45.6% >" se queda con todo. Medido a 393px, el
    telefono de Guzman: "Interactive Brokers" quedaba con 31px de los 128 que
    necesita — o sea ilegible. Y agrava que esta leyenda es AHORA el unico
    camino para abrir cada cuenta: sus etiquetas no pueden ser un muñon.

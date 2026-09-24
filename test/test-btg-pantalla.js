@@ -89,17 +89,18 @@ function montar(opts) {
   return { api: api, els: els, pedidos: pedidos, espias: espias, el: function (id) { return ctx.document.getElementById(id); } };
 }
 
-// El payload TAL CUAL lo produce getBtg (Btg.js): un corte al 13/09 con USD y
+// El payload con la FORMA que produce getBtg (Btg.js) y montos INVENTADOS (los
+// reales se sacaron el 24/09/2026: este repo es publico). Un corte al 13/09 con USD y
 // pesos, y el cambio contra el anterior partido en flujo y efecto del peso.
 var PAYLOAD = {
   cortes: [], anterior: { fecha: '2026-08-31' },
   ultimo: {
     fecha: '2026-09-13',
-    filas: [{ fecha: '2026-09-13', tipo: 'liquido', moneda: 'USD', monto: 2662.87, tc: 1 },
-            { fecha: '2026-09-13', tipo: 'liquido', moneda: 'UYU', monto: 206554.92, tc: 40.2 }],
-    totales: { liquido: 7801.19, plazo: 0, total: 7801.19, porMoneda: { USD: 2662.87, UYU: 5138.32 } }
+    filas: [{ fecha: '2026-09-13', tipo: 'liquido', moneda: 'USD', monto: 1500.25, tc: 1 },
+            { fecha: '2026-09-13', tipo: 'liquido', moneda: 'UYU', monto: 100000.5, tc: 40 }],
+    totales: { liquido: 4000.26, plazo: 0, total: 4000.26, porMoneda: { USD: 1500.25, UYU: 2500.01 } }
   },
-  cambio: { desde: '2026-08-31', hasta: '2026-09-13', delta: -23.81, efectoFx: -25.4, flujo: 1.59 }
+  cambio: { desde: '2026-08-31', hasta: '2026-09-13', delta: -18.2, efectoFx: -20.6, flujo: 1.59 }
 };
 
 // ===========================================================================
@@ -110,13 +111,13 @@ m.api.renderBtg(PAYLOAD);
 var box = m.el('accBtg');
 ok(box.hidden === false, 'el bloque de BTG se muestra');
 ok(/Snapshot of 2026-09-13/.test(box.innerHTML), 'dice de que fecha es el corte');
-ok(/Liquid<\/span><b>[^<]*7,801/.test(box.innerHTML), 'el liquido en dolares (7.801)');
+ok(/Liquid<\/span><b>[^<]*4,000/.test(box.innerHTML), 'el liquido en dolares (4.000)');
 ok(/Fixed deposit<\/span><b>[^<]*0/.test(box.innerHTML), 'el plazo fijo en cero, que es un dato');
-// fmt() redondea a dolares enteros: +1.59 se ve "+USD 2" y -25.4, "-USD 25".
+// fmt() redondea a dolares enteros: +1.59 se ve "+USD 2" y -20.6, "USD -21".
 ok(/Since 2026-08-31/.test(box.innerHTML) && /You put in \/ took out<\/span><b>\+USD 2</.test(box.innerHTML),
    'el cambio contra el corte anterior, con el FLUJO aparte (+1.59 -> "+USD 2"): ' + (box.innerHTML.match(/took out<\/span><b>[^<]*/) || [''])[0]);
-// (fmt pone el signo despues de la moneda: "USD -25".)
-ok(/Peso vs dollar<\/span><b class="down">USD -25</.test(box.innerHTML), 'y el efecto del peso aparte, en rojo (-25.4 -> "USD -25")');
+// (fmt pone el signo despues de la moneda: "USD -21".)
+ok(/Peso vs dollar<\/span><b class="down">USD -21</.test(box.innerHTML), 'y el efecto del peso aparte, en rojo (-20.6 -> "USD -21")');
 ok(/id="btgAbrir"/.test(box.innerHTML) && typeof m.el('btgAbrir').onclick === 'function', 'el boton de cargar un corte nuevo queda cableado');
 
 var m0 = montar();
@@ -146,8 +147,8 @@ ok(m.pedidos.length === 0 && /Check the amounts/.test(m.el('btgMsg').textContent
 
 // Lo normal: USD y pesos liquidos, el plazo en USD en CERO (dato) y el de
 // pesos VACIO (no tengo). Casilla del flujo destildada.
-m.el('btgLiqUsd').value = '2662.87';
-m.el('btgLiqUyu').value = '206554.92';
+m.el('btgLiqUsd').value = '1500.25';
+m.el('btgLiqUyu').value = '100000.5';
 m.el('btgPfUsd').value = '0';
 m.el('btgPfUyu').value = '';
 m.el('btgFlujo').checked = false;
@@ -156,8 +157,8 @@ ok(m.pedidos.length === 1 && m.pedidos[0].fn === 'guardarBtg', 'con saldos, mand
 var args = m.pedidos[0].args || {};
 ok(args.fecha === fechaPropuesta, 'con la fecha del formulario');
 ok(JSON.stringify(args.saldos) === JSON.stringify([
-  { tipo: 'liquido', moneda: 'USD', monto: 2662.87 },
-  { tipo: 'liquido', moneda: 'UYU', monto: 206554.92 },
+  { tipo: 'liquido', moneda: 'USD', monto: 1500.25 },
+  { tipo: 'liquido', moneda: 'UYU', monto: 100000.5 },
   { tipo: 'plazo', moneda: 'USD', monto: 0 }
 ]), 'los saldos: el CERO viaja (es un dato) y el VACIO no (no tengo de eso): ' + JSON.stringify(args.saldos));
 ok(args.registrarFlujo === false, 'la casilla destildada manda registrarFlujo:false');
@@ -165,7 +166,7 @@ ok(m.el('btgGuardar').disabled === true && /Saving/.test(m.el('btgMsg').textCont
 
 // La respuesta buena: mensaje, formulario cerrado, la cuenta se repinta y se
 // dispara la sincronizacion.
-m.pedidos[0].ok({ ok: true, mensajes: ['Saved 2026-09-30: USD 7801.19 (liquid 7801.19, deposit 0).'] });
+m.pedidos[0].ok({ ok: true, mensajes: ['Saved 2026-09-30: USD 4000.26 (liquid 4000.26, deposit 0).'] });
 ok(m.el('btgGuardar').disabled === false, 'vuelve el boton');
 // Lo que contesto el servidor va al aviso FLOTANTE (23/09/2026): #btgMsg vive
 // adentro del formulario que se cierra en la linea siguiente, y el mensaje se
@@ -205,7 +206,7 @@ ok(m2.el('accTabla').hidden === true && m2.el('accItau').hidden === true && m2.e
 ok(m2.el('accBtg').hidden === false && /Loading/.test(m2.el('accBtg').innerHTML), 'muestra su bloque cargando');
 ok(m2.pedidos.length === 1 && m2.pedidos[0].fn === 'getBtg', 'pide getBtg');
 m2.pedidos[0].ok(PAYLOAD);
-ok(/7,801/.test(m2.el('accTotal').textContent) && /Liquid: /.test(m2.el('accLiq').textContent), 'al llegar, el total y el liquido arriba');
+ok(/4,000/.test(m2.el('accTotal').textContent) && /Liquid: /.test(m2.el('accLiq').textContent), 'al llegar, el total y el liquido arriba');
 ok(/Snapshot of 2026-09-13/.test(m2.el('accBtg').innerHTML), 'y el corte pintado');
 
 // Una respuesta TARDIA de BTG cuando ya se abrio otra cuenta no pinta nada.

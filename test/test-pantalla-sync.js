@@ -112,10 +112,10 @@ function esperar() { return new Promise(function (r) { setTimeout(r, 80); }); }
   ok(m.elems.ibkrAplicar.style.display === 'none', 'sin cambios no ofrece Aplicar');
 
   console.log('\nB) IBKR: cambios y aplicar');
-  m = montar({ respuestas: { sincronizarIBKR: { ok: true, cambios: [{ tipo: 'qty', symbol: 'VOO', antes: 33, despues: 34 }], mensajes: [], posicionesBroker: 10 } } });
+  m = montar({ respuestas: { sincronizarIBKR: { ok: true, cambios: [{ tipo: 'qty', symbol: 'VOO', antes: 20, despues: 21 }], mensajes: [], posicionesBroker: 10 } } });
   m.click('ibkrVerCambios');
   await esperar();
-  ok(/VOO.*33.*34/.test(m.elems.ibkrCambios.innerHTML.replace(/<[^>]*>/g, '')), 'lista el cambio de cantidad');
+  ok(/VOO.*20.*21/.test(m.elems.ibkrCambios.innerHTML.replace(/<[^>]*>/g, '')), 'lista el cambio de cantidad');
   ok(m.elems.ibkrAplicar.style.display === '', 'ofrece Aplicar');
   m.click('ibkrAplicar');
   await esperar();
@@ -197,11 +197,11 @@ function esperar() { return new Promise(function (r) { setTimeout(r, 80); }); }
   ok(m.elems.csGuardar.disabled === false, 'y el boton no queda muerto');
 
   console.log('\nH) el cambio de costo (V4bis) se muestra como "precio compra"');
-  m = montar({ respuestas: { sincronizarCS: { ok: true, cambios: [{ tipo: 'costo', symbol: 'VOO', antes: 431.9, despues: 455.2 }, { tipo: 'costo', symbol: 'QQQ', antes: null, despues: 404.68 }], mensajes: [] } } });
+  m = montar({ respuestas: { sincronizarCS: { ok: true, cambios: [{ tipo: 'costo', symbol: 'VOO', antes: 400.5, despues: 420.25 }, { tipo: 'costo', symbol: 'QQQ', antes: null, despues: 380.75 }], mensajes: [] } } });
   m.click('csVerCambios');
   await esperar();
   var textoCosto = m.elems.csCambios.innerHTML.replace(/<[^>]*>/g, '');
-  ok(/VOO.?buy price 431\.9 .*455\.2/.test(textoCosto), 'VOO: precio compra 431.9 -> 455.2');
+  ok(/VOO.?buy price 400\.5 .*420\.25/.test(textoCosto), 'VOO: precio compra 400.5 -> 420.25');
   ok(m.elems.csCambios.innerHTML.indexOf('buy price &mdash;') !== -1, 'sin costo previo muestra el guion, no un 0');
 
   console.log('\nJ) msgErr: texto plano y sin copias (auditoria 19/08/2026)');

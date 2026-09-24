@@ -117,10 +117,10 @@ function calcularKpis(data) {
     // El cash NO tiene resultado no realizado: es plata, no una posicion
     // comprada a un precio. Excluirlo no es una preferencia de presentacion,
     // es un bug encontrado el 31/08/2026 mirando la pantalla con datos
-    // reales: la fila de ITAU llega con `base` 239.974 contra un valor de
-    // 6.021 (la columna no esta en dolares), y esa sola fila daba
-    // "Unrealized −USD 198.516 / −65,1%" cuando lo real es +USD 35.437 /
-    // +54,4%. El SIGNO estaba dado vuelta, no solo el monto.
+    // reales: la fila de ITAU llega con `base` en PESOS (cientos de miles)
+    // contra un valor en dolares (miles), y esa sola fila daba un resultado
+    // no realizado negativo de decenas de miles cuando el real era positivo.
+    // El SIGNO estaba dado vuelta, no solo el monto.
     var base = Number(p.base);
     if (isFinite(v) && isFinite(base) && base > 0 && !esFilaCash(p)) {
       valorConCosto += v; costo += base;

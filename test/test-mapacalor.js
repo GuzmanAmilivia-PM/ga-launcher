@@ -4,7 +4,7 @@
 // depositos" de toda la app) sobre los puntos del mes. Hasta ese dia habia dos
 // grillas: esta, con el cierre contra el cierre (un deposito pintaba el mes de
 // verde), y la de Analysis (D10), que restaba los aportes con otra cuenta. Los
-// casos con numeros reales que custodiaba aquella (test-heatmap.js) viven
+// casos que custodiaba aquella (test-heatmap.js; hoy con numeros inventados) viven
 // ahora aca, contra esta.
 var ruta = require('./_ruta');
 var html = ruta.leerIndex();
@@ -80,37 +80,39 @@ var fd = api.mapaCalorMensual(dosAnios);
 ok(fd.length === 2 && fd[0].anio === 2026 && fd[1].anio === 2025, 'el año mas nuevo va arriba');
 
 console.log('\nC) los depositos NO cuentan como ganancia (23/09/2026)');
-// Los numeros REALES del 1/09/2026 (los de la grilla de Analysis, D10).
-var SERIE = [cierre(2025, 12, 90867), cierre(2026, 1, 94418), cierre(2026, 2, 93618),
-  cierre(2026, 3, 90082), cierre(2026, 4, 102572)];
+// Numeros INVENTADOS con la misma forma que el caso real del 1/09/2026 (los
+// reales se sacaron el 24/09/2026: este repo es publico).
+var SERIE = [cierre(2025, 12, 60000), cierre(2026, 1, 63000), cierre(2026, 2, 62400),
+  cierre(2026, 3, 60100), cierre(2026, 4, 68500)];
 var APORTES = [
-  { fecha: '2026-01-15', grupo: 2500, total: 2500 },
-  { fecha: '2026-02-10', grupo: 1500, total: 1500 },
-  { fecha: '2026-03-05', grupo: 1500, total: 1500 }
+  { fecha: '2026-01-15', grupo: 1600, total: 1600 },
+  { fecha: '2026-02-10', grupo: 1000, total: 1000 },
+  { fecha: '2026-03-05', grupo: 1000, total: 1000 }
 ];
 api.setAportes(APORTES, null, true);
 var fr = api.mapaCalorMensual(SERIE)[0];
 // El flujo entra al INICIO de su tramo (la convencion de toda la app):
-// enero = 94.418 / (90.867 + 2.500) − 1 = +1,13 %. En crudo daria +3,91 %.
-ok(Math.abs(fr.meses[0] - (94418 / (90867 + 2500) - 1)) < 1e-4, 'enero neto: +1,13 %, no el +3,91 % crudo (=' + (fr.meses[0] * 100).toFixed(2) + ')');
-ok(Math.abs(fr.meses[1] - (93618 / (94418 + 1500) - 1)) < 1e-4, 'febrero: ' + (fr.meses[1] * 100).toFixed(2) + ' %');
-ok(Math.abs(fr.meses[2] - (90082 / (93618 + 1500) - 1)) < 1e-4, 'marzo: ' + (fr.meses[2] * 100).toFixed(2) + ' %');
-ok(Math.abs(fr.meses[3] - (102572 / 90082 - 1)) < 1e-4, 'abril, sin aportes: crudo y neto coinciden (' + (fr.meses[3] * 100).toFixed(2) + ' %)');
+// enero = 63.000 / (60.000 + 1.600) − 1 = +2,27 %. En crudo daria +5,00 %.
+ok(Math.abs(fr.meses[0] - (63000 / (60000 + 1600) - 1)) < 1e-4, 'enero neto: +2,27 %, no el +5,00 % crudo (=' + (fr.meses[0] * 100).toFixed(2) + ')');
+ok(Math.abs(fr.meses[1] - (62400 / (63000 + 1000) - 1)) < 1e-4, 'febrero: ' + (fr.meses[1] * 100).toFixed(2) + ' %');
+ok(Math.abs(fr.meses[2] - (60100 / (62400 + 1000) - 1)) < 1e-4, 'marzo: ' + (fr.meses[2] * 100).toFixed(2) + ' %');
+ok(Math.abs(fr.meses[3] - (68500 / 60100 - 1)) < 1e-4, 'abril, sin aportes: crudo y neto coinciden (' + (fr.meses[3] * 100).toFixed(2) + ' %)');
 ok(fr.conFlujo[0] && fr.conFlujo[1] && fr.conFlujo[2] && !fr.conFlujo[3], 'marca los meses con movimiento de plata');
 
-// El caso que justifica todo: junio real, 109.885 -> 110.500 con 1.500 de
-// aporte. Crudo +0,56 %; neto −0,80 %. Sin la resta, la grilla lo pinta VERDE.
-api.setAportes([{ fecha: '2026-06-11', grupo: 1500, total: 1500 }], null, true);
-var jun = api.mapaCalorMensual([cierre(2026, 5, 109885), cierre(2026, 6, 110500)])[0];
+// El caso que justifica todo (con la forma del junio real): 70.000 -> 70.350
+// con 1.000 de aporte. Crudo +0,50 %; neto −0,92 %. Sin la resta, la grilla lo
+// pinta VERDE.
+api.setAportes([{ fecha: '2026-06-11', grupo: 1000, total: 1000 }], null, true);
+var jun = api.mapaCalorMensual([cierre(2026, 5, 70000), cierre(2026, 6, 70350)])[0];
 ok(jun.meses[5] < 0, 'junio da NEGATIVO una vez descontado el aporte (=' + (jun.meses[5] * 100).toFixed(2) + ')');
 ok(/244,63,94/.test(api.celdaCalor(jun.meses[5], true)), 'y la celda se pinta ROJA, no verde');
-// Un deposito a BTG: grupo 0, total 1.500. La serie es la del patrimonio
+// Un deposito a BTG: grupo 0, total 1.000. La serie es la del patrimonio
 // ENTERO, asi que manda `total` (7/09/2026).
-api.setAportes([{ fecha: '2026-06-11', grupo: 0, total: 1500 }], null, true);
-ok(api.mapaCalorMensual([cierre(2026, 5, 109885), cierre(2026, 6, 110500)])[0].meses[5] < 0, 'un deposito a BTG (grupo 0) tambien se descuenta: lee `total`');
+api.setAportes([{ fecha: '2026-06-11', grupo: 0, total: 1000 }], null, true);
+ok(api.mapaCalorMensual([cierre(2026, 5, 70000), cierre(2026, 6, 70350)])[0].meses[5] < 0, 'un deposito a BTG (grupo 0) tambien se descuenta: lee `total`');
 // Un cache local anterior al campo `total` cae a `grupo`.
-api.setAportes([{ fecha: '2026-06-11', grupo: 1500 }], null, true);
-ok(api.mapaCalorMensual([cierre(2026, 5, 109885), cierre(2026, 6, 110500)])[0].meses[5] < 0, 'sin `total` (cache viejo) sigue leyendo `grupo`');
+api.setAportes([{ fecha: '2026-06-11', grupo: 1000 }], null, true);
+ok(api.mapaCalorMensual([cierre(2026, 5, 70000), cierre(2026, 6, 70350)])[0].meses[5] < 0, 'sin `total` (cache viejo) sigue leyendo `grupo`');
 
 console.log('\nD) un mes que la lista de aportes no cubre queda VACIO');
 // La lista solo da fe desde `desde` (la ventana de los brokers). Un mes que

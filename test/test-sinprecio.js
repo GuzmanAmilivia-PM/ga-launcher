@@ -153,16 +153,17 @@ casi(k.noRealizado, 0, 0.01, 'el no realizado incluye lo que no cotizo hoy: su c
 
 console.log('\nG) el cash queda fuera del resultado no realizado (bug real, 31/08/2026)');
 // Encontrado mirando la pantalla con datos reales, no en una prueba: la fila
-// de ITAU (clasificada como cash) llega con `base` 239.974 contra un valor de
-// 6.021 — esa columna no esta en dolares. Esa sola fila daba
-// "Unrealized −USD 198.516 / −65,1%" cuando lo real es +USD 35.437 / +54,4%:
-// el SIGNO estaba dado vuelta, no solo el monto. El cash no tiene resultado
-// no realizado porque es plata, no algo comprado a un precio.
+// de ITAU (clasificada como cash) llega con `base` en PESOS contra un valor en
+// dolares — esa columna no esta en dolares. Esa sola fila daba un resultado no
+// realizado negativo de decenas de miles cuando el real era positivo: el SIGNO
+// estaba dado vuelta, no solo el monto. El cash no tiene resultado no
+// realizado porque es plata, no algo comprado a un precio. (Numeros de abajo
+// inventados.)
 k = api.calcularKpis({
   total: 7000,
   posiciones: [
     { symbol: 'A', tipo: 'accion', valor: 1000, base: 800, cambioDia: 1 },
-    { symbol: 'ITAU', tipo: 'cash', valor: 6000, base: 239974, cambioDia: null }
+    { symbol: 'ITAU', tipo: 'cash', valor: 6000, base: 240000, cambioDia: null }
   ]
 });
 casi(k.noRealizado, 200, 0.01, 'la ganancia sale de la accion sola: +200');

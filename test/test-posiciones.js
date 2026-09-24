@@ -197,7 +197,7 @@ var ctx2 = {
   fmt: function (v) { return 'US$ ' + v; },
   // El fmtNum de VERDAD (nucleo.js) desde el 23/09/2026: el doble devolvia el
   // numero tal cual, y con el no se notaba que la cantidad de una cripto
-  // pasara por fmtNum (que redondea a dos decimales: 0,0257 BTC -> 0,03).
+  // pasara por fmtNum (que redondea a dos decimales: 0,0321 BTC -> 0,03).
   fmtNum: new Function(fmtNumSrc + '\nreturn fmtNum;')(),
   signoPct: function (v) { return String(v); },
   daychgHtml: function () { return ''; },
@@ -314,10 +314,10 @@ function cabecerasDe(filtro) {
 // valores GRANDES —BTC pesa mas que dos de las acciones elegidas— para que el
 // assert no pase de casualidad por ser chicos.
 var cartera = [
-  holding('MSFT', 487, 7310, 'accion'), holding('SMH', 546, 4921, 'etf'),
-  holding('VOO', 701, 23160, 'etf'), holding('GOOG', 344, 5169, 'accion'),
-  holding('ASML', 1740, 12172, 'accion'), holding('QQQ', 706, 14833, 'etf'),
-  holding('META', 559, 6708, 'accion'), holding('KO', 60, 1200, 'accion'),
+  holding('MSFT', 487, 7000, 'accion'), holding('SMH', 546, 5000, 'etf'),
+  holding('VOO', 701, 20000, 'etf'), holding('GOOG', 344, 5100, 'accion'),
+  holding('ASML', 1740, 12000, 'accion'), holding('QQQ', 706, 15000, 'etf'),
+  holding('META', 559, 6500, 'accion'), holding('KO', 60, 1200, 'accion'),
   holding('PEP', 70, 900, 'accion'), holding('IWM', 220, 3300, 'etf'),
   holding('BTC', 63000, 9500, 'cripto'), holding('ITAU', 1, 8000, 'cash')
 ];
@@ -378,7 +378,7 @@ ok(btnHold.textContent === 'See more', 'y al plegar vuelve a "Ver mas": ' + btnH
   api2.renderHoldings([
     holding('VOO', 700, 20000, 'etf'),
     holding('VOO', 700, 5000, 'accion'),
-    holding('MSFT', 487, 7310, 'accion')
+    holding('MSFT', 487, 7000, 'accion')
   ]);
   ok(simbolosDe('visibles').join(',') === 'VOO',
     'con el simbolo repetido, plegada sigue mostrando el ETF: ' + simbolosDe('visibles').join(','));
@@ -815,20 +815,20 @@ function detalleDe(pos) {
   var det = cont.children[1];
   return det && det.children[0] ? det.children[0]._html : '';
 }
-var htmlItau = detalleDe({ symbol: 'ITAU', precioCompra: 120.49, precioActual: 120.69, qty: 2005, cuenta: 'ITAU', gfTicker: null, cripto: false });
+var htmlItau = detalleDe({ symbol: 'ITAU', precioCompra: 120.49, precioActual: 120.69, qty: 1250, cuenta: 'ITAU', gfTicker: null, cripto: false });
 ok(htmlItau.indexOf('Edit prices') !== -1, 'el fondo de Itau (precio manual) ofrece editar');
 ok(htmlItau.indexOf('detedit-pa') !== -1 && htmlItau.indexOf('detedit-pc') !== -1,
   'con los dos campos: precio actual y precio de compra');
-var htmlVoo = detalleDe({ symbol: 'VOO', precioCompra: 431.9, precioActual: 700, qty: 33, cuenta: 'CS', gfTicker: 'VOO', cripto: false });
+var htmlVoo = detalleDe({ symbol: 'VOO', precioCompra: 400, precioActual: 700, qty: 20, cuenta: 'CS', gfTicker: 'VOO', cripto: false });
 ok(htmlVoo.indexOf('Edit prices') === -1, 'VOO (proveedor vivo) NO ofrece editar');
-var htmlMerged = detalleDe({ symbol: 'ITAU', precioCompra: 120.49, precioActual: 120.69, qty: 2005 });
+var htmlMerged = detalleDe({ symbol: 'ITAU', precioCompra: 120.49, precioActual: 120.69, qty: 1250 });
 ok(htmlMerged.indexOf('Edit prices') === -1,
   'fuera de la pagina de la cuenta (sin cuenta conocida) tampoco: el boton vive en la pagina de Itau');
 var htmlUsdt = detalleDe({ symbol: 'USDT', precioActual: 1, qty: 380, cuenta: 'BNB', gfTicker: null, cripto: false });
 ok(htmlUsdt.indexOf('Edit prices') === -1 && htmlUsdt.indexOf('Set buy price') === -1, 'USDT no: su 1 esta a mano y es verdad, no se toca desde la app');
 // 9/09/2026: una cripto de Binance ofrece cargar SOLO el precio de compra
 // (lo comprado por Convert o con tarjeta no figura en el historial spot).
-var htmlBtc = detalleDe({ symbol: 'BTC', precioActual: 79138.7, qty: 0.0257, cuenta: 'BNB', gfTicker: null, cripto: true });
+var htmlBtc = detalleDe({ symbol: 'BTC', precioActual: 79138.7, qty: 0.0321, cuenta: 'BNB', gfTicker: null, cripto: true });
 ok(htmlBtc.indexOf('Set buy price') !== -1 && htmlBtc.indexOf('detedit-pc') !== -1, 'BTC en Binance ofrece cargar el precio de compra');
 ok(htmlBtc.indexOf('detedit-pa') === -1 && htmlBtc.indexOf('Edit prices') === -1, 'pero NO el precio actual: ese viene del mercado');
 // Y la fn esta cableada en el MAP de nucleo.js (el contrato del otro lado lo
@@ -847,15 +847,15 @@ ok(/Result<\/span><b class="up">\+US\$ 5100 /.test(htmlG), 'la ganancia en dolar
 ok(/class="detsec">[^<]*89/.test(htmlG), 'y el % al lado (+89,5 %)');
 var htmlPerd = detalleDe({ symbol: 'GOOG', precioCompra: 200, precioActual: 150, qty: 10, valor: 1500, cuenta: 'CS', gfTicker: 'GOOG', cripto: false });
 ok(/Result<\/span><b class="down">−US\$ 500 /.test(htmlPerd), 'una perdida con su signo: ' + (htmlPerd.match(/Result<\/span><b[^>]*>[^<]*/) || [''])[0]);
-// La cantidad de una cripto no se redondea a dos decimales: 0,0257 BTC no es
+// La cantidad de una cripto no se redondea a dos decimales: 0,0321 BTC no es
 // 0,03 (fmtNum habria dicho eso).
-var htmlBtcG = detalleDe({ symbol: 'BTC', precioCompra: 60000, precioActual: 80000, qty: 0.0257, valor: 2056, cuenta: 'BNB', gfTicker: null, cripto: true });
-ok(/Quantity<\/span><b>0\.0257</.test(htmlBtcG), 'la cantidad de una cripto con sus decimales: ' + (htmlBtcG.match(/Quantity<\/span><b>[^<]*/) || [''])[0]);
+var htmlBtcG = detalleDe({ symbol: 'BTC', precioCompra: 60000, precioActual: 80000, qty: 0.0321, valor: 2568, cuenta: 'BNB', gfTicker: null, cripto: true });
+ok(/Quantity<\/span><b>0\.0321</.test(htmlBtcG), 'la cantidad de una cripto con sus decimales: ' + (htmlBtcG.match(/Quantity<\/span><b>[^<]*/) || [''])[0]);
 // Una fila cuyo COSTO no esta en dolares (el fondo de Itau: cuotaparte en
 // pesos, valor en dolares). La ganancia sale del valor por la razon de
 // precios, no de valor - costo: 6.000 x (1 - 100/120) = 1.000 dolares. Con la
-// resta habria dado 6.000 - 2005 x 100 = -194.500.
-var htmlPesos = detalleDe({ symbol: 'ITAU', precioCompra: 100, precioActual: 120, qty: 2005, valor: 6000, base: 200500 });
+// resta habria dado 6.000 - 1250 x 100 = -119.000.
+var htmlPesos = detalleDe({ symbol: 'ITAU', precioCompra: 100, precioActual: 120, qty: 1250, valor: 6000, base: 125000 });
 ok(/Result<\/span><b class="up">\+US\$ 1000 /.test(htmlPesos), 'con el costo en pesos la ganancia sigue en dolares: ' + (htmlPesos.match(/Result<\/span><b[^>]*>[^<]*/) || [''])[0]);
 // Sin valor no se inventa: solo el %.
 var htmlSinValor = detalleDe({ symbol: 'VOO', precioCompra: 400, precioActual: 500, qty: 3, cuenta: 'CS', gfTicker: 'VOO' });

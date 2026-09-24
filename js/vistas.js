@@ -716,7 +716,7 @@ body.appendChild(tr);
 // se parten. Por eso las filas usan celdaInstrumentoHtml + engancharLogos
 // (graficos.js), las MISMAS piezas de esa tarjeta.
 // El valor va sin el "USD " adelante (la lista de TradingView tampoco lo
-// pone): con el prefijo, "USD 23.204" se partía en dos renglones en el ancho
+// pone): con el prefijo, "USD 12.345" se partía en dos renglones en el ancho
 // del teléfono — captura de Guzmán del 25/08/2026. Sale de fmt() para
 // conservar el ojito de ocultar montos ('****').
 // Refresca la cuenta abierta con datos frescos del backend. La usa el

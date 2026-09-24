@@ -113,9 +113,9 @@ function itauSeguir() {
 // El fondo cotiza en PESOS y la cartera se mide en dólares, así que la
 // ganancia que ves mezcla dos cosas que se mueven por motivos distintos: lo
 // que rinde el fondo (letras del Banco Central) y lo que hace el tipo de
-// cambio. Guzmán aportó 6.000 y tiene 32 más; el fondo rindió 1,23% en pesos
-// y el peso se llevó 0,68 de esos puntos. Sin el desglose ese 0,54% parece
-// que el fondo no rinde, y no es eso.
+// cambio. Un ejemplo (inventado): el fondo rinde 1,2% en pesos y el peso se
+// lleva 0,7 de esos puntos. Sin el desglose ese 0,5% parece que el fondo no
+// rinde, y no es eso.
 //
 // Antes esta fila mostraba un guion en la ganancia, y no por esconderla: la
 // app tiene el costo en pesos y el valor en dólares, y no puede restarlos.

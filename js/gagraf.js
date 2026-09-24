@@ -107,8 +107,8 @@
 
     // Al callback del eje Y se le pasa el PASO de la escala (06/09/2026). Sin
     // el, un formateador que redondea no sabe cuanta precision hace falta: con
-    // la cartera en 120K y el rango 1S, el paso es 200 y el eje escribia
-    // "120K" CINCO VECES. Borrar las repetidas —como hace el eje X— aca seria
+    // la cartera en 80K y el rango 1W, el paso es 200 y el eje escribia
+    // "80K" CINCO VECES. Borrar las repetidas —como hace el eje X— aca seria
     // peor: quedaria una sola etiqueta y se perderia la escala entera.
     var cbY = tickCb(ejes.y), cbX = tickCb(ejes.x);
     ctx.font = tickFont(ejes.y) + 'px sans-serif';
