@@ -141,6 +141,21 @@ function calcularKpis(data) {
   };
 }
 
+// La nota de lo que quedo afuera, SOLO cuando pesa (24/09/2026). Guzman, al
+// ver "Today excludes USD … not priced today (3.1%)": "no es minimalista a no
+// ser que sea data importante". Un 3% sin precio casi no mueve el numero de
+// hoy —el % ya se mide contra la parte con precio—, y un fondo que nunca
+// cotiza en el dia dejaba la nota encendida todos los dias: el aviso que se
+// aprende a ignorar. Desde HOY_NOTA_UMBRAL_PCT de la cartera si importa (el
+// dia que Finnhub frena, faltaba un octavo). Sin total para medir, se dice.
+var HOY_NOTA_UMBRAL_PCT = 10;
+function notaSinPrecio(k) {
+  if (k.diaUsd === null || !k.sinPrecio) return '';
+  if (k.pctSinPrecio !== null && k.pctSinPrecio < HOY_NOTA_UMBRAL_PCT) return '';
+  return 'excludes ' + fmt(k.valorSinPrecio) + ' not priced today' +
+    (k.pctSinPrecio ? ' (' + k.pctSinPrecio.toFixed(1) + '%)' : '');
+}
+
 function pintarKpis(data) {
   var el = document.getElementById('kpiStrip');
   if (!el) return;
@@ -163,8 +178,7 @@ function pintarKpis(data) {
     h += celda('Today', (k.diaUsd >= 0 ? '+' : '−') + fmt(Math.abs(k.diaUsd)),
       k.diaPct === null ? '' : signoPct(k.diaPct, 2),
       k.diaUsd >= 0 ? 'up' : 'down',
-      k.sinPrecio ? ('excludes ' + fmt(k.valorSinPrecio) + ' not priced today' +
-        (k.pctSinPrecio ? ' (' + k.pctSinPrecio.toFixed(1) + '%)' : '')) : '');
+      notaSinPrecio(k));
   }
   // 2) El resultado no realizado.
   if (k.noRealizado === null) {
@@ -231,10 +245,9 @@ function pintarHoy(data) {
     pct.textContent = k.diaPct === null ? '' : signoPct(k.diaPct, 2); pct.className = clase;
   }
   if (nota) {
-    var hayNota = k.diaUsd !== null && k.sinPrecio > 0;
-    nota.hidden = !hayNota;
-    nota.textContent = hayNota ? ('Today excludes ' + fmt(k.valorSinPrecio) + ' not priced today' +
-      (k.pctSinPrecio ? ' (' + k.pctSinPrecio.toFixed(1) + '%)' : '') + '.') : '';
+    var texto = notaSinPrecio(k);
+    nota.hidden = !texto;
+    nota.textContent = texto ? 'Today ' + texto + '.' : '';
   }
 }
 

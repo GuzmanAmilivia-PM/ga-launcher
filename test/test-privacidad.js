@@ -45,8 +45,9 @@ archivos.forEach(function (f) {
 });
 ok(archivos.length > 50, 'se revisan todos los archivos del repo (' + archivos.length + ')');
 ok(conMail.length === 0, 'ninguno trae un mail' + (conMail.length ? ': ' + conMail.join(', ') : ''));
-// Que el detector sirva (no es un assert sobre el repo): con un mail inventado.
-ok(MAIL.test('la cuenta alguien@ejemplo.com') && !MAIL.test('icons/eth@2x.png'), 'el detector reconoce un mail y no confunde un icono');
+// Que el detector sirva (no es un assert sobre el repo): con un mail inventado,
+// partido en dos para que el barrido no encuentre a este mismo archivo.
+ok(MAIL.test('la cuenta alguien@' + 'ejemplo.com') && !MAIL.test('icons/eth@2x.png'), 'el detector reconoce un mail y no confunde un icono');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

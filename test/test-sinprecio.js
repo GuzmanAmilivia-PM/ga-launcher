@@ -219,6 +219,31 @@ ok(mh.els.hoyVal.textContent === '—' && /no daily data/.test(mh.els.hoyPct.tex
   'sin ningun dato del dia se dice, no se pinta un cero: ' + mh.els.hoyVal.textContent + ' ' + mh.els.hoyPct.textContent);
 ok(mh.els.hoyNota.hidden === true, 'y la nota de "excluye" no aparece sobre un numero que no hay');
 
+// Lo que falta, solo cuando pesa (24/09/2026, Guzman: "no es minimalista a no
+// ser que sea data importante"). Un 3% afuera no se dice; un 10%, si.
+function carteraConAfuera(afuera) {
+  return { total: 10000, actualizado: Date.now(), posiciones: [
+    { symbol: 'A', tipo: 'accion', valor: 10000 - afuera, cambioDia: 1 },
+    { symbol: 'F', tipo: 'fondo', valor: afuera, cambioDia: null }
+  ] };
+}
+mh = montarHoy();
+mh.api.pintarHoy(carteraConAfuera(300));
+ok(mh.els.hoyNota.hidden === true && mh.els.hoyNota.textContent === '',
+  'un 3% sin precio de hoy no enciende la nota: ' + mh.els.hoyNota.textContent);
+ok(mh.els.hoyVal.textContent !== '—', 'y el cambio del dia se muestra igual');
+mh = montarHoy();
+mh.api.pintarHoy(carteraConAfuera(999));
+ok(mh.els.hoyNota.hidden === true, 'justo debajo del umbral (9.99%), tampoco');
+mh = montarHoy();
+mh.api.pintarHoy(carteraConAfuera(1000));
+ok(mh.els.hoyNota.hidden === false && /excludes US\$ 1,000 not priced today \(10\.0%\)/.test(mh.els.hoyNota.textContent),
+  'desde el 10% se dice: ' + mh.els.hoyNota.textContent);
+api.pintarKpis(Object.assign({ liquidez: 0, liquidezPct: 0 }, carteraConAfuera(300)));
+ok(pintado.indexOf('not priced today') === -1, 'la tira del escritorio sigue la misma regla (3%: nada)');
+api.pintarKpis(Object.assign({ liquidez: 0, liquidezPct: 0 }, carteraConAfuera(1000)));
+ok(/excludes US\$ 1,000 not priced today \(10\.0%\)/.test(pintado), 'y al 10% lo dice');
+
 // La hora: del mismo dia, solo la hora; de otro dia, con la fecha (un dato de
 // ayer con la hora sola se leeria como de hoy).
 ok(mh.api.horaDelDato(hoyMs, new Date(2026, 8, 23, 18, 0).getTime()) === '2:32 PM', 'mismo dia: ' + mh.api.horaDelDato(hoyMs, new Date(2026, 8, 23, 18, 0).getTime()));
