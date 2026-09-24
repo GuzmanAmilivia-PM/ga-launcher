@@ -7,7 +7,7 @@ setView('buscar');
 var inp = document.getElementById('busInput');
 try { inp.focus(); inp.select(); } catch (e) {}
 };
-document.getElementById('busBack').onclick = function () { setView(busReturnView || 'inicio'); };
+document.getElementById('busBack').onclick = function () { volver(busReturnView || 'inicio'); };
 // Montos grandes tipo market cap: 2.95 T / 540 B / 12 M
 function fmtBig(n) {
 if (n === null || n === undefined || !isFinite(n)) return '—';

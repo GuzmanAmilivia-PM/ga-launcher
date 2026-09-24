@@ -189,7 +189,7 @@ ejecutar: function (dryRun, forzar, ok, fail) {
 google.script.run.withSuccessHandler(ok).withFailureHandler(fail).sincronizarIBKR({ dryRun: dryRun, forzar: forzar });
 }
 });
-document.getElementById('ibkrBack').onclick = function () { setView('config'); };
+document.getElementById('ibkrBack').onclick = function () { volver('config'); };
 
 // ---------- Binance: saldos en vivo (WebSocket + clave de solo lectura) ----------
 // El REST de Binance no pasa el CORS del navegador (el preflight no habilita
@@ -237,7 +237,7 @@ try { localStorage.removeItem('ga_bnb'); localStorage.removeItem('ga_bnb_ultima'
 document.getElementById('bnbKeyResultado').innerHTML = '<div class="tmsg ok">Key deleted from this device.</div>';
 prepararBNB();
 };
-document.getElementById('bnbBack').onclick = function () { setView('config'); };
+document.getElementById('bnbBack').onclick = function () { volver('config'); };
 
 // Firma HMAC-SHA256 en hexadecimal, calculada en el propio teléfono.
 function bnbFirmar(secret, payload) {
@@ -525,5 +525,5 @@ ejecutar: function (dryRun, forzar, ok, fail) {
 google.script.run.withSuccessHandler(ok).withFailureHandler(fail).sincronizarCS({ dryRun: dryRun, forzar: forzar });
 }
 });
-document.getElementById('csBack').onclick = function () { setView('config'); };
+document.getElementById('csBack').onclick = function () { volver('config'); };
 

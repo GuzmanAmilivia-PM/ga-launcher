@@ -37,6 +37,37 @@ function elemento() {
   return e;
 }
 
+// El historial del navegador, de mentira pero con su forma (24/09/2026, el
+// gesto de volver de iOS): pushState/replaceState son sincronicos; back() y
+// go() NO — el navegador los resuelve despues y avisa con un 'popstate'. Aca
+// quedan pendientes hasta que el arnes llama __resolver(), que es lo que
+// permite probar el orden real (la app no puede dar por hecho un atras en la
+// misma linea en que lo pide).
+function historialFalso(oyentes) {
+  var pila = [{ state: null }], i = 0, pendientes = [];
+  function clon(s) { return s === null || s === undefined ? null : JSON.parse(JSON.stringify(s)); }
+  return {
+    scrollRestoration: 'auto',
+    get state() { return pila[i].state; },
+    get length() { return pila.length; },
+    pushState: function (s) { pila = pila.slice(0, i + 1); pila.push({ state: clon(s) }); i++; },
+    replaceState: function (s) { pila[i] = { state: clon(s) }; },
+    back: function () { pendientes.push(-1); },
+    forward: function () { pendientes.push(1); },
+    go: function (n) { pendientes.push(n || 0); },
+    __resolver: function () {
+      while (pendientes.length) {
+        var j = Math.max(0, Math.min(pila.length - 1, i + pendientes.shift()));
+        if (j === i) continue;
+        i = j;
+        (oyentes.popstate || []).forEach(function (f) { f({ state: clon(pila[i].state) }); });
+      }
+    },
+    __pila: function () { return pila.map(function (e) { return e.state; }); },
+    __indice: function () { return i; }
+  };
+}
+
 // Los archivos, en el orden REAL que declara el index.html.
 function ordenDelIndex() {
   var html = fs.readFileSync(ruta.INDEX, 'utf8');
@@ -59,6 +90,7 @@ function fuentes() {
  */
 function cargar(storage) {
   var store = Object.assign({}, storage || {});
+  var oyentes = {};
   var doc = {
     getElementById: function () { return elemento(); },
     querySelector: function () { return elemento(); },
@@ -111,7 +143,15 @@ function cargar(storage) {
     // CSS, así que devuelve vacío y esas funciones caen a su dorado por defecto.
     getComputedStyle: function () { return { getPropertyValue: function () { return ''; } }; },
     requestAnimationFrame: function () { return 0; },
-    cancelAnimationFrame: function () {}
+    cancelAnimationFrame: function () {},
+    // La ventana: los oyentes quedan anotados (el historial los despierta) y
+    // el scroll existe. Sin addEventListener, vistas.js no podria escuchar el
+    // 'popstate' del gesto de volver.
+    addEventListener: function (tipo, fn) { (oyentes[tipo] = oyentes[tipo] || []).push(fn); },
+    removeEventListener: function () {},
+    scrollTo: function () {},
+    scrollY: 0,
+    history: historialFalso(oyentes)
   };
   vm.createContext(ctx);
   // window.X y X son lo mismo, como en el navegador. Se hace DESPUÉS de

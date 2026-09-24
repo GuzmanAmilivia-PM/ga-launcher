@@ -313,7 +313,7 @@ function renderRendAnual() {
 }
 (function () {
   var back = document.getElementById('ranBack');
-  if (back) back.onclick = function () { setView('inicio'); };
+  if (back) back.onclick = function () { volver('inicio'); };
   var ref = document.getElementById('ranRefresh');
   if (ref) ref.onclick = function () { cargarRendAnual(true); };
 })();

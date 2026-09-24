@@ -25,7 +25,7 @@ google.script.run.withSuccessHandler(ok).withFailureHandler(fail).guardarClaveIA
 });
 };
 document.getElementById('iaIrConfig').onclick = function () { setView('config'); };
-document.getElementById('iaBack').onclick = function () { setView('inicio'); };
+document.getElementById('iaBack').onclick = function () { volver('inicio'); };
 function prepararIA() {
 if (iaConfigurada === null) cargarEstadoIA();
 else document.getElementById('iaKeyAviso').style.display = iaConfigurada ? 'none' : '';

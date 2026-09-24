@@ -65,7 +65,7 @@ resEl.innerHTML = '<div class="tmsg err">Error: ' + esc(err.message) + '</div>';
 }).registrarMovimientoCash({ cuenta: document.getElementById('cashCuenta').value, tipo: cashTipo, monto: monto });
 };
 // Banking se abre desde el menu lateral desde el 27/08/2026: gana su volver.
-document.getElementById('cashBack').onclick = function () { setView('inicio'); };
+document.getElementById('cashBack').onclick = function () { volver('inicio'); };
 
 // ---------- El atajo DEPOSIT del Inicio (27/08/2026) ----------
 // Un toque muestra los dos bancos; elegir uno abre el formulario de cash de
@@ -256,7 +256,7 @@ platsMsg(esc(((res && res.mensajes) || ['Error']).join(' ')), false);
 }).withFailureHandler(function (err) { btn.disabled = false; platsMsg('Error: ' + esc(err.message), false); });
 if (esNueva) runner.agregarPlataforma(payload); else runner.editarPlataforma(payload);
 };
-document.getElementById('cfgBack').onclick = function () { setView('inicio'); };
+document.getElementById('cfgBack').onclick = function () { volver('inicio'); };
 
 
 // ---------- Diagnostico ----------

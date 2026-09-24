@@ -111,6 +111,9 @@ function montar() {
     msgErr: function (err) { return String((err && err.message) || err); },
     nombrePlataforma: function (n) { return String(n || ''); },
     setView: function (v) { estado.vistas.push(v); },
+    // "Back" pasa por volver() desde el 24/09/2026 (el historial, vistas.js):
+    // sin historial va a su destino, que es lo que se anota aca.
+    volver: function (v) { estado.vistas.push('volver:' + v); },
     cargarConCache: function (cfg) {
       estado.cfg = cfg;
       cfg.pedir(function (r) { cfg.render(r); }, function () {});
@@ -189,7 +192,7 @@ ok(m.vistas[m.vistas.length - 1] === 'analisis', 'tocar el cuerpo de la tarjeta 
 m.elem('anaTitulo').disparar('click');
 ok(m.vistas[m.vistas.length - 1] === 'analisis', 'tocar el titulo -> setView(analisis)');
 m.elem('anxBack').onclick();
-ok(m.vistas[m.vistas.length - 1] === 'portafolio', 'Back -> setView(portafolio)');
+ok(m.vistas[m.vistas.length - 1] === 'volver:portafolio', 'Back -> volver(portafolio): el mismo camino que el gesto de iOS');
 ok(/var VIEWS = \[[^\]]*'analisis'/.test(html), 'la vista esta en VIEWS (setView la puede mostrar y esconder)');
 ok(/name === 'analisis' \? 'portafolio'/.test(html), 'en la barra queda encendida Portfolio, como Posiciones con Inicio');
 

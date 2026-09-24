@@ -148,6 +148,10 @@ e.innerHTML = '&#9888; No connection';
 }
 function toggleMenu(open) {
 document.getElementById('menuPanel').classList.toggle('open', open);
+// El menu abierto es un paso del historial (24/09/2026): el gesto de volver
+// lo cierra. Ver "El historial" mas abajo.
+if (open) navAbrioMenu();
+else navCerroMenu();
 }
 document.getElementById('logoBtn').onclick = function () { toggleMenu(true); };
 document.getElementById('menuBack').onclick = function () { toggleMenu(false); };
@@ -162,7 +166,7 @@ document.getElementById('mDiseno').onclick = function () { toggleMenu(false); se
 // son la primera tarjeta de Keys.
 document.getElementById('mPlataformas').onclick = function () { toggleMenu(false); setView('config'); };
 // Settings era la unica pagina del menu sin volver (auditoria del 23/09/2026).
-document.getElementById('disBack').onclick = function () { setView('inicio'); };
+document.getElementById('disBack').onclick = function () { volver('inicio'); };
 document.getElementById('mSeguridad').onclick = function () { toggleMenu(false); setView('seguridad'); };
 document.getElementById('mTrans').onclick = function () { toggleMenu(false); setView('trade'); };
 // Banking vive en el menu desde el 27/08/2026: su lugar en la barra de abajo
@@ -180,6 +184,10 @@ var currentView = 'inicio';
 var CONFIG_REFRESCO_MS = 5 * 60 * 1000;
 var configUltimaCarga = 0;
 function setView(name) {
+var vistaAnterior = currentView;
+// Cuanto habias bajado, ANTES de que el scrollTo(0, 0) de abajo lo borre: es
+// lo que el historial guarda para devolverte ahi al volver.
+var scrollAnterior = window.scrollY || 0;
 currentView = name;
 VIEWS.forEach(function (v) {
 var el = document.getElementById('view-' + v);
@@ -231,10 +239,156 @@ if (name === 'noticias') cargarResultados();
 if (name === 'noticias') pedirNoticias();
 if (name === 'trade' && !opsCargadas) cargarOperaciones(false);
 window.scrollTo(0, 0);
+navRegistrar(name, vistaAnterior, scrollAnterior);
 }
 NAVTABS.forEach(function (b) {
 b.addEventListener('click', function () { setView(b.getAttribute('data-view')); });
 });
+
+// ---------- El historial: volver deslizando (24/09/2026, A7) ----------
+// Pedido de Guzman ("Si Hacelo"): el gesto de iOS de deslizar desde el borde
+// izquierdo —lo mas comodo para el pulgar de un zurdo— no hacia nada, porque
+// cambiar de pantalla no dejaba nada en el historial. Las apps web instaladas
+// en la pantalla de inicio soportan ese gesto desde iOS 12.2 si hay a donde
+// volver. Ahora cada pantalla SECUNDARIA (una cuenta, Posiciones, Analysis,
+// Settings, Keys...) deja su paso, y el gesto, el boton "Back" y el atras del
+// navegador en la computadora hacen lo mismo.
+//
+// Tres decisiones, cada una por algo:
+// 1. Las cinco pestañas de la barra son RAICES, sin atras, como en una app
+//    nativa: tocar una desde una pantalla secundaria vuelve el historial al
+//    principio. Ademas evita el choque con los gestos de costado que ya
+//    tienen dos raices (el carrusel del Inicio y las filas de la Watchlist):
+//    en una raiz el sistema no tiene a donde volver y no se mete.
+// 2. El menu abierto es un paso: el gesto lo cierra. Un tile del menu que
+//    abre otra pantalla OCUPA ese paso (volver desde ahi vuelve a donde
+//    estabas, no al menu).
+// 3. Cada paso guarda cuanto habias bajado en la pantalla que dejas, y al
+//    volver se restaura: volver de Analysis a Portfolio te deja donde estabas.
+//
+// Cada entrada: {ga, v: vista, p: profundidad, acc/ret: la cuenta abierta y
+// a donde vuelve, menu, y: scroll}. `p` es cuantos pasos hay encima de la
+// raiz: 0 = una pestaña.
+var NAV_RAICES = ['inicio', 'portafolio', 'watchlist', 'trade', 'noticias'];
+var navDesdeHistorial = false;   // el cambio lo pidio el historial: no se anota de nuevo
+var navMenuEntrada = false;      // la entrada de arriba es la del menu abierto
+var navTabPendiente = null;      // una pestaña esperando que el historial vuelva a la raiz
+var navCuentaAbierta = null;     // la cuenta que showAccount esta abriendo
+function navOk() {
+  try { return !!(window.history && history.pushState && history.replaceState); } catch (e) { return false; }
+}
+function navEstado() {
+  try { return (history.state && history.state.ga) ? history.state : null; } catch (e) { return null; }
+}
+function navProf() { var s = navEstado(); return s ? (s.p || 0) : 0; }
+function navEntrada(v, p, extra) {
+  var e = { ga: 1, v: v, p: p };
+  if (v === 'account') { e.acc = navCuentaAbierta; e.ret = accountReturnView; }
+  if (extra) Object.keys(extra).forEach(function (k) { e[k] = extra[k]; });
+  return e;
+}
+// Anota en la entrada ACTUAL cuanto habias bajado, antes de dejarla.
+function navGuardarScroll(y) {
+  var s = navEstado();
+  if (!s) return;
+  try {
+    var c = {};
+    Object.keys(s).forEach(function (k) { c[k] = s[k]; });
+    c.y = (y !== undefined) ? y : (window.scrollY || 0);
+    history.replaceState(c, '');
+  } catch (e) {}
+}
+// La llama setView al final de cada cambio de pantalla.
+function navRegistrar(name, anterior, scrollAnterior) {
+  if (navDesdeHistorial || !navOk()) return;
+  try {
+    if (NAV_RAICES.indexOf(name) !== -1) {
+      navMenuEntrada = false;
+      var p = navProf();
+      // La pantalla ya esta pintada; el historial vuelve a la raiz y ahi se
+      // reescribe con esta pestaña (el popstate de abajo lo termina).
+      if (p > 0) { navTabPendiente = name; history.go(-p); }
+      else history.replaceState(navEntrada(name, 0), '');
+      return;
+    }
+    if (navMenuEntrada) {
+      navMenuEntrada = false;
+      history.replaceState(navEntrada(name, navProf()), '');
+      return;
+    }
+    var s = navEstado();
+    // Repintar la misma pantalla (una cuenta que se refresca) no es navegar.
+    if (name === anterior && !(name === 'account' && s && s.acc !== navCuentaAbierta)) return;
+    navGuardarScroll(scrollAnterior);
+    history.pushState(navEntrada(name, navProf() + 1), '');
+  } catch (e) {}
+}
+function navAbrioMenu() {
+  if (navDesdeHistorial || navMenuEntrada || !navOk()) return;
+  try {
+    navGuardarScroll();
+    history.pushState(navEntrada(currentView, navProf() + 1, { menu: 1 }), '');
+    navMenuEntrada = true;
+  } catch (e) {}
+}
+// Cerrado con su flecha o al terminar algo (el Sync): si en este mismo turno
+// nadie ocupo su paso —un tile que abre otra pantalla lo reemplaza—, se saca
+// con un atras, asi el proximo gesto no queda "muerto" sobre un menu cerrado.
+function navCerroMenu() {
+  if (navDesdeHistorial || !navMenuEntrada) return;
+  setTimeout(function () {
+    if (!navMenuEntrada) return;
+    navMenuEntrada = false;
+    try { history.back(); } catch (e) {}
+  }, 0);
+}
+// El boton "Back" de cada pagina: si la pantalla la abrio la app, volver es
+// ir atras en el historial (lo mismo que el gesto, y la pila no crece). Si
+// no hay a donde (se llego sin historial), va a su destino de siempre.
+function volver(destino) {
+  if (navOk() && navProf() > 0) {
+    try { history.back(); return; } catch (e) {}
+  }
+  setView(destino);
+}
+function navCerrarModales() {
+  var cm = document.getElementById('chartModal');
+  if (cm && cm.style.display !== 'none' && typeof closeChartModal === 'function') closeChartModal();
+  var dm = document.getElementById('divModal');
+  if (dm && dm.style.display !== 'none' && typeof cerrarDivModal === 'function') cerrarDivModal();
+}
+function navAlVolver(ev) {
+  if (navTabPendiente) {
+    var t = navTabPendiente;
+    navTabPendiente = null;
+    try { history.replaceState(navEntrada(t, 0), ''); } catch (e) {}
+    return;
+  }
+  var s = (ev && ev.state && ev.state.ga) ? ev.state : null;
+  if (!s) return;
+  navDesdeHistorial = true;
+  try {
+    navMenuEntrada = !!s.menu;
+    document.getElementById('menuPanel').classList.toggle('open', !!s.menu);
+    navCerrarModales();
+    var otraCuenta = s.v === 'account' && s.acc && !(lastAcc && lastAcc.key === s.acc);
+    if (s.v !== currentView || otraCuenta) {
+      var acc = (s.v === 'account' && s.acc) ? ACCOUNTS.filter(function (a) { return a.key === s.acc; })[0] : null;
+      if (acc) showAccount(acc, s.ret || accountReturnView);
+      else if (VIEWS.indexOf(s.v) !== -1 && s.v !== 'account') setView(s.v);
+      else setView('inicio');
+      window.scrollTo(0, s.y || 0);
+    }
+  } finally {
+    navDesdeHistorial = false;
+  }
+}
+(function () {
+  if (!navOk()) return;
+  try { history.scrollRestoration = 'manual'; } catch (e) {}
+  try { history.replaceState(navEntrada(currentView, 0), ''); } catch (e) {}
+  if (typeof window.addEventListener === 'function') window.addEventListener('popstate', navAlVolver);
+})();
 
 // ---------- Detalle de cuenta ----------
 var lastAcc = null, lastAccData = null;
@@ -314,6 +468,7 @@ function pedirNoticias() {
 }
 function showAccount(acc, fromView) {
 accountReturnView = fromView || 'portafolio';
+navCuentaAbierta = acc.key;   // viaja en la entrada del historial (volver a ESTA cuenta)
 setView('account');
 document.getElementById('accTitle').textContent = nombrePlataforma(acc.nombre);
 var accErr = document.getElementById('accError'); if (accErr) accErr.innerHTML = '';
@@ -373,7 +528,7 @@ document.getElementById('accTotal').textContent = '--';
 errorEnVista('accError', err, 'the account detail');
 }).getAccountData(acc.key);
 }
-document.getElementById('accBack').onclick = function () { setView(accountReturnView); };
+document.getElementById('accBack').onclick = function () { volver(accountReturnView); };
 // La variacion intradia por simbolo ya viaja en el payload del Inicio
 // (lastData.posiciones): se reusa aca en vez de pedirla de nuevo (regla R1).
 // Sin datos del Inicio devuelve null y el porcentaje simplemente no se muestra.
@@ -538,7 +693,7 @@ function renderPosiciones() {
     body.appendChild(tr);
   });
 }
-document.getElementById('posBack').onclick = function () { setView('inicio'); };
+document.getElementById('posBack').onclick = function () { volver('inicio'); };
 // El título es un h2 con role="button" (la política de contenido no permite
 // onclick inline): click y teclado, como cualquier control de verdad.
 (function () {

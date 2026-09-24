@@ -558,7 +558,7 @@ document.getElementById('anaRefreshBtn').onclick = function () { cargarAnalisis(
 var b = document.getElementById('anxRefreshBtn');
 if (b) b.onclick = function () { cargarAnalisis(true); };
 var back = document.getElementById('anxBack');
-if (back) back.onclick = function () { setView('portafolio'); };
+if (back) back.onclick = function () { volver('portafolio'); };
 // El titulo de la tarjeta resumen abre el detalle: h2 con role="button"
 // (la politica de contenido no permite onclick inline), click y teclado,
 // mismo patron que el titulo Positions del Inicio.

@@ -72,6 +72,8 @@ var ctx = {
   document: doc,
   lastData: lastData,
   setView: function (n) { vistasPedidas.push(n); },
+  // "Back" pasa por volver() desde el 24/09/2026 (el historial, vistas.js).
+  volver: function (n) { vistasPedidas.push('volver:' + n); },
   toggleDetalle: function (tr, h) { detallesAbiertos.push(h); },
   // Espia: el de verdad (graficos.js) necesita querySelectorAll; aca solo
   // importa que cada fila pintada lo llame para que el logo tenga su caida.
@@ -157,7 +159,7 @@ var antes = vistasPedidas.length;
 els.posTitulo._ev.keydown({ key: 'a', preventDefault: function () {} });
 ok(vistasPedidas.length === antes, 'cualquier otra tecla no hace nada');
 els.posBack.onclick();
-ok(vistasPedidas[vistasPedidas.length - 1] === 'inicio', 'Volver -> setView(inicio)');
+ok(vistasPedidas[vistasPedidas.length - 1] === 'volver:inicio', 'Volver -> volver(inicio): el mismo camino que el gesto de iOS');
 
 console.log('\nF) sin datos no hay pantalla rota');
 lastData.posiciones = [{ symbol: 'USDT', nombre: 'Tether', tipo: 'cash', valor: 1000 }];

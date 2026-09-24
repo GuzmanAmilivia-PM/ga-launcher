@@ -120,7 +120,7 @@ else bioBtn.textContent = 'Biometrics not available here';
 });
 }
 }
-document.getElementById('segBack').onclick = function () { setView('inicio'); };
+document.getElementById('segBack').onclick = function () { volver('inicio'); };
 document.getElementById('segBioBtn').onclick = function () {
 var s = secLeer(), btn = this;
 if (s.bio) { delete s.bio; secGuardar(s); prepararSeguridad(); segMsg('segBioMsg', '&#10003; Biometrics disabled.', true); return; }
