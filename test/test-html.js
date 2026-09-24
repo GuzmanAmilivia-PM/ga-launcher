@@ -1002,5 +1002,24 @@ ok((navHtml.match(/navtab-center/g) || []).length === 1 && (navHtml.match(/class
 ok(/data-view="portafolio">\s*<span class="cbtn">/.test(navHtml),
   'el circulo envuelve el icono de Portfolio, no el de News');
 
+// 12) Lo que se baja de mas (24/09/2026, "borra todo lo que no se use y sea
+// ineficiente"). Los dos logos viajaban en base64 dentro de estilos.css —53 KB
+// de 140— y se volvian a bajar con cada version; index.html se bajaba dos
+// veces por version ('./' y './index.html' son la misma pagina); y habia una
+// fuente que nada usaba.
+var cssTexto = fsA.readFileSync(pathA.join(ruta.RUTA, 'css', 'estilos.css'), 'utf8');
+ok(!/data:image\//.test(cssTexto), 'el CSS no trae imagenes embebidas: van como archivo, en el cache de lo estable');
+var imagenesCss = (cssTexto.match(/url\(["']?\.\.\/[\w.-]+\.png["']?\)/g) || []).map(function (u) { return u.replace(/^url\(["']?\.\.\//, '').replace(/["']?\)$/, ''); });
+ok(imagenesCss.length >= 2, 'el CSS usa los logos como archivo: ' + imagenesCss.join(', '));
+var imgMal = imagenesCss.filter(function (f) { return !fsA.existsSync(pathA.join(ruta.RUTA, f)) || !/ASSETS_ESTABLES = \[[^\]]*/.exec(swPlano)[0].includes('./' + f); });
+ok(imgMal.length === 0, 'cada imagen del CSS existe y esta en ASSETS_ESTABLES (sin senal no se veria)' + (imgMal.length ? ' — MAL: ' + imgMal.join(', ') : ''));
+var assetsCascaron = (/var ASSETS = \[([^\]]*)\]/.exec(swPlano) || [])[1] || '';
+ok(assetsCascaron.indexOf("'./'") !== -1 && assetsCascaron.indexOf("'./index.html'") === -1,
+  'el cascaron baja la pagina UNA vez por version (./), no tambien ./index.html');
+ok(/\\\/index\\\.html\$\/\.test\(url\.pathname\) \? new Request\('\.\/'\)/.test(sw),
+  'y quien pida index.html por su nombre recibe ./ del cache');
+var fontsSinUso = woff2.filter(function (f) { return cssTexto.indexOf('../fonts/' + f) === -1; });
+ok(fontsSinUso.length === 0, 'cada fuente de fonts/ la usa un @font-face' + (fontsSinUso.length ? ' — SOBRAN: ' + fontsSinUso.join(', ') : ''));
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

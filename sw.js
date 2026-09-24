@@ -1,7 +1,10 @@
 // Service worker: cachea el "cascarón" de la app para carga instantánea.
 // Los datos (POST a la API) nunca se cachean.
-var CACHE = 'ga-pwa-v233';
-var ASSETS = ['./', './index.html', './css/estilos.css',   './js/gagraf.js', './js/analisis.js', './js/arranque.js', './js/brokers.js', './js/buscador.js', './js/calor.js', './js/config.js', './js/graficos.js', './js/ia.js', './js/nucleo.js', './js/paneles.js', './js/rendimiento.js', './js/seguridad.js', './js/sincronizar.js', './js/tablero.js', './js/trade.js', './js/bancos.js', './js/vistas.js', './js/watchlist.js',
+var CACHE = 'ga-pwa-v234';
+// './' y NO también './index.html' (24/09/2026): son la misma página, y con
+// las dos cada versión nueva la bajaba dos veces (50 KB de más). Quien pida
+// index.html por su nombre recibe './' (ver el fetch, abajo).
+var ASSETS = ['./', './css/estilos.css',   './js/gagraf.js', './js/analisis.js', './js/arranque.js', './js/brokers.js', './js/buscador.js', './js/calor.js', './js/config.js', './js/graficos.js', './js/ia.js', './js/nucleo.js', './js/paneles.js', './js/rendimiento.js', './js/seguridad.js', './js/sincronizar.js', './js/tablero.js', './js/trade.js', './js/bancos.js', './js/vistas.js', './js/watchlist.js',
   './manifest.json'];
 // Lo ESTABLE (5/09/2026): fuentes e iconos, ~110 KB que no cambian desde agosto
 // y se volvian a bajar con CADA version (entre 2 y 9 por dia). Viven en un cache
@@ -10,8 +13,12 @@ var ASSETS = ['./', './index.html', './css/estilos.css',   './js/gagraf.js', './
 // nuevo. El nombre NO empieza con 'ga-pwa-' a proposito: versionShell (vistas.js)
 // saca el numero de version de los caches que si empiezan asi.
 var ESTABLES = 'ga-estables-v1';
-var ASSETS_ESTABLES = ['./fonts/manrope.woff2', './fonts/montserrat-500.woff2',
-  './fonts/montserrat-700.woff2',
+// Los dos logos (24/09/2026) viajaban en base64 DENTRO de estilos.css —53 KB
+// de los 140 del CSS—, así que se volvían a bajar con cada versión. Ahora son
+// archivos y viven acá. Si cambia el logo, scripts/logo.js --aplicar sube
+// ESTABLES solo.
+var ASSETS_ESTABLES = ['./fonts/manrope.woff2',
+  './fonts/montserrat-700.woff2', './logo-menu.png', './logo-marca.png',
   './apple-touch-icon.png', './icon-512.png', './favicon.png'];
 
 self.addEventListener('install', function (e) {
@@ -68,8 +75,9 @@ self.addEventListener('fetch', function (e) {
   // directo; a la red solo si falta (test-html vigila que ningun asset quede
   // fuera de la lista). La actualizacion llega por el ciclo normal del
   // service worker: el navegador re-lee sw.js, ve otro CACHE e instala.
+  var pedido = /\/index\.html$/.test(url.pathname) ? new Request('./') : e.request;
   e.respondWith(
-    caches.match(e.request).then(function (cached) {
+    caches.match(pedido).then(function (cached) {
       return cached || fetch(e.request).then(function (resp) {
         if (resp && resp.ok) {
           var copy = resp.clone();

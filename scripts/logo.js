@@ -5,10 +5,12 @@
 //
 // Piezas:
 //   marca.png        el simbolo dorado sobre transparente, RECORTADO al trazo
-//                    (es el del splash: sin marco, sin margenes de sobra)
+//                    (es el del splash: sin marco, sin margenes de sobra;
+//                    en la app, logo-marca.png)
 //   icono-180.png    ícono de la pantalla de inicio de iOS (apple-touch-icon)
 //   icono-512.png    ícono del manifest / Android
-//   icono-192.png    el redondito del menu y de la barra de arriba
+//   icono-192.png    el redondito del menu y de la barra de arriba (en la
+//                    app, logo-menu.png)
 //   favicon.png      64 px para la pestaña
 var fs = require('fs'), zlib = require('zlib'), path = require('path');
 
@@ -236,19 +238,24 @@ if (process.argv.indexOf('--aplicar') === -1) {
 
 // ---------- aplicar en la PWA ----------
 var PWA = process.env.GA_LAUNCHER || path.join(__dirname, '..');
-var b64marca = fs.readFileSync(path.join(dir, 'marca.png')).toString('base64');
-var b64menu = fs.readFileSync(path.join(dir, 'icono-192.png')).toString('base64');
-var lineas = fs.readFileSync(path.join(PWA, 'index.html'), 'utf8').split(/\r?\n/);
-var iMarca = lineas.findIndex(function (l) { return l.indexOf('.splash-mark{') === 0; });
-var iMenu = lineas.findIndex(function (l) { return l.indexOf('.galogo-img {') === 0; });
-if (iMarca < 0 || iMenu < 0) throw new Error('no encontre .splash-mark / .galogo-img en index.html');
-lineas[iMarca] = '.splash-mark{width:124px;height:124px;margin:0 auto 6px;background:url("data:image/png;base64,' + b64marca + '") center/contain no-repeat;}';
-lineas[iMenu] = '.galogo-img { background-image: url("data:image/png;base64,' + b64menu + '"); background-size: cover; background-position: center; }';
-fs.writeFileSync(path.join(PWA, 'index.html'), lineas.join('\n'));
+// Los dos logos de adentro de la app son ARCHIVOS desde el 24/09/2026 (antes,
+// base64 dentro del CSS: se bajaban con cada version). Este paso escribia ese
+// base64 en index.html y estaba roto desde el 6/09, cuando el CSS se mudo a
+// css/estilos.css.
+fs.copyFileSync(path.join(dir, 'marca.png'), path.join(PWA, 'logo-marca.png'));
+fs.copyFileSync(path.join(dir, 'icono-192.png'), path.join(PWA, 'logo-menu.png'));
 fs.copyFileSync(path.join(dir, 'icono-180.png'), path.join(PWA, 'apple-touch-icon.png'));
 fs.copyFileSync(path.join(dir, 'icono-512.png'), path.join(PWA, 'icon-512.png'));
 fs.copyFileSync(path.join(dir, 'favicon.png'), path.join(PWA, 'favicon.png'));
-console.log('\naplicado en ga-launcher: splash, logo del menu, apple-touch-icon, icon-512 y favicon.');
+// Todos viven en el cache de lo ESTABLE del service worker, que solo baja lo
+// que le falta: sin subir su nombre, los telefonos seguirian con el logo viejo.
+var rutaSw = path.join(PWA, 'sw.js');
+var sw = fs.readFileSync(rutaSw, 'utf8');
+var mEst = sw.match(/var ESTABLES = 'ga-estables-v(\d+)'/);
+if (!mEst) throw new Error('no encontre ESTABLES en sw.js');
+fs.writeFileSync(rutaSw, sw.replace(mEst[0], "var ESTABLES = 'ga-estables-v" + (Number(mEst[1]) + 1) + "'"));
+console.log('\naplicado en ga-launcher: splash, logo del menu, apple-touch-icon, icon-512 y favicon; ESTABLES v' + (Number(mEst[1]) + 1) + '.');
+console.log('Al publicar, subir tambien CACHE en sw.js, como siempre.');
 console.log('FALTA a mano: en el telefono, borrar el acceso de la pantalla de inicio y volver a agregarlo (iOS cachea el icono).');
 
 }

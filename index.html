@@ -55,7 +55,6 @@
      pedir otro (dos peticiones vivas se rechazan entre si). Permitido por su
      hash en la CSP: si se edita, recalcular. test-html.js vigila las dos cosas. -->
 <script>(function(){try{var s=JSON.parse(localStorage.getItem('ga_sec')||'{}');if(!s.bio||!localStorage.getItem('ga_token')||document.visibilityState==='hidden'||!window.PublicKeyCredential||!navigator.credentials||!window.AbortController)return;var u=parseInt(localStorage.getItem('ga_desbloqueo'),10)||0,d=Date.now()-u;if(u&&d>=0&&d<43200000)return;var b=s.bio.replace(/-/g,'+').replace(/_/g,'/'),r=atob(b),a=new Uint8Array(r.length);for(var i=0;i<r.length;i++)a[i]=r.charCodeAt(i);var c=new AbortController(),p=navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rpId:location.hostname,allowCredentials:[{type:'public-key',id:a}],userVerification:'required',timeout:60000},signal:c.signal});p.catch(function(){});window.__bioArranque={promesa:p,abort:c,t0:Date.now()};}catch(e){}})();</script>
-<base target="_top">
 <!-- viewport-fit=cover: sin esto las variables env(safe-area-inset-*) que usa
      el CSS valen 0 en iOS y el contenido se mete bajo el notch y bajo la barra
      de gestos (el status bar esta en black-translucent). -->
@@ -81,7 +80,7 @@
      splash, que no se va hasta que se entra. -->
 <div id="splash"><div class="splash-inner">
 <div class="splash-mark" role="img" aria-label="GA"></div>
-<div class="splash-sub splash-brand">GUZMANA</div>
+<div class="splash-brand">GUZMANA</div>
 <div id="splashLock" style="display:none">
 <button class="bigbtn" id="secBioGo" style="display:none;margin-top:22px">Unlock with Face ID</button>
 <div id="secPinWrap" style="display:none">
@@ -283,7 +282,7 @@
 <!-- La asignacion en el tablero (D4, 31/08/2026). Solo en escritorio: en el
      telefono ya vive en la pagina Analysis y aca competiria por la primera
      pantalla. Nace apagada, como la tira de indicadores. -->
-<div class="card asigcard" id="asigCard">
+<div class="card asigcard">
 <h2 id="asigTitulo" class="h2link" role="button" tabindex="0" title="Open the full analysis">Allocation <span class="chev">&rsaquo;</span></h2>
 <div id="asigBody"><p class="loadingtxt">Loading...</p></div>
 </div>
