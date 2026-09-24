@@ -141,7 +141,15 @@ function pintarVsBench(serie, pctCartera) {
   // custodian). Lo unico que cambia es que ahora entra en una sola linea,
   // porque el renglon es de ancho completo. Se traduce el respaldo del nombre
   // del indice, que estaba en español como los titulos de aca abajo.
-  el.textContent = (delta >= 0 ? '+' : '−') + Math.abs(delta).toFixed(1) + ' pp vs ' +
+  // Con aportes en el rango, la linea dice ADEMAS el rendimiento sin ellos
+  // (23/09/2026, auditoria general, punto 15). El % de arriba ("+32% in YTD")
+  // es el patrimonio entero, depositos incluidos, y la aclaracion vivia en un
+  // `title` que el iPhone nunca muestra: al lado de "+10.7 pp vs S&P 500" se
+  // leia que el indice habia hecho +21%. Son las dos caras del mismo YTD que
+  // pidio Guzman ("ytd completo o sin contemplar depositos"), una arriba de
+  // la otra. Sin aportes no se agrega nada: ahi el % de arriba ya es limpio.
+  el.textContent = (limpio !== null ? signoPct(limpio, 1) + ' without deposits · ' : '') +
+    (delta >= 0 ? '+' : '−') + Math.abs(delta).toFixed(1) + ' pp vs ' +
     (benchNombre || 'the index') + ((noSeParan || hayAportesSinDesglose) ? ' *' : '');
   el.className = 'vsbench ' + (delta >= 0 ? 'up' : 'down');
 

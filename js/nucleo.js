@@ -264,14 +264,14 @@ function acentoRgba(alpha) { return 'rgba(' + leerVarCss('--gold-rgb', '212,175,
 // vea sin recargar.
 function coloresPie() { var c = PIE_COLORS.slice(); c[0] = colorAcento(); return c; }
 var RANGES = [
-{ key: '1S', dias: 7 },
+{ key: '1W', dias: 7 },
 { key: '1M', dias: 30 },
 { key: '3M', dias: 91 },
 { key: '6M', dias: 182 },
 { key: 'YTD', dias: 'ytd' },
-{ key: '1A', dias: 365 },
-{ key: '2A', dias: 730 },
-{ key: '5A', dias: 1825 }
+{ key: '1Y', dias: 365 },
+{ key: '2Y', dias: 730 },
+{ key: '5Y', dias: 1825 }
 ];
 var fullSerie = [];
 var lineChartInstance = null;
@@ -354,6 +354,19 @@ if (n === null || n === undefined || n === '') return '\u2014';
 // los decimales), junto con el resto de la app.
 return (typeof n === 'number') ? (Math.round(n * 100) / 100).toLocaleString('en-US') : n;
 }
+// Una CANTIDAD (acciones, monedas), no un precio (23/09/2026). fmtNum redondea
+// a dos decimales, y 0,0123 BTC salia "0.01": la cuarta parte de lo que hay.
+// Hasta ocho decimales debajo de 1, cuatro arriba. Pasa por el ojito: la
+// cantidad por el precio de la fila es el monto que el ojito esconde.
+function fmtCant(n) {
+var q = Number(n);
+if (n === null || n === undefined || n === '' || !isFinite(q)) return '—';
+return mask(q.toLocaleString('en-US', { maximumFractionDigits: Math.abs(q) < 1 ? 8 : 4 }));
+}
+// Un monto con su signo adelante: "+USD 812" / "−USD 95". El signo va
+// siempre escrito y no se confia solo en el color (misma regla que la tira
+// del escritorio).
+function fmtSigno(n) { return (n >= 0 ? '+' : '−') + fmt(Math.abs(n)); }
 // Montos de los paneles (dividendos/aportes), con el ojito de privacidad ya
 // aplicado. La misma cadena mask('US$ ' + ...) estaba repetida 15 veces en
 // paneles.js. fmtUsd: 2 decimales; fmtUsdEnt: redondeado, con miles (en-US).
@@ -375,6 +388,36 @@ el._confirm = true;
 el.textContent = pregunta;
 setTimeout(function () { el._confirm = false; el.textContent = normal; }, ms);
 }
+// El aviso flotante (23/09/2026, auditoria general, punto 12). El resultado de
+// lo que se registra se escondia solo: el "Logged" de Trade iba adentro del
+// <details> que la linea siguiente cerraba, el mensaje de BTG se ocultaba con
+// su formulario, y el del Sync del menu iba a un aviso que solo existe en el
+// Inicio (sincronizando desde Portfolio no se veia). Uno solo, fijo encima de
+// la barra de abajo y visible desde cualquier pantalla. Lo bueno se va solo;
+// un error o una advertencia quedan hasta que se tocan: un aviso que se va
+// antes de leerlo es lo mismo que no darlo. `html` ya viene escapado.
+var AVISO_FLOTANTE_MS = 6000;
+var _avisoFlotanteT = null;
+function avisoFlotante(html, esOk, persistente) {
+var el = document.getElementById('avisoFlotante');
+if (!el) return;
+if (_avisoFlotanteT) { clearTimeout(_avisoFlotanteT); _avisoFlotanteT = null; }
+el.className = 'avisoflot ' + (esOk ? 'ok' : 'err');
+el.innerHTML = html;
+el.hidden = false;
+if (esOk && !persistente) _avisoFlotanteT = setTimeout(cerrarAvisoFlotante, AVISO_FLOTANTE_MS);
+}
+function cerrarAvisoFlotante() {
+if (_avisoFlotanteT) { clearTimeout(_avisoFlotanteT); _avisoFlotanteT = null; }
+var el = document.getElementById('avisoFlotante');
+if (!el) return;
+el.hidden = true;
+el.innerHTML = '';
+}
+(function () {
+var el = document.getElementById('avisoFlotante');
+if (el) el.onclick = cerrarAvisoFlotante;
+})();
 // El nucleo del porcentaje firmado, SIN envoltorio: cada pantalla le pone el
 // suyo (chip del buscador, comparacion, resultado del detalle, bruscos). El
 // signo y los decimales salen de un solo lugar (auditoria 19/08/2026: el

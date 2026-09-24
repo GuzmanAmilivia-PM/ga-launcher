@@ -244,6 +244,13 @@ ok(/−0\.2 pp/.test(conAportes._pintado.texto),
   'el delta usa el rendimiento limpio encadenado (4,76% − 5%), no el +10% crudo: ' + conAportes._pintado.texto);
 ok(/WITHOUT the/.test(conAportes._pintado.titulo) && /5,000/.test(conAportes._pintado.titulo),
   'y la explicacion dice cuanto se descuento: ' + conAportes._pintado.titulo.slice(0, 70));
+// Esa explicacion vive en un `title`, y el iPhone no muestra titles: al lado
+// del "+10% in YTD" (el patrimonio entero, deposito incluido) quedaba
+// "−0.2 pp" a secas y se leia que el indice habia hecho +10,2%. Desde el
+// 23/09/2026 la linea dice el rendimiento sin depositos EN EL TEXTO
+// (auditoria general, punto 15).
+ok(/^\+4\.8% without deposits · −0\.2 pp vs S&P 500$/.test(conAportes._pintado.texto),
+  'con aportes, la linea dice tambien el % sin depositos, a la vista: ' + conAportes._pintado.texto);
 
 console.log('\nG) un aporte FUERA del rango no ensucia el aviso');
 var fuera = montar({ fullSerie: SERIE });
@@ -252,6 +259,7 @@ fuera.aplicarAportes({ lista: [{ fecha: '2026-01-15', grupo: 9000 }], desde: '20
 ok(fuera.aportesEnRango(SERIE) === 0, 'un aporte de enero no cuenta en un rango de marzo');
 fuera.pintarVsBench(SERIE, 10);
 ok(!/\*/.test(fuera._pintado.texto), 'sin asterisco: ' + fuera._pintado.texto);
+ok(!/without deposits/.test(fuera._pintado.texto), 'y sin aportes en el rango no agrega el "without deposits": el % de arriba ya es limpio');
 ok(/same money/.test(fuera._pintado.titulo), 'y la explicacion es la limpia');
 
 console.log('\nH) las guardas: nada de dividir por cero ni pintar basura');

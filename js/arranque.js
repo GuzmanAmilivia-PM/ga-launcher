@@ -70,6 +70,7 @@ hideSplash();
 lastData = data;
 animarTotal(document.getElementById('total'), data.total);
 pintarKpis(data);
+pintarHoy(data);
 document.getElementById('liquidezVal').textContent = fmt(data.liquidez);
 document.getElementById('liquidezPct').textContent = (data.liquidezPct ? (data.liquidezPct * 100).toFixed(2) : '0') + '%';
 // La lista de cuentas del Inicio se fue el 02/09/2026 ("para mi esa info no
@@ -84,10 +85,15 @@ if (typeof pedirNoticias === 'function') setTimeout(pedirNoticias, 1200);
 document.getElementById('cashTotal').textContent = fmt(data.liquidez);
 var cashListEl = document.getElementById('cashList');
 cashListEl.innerHTML = '';
+// Cada cuenta abre su pagina (23/09/2026, auditoria general): Itau y BTG solo
+// se alcanzaban desde la torta de Portfolio, y Banking —donde uno las busca—
+// las listaba sin llevar a ningun lado. Volver regresa a Banking.
 data.cuentas.forEach(function (c) {
+var acc = accountByName(c.nombre);
 var row = document.createElement('div');
-row.className = 'row';
-row.innerHTML = '<span>' + esc(nombrePlataforma(c.nombre)) + '</span><span>' + fmt(c.liquido) + '</span>';
+row.className = 'row' + (acc ? ' clickable' : '');
+row.innerHTML = '<span>' + esc(nombrePlataforma(c.nombre)) + '</span><span>' + fmt(c.liquido) + (acc ? '<span class="chev">&rsaquo;</span>' : '') + '</span>';
+if (acc) row.onclick = function () { showAccount(acc, 'cash'); };
 cashListEl.appendChild(row);
 });
 buildCashForm(data.cuentas);
@@ -136,6 +142,17 @@ renderHoldings(data.topHoldings);
 // R1: si el payload trajo los agregados de los paneles ya calculados, se
 // aplican aca (despues de fullSerie/serieGrupo: la comparacion los usa).
 if (data.extras) aplicarExtras(data.extras);
+// Los aportes se piden solos si no llegaron (23/09/2026, auditoria general,
+// punto 16). El "pp vs S&P" del Inicio se esconde a proposito sin la lista
+// (pintarVsBench), y la lista solo llegaba con los extras de una carga
+// completa con el cache del servidor caliente, o al deslizar hasta el panel
+// de Aportes. Con el arranque liviano no llegaba nunca: la linea faltaba en
+// muchas aperturas. getAportes sale del cache de 6 h del Worker o de su copia
+// en la base, no le pide nada a los brokers. Despues de pintar, como las
+// noticias: no compite con el arranque.
+if (typeof apoCargado !== 'undefined' && !apoCargado && typeof cargarAportes === 'function' && getApiToken()) {
+  setTimeout(function () { if (!apoCargado) cargarAportes(); }, 1500);
+}
 if (typeof ajustarAlturaDeck === 'function') ajustarAlturaDeck();
 actualizarSymbols();
 if (document.getElementById('view-portafolio').style.display !== 'none') renderPortafolio();

@@ -43,6 +43,20 @@ function gananciaHtml(p) {
   if (!isFinite(pm) || pm <= 0 || !isFinite(pa) || pa <= 0) return '';
   return pctHtml((pa / pm - 1) * 100, 2);
 }
+// La ganancia en DOLARES de una posicion (23/09/2026). Sale del VALOR de la
+// fila por la razon de precios —valor x (1 − medio/actual)— y no de
+// valor − costo: en una posicion normal es lo mismo (qty x (actual − medio)),
+// pero hay filas cuyo costo NO esta en dolares (el fondo de Itau cotiza en
+// pesos y su `base` llega en pesos contra un valor en dolares: ver
+// calcularKpis) y la resta daria un numero sin sentido. Los dos precios estan
+// en la misma moneda, asi que el resultado queda en la del valor. Sin precio
+// medio o sin valor, null: la pantalla muestra solo el %.
+function gananciaUsd(p) {
+  var pm = Number(p && p.precioCompra), pa = Number(p && p.precioActual), v = Number(p && p.valor);
+  if (!isFinite(pm) || pm <= 0 || !isFinite(pa) || pa <= 0) return null;
+  if (p.valor === null || p.valor === undefined || p.valor === '' || !isFinite(v) || v <= 0) return null;
+  return v * (1 - pm / pa);
+}
 // ---------- La tira de indicadores del escritorio (31/08/2026) ----------
 // Sale de comparar con IBKR, Schwab, Fidelity, Sharesight y Snowball:
 // NINGUNO abre con un grafico, todos abren con numeros. El cambio del dia en
@@ -165,6 +179,48 @@ function pintarKpis(data) {
   el.innerHTML = h;
 }
 
+// ---------- El "hoy" del telefono (23/09/2026) ----------
+// La auditoria general (punto 11) encontro que el cambio del dia estaba
+// calculado y solo se veia desde 1100 px: la tira de arriba vive dentro del
+// @media de escritorio. En el telefono va en un renglon como el de Cash, con
+// el MISMO calculo (calcularKpis) y las mismas honestidades: sin dato se dice
+// que no hay, no se pinta un cero, y lo que no tiene precio de hoy se dice en
+// plata. Lleva la hora del dato: el total no decia de cuando era.
+function horaDelDato(ms, ahora) {
+  var t = Number(ms);
+  if (!isFinite(t) || t <= 0) return '';
+  var d = new Date(t), h = new Date(ahora || Date.now());
+  var hora = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  var mismoDia = d.getFullYear() === h.getFullYear() && d.getMonth() === h.getMonth() && d.getDate() === h.getDate();
+  return mismoDia ? hora : (d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + hora);
+}
+function pintarHoy(data) {
+  var linea = document.getElementById('hoyLinea');
+  if (!linea) return;
+  var val = document.getElementById('hoyVal');
+  var pct = document.getElementById('hoyPct');
+  var nota = document.getElementById('hoyNota');
+  var hora = document.getElementById('hoyHora');
+  var k = calcularKpis(data);
+  var cuando = horaDelDato(data && data.actualizado);
+  if (hora) hora.textContent = cuando ? '· ' + cuando : '';
+  linea.hidden = false;
+  if (k.diaUsd === null) {
+    val.textContent = '—'; val.className = '';
+    pct.textContent = 'no daily data yet'; pct.className = '';
+  } else {
+    var clase = k.diaUsd >= 0 ? 'up' : 'down';
+    val.textContent = fmtSigno(k.diaUsd); val.className = clase;
+    pct.textContent = k.diaPct === null ? '' : signoPct(k.diaPct, 2); pct.className = clase;
+  }
+  if (nota) {
+    var hayNota = k.diaUsd !== null && k.sinPrecio > 0;
+    nota.hidden = !hayNota;
+    nota.textContent = hayNota ? ('Today excludes ' + fmt(k.valorSinPrecio) + ' not priced today' +
+      (k.pctSinPrecio ? ' (' + k.pctSinPrecio.toFixed(1) + '%)' : '') + '.') : '';
+  }
+}
+
 // ---------- Detalle desplegable por activo + grafico TradingView ----------
 var detalleAbierto = null;
 // El widget se incrusta como IFRAME, no como <script> de TradingView.
@@ -233,12 +289,18 @@ function toggleDetalle(tr, pos) {
   // El precio actual de una cripto sigue viniendo del mercado.
   var editable = !!pos.cuenta && !pos.gfTicker && symU !== 'USDT' && symU !== 'LIQUIDEZ';
   var soloCompra = !!pos.cripto;
+  // La cantidad y la ganancia en DOLARES (23/09/2026, auditoria general,
+  // punto 13): el detalle decia precio medio, costo y un %, y no cuanto
+  // tenes ni cuanta plata va ganada — lo primero que muestra un broker.
   var html = '<div class="detgrid">' +
+    '<span><span class="detlbl">Quantity</span><b>' + esc(fmtCant(pos.qty)) + '</b></span>' +
     '<span><span class="detlbl">Average price</span><b>' + (tienePm ? esc(fmtNum(pm)) : '&mdash;') + '</b></span>' +
     '<span><span class="detlbl">Cost basis</span><b>' + (base ? fmt(base) : '&mdash;') + '</b></span>';
+  var gan = gananciaUsd(pos);
   if (tienePm && isFinite(pa) && pa > 0) {
     var res = (pa / pm - 1) * 100;
-    html += '<span><span class="detlbl">Result</span><b class="' + (res >= 0 ? 'up' : 'down') + '">' + signoPct(res, 1) + '</b></span>';
+    html += '<span><span class="detlbl">Result</span><b class="' + (res >= 0 ? 'up' : 'down') + '">' +
+      (gan !== null ? esc(fmtSigno(gan)) + ' <span class="detsec">' + signoPct(res, 1) + '</span>' : signoPct(res, 1)) + '</b></span>';
   }
   html += '</div>';
   if (editable) {

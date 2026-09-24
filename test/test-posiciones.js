@@ -195,10 +195,18 @@ var ctx2 = {
   },
   esc: function (s) { return String(s); },
   fmt: function (v) { return 'US$ ' + v; },
-  fmtNum: function (v) { return String(v); },
+  // El fmtNum de VERDAD (nucleo.js) desde el 23/09/2026: el doble devolvia el
+  // numero tal cual, y con el no se notaba que la cantidad de una cripto
+  // pasara por fmtNum (que redondea a dos decimales: 0,0257 BTC -> 0,03).
+  fmtNum: new Function(fmtNumSrc + '\nreturn fmtNum;')(),
   signoPct: function (v) { return String(v); },
   daychgHtml: function () { return ''; },
   gananciaHtml: function () { return ''; },
+  // La cantidad y la ganancia en dolares del detalle (23/09/2026): las de
+  // VERDAD, sacadas del codigo (nucleo.js y tablero.js). El ojito, abierto.
+  fmtCant: new Function('mask', (html.match(/function fmtCant\(n\)[\s\S]*?\n\}/) || [''])[0] + '\nreturn fmtCant;')(function (s) { return s; }),
+  fmtSigno: function (n) { return (n >= 0 ? '+' : '−') + 'US$ ' + Math.round(Math.abs(n)); },
+  gananciaUsd: new Function((html.match(/function gananciaUsd\(p\)[\s\S]*?\n\}/) || [''])[0] + '\nreturn gananciaUsd;')(),
   esTemaClaro: function () { return false; },
   // El de VERDAD, sacado de vistas.js. Era una copia escrita a mano: los tres
   // asserts del texto de las cabeceras verificaban el fixture del propio test,
@@ -828,6 +836,34 @@ ok(htmlBtc.indexOf('detedit-pa') === -1 && htmlBtc.indexOf('Edit prices') === -1
 var nucleoSrc = fs.readFileSync(path.join(ruta.RUTA, 'js', 'nucleo.js'), 'utf8');
 ok(nucleoSrc.indexOf("editarPrecioManual: 'posicion_editar'") !== -1,
   'editarPrecioManual figura en el MAP de nucleo.js');
+
+console.log('\nJ) el detalle dice cuanto tenes y cuanta plata va ganada (23/09/2026)');
+// Auditoria general, punto 13: el detalle mostraba precio medio, costo y un
+// %, y no la cantidad ni la ganancia en dolares.
+var htmlG = detalleDe({ symbol: 'NVDA', precioCompra: 95, precioActual: 180, qty: 60, valor: 10800, cuenta: 'IB', gfTicker: 'NVDA', cripto: false });
+ok(/Quantity<\/span><b>60</.test(htmlG), 'la cantidad: ' + (htmlG.match(/Quantity<\/span><b>[^<]*/) || [''])[0]);
+// 10.800 x (1 - 95/180) = 5.100 = 60 x (180 - 95).
+ok(/Result<\/span><b class="up">\+US\$ 5100 /.test(htmlG), 'la ganancia en dolares: ' + (htmlG.match(/Result<\/span><b[^>]*>[^<]*/) || [''])[0]);
+ok(/class="detsec">[^<]*89/.test(htmlG), 'y el % al lado (+89,5 %)');
+var htmlPerd = detalleDe({ symbol: 'GOOG', precioCompra: 200, precioActual: 150, qty: 10, valor: 1500, cuenta: 'CS', gfTicker: 'GOOG', cripto: false });
+ok(/Result<\/span><b class="down">−US\$ 500 /.test(htmlPerd), 'una perdida con su signo: ' + (htmlPerd.match(/Result<\/span><b[^>]*>[^<]*/) || [''])[0]);
+// La cantidad de una cripto no se redondea a dos decimales: 0,0257 BTC no es
+// 0,03 (fmtNum habria dicho eso).
+var htmlBtcG = detalleDe({ symbol: 'BTC', precioCompra: 60000, precioActual: 80000, qty: 0.0257, valor: 2056, cuenta: 'BNB', gfTicker: null, cripto: true });
+ok(/Quantity<\/span><b>0\.0257</.test(htmlBtcG), 'la cantidad de una cripto con sus decimales: ' + (htmlBtcG.match(/Quantity<\/span><b>[^<]*/) || [''])[0]);
+// Una fila cuyo COSTO no esta en dolares (el fondo de Itau: cuotaparte en
+// pesos, valor en dolares). La ganancia sale del valor por la razon de
+// precios, no de valor - costo: 6.000 x (1 - 100/120) = 1.000 dolares. Con la
+// resta habria dado 6.000 - 2005 x 100 = -194.500.
+var htmlPesos = detalleDe({ symbol: 'ITAU', precioCompra: 100, precioActual: 120, qty: 2005, valor: 6000, base: 200500 });
+ok(/Result<\/span><b class="up">\+US\$ 1000 /.test(htmlPesos), 'con el costo en pesos la ganancia sigue en dolares: ' + (htmlPesos.match(/Result<\/span><b[^>]*>[^<]*/) || [''])[0]);
+// Sin valor no se inventa: solo el %.
+var htmlSinValor = detalleDe({ symbol: 'VOO', precioCompra: 400, precioActual: 500, qty: 3, cuenta: 'CS', gfTicker: 'VOO' });
+ok(/Result<\/span><b class="up">25</.test(htmlSinValor) && htmlSinValor.indexOf('detsec') === -1, 'sin valor, solo el % (no una ganancia calculada a ciegas)');
+// La pagina de cada cuenta le pasa el valor al detalle (vistas.js): sin eso,
+// ahi nunca apareceria la ganancia en dolares.
+var vistasSrc = fs.readFileSync(path.join(ruta.RUTA, 'js', 'vistas.js'), 'utf8');
+ok(/toggleDetalle\(tr, \{[^}]*valor: h\.valor/.test(vistasSrc), 'la pagina de la cuenta pasa `valor` al detalle');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

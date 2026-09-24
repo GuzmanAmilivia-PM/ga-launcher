@@ -85,12 +85,17 @@ function error(nombre, msg) {
 huboError = true;
 lineas.push('&#9888; ' + nombre + ': ' + esc(msg));
 }
+// El resumen va al aviso FLOTANTE (23/09/2026): iba a #autoAviso, que solo
+// existe en el Inicio, y sincronizando desde Portfolio o desde una cuenta no
+// se veia. `opts.previo` es lo que el que llamo ya habia dicho (el corte de
+// BTG): el resumen lo pisaria, asi que va adelante.
 function terminar() {
 syncTodoEnCurso = false;
 txt.textContent = 'Sync';
 toggleMenu(false);
 loadData();
-if (lineas.length) avisoInicio(lineas.join('<br>'), !huboError);
+var previo = (opts && opts.previo) ? [opts.previo] : [];
+if (lineas.length || previo.length) avisoFlotante(previo.concat(lineas).join('<br>'), !huboError);
 }
 // Un paso de broker: saltea si no esta configurado, anota el resultado y
 // sigue con el siguiente pase lo que pase.

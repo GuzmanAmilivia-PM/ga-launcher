@@ -347,10 +347,17 @@ function wireBtgAbrir() {
     google.script.run.withSuccessHandler(function (r) {
       g.disabled = false;
       if (!r || !r.ok) { msg.textContent = msgBackend(r) || 'It could not be saved.'; return; }
-      msg.textContent = (r.mensajes || []).join(' ');
+      // El resultado va al aviso FLOTANTE (23/09/2026): #btgMsg vive adentro
+      // del formulario que se oculta en la linea siguiente, y el mensaje se
+      // iba con el. Y el Sync de despues ya no vuelve a pedir Itau: guardar
+      // un corte de BTG no tiene nada que leer del banco, y el pedido dejaba
+      // a la PC de Guzman entrando a Itau por nada.
+      msg.textContent = '';
+      var hecho = '&#10003; ' + (esc((r.mensajes || []).join(' ')) || 'Saved.');
+      avisoFlotante(hecho, true);
       document.getElementById('accBtgForm').hidden = true;
       if (lastAcc) showAccount(lastAcc, accountReturnView);
-      if (typeof sincronizarTodo === 'function') sincronizarTodo();
+      if (typeof sincronizarTodo === 'function') sincronizarTodo({ sinItau: true, previo: hecho });
     }).withFailureHandler(function (err) {
       g.disabled = false;
       msg.textContent = msgErr ? msgErr(err, 'The snapshot') : 'It could not be saved.';

@@ -140,7 +140,9 @@ function sueltaEnTelefono(selector, prop) {
 // Y las reglas del telefono siguen intactas.
 ok(/\.bottomnav \{ position: fixed; bottom: 0;/.test(sinBloque),
   'la barra de abajo del telefono sigue escrita igual');
-ok(/\.sweeppanel \{ min-width: 100%; \}/.test(sinBloque),
+// (23/09/2026: la regla gano un padding-top para la capa de toque del ojo;
+// lo que se custodia es el ancho completo de cada panel.)
+ok(/\.sweeppanel \{ min-width: 100%;/.test(sinBloque),
   'y el carrusel del telefono tambien');
 
 console.log('\nG) la tira de indicadores: nace APAGADA');

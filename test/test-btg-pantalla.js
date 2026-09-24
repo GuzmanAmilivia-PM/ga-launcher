@@ -50,7 +50,7 @@ function elemento(id) {
 function montar() {
   var els = {};
   var pedidos = [];   // {fn, args, ok, err}
-  var espias = { showAccount: [], sincronizarTodo: 0, errorEnVista: [] };
+  var espias = { showAccount: [], sincronizarTodo: 0, syncOpts: [], errorEnVista: [], avisos: [] };
   var run = {
     _ok: null, _err: null,
     withSuccessHandler: function (fn) { run._ok = fn; return run; },
@@ -63,7 +63,8 @@ function montar() {
     google: { script: { run: run } },
     lastAcc: { key: 'BTG', nombre: 'BTG' }, accountReturnView: 'portafolio', accPedida: 'BTG',
     showAccount: function (acc, v) { espias.showAccount.push([acc, v]); },
-    sincronizarTodo: function () { espias.sincronizarTodo++; },
+    sincronizarTodo: function (opts) { espias.sincronizarTodo++; espias.syncOpts.push(opts || null); },
+    avisoFlotante: function (h, esOk) { espias.avisos.push({ html: h, ok: esOk }); },
     errorEnVista: function (id, err, que) { espias.errorEnVista.push([id, que]); },
     msgBackend: function (r) { return ((r && r.mensajes) || []).join(' '); },
     msgErr: function (err, que) { return que + ' failed: ' + String(err && err.message || err); },
@@ -154,10 +155,18 @@ ok(m.el('btgGuardar').disabled === true && /Saving/.test(m.el('btgMsg').textCont
 // dispara la sincronizacion.
 m.pedidos[0].ok({ ok: true, mensajes: ['Saved 2026-09-30: USD 7801.19 (liquid 7801.19, deposit 0).'] });
 ok(m.el('btgGuardar').disabled === false, 'vuelve el boton');
-ok(/Saved 2026-09-30/.test(m.el('btgMsg').textContent), 'muestra lo que contesto el servidor');
+// Lo que contesto el servidor va al aviso FLOTANTE (23/09/2026): #btgMsg vive
+// adentro del formulario que se cierra en la linea siguiente, y el mensaje se
+// iba con el (auditoria general, punto 12).
+var avBtg = m.espias.avisos[m.espias.avisos.length - 1];
+ok(avBtg && /Saved 2026-09-30/.test(avBtg.html) && avBtg.ok === true, 'muestra lo que contesto el servidor en el aviso flotante: ' + (avBtg && avBtg.html));
+ok(m.el('btgMsg').textContent === '', 'y no lo deja adentro del formulario que se cierra');
 ok(form.hidden === true, 'cierra el formulario');
 ok(m.espias.showAccount.length === 1 && m.espias.showAccount[0][0].key === 'BTG', 'repinta la cuenta abierta (BTG, no otra)');
 ok(m.espias.sincronizarTodo === 1, 'y dispara la sincronizacion para que el resumen tome el valor nuevo');
+var optsBtg = m.espias.syncOpts[0] || {};
+ok(optsBtg.sinItau === true, 'sin volver a pedir Itau: guardar BTG no tiene nada que leer del banco');
+ok(optsBtg.previo && /Saved 2026-09-30/.test(optsBtg.previo), 'y le pasa el mensaje, para que el resumen de la sync no lo pise');
 
 // Con la casilla tildada, viaja true. Y una respuesta mala deja el formulario
 // abierto con el motivo.

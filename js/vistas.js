@@ -157,6 +157,8 @@ document.getElementById('mIA').onclick = function () { toggleMenu(false); setVie
 // view-diseno (tema, acento y tonalidad).
 document.getElementById('mConfig').onclick = function () { toggleMenu(false); setView('config'); };
 document.getElementById('mDiseno').onclick = function () { toggleMenu(false); setView('diseno'); };
+// Settings era la unica pagina del menu sin volver (auditoria del 23/09/2026).
+document.getElementById('disBack').onclick = function () { setView('inicio'); };
 document.getElementById('mSeguridad').onclick = function () { toggleMenu(false); setView('seguridad'); };
 document.getElementById('mTrans').onclick = function () { toggleMenu(false); setView('trade'); };
 // Banking vive en el menu desde el 27/08/2026: su lugar en la barra de abajo
@@ -453,7 +455,9 @@ tr.innerHTML = '<td>' + celdaInstrumentoHtml(h, esc(fmt(h.valor)) + gananciaHtml
 '<td class="col-precio">' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + compra + '</td>';
 tr.className = corte ? 'corte-grupo asset-row' : 'asset-row';
 engancharLogos(tr);
-tr.onclick = function () { toggleDetalle(tr, { symbol: h.symbol, precioCompra: h.precioCompra, precioActual: h.precioActual, qty: h.qty, cripto: acc.key === 'BNB', cuenta: acc.key, gfTicker: h.gfTicker }); };
+// `valor` viaja desde el 23/09/2026: el detalle muestra la ganancia en
+// dolares y la saca del valor de la fila (ver toggleDetalle, tablero.js).
+tr.onclick = function () { toggleDetalle(tr, { symbol: h.symbol, precioCompra: h.precioCompra, precioActual: h.precioActual, qty: h.qty, valor: h.valor, cripto: acc.key === 'BNB', cuenta: acc.key, gfTicker: h.gfTicker }); };
 body.appendChild(tr);
 });
 }

@@ -169,5 +169,68 @@ casi(k.noRealizado, 200, 0.01, 'la ganancia sale de la accion sola: +200');
 casi(k.noRealizadoPct, 25, 0.01, 'y el % tambien: +25%');
 ok(k.noRealizado > 0, 'no se da vuelta el signo por una base de cash en otra moneda');
 
+console.log('\nH) el "hoy" del telefono (23/09/2026): el MISMO calculo, en un renglon');
+// Auditoria general, punto 11: el cambio del dia estaba calculado y solo se
+// veia desde 1100 px. pintarHoy lo pone en el renglon de arriba de Cash, con
+// calcularKpis (el mismo que la tira del escritorio: no puede decir otra
+// cosa) y la hora del dato.
+function montarHoy() {
+  var els = {};
+  ['hoyLinea', 'hoyVal', 'hoyPct', 'hoyNota', 'hoyHora'].forEach(function (id) {
+    els[id] = { id: id, hidden: true, textContent: '', className: '' };
+  });
+  var c2 = Object.assign({}, ctx, {
+    document: { getElementById: function (id) { return els[id] || null; } },
+    fmtSigno: function (n) { return (n >= 0 ? '+' : '−') + ctx.fmt(Math.abs(n)); }
+  });
+  var n2 = Object.keys(c2);
+  var f2 = new Function(n2.join(','), cashSrc + '\n' + codigo +
+    '\nreturn { pintarHoy: pintarHoy, horaDelDato: horaDelDato };');
+  return { api: f2.apply(null, n2.map(function (n) { return c2[n]; })), els: els };
+}
+var mh = montarHoy();
+var hoyMs = new Date(2026, 8, 23, 14, 32).getTime();
+mh.api.pintarHoy({
+  total: 10000, actualizado: Date.now(),
+  posiciones: [
+    { symbol: 'A', tipo: 'accion', valor: 1000, cambioDia: 10 },
+    { symbol: 'B', tipo: 'accion', valor: 1000, cambioDia: 10 },
+    { symbol: 'C', tipo: 'accion', valor: 8000, cambioDia: null }
+  ]
+});
+ok(mh.els.hoyLinea.hidden === false, 'el renglon aparece');
+ok(mh.els.hoyVal.textContent === '+US$ 182', 'el cambio en dolares, con su signo: ' + mh.els.hoyVal.textContent);
+ok(mh.els.hoyPct.textContent === '+10.00%', 'el % contra lo medido (el mismo de la tira): ' + mh.els.hoyPct.textContent);
+ok(mh.els.hoyVal.className === 'up' && mh.els.hoyPct.className === 'up', 'en verde');
+ok(mh.els.hoyNota.hidden === false && /excludes US\$ 8,000 not priced today \(80\.0%\)/.test(mh.els.hoyNota.textContent),
+  'lo que no tiene precio de hoy se dice en plata: ' + mh.els.hoyNota.textContent);
+ok(/^· /.test(mh.els.hoyHora.textContent), 'y lleva la hora del dato: ' + mh.els.hoyHora.textContent);
+
+mh = montarHoy();
+mh.api.pintarHoy({ total: 1000, posiciones: [{ symbol: 'A', tipo: 'accion', valor: 1000, cambioDia: -2 }] });
+ok(mh.els.hoyVal.className === 'down' && /^−/.test(mh.els.hoyVal.textContent), 'una baja en rojo y con su signo: ' + mh.els.hoyVal.textContent);
+ok(mh.els.hoyNota.hidden === true, 'sin nada afuera, la nota no aparece (un aviso que esta siempre se aprende a ignorar)');
+ok(mh.els.hoyHora.textContent === '', 'sin `actualizado`, no se inventa una hora');
+
+mh = montarHoy();
+mh.api.pintarHoy({ total: 1000, posiciones: [{ symbol: 'A', tipo: 'accion', valor: 1000, cambioDia: null }] });
+ok(mh.els.hoyVal.textContent === '—' && /no daily data/.test(mh.els.hoyPct.textContent),
+  'sin ningun dato del dia se dice, no se pinta un cero: ' + mh.els.hoyVal.textContent + ' ' + mh.els.hoyPct.textContent);
+ok(mh.els.hoyNota.hidden === true, 'y la nota de "excluye" no aparece sobre un numero que no hay');
+
+// La hora: del mismo dia, solo la hora; de otro dia, con la fecha (un dato de
+// ayer con la hora sola se leeria como de hoy).
+ok(mh.api.horaDelDato(hoyMs, new Date(2026, 8, 23, 18, 0).getTime()) === '2:32 PM', 'mismo dia: ' + mh.api.horaDelDato(hoyMs, new Date(2026, 8, 23, 18, 0).getTime()));
+ok(mh.api.horaDelDato(hoyMs, new Date(2026, 8, 24, 9, 0).getTime()) === 'Sep 23, 2:32 PM', 'otro dia, con la fecha: ' + mh.api.horaDelDato(hoyMs, new Date(2026, 8, 24, 9, 0).getTime()));
+ok(mh.api.horaDelDato(null) === '' && mh.api.horaDelDato(0) === '', 'sin dato, nada');
+
+// El renglon esta en el Inicio ARRIBA de Cash, lo pinta render(), y en
+// escritorio se apaga (la tira ya lo muestra). ALCANCE: mira el codigo
+// escrito, no la pantalla.
+var iHoy = html.indexOf('id="hoyLinea"'), iCash = html.indexOf('id="liquidezVal"');
+ok(iHoy !== -1 && iHoy < iCash, 'el renglon vive en el Inicio, arriba de Cash');
+ok(/pintarKpis\(data\);\s*pintarHoy\(data\);/.test(html), 'render() lo pinta junto con la tira');
+ok(/\.hoyline\[hidden\][^{]*\{\s*display:\s*none/.test(html), '`hidden` le gana a .cashline (display:flex)');
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

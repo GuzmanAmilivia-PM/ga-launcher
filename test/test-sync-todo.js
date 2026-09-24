@@ -25,7 +25,11 @@ function correr(nombre, cfg) {
     esc: function (s) { return String(s); },
     toggleMenu: function (o) { if (!o) estado.menuCerrado = true; },
     loadData: function () { estado.loadData++; },
-    avisoInicio: function (msg, esOk) { estado.avisos.push({ msg: msg, ok: !!esOk }); },
+    // El resumen va al aviso FLOTANTE desde el 23/09/2026: el del Inicio no
+    // se ve sincronizando desde otra pantalla. avisoInicio queda espiado para
+    // verificar que YA NO se use (ver H4).
+    avisoFlotante: function (msg, esOk) { estado.avisos.push({ msg: msg, ok: !!esOk }); },
+    avisoInicio: function (msg) { (estado.avisosInicio = estado.avisosInicio || []).push(msg); },
     msgErr: function (e, suj) { return String(suj || '') + ':' + ((e && e.message) || e); },
     msgBackend: function (r) { return ((r && r.mensajes) || ['no se pudo sincronizar']).join(' '); },
     syncEnCurso: function () { return !!cfg.ocupado; },
@@ -215,6 +219,17 @@ var OK1 = { ok: true, cambios: [{ tipo: 'qty', symbol: 'VOO' }] };
   });
   ok(e.llamadas.indexOf('itau') === -1, 'no se pide Itau: fue ' + JSON.stringify(e.llamadas));
   ok(e.llamadas[0] === 'ibkr', 'la cadena arranca directo en los brokers');
+
+  // H4) EL RESUMEN SE VE DESDE CUALQUIER PANTALLA (23/09/2026). Iba a
+  // #autoAviso, que solo existe en el Inicio. Y lo que dijo quien llamo (el
+  // corte de BTG, `opts.previo`) va ADELANTE: el resumen lo pisaba.
+  e = await correr('H4) el resumen va al aviso flotante, con lo previo adelante', {
+    ibkr: OKV, cs: OKV, bnbConfigurado: false, refrescar: {}, opts: { sinItau: true, previo: 'BTG guardado' }
+  });
+  ok(e.avisos.length === 1, 'un solo aviso al terminar: ' + e.avisos.length);
+  ok(e.avisos[0] && e.avisos[0].msg.indexOf('BTG guardado') === 0, 'lo previo va primero: ' + (e.avisos[0] && e.avisos[0].msg));
+  ok(e.avisos[0] && /IBKR/.test(e.avisos[0].msg) && /Schwab/.test(e.avisos[0].msg), 'y despues el resumen de la cadena');
+  ok(!(e.avisosInicio && e.avisosInicio.length), 'y NADA va al aviso del Inicio, que desde otra pantalla no se ve');
 
   console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
   process.exit(fallos ? 1 : 0);

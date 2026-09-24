@@ -17,7 +17,7 @@ function ok(cond, msg) {
 }
 
 function montar(respuesta) {
-  var estado = { elems: {}, enviado: null };
+  var estado = { elems: {}, enviado: null, avisos: [] };
   function nuevoElem(id) {
     var el = {
       id: id, style: {}, options: [], textContent: '', disabled: false,
@@ -59,6 +59,8 @@ function montar(respuesta) {
     lastData: null,
     loadData: function () { estado.recargas = (estado.recargas || 0) + 1; },
     cargarOperaciones: function () {},
+    // El aviso flotante (nucleo.js): se anota lo que recibe.
+    avisoFlotante: function (h, esOk, persistente) { estado.avisos.push({ html: h, ok: esOk, persistente: !!persistente }); },
     google: { script: { run: (function () {
       function mk() {
         var oks = [], fails = [];
@@ -134,8 +136,27 @@ m.elem('tConfirmar').onclick.call(m.elem('tConfirmar'));
 ok(m.enviado && m.enviado.symbol === 'VOO', 'el ticker viaja normalizado a mayúsculas (' + (m.enviado && m.enviado.symbol) + ')');
 ok(m.enviado.tipo === 'compra' && m.enviado.qty === 3 && m.enviado.precio === 700.5, 'compra, 3 unidades, al precio escrito');
 ok(m.enviado.cuenta === 'CS', 'en la cuenta elegida (' + m.enviado.cuenta + ')');
-ok(/Logged/.test(m.elem('tResultado').innerHTML), 'confirma en pantalla');
+// El "Logged" va al aviso FLOTANTE (23/09/2026). Iba a #tResultado, que
+// vive adentro del <details> que el mismo exito cierra: se escribia y se
+// escondia en el mismo instante (auditoria general, punto 12).
+var av = m.avisos[m.avisos.length - 1];
+ok(av && /Logged/.test(av.html) && av.ok === true, 'confirma en el aviso flotante: ' + (av && av.html));
+ok(av && av.persistente === false, 'sin advertencias, el aviso se va solo');
+ok(m.elem('tManual').open === false, 'el formulario se pliega');
+ok(!/Logged/.test(m.elem('tResultado').innerHTML), 'y el exito NO queda adentro del plegado, donde nadie lo ve');
 ok(m.elem('tSymbol').value === '' && m.elem('tQty').value === '', 'y el formulario queda limpio');
+
+console.log('\nD2) con advertencias del backend, el aviso queda hasta que se toca');
+m = montar({ ok: true, resumen: { cuenta: 'CS', tipo: 'compra', symbol: 'VOO', qty: 3, precio: 700 }, mensajes: ['El cash de la cuenta quedo negativo.'] });
+m.api.buildTradeForm();
+m.elem('tSymbol').value = 'VOO';
+m.elem('tQty').value = '3';
+m.elem('tPrecio').value = '700';
+m.elem('tRevisar').onclick.call(m.elem('tRevisar'));
+m.elem('tConfirmar').onclick.call(m.elem('tConfirmar'));
+av = m.avisos[m.avisos.length - 1];
+ok(av && /quedo negativo/.test(av.html), 'la advertencia viaja en el aviso: ' + (av && av.html));
+ok(av && av.persistente === true, 'y no se va sola: una advertencia que desaparece antes de leerla no avisa nada');
 
 console.log('\nE) el toggle a VENTA viaja como venta (el bug que este arnés vino a impedir)');
 m = montar();
@@ -159,6 +180,8 @@ m.elem('tRevisar').onclick.call(m.elem('tRevisar'));
 m.elem('tConfirmar').onclick.call(m.elem('tConfirmar'));
 ok(/No hay suficiente/.test(m.elem('tResultado').innerHTML), 'el mensaje del backend se muestra');
 ok(!/Logged/.test(m.elem('tResultado').innerHTML), 'y no se canta victoria');
+ok(m.avisos.length === 0, 'ni en el aviso flotante: el error queda al lado del formulario, que sigue abierto');
+ok(m.elem('tManual').open !== false, 'y el formulario NO se pliega (hay que corregir algo)');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

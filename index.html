@@ -210,6 +210,14 @@
 <button class="pillbtn ghost" id="depBtg">BTG</button>
 <button class="pillbtn ghost" id="depItau">Ita&uacute;</button>
 </div>
+<!-- El "hoy" en el telefono (23/09/2026, auditoria general, punto 11): el
+     cambio del dia en dolares y en % estaba calculado para la tira del
+     escritorio y en el telefono no se veia en ningun lado. Mismo renglon que
+     Cash: no le quita la primera pantalla al grafico. La hora dice de cuando
+     es el total, que tampoco lo decia nadie. En escritorio lo muestra la tira
+     y este renglon se apaga. -->
+<div class="cashline hoyline" id="hoyLinea" hidden><span>Today <span class="hoyhora" id="hoyHora"></span></span><b id="hoyVal">&mdash;</b><span id="hoyPct"></span></div>
+<p class="hoynota" id="hoyNota" hidden></p>
 <p class="cashline"><span>Cash</span><b id="liquidezVal">&mdash;</b><span id="liquidezPct">&mdash;</span></p>
 <!-- La tira de indicadores: SOLO en escritorio (31/08/2026). Sale de comparar
      con IBKR, Schwab, Fidelity, Sharesight y Snowball: ninguno abre con un
@@ -317,7 +325,7 @@
 
 <!-- ============ CUENTA (detalle) ============ -->
 <div id="view-account" style="display:none">
-<span class="backlink" id="accBack">&larr; Back</span>
+<button type="button" class="backlink" id="accBack">&larr; Back</button>
 <p class="lbl" id="accTitle">Account</p>
 <p class="total" id="accTotal" style="font-size:clamp(26px,8vw,38px)">&mdash;</p>
 <p class="subtotal" id="accLiq"></p>
@@ -347,8 +355,8 @@
 <div class="detgrid" style="margin-top:8px">
 <label><span class="detlbl">Liquid USD</span><input id="btgLiqUsd" type="number" inputmode="decimal" step="any" min="0"></label>
 <label><span class="detlbl">Liquid UYU</span><input id="btgLiqUyu" type="number" inputmode="decimal" step="any" min="0"></label>
-<label><span class="detlbl">Deposit USD</span><input id="btgPfUsd" type="number" inputmode="decimal" step="any" min="0"></label>
-<label><span class="detlbl">Deposit UYU</span><input id="btgPfUyu" type="number" inputmode="decimal" step="any" min="0"></label>
+<label><span class="detlbl">Fixed deposit USD</span><input id="btgPfUsd" type="number" inputmode="decimal" step="any" min="0"></label>
+<label><span class="detlbl">Fixed deposit UYU</span><input id="btgPfUyu" type="number" inputmode="decimal" step="any" min="0"></label>
 </div>
 <label style="display:block;margin-top:8px"><input id="btgFlujo" type="checkbox"> <span class="detlbl">Also record the change as a deposit/withdrawal</span></label>
 <div class="detedit-botones" style="margin-top:8px">
@@ -378,7 +386,7 @@
 
 <!-- ============ POSICIONES (la lista completa, desde el Inicio) ============ -->
 <div id="view-posiciones" style="display:none">
-<span class="backlink" id="posBack">&larr; Back</span>
+<button type="button" class="backlink" id="posBack">&larr; Back</button>
 <p class="viewtitle">Positions</p>
 <div class="card">
 <div style="overflow-x:auto">
@@ -392,7 +400,7 @@
 
 <!-- ============ ANALYSIS (el analisis por perfil, desde Portfolio) ============ -->
 <div id="view-analisis" style="display:none">
-<span class="backlink" id="anxBack">&larr; Back</span>
+<button type="button" class="backlink" id="anxBack">&larr; Back</button>
 <p class="viewtitle">Portfolio analysis</p>
 <div class="card">
 <h2>Investor profile</h2>
@@ -409,7 +417,7 @@
      quieta el 1 de enero), abajo cada broker con su historia. Todo lo arma el
      Worker (rendimiento_anual); aca solo se dibuja (js/rendimiento.js). -->
 <div id="view-rendanual" style="display:none">
-<span class="backlink" id="ranBack">&larr; Back</span>
+<button type="button" class="backlink" id="ranBack">&larr; Back</button>
 <p class="viewtitle">Performance</p>
 <div class="card">
 <div class="cardtop"><h2>Whole portfolio vs S&amp;P 500</h2><button class="expandbtn" id="ranRefresh" title="Refresh" aria-label="Refresh performance">&#8635;</button></div>
@@ -420,6 +428,7 @@
 
 <!-- ============ CONFIGURACIÓN (diseño: tema + acento + tonalidad) ============ -->
 <div id="view-diseno" style="display:none">
+<button type="button" class="backlink" id="disBack">&larr; Back</button>
 <p class="viewtitle">Settings</p>
 <div class="card">
 <h2>Theme</h2>
@@ -455,7 +464,7 @@
      lateral (Banking), asi que gana el volver y el titulo de las paginas
      secundarias — la barra ya no dice donde estas. -->
 <div id="view-cash" style="display:none">
-<span class="backlink" id="cashBack">&larr; Back</span>
+<button type="button" class="backlink" id="cashBack">&larr; Back</button>
 <p class="viewtitle">Banking</p>
 <p class="lbl">Total cash</p>
 <p class="total" id="cashTotal" style="font-size:clamp(24px,7vw,34px)">&mdash;</p>
@@ -501,7 +510,7 @@
 
 <!-- ============ CONFIGURACION ============ -->
 <div id="view-config" style="display:none">
-<span class="backlink" id="cfgBack">&larr; Back</span>
+<button type="button" class="backlink" id="cfgBack">&larr; Back</button>
 <!-- Se llamo "Configuracion" hasta el 25/08/2026: Guzman la renombro Keys
      (queda para APIs y claves) y "Configuracion" paso a ser la pagina de
      diseño (view-diseno: tema, acento y tonalidad). -->
@@ -559,7 +568,7 @@
 
 <!-- ============ IBKR (se entra desde Configuracion > Plataformas) ============ -->
 <div id="view-ibkr" style="display:none">
-<span class="backlink" id="ibkrBack">&larr; Back</span>
+<button type="button" class="backlink" id="ibkrBack">&larr; Back</button>
 <p class="viewtitle">IBKR</p>
 <p class="pagesub">Interactive Brokers &middot; read-only connection</p>
 <div class="card">
@@ -603,7 +612,7 @@
 
 <!-- ============ BINANCE (se entra desde Configuracion > Plataformas) ============ -->
 <div id="view-bnb" style="display:none">
-<span class="backlink" id="bnbBack">&larr; Back</span>
+<button type="button" class="backlink" id="bnbBack">&larr; Back</button>
 <p class="viewtitle">Binance</p>
 <p class="pagesub">Balances read live from your phone &middot; read-only key</p>
 <div class="card">
@@ -643,7 +652,7 @@
 
 <!-- ============ SCHWAB (se entra desde Configuracion > Plataformas) ============ -->
 <div id="view-cs" style="display:none">
-<span class="backlink" id="csBack">&larr; Back</span>
+<button type="button" class="backlink" id="csBack">&larr; Back</button>
 <p class="viewtitle">Charles Schwab</p>
 <p class="pagesub">Automatic read-only connection via SnapTrade</p>
 <div class="card">
@@ -734,7 +743,7 @@
 
 <!-- ============ BUSCAR (lupa) ============ -->
 <div id="view-buscar" style="display:none">
-<span class="backlink" id="busBack">&larr; Back</span>
+<button type="button" class="backlink" id="busBack">&larr; Back</button>
 <p class="viewtitle">Search asset</p>
 <p class="pagesub">Any stock, ETF or crypto, whether or not it is in your portfolio</p>
 <div class="card tradeform" style="margin-top:0">
@@ -758,7 +767,7 @@
 
 <!-- ============ IA INSIGHTS ============ -->
 <div id="view-ia" style="display:none">
-<span class="backlink" id="iaBack">&larr; Back</span>
+<button type="button" class="backlink" id="iaBack">&larr; Back</button>
 <p class="viewtitle">AI Insights</p>
 <p class="pagesub">Informational analysis generated with Claude &middot; not financial advice</p>
 <div class="card" id="iaKeyAviso" style="display:none">
@@ -775,7 +784,7 @@
 
 <!-- ============ SEGURIDAD ============ -->
 <div id="view-seguridad" style="display:none">
-<span class="backlink" id="segBack">&larr; Back</span>
+<button type="button" class="backlink" id="segBack">&larr; Back</button>
 <p class="viewtitle">Security</p>
 <p class="pagesub">Lock when opening the app on this device</p>
 <div class="card">
@@ -845,6 +854,11 @@ Trades</button>
 <div id="divModalDetalle"></div>
 </div>
 </div>
+
+<!-- El aviso flotante (23/09/2026): el resultado de registrar una operacion,
+     guardar el corte de BTG o sincronizar, visible desde cualquier pantalla.
+     Se cierra al tocarlo (avisoFlotante en nucleo.js). -->
+<div class="avisoflot" id="avisoFlotante" role="status" aria-live="polite" hidden></div>
 
 <!-- El codigo de la app, partido por secciones. Son scripts CLASICOS que
      comparten ambito global y se ejecutan EN ESTE ORDEN (hay ~138 sentencias

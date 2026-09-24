@@ -99,7 +99,12 @@ if (res && res.ok) {
 var r = res.resumen;
 var html = '&#10003; Logged: ' + (r.tipo === 'compra' ? 'buy' : 'sell') + ' ' + esc(r.qty) + ' ' + esc(r.symbol) + ' at USD ' + esc(r.precio) + ' in ' + esc(r.cuenta) + '.';
 (res.mensajes || []).forEach(function (m) { html += '<br>&#9888; ' + esc(m); });
-mostrarResultado(html, true);
+// Al aviso FLOTANTE y no a #tResultado (23/09/2026): ese vive adentro del
+// <details> que se cierra dos lineas mas abajo, asi que el "Logged" y sus
+// advertencias desaparecian en el mismo instante en que se escribian. Con
+// advertencias el aviso queda hasta que se toca.
+document.getElementById('tResultado').innerHTML = '';
+avisoFlotante(html, true, (res.mensajes || []).length > 0);
 document.getElementById('tSymbol').value = '';
 document.getElementById('tQty').value = '';
 document.getElementById('tPrecio').value = '';

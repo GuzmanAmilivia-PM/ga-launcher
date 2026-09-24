@@ -111,6 +111,16 @@ html[data-paleta="violeta"] .galogo-img { filter: hue-rotate(209deg) saturate(1.
 /* --- Números grandes (estilo Binance) --- */
 .lbl { color: var(--muted); font-size: 12.5px; font-weight: 600; margin: 0 0 4px; display: flex; align-items: center; gap: 6px; }
 .eyebtn { background: none; border: none; color: var(--muted); cursor: pointer; padding: 2px; display: inline-flex; align-items: center; }
+/* El area de TOQUE, no el dibujo (23/09/2026, auditoria general, punto 14):
+   el ojo medía 21x21, DEPOSIT 61x21 y "Back" 45x18, lejos de los 44 que pide
+   Apple. Una capa invisible por encima los agranda sin mover un pixel. Entre
+   el ojo y DEPOSIT las capas se tocan: gana DEPOSIT (va despues), por eso la
+   del ojo casi no crece hacia la derecha. */
+.eyebtn, .depositbtn, .backlink { position: relative; -webkit-tap-highlight-color: transparent; }
+.eyebtn::after, .depositbtn::after, .backlink::after { content: ''; position: absolute; }
+.eyebtn::after { top: -12px; bottom: -12px; left: -12px; right: -4px; }
+.depositbtn::after { top: -12px; bottom: -12px; left: -4px; right: -12px; }
+.backlink::after { top: -13px; bottom: -13px; left: -16px; right: -16px; }
 .eyebtn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 /* Baja de 38px a 25 (23/08/2026): dejo de estar solo en su renglon y ahora
    comparte fila con el dibujo y el %, como una posicion de la tabla. Sigue
@@ -240,6 +250,7 @@ canvas { max-width: 100%; }
 .detgrid > span { display: flex; flex-direction: column; gap: 3px; }
 .detlbl { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
 .detgrid b { font-size: 15px; }
+.detgrid b .detsec { font-size: 12px; margin-left: 4px; }
 .detedit { margin-top: 12px; }
 .detedit-abrir, .detedit-botones button { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 700; }
 .detedit-botones .detedit-guardar { color: var(--text); border-color: var(--gold); }
@@ -290,6 +301,10 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
 .sym { font-weight: 700; }
 .desc { color: var(--muted); font-size: 12px; display: block; }
 .backlink { color: var(--gold); font-size: 13px; cursor: pointer; margin-bottom: 14px; display: inline-block; font-weight: 600; }
+/* Desde el 23/09/2026 "Back" es un <button> (era un <span>: sin teclado ni
+   lector de pantalla). Se le saca todo lo que un boton trae de fabrica para
+   que se vea igual que antes. */
+button.backlink { background: none; border: 0; padding: 0; font-family: inherit; line-height: inherit; text-align: left; }
 .holdtable { font-size: 15px; }
 .holdtable td { padding: 13px 8px; }
 .holdtable .sym { font-size: 17.5px; font-weight: 800; }
@@ -452,6 +467,16 @@ td { text-align: right; padding: 10px 8px; border-bottom: 1px solid var(--border
   border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
 .cashline b { color: var(--text); font-weight: 700; margin-left: auto; }
 .cashline #liquidezPct { font-size: 12px; }
+/* El "hoy" del telefono (23/09/2026): el mismo renglon que Cash, con el
+   color del signo (el signo va escrito igual: no se confia solo en el color).
+   `hidden` necesita su regla: .cashline pone display:flex y le ganaria. */
+.hoyline[hidden], .hoynota[hidden] { display: none; }
+.cashline b.up { color: var(--green); }
+.cashline b.down { color: var(--red); }
+.hoyline #hoyPct { font-size: 12px; }
+.hoyline #hoyPct.up, .hoyline #hoyPct.down { font-weight: 700; }
+.hoyhora { font-size: 11px; margin-left: 2px; }
+.hoynota { margin: 4px 0 0; font-size: 11px; color: var(--muted); text-align: right; }
 #evoChartBox { cursor: pointer; }
 .chartmodal { position: fixed; inset: 0; background: rgba(4,7,14,.85); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .chartmodal-inner { background: var(--navy2); border-radius: 18px; border: 1px solid var(--border); padding: 18px; width: 100%; max-width: 900px; }
@@ -577,14 +602,35 @@ html.light .wl-detalle { background: rgba(20,40,80,.035); }
 .tmsg { margin-top: 14px; font-size: 13.5px; line-height: 1.5; padding: 12px 14px; border-radius: 12px; }
 .tmsg.ok { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.35); color: var(--text); }
 .tmsg.err { background: rgba(244,63,94,.1); border: 1px solid rgba(244,63,94,.35); color: var(--text); }
+/* El aviso flotante (23/09/2026): encima de la barra de abajo, visible desde
+   cualquier pantalla (avisoFlotante en nucleo.js). Fondo OPACO: pasa por
+   encima de numeros y un fondo transparente los mezclaria con el texto. El
+   borde de color dice si salio bien; se cierra tocandolo. */
+.avisoflot {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  width: calc(100% - 32px); max-width: 520px; z-index: 85;
+  background: var(--navy3); color: var(--text); border: 1px solid var(--border);
+  border-left: 4px solid var(--green); border-radius: 12px;
+  padding: 12px 14px; font-size: 13.5px; line-height: 1.5;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35); cursor: pointer;
+}
+.avisoflot.err { border-left-color: var(--red); }
+.avisoflot[hidden] { display: none; }
 .confighelp { margin: 10px 0 2px; font-size: 13px; color: var(--muted); }
 .confighelp summary { cursor: pointer; color: var(--gold); -webkit-tap-highlight-color: transparent; }
 .confighelp ol { margin: 8px 0 0 18px; padding: 0; }
 .confighelp li { margin: 7px 0; line-height: 1.5; }
 /* Tarjeta deslizable (Evolución / Dividendos / Aportes) */
-.sweepwrap { overflow: hidden; transition: height .25s ease; }
+/* Los 12px de arriba (23/09/2026): el `overflow: hidden` recortaba la capa de
+   toque del ojo y de DEPOSIT, que estan en el primer renglon (medido: 33px
+   de alto en vez de 45). El panel gana 12px de aire arriba y el carrusel los
+   devuelve con el margen negativo: nada se mueve en pantalla, y el recorte
+   queda 12px mas arriba. El alto lo mide paneles.js con offsetHeight, que ya
+   incluye ese aire. */
+.sweepwrap { overflow: hidden; transition: height .25s ease; margin-top: -12px; }
 .sweepdeck { display: flex; align-items: flex-start; transition: transform .28s ease; touch-action: pan-y; }
-.sweeppanel { min-width: 100%; }
+.sweeppanel { min-width: 100%; padding-top: 12px; }
 /* Los puntitos del carrusel se sacan DE LA VISTA, no del documento
    (23/08/2026: "que el carrusel se mueva pero que no aparezcan los puntitos
    abajo, no es necesario y tambien ocupan pila de espacio"). Siguen ahi porque
@@ -1030,6 +1076,9 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
   .kpi-va .kpi-sec { font-size: 12px; font-weight: 700; color: var(--muted); margin-left: 7px; }
   .kpi-va.up { color: var(--green); }
   .kpi-va.down { color: var(--red); }
+  /* El renglon "Today" del telefono (23/09/2026) repetiria la primera celda
+     de esta tira: aca se apaga. */
+  .hoyline, .hoynota { display: none !important; }
 
   /* --- La asignacion (D4) --- */
   .asigcard { display: block; }
