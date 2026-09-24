@@ -12,7 +12,9 @@ var path = require('path');
 var cp = require('child_process');
 var ruta = require('./_ruta');
 
-var dir = __dirname;
+// GA_ARNESES pisa la carpeta: existe para que test-run.js pruebe al propio
+// runner con arneses de mentira (24/09/2026).
+var dir = process.env.GA_ARNESES || __dirname;
 var archivos = fs.readdirSync(dir)
   .filter(function (f) { return /^test-.*\.js$/.test(f); })
   .sort();
@@ -28,6 +30,15 @@ archivos.forEach(function (f) {
   if (!m) {
     rotos.push(f);
     console.log('  ROTO  ' + f);
+    console.log(salida.split('\n').slice(-6).map(function (l) { return '        ' + l; }).join('\n'));
+    return;
+  }
+  // El codigo de salida TAMBIEN cuenta (auditoria del 23/09/2026, A18): un
+  // arnes que imprime "0 fallas" y despues revienta (una promesa que falla
+  // tarde, un throw despues del resumen) pasaba como PASS.
+  if (r.status !== 0 && !Number(m[2])) {
+    rotos.push(f);
+    console.log('  ROTO  ' + f + '  (dijo 0 fallas pero salio con codigo ' + r.status + ')');
     console.log(salida.split('\n').slice(-6).map(function (l) { return '        ' + l; }).join('\n'));
     return;
   }
