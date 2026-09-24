@@ -29,6 +29,10 @@ function fuente(re, nombre) {
 }
 var piezas = [
   fuente(/function apISOaMs\(s\) \{[\s\S]*?\n\}/, 'apISOaMs'),
+  // El momento de un flujo y la regla del flujo de hoy (24/09/2026, A17).
+  fuente(/function apFlujoMs\(s\) \{[\s\S]*?\n\}/, 'apFlujoMs'),
+  fuente(/function alUltimoPunto\(ts, tFin\) \{[\s\S]*?\n\}/, 'alUltimoPunto'),
+  fuente(/function _inicioDelDia\(ts\) \{[\s\S]*?\n\}/, '_inicioDelDia'),
   fuente(/function aporteTotalDelDia\(a\) \{[\s\S]*?\n\}/, 'aporteTotalDelDia'),
   fuente(/function _twrCadena\(serie\) \{[\s\S]*?\n\}/, '_twrCadena')
 ].join('\n');

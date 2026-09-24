@@ -141,13 +141,17 @@ api.aplicarAportes({ lista: [{ fecha: '2026-03-03', grupo: 5000, total: 5000 }],
 var rp = api.serieRendimientoPct(SERIE);
 ok(!rp.sinDatos && rp.cartera.length === 3 && rp.indice.length === 3, 'un punto por dia en las dos curvas');
 ok(rp.cartera[0].y === 0 && rp.indice[0].y === 0, 'las dos ARRANCAN en 0 %');
-// Tramo 1: 104.000 / (100.000 + 5.000) = 0,99048; tramo 2: 110.000 / 104.000.
-ok(Math.abs(rp.cartera[1].y - (104000 / 105000 - 1) * 100) < 1e-9, 'el deposito NO es rendimiento: el dia 2 la cartera va en -0,95 %, no en +4 % (=' + rp.cartera[1].y.toFixed(3) + ')');
+// Desde el 24/09/2026 (auditoria A17) el aporte va al FIN de su dia, como en
+// el Worker: el del 03/03 es DESPUES de la foto de ese dia (la de las 8:00),
+// asi que entra en el tramo 2. Tramo 1: 104.000 / 100.000 (mercado);
+// tramo 2: 110.000 / (104.000 + 5.000) = 1,00917.
+ok(Math.abs(rp.cartera[1].y - (104000 / 100000 - 1) * 100) < 1e-9, 'la foto del dia 2 es de ANTES del deposito: +4 % de mercado (=' + rp.cartera[1].y.toFixed(3) + ')');
+ok(Math.abs(rp.cartera[2].y - (1.04 * 110000 / 109000 - 1) * 100) < 1e-9, 'y el deposito NO es rendimiento: el tramo 2 lo descuenta (' + rp.cartera[2].y.toFixed(3) + ')');
 ok(Math.abs(rp.cartera[2].y - api.twrEnRango(SERIE).pct) < 1e-9, 'la punta de la cartera es EXACTAMENTE twrEnRango (el % sin depositos de arriba)');
 ok(Math.abs(rp.indice[2].y - 5) < 1e-9, 'y la del indice, +5 %');
 api.pintarVsBench(SERIE, 10);
 var gap = rp.cartera[2].y - rp.indice[2].y;
-ok(/−0\.2 pp/.test(api._pintado.texto) && Math.abs(gap - (-0.24)) < 0.01, 'la distancia entre las puntas es el "pp vs S&P" del Inicio: ' + api._pintado.texto + ' / ' + gap.toFixed(2));
+ok(/−0\.0 pp/.test(api._pintado.texto) && Math.abs(gap - (-0.046)) < 0.01, 'la distancia entre las puntas es el "pp vs S&P" del Inicio: ' + api._pintado.texto + ' / ' + gap.toFixed(3));
 var dsPct = api.datasetsRendimiento(rp.cartera, rp.indice);
 ok(dsPct.length === 2 && !!dsPct[1].borderDash && dsPct[1].fill === false, 'dos curvas; el indice PUNTEADO y sin relleno');
 ok(dsPct[0].fill === false && dsPct[0].borderColor === '#d4af37', 'la cartera con el acento y SIN relleno (las rachas negativas no se pintan como area ganada)');
@@ -249,8 +253,12 @@ ok(!/\*/.test(conAportes._pintado.texto),
 // 0,9905 × 1,0577 − 1 = +4,76%, contra +5% = −0,2 pp. (Con el flujo al
 // cierre daba 4,71%; la cuenta vieja "(final−inicial−aportes)/(inicial+aportes)"
 // coincide con esta solo por casualidad de dos puntos.)
-ok(/−0\.2 pp/.test(conAportes._pintado.texto),
-  'el delta usa el rendimiento limpio encadenado (4,76% − 5%), no el +10% crudo: ' + conAportes._pintado.texto);
+// Y desde el 24/09/2026 (A17) el aporte del 03/03 va al FIN de su dia, como
+// en el Worker: despues de la foto de ese dia, en el tramo 2. Tramo 1
+// 104.000 / 100.000 = 1,04; tramo 2 110.000 / 109.000 = 1,00917 → +4,95%,
+// contra +5% = −0,05 pp.
+ok(/−0\.0 pp/.test(conAportes._pintado.texto),
+  'el delta usa el rendimiento limpio encadenado (4,95% − 5%), no el +10% crudo: ' + conAportes._pintado.texto);
 ok(/WITHOUT the/.test(conAportes._pintado.titulo) && /5,000/.test(conAportes._pintado.titulo),
   'y la explicacion dice cuanto se descuento: ' + conAportes._pintado.titulo.slice(0, 70));
 // Esa explicacion vive en un `title`, y el iPhone no muestra titles: al lado
@@ -258,7 +266,7 @@ ok(/WITHOUT the/.test(conAportes._pintado.titulo) && /5,000/.test(conAportes._pi
 // "−0.2 pp" a secas y se leia que el indice habia hecho +10,2%. Desde el
 // 23/09/2026 la linea dice el rendimiento sin depositos EN EL TEXTO
 // (auditoria general, punto 15).
-ok(/^\+4\.8% without deposits · −0\.2 pp vs S&P 500$/.test(conAportes._pintado.texto),
+ok(/^\+5\.0% without deposits · −0\.0 pp vs S&P 500$/.test(conAportes._pintado.texto),
   'con aportes, la linea dice tambien el % sin depositos, a la vista: ' + conAportes._pintado.texto);
 
 console.log('\nG) un aporte FUERA del rango no ensucia el aviso');
@@ -301,11 +309,11 @@ var m = apiM.movimientoDelSaldo(SERIE);
 ok(m.inicial === 100000 && m.final === 110000, 'toma los extremos del rango');
 ok(m.aportes === 4000, 'los aportes del periodo');
 ok(m.mercado === 6000, 'y el mercado se despeja por diferencia: 10.000 − 4.000 = 6.000');
-// Encadenado (9/09/2026): tramo 1 (104.000 − 4.000) / 100.000 = 1,0; tramo 2
-// 110.000 / 104.000 = 1,0577 → +5,77%. Coincide con la cuenta vieja solo
-// porque el aporte cayó en el primer tramo; es la misma definición que
-// comparacionAnual y que el backend.
-ok(Math.abs(m.mercadoPct - (110000 / 104000 * 100 - 100)) < 0.01,
+// Encadenado (9/09/2026), con el aporte al FIN de su dia como el Worker
+// (24/09/2026, A17): el del 03/03 va despues de la foto de ese dia. Tramo 1
+// 104.000 / 100.000 = 1,04; tramo 2 110.000 / (104.000 + 4.000) = 1,0185 →
+// +5,93%. Es la misma definición que comparacionAnual y que el backend.
+ok(Math.abs(m.mercadoPct - (1.04 * 110000 / 108000 * 100 - 100)) < 0.01,
   'el % es el encadenado que descuenta el aporte de su tramo: ' + m.mercadoPct.toFixed(2) + '%');
 
 console.log('\nJ) un RETIRO da vuelta el signo sin romper la cuenta');
@@ -377,12 +385,13 @@ ok(typeof apiM.movimientoDelSaldo === 'function',
 
 console.log('\nÑ) el benchmark ahora compara el rendimiento LIMPIO, y se acabo el asterisco');
 // Antes: cartera +10% (que incluye 4.000 aportados) vs indice +5% = "+5 pp *".
-// Ahora: rendimiento limpio 5,77% vs indice 5% = +0,8 pp, SIN asterisco.
+// Ahora: rendimiento limpio 5,93% vs indice 5% = +0,9 pp, SIN asterisco
+// (el aporte al fin de su dia, como el Worker: ver I).
 apiM.aplicarBench({ bench: { nombre: 'S&P 500', valores: [5000, 5100, 5250] } });
 apiM.pintarVsBench(SERIE, 10);
 ok(!/\*/.test(apiM._pintado.texto), 'sin asterisco: ya no hace falta advertir, se descuenta: ' + apiM._pintado.texto);
-ok(/0\.8 pp/.test(apiM._pintado.texto),
-  'y el delta usa el rendimiento limpio (5,77% − 5%), no el +10% crudo: ' + apiM._pintado.texto);
+ok(/\+0\.9 pp/.test(apiM._pintado.texto),
+  'y el delta usa el rendimiento limpio (5,93% − 5%), no el +10% crudo: ' + apiM._pintado.texto);
 ok(/WITHOUT the/.test(apiM._pintado.titulo), 'la explicacion dice que descuenta los aportes');
 
 console.log('\nO) si NO se puede desglosar, el asterisco vuelve');

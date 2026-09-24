@@ -408,8 +408,10 @@ function aportesEnRango(serie) {
   var desde = serie[0].fecha, hasta = serie[serie.length - 1].fecha;
   var total = 0;
   aportesLista.forEach(function (a) {
-    var ts = apISOaMs(a.fecha);
-    if (ts === null || ts < desde || ts > hasta) return;
+    // Al fin de su dia, como el Worker (A17): uno del primer dia cae despues
+    // de la foto de ese dia, adentro del rango; uno de hoy, en el ultimo punto.
+    var ts = alUltimoPunto(apFlujoMs(a.fecha), hasta);
+    if (!isFinite(ts) || ts <= desde || ts > hasta) return;
     var m = aporteTotalDelDia(a);
     if (isFinite(m)) total += m;
   });
@@ -707,6 +709,24 @@ function apISOaMs(s) {
   if (p.length !== 3) return NaN;
   return new Date(+p[0], +p[1] - 1, +p[2]).getTime();
 }
+// El MOMENTO de un flujo (24/09/2026, auditoria A17): el FIN de su dia, como
+// el Worker (Bench._msFinDeDia, 23:59 de Montevideo). La foto de cada dia es
+// la de las 8:00 —el cierre anterior, antes de los depositos del dia—, asi
+// que un deposito del dia D entra en el tramo D -> D+1. Con la medianoche
+// (apISOaMs) entraba en el tramo anterior, y uno del mismo dia que la base
+// quedaba afuera: el YTD sin depositos de la app no daba el del Worker, y con
+// un deposito el dia de la base mostraba +10 % que no existian.
+function apFlujoMs(s) {
+  var p = String(s || '').split('-');
+  if (p.length !== 3) return NaN;
+  return new Date(+p[0], +p[1] - 1, +p[2], 23, 59, 59).getTime();
+}
+// Un flujo de HOY cae despues del ultimo punto (que es ahora): se trae a ese
+// punto, como flujosEnVentana del Worker. Si no, lo depositado hoy se contaba
+// como rendimiento hasta mañana.
+function alUltimoPunto(ts, tFin) {
+  return (ts > tFin && _inicioDelDia(ts) === _inicioDelDia(tFin)) ? tFin : ts;
+}
 
 // El aporte de un dia sobre el patrimonio ENTERO. El backend manda dos montos
 // por dia (getAportes, 7/09/2026): `grupo` es lo que entro a Schwab + IBKR +
@@ -748,20 +768,30 @@ function twrEnRango(serie) {
 // S&P" que tiene arriba.
 function _twrCadena(serie) {
   if (!serie || serie.length < 2) return null;
-  var t0 = serie[0].fecha, tFin = serie[serie.length - 1].fecha;
-  var flujos = [];
+  var tFin = serie[serie.length - 1].fecha;
+  var todos = [];
   aportesLista.forEach(function (r) {
-    var ts = apISOaMs(r.fecha);
+    var ts = alUltimoPunto(apFlujoMs(r.fecha), tFin);
     var m = aporteTotalDelDia(r);
-    if (isFinite(ts) && ts > t0 && ts <= tFin && isFinite(m) && m !== 0) flujos.push({ ts: ts, monto: m });
+    if (isFinite(ts) && isFinite(m) && m !== 0) todos.push({ ts: ts, monto: m });
   });
+  // La base es el primer punto SIN un flujo fechado ese mismo dia (la regla
+  // del Worker, Bench.crecimientoSinAportes): la foto no dice si el flujo ya
+  // estaba adentro, y mejor un dia menos que un numero mentiroso. Los puntos
+  // salteados quedan en 1: la curva arranca plana.
+  var i0 = 0;
+  while (i0 < serie.length - 1 && todos.some(function (a) { return _inicioDelDia(a.ts) === _inicioDelDia(serie[i0].fecha); })) i0++;
+  if (i0 >= serie.length - 1) return null;
+  var t0 = serie[i0].fecha;
+  var flujos = todos.filter(function (a) { return a.ts > t0 && a.ts <= tFin; });
   // El flujo entra AL INICIO de su tramo y participa de su rendimiento
   // (15/09/2026, V17): tramo = valor final / (valor anterior + flujo). Es la
   // convención de IBKR, verificada contra PortfolioAnalyst tramo por tramo
   // (Bench.crecimientoSinAportes tiene la explicación completa). Antes se
   // descontaba al cierre, y el acumulado se apartaba 2,2 puntos.
-  var twr = 1, factores = [1];
-  for (var j = 1; j < serie.length; j++) {
+  var twr = 1, factores = [];
+  for (var k = 0; k <= i0; k++) factores.push(1);
+  for (var j = i0 + 1; j < serie.length; j++) {
     var vPrev = serie[j - 1].valor, vHoy = serie[j].valor;
     var flujo = 0;
     flujos.forEach(function (a) { if (a.ts > serie[j - 1].fecha && a.ts <= serie[j].fecha) flujo += a.monto; });
@@ -900,7 +930,7 @@ function comparacionGrupo() {
   // arriba) ya estan dentro de la base.
   var enVentana = [];
   aportesLista.forEach(function (r) {
-    var ts = apISOaMs(r.fecha);
+    var ts = alUltimoPunto(apFlujoMs(r.fecha), tFin);   // al fin de su dia, como el Worker (A17)
     var m = Number(r.grupo);
     if (isFinite(ts) && ts > t0 && ts <= tFin && isFinite(m) && m !== 0) enVentana.push({ ts: ts, monto: m });
   });

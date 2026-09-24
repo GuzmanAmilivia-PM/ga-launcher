@@ -183,6 +183,11 @@ api = montarK([76000, 80000, 86000], [{ fecha: '2026-03-03', grupo: 5000, total:
 comp = api.comparacionGrupo();
 ok(comp.desde === d1, 'la base NO se corre: d1 no tiene ningun aporte ese dia (=' + new Date(comp.desde).toDateString() + ')');
 ok(comp.capital === 81000, 'el aporte de d2 SI entra al capital (76000 + 5000) (=' + comp.capital + ')');
+// El aporte del d2 va al FIN de su dia, como el Worker (24/09/2026, A17):
+// despues de la foto del d2, en el tramo d2 -> d3. Con la medianoche entraba
+// en el tramo anterior y la cartera daba otro numero que el del Worker.
+ok(Math.abs(comp.twrPct - ((80000 / 76000) * (86000 / 85000) - 1) * 100) < 0.001,
+  'la cartera: 80/76 x 86/(80+5), el aporte en el tramo que sigue a su foto (=' + comp.twrPct.toFixed(3) + '%)');
 
 console.log('\nQ) si TODOS los dias salvo el ultimo quedan ambiguos, mejor honesto que inventado');
 // Solo 2 dias con dato (d2 y d3, igual que en K) y el primero es ambiguo: no
