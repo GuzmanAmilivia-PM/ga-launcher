@@ -135,7 +135,7 @@ var OK1 = { ok: true, cambios: [{ tipo: 'qty', symbol: 'VOO' }] };
   });
   ok(e.llamadas.indexOf('bnb') === -1, 'no intenta Binance sin clave');
   ok(e.avisos.length === 1 && /Binance: not synced, the API key is not on this phone/.test(e.avisos[0].msg), 'la linea de Binance dice que falta la clave en este telefono');
-  ok(/Keys &rarr; Platforms &rarr; Binance/.test(e.avisos[0].msg), 'y a donde ir a pegarla');
+  ok(/Connections &rarr; Platforms &rarr; Binance/.test(e.avisos[0].msg), 'y a donde ir a pegarla');
   ok(e.avisos[0].ok === true, 'sin ponerse en rojo: no es un error');
 
   // C) IBKR falla: no corta la cadena

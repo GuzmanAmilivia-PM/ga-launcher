@@ -630,6 +630,11 @@ html.light .wl-detalle { background: rgba(20,40,80,.035); }
   box-shadow: 0 8px 24px rgba(0,0,0,.35); cursor: pointer;
 }
 .avisoflot.err { border-left-color: var(--red); }
+/* El recordatorio del corte de BTG en el Inicio (24/09/2026): con el acento,
+   no en rojo — no es un error, es algo que falta hacer. */
+.recordatorio { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; padding: 11px 14px; min-height: 44px; border-radius: 12px; background: rgba(var(--gold-rgb), .1); border: 1px solid rgba(var(--gold-rgb), .35); color: var(--text); font-size: 13.5px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.recordatorio .chev { margin-left: auto; color: var(--gold); font-weight: 800; font-size: 18px; }
+.recordatorio[hidden] { display: none; }
 /* La accion dentro del aviso ("Undo" al quitar de la Watchlist, 24/09/2026):
    a la derecha, con area de toque de 44 px de alto. */
 .avisoflot-accion { float: right; margin: -12px -8px -12px 10px; min-height: 44px; padding: 0 10px; background: none; border: 0; color: var(--gold); font-family: inherit; font-size: 13.5px; font-weight: 800; letter-spacing: .02em; cursor: pointer; -webkit-tap-highlight-color: transparent; }

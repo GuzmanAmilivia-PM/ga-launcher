@@ -47,7 +47,16 @@ function elemento(id) {
   e.click = function () { if (e.onclick) e.onclick(); };
   return e;
 }
-function montar() {
+// Un Date cuyo "ahora" es el que diga la prueba (con argumentos, el de siempre).
+function relojFalso(ahora) {
+  if (!ahora) return Date;
+  var F = function () { return arguments.length ? new (Function.prototype.bind.apply(Date, [null].concat([].slice.call(arguments))))() : new Date(ahora); };
+  F.now = function () { return ahora; };
+  F.UTC = Date.UTC;   // el formulario propone la fecha con Date.UTC
+  return F;
+}
+function montar(opts) {
+  opts = opts || {};
   var els = {};
   var pedidos = [];   // {fn, args, ok, err}
   var espias = { showAccount: [], sincronizarTodo: 0, syncOpts: [], errorEnVista: [], avisos: [] };
@@ -68,11 +77,14 @@ function montar() {
     errorEnVista: function (id, err, que) { espias.errorEnVista.push([id, que]); },
     msgBackend: function (r) { return ((r && r.mensajes) || []).join(' '); },
     msgErr: function (err, que) { return que + ' failed: ' + String(err && err.message || err); },
-    Number: Number, isFinite: isFinite, String: String, Date: Date, Math: Math
+    // Las cuentas (el recordatorio abre BTG) y un reloj a mano para la ventana
+    // del fin de mes (24/09/2026).
+    ACCOUNTS: [{ key: 'IB', nombre: 'Interactive Brokers' }, { key: 'BTG', nombre: 'BTG' }],
+    Number: Number, isFinite: isFinite, String: String, Date: relojFalso(opts.ahora), Math: Math
   };
   var nombres = Object.keys(ctx);
   var fn = new Function(nombres.join(','), preambulo + codigo +
-    '\nreturn { esBtg: esBtg, renderBtg: renderBtg, mostrarBtg: mostrarBtg, restaurarVistaCuenta: restaurarVistaCuenta, setPedida: function (k) { accPedida = k; } };');
+    '\nreturn { esBtg: esBtg, renderBtg: renderBtg, mostrarBtg: mostrarBtg, restaurarVistaCuenta: restaurarVistaCuenta, setPedida: function (k) { accPedida = k; }, btgCorteQueFalta: btgCorteQueFalta, btgRevisarRecordatorio: btgRevisarRecordatorio };');
   var api = fn.apply(null, nombres.map(function (n) { return ctx[n]; }));
   return { api: api, els: els, pedidos: pedidos, espias: espias, el: function (id) { return ctx.document.getElementById(id); } };
 }
@@ -173,8 +185,12 @@ ok(optsBtg.previo && /Saved 2026-09-30/.test(optsBtg.previo), 'y le pasa el mens
 m.el('btgAbrir').click();
 m.el('btgFlujo').checked = true;
 m.el('btgGuardar').click();
-ok(m.pedidos.length === 2 && m.pedidos[1].args.registrarFlujo === true, 'la casilla tildada manda registrarFlujo:true');
-m.pedidos[1].ok({ ok: false, mensajes: ['The store is not available right now.'] });
+// Por TIPO de pedido y no por posicion (24/09/2026): en la ventana del fin de
+// mes, guardar un corte vuelve a mirar el recordatorio (un getBtg de mas), y
+// contar por posicion hacia que esta prueba fallara solo esos dias.
+var guardados = m.pedidos.filter(function (p) { return p.fn === 'guardarBtg'; });
+ok(guardados.length === 2 && guardados[1].args.registrarFlujo === true, 'la casilla tildada manda registrarFlujo:true');
+guardados[1].ok({ ok: false, mensajes: ['The store is not available right now.'] });
 ok(/not available/.test(m.el('btgMsg').textContent) && m.el('accBtgForm').hidden === false, 'una respuesta con ok:false deja el formulario abierto y dice por que');
 ok(m.espias.showAccount.length === 1, 'y NO repinta nada');
 
@@ -228,6 +244,58 @@ var cambio = (btgSrc.match(/export function cambioEntreCortes\([\s\S]*?\n\}/) ||
   ok(cambio.indexOf(campo) !== -1, 'cambioEntreCortes devuelve ' + campo.replace(':', '') + ' (lo que pinta renderBtg)');
 });
 ok(/totales\.total/.test(btgSrc) && /liquido:/.test(btgSrc) && /plazo:/.test(btgSrc), 'y los totales traen liquido, plazo y total');
+
+// ===========================================================================
+console.log('\nE) el recordatorio del corte de fin de mes, sin notificacion (24/09/2026)');
+// ===========================================================================
+// A9 de la auditoria. Guzman: "Sin notificacion". Un aviso en el Inicio desde
+// el ULTIMO dia del mes hasta el 10 del siguiente, solo si el corte falta.
+function t(y, mes, d) { return new Date(y, mes - 1, d, 12, 0, 0).getTime(); }
+var f = montar().api.btgCorteQueFalta;
+ok(f('2026-08-31', t(2026, 9, 30)) === '2026-09-30', 'el 30/09 (fin de mes) con el ultimo corte en agosto: falta el del 30/09');
+ok(f('2026-09-30', t(2026, 9, 30)) === null, 'cargado el mismo dia: ya no');
+ok(f('2026-08-31', t(2026, 10, 4)) === '2026-09-30', 'el 4/10 todavia falta el de septiembre');
+ok(f('2026-09-28', t(2026, 10, 4)) === null, 'un corte del 28/09 cuenta como el de fin de mes (tolerancia de 5 dias)');
+ok(f('2026-09-20', t(2026, 10, 4)) === '2026-09-30', 'uno del 20/09 no: es de mitad de mes');
+ok(f('2026-08-31', t(2026, 10, 11)) === null, 'pasado el 10, se deja de recordar (el mes que viene vuelve)');
+ok(f('2026-08-31', t(2026, 9, 24)) === null, 'a mitad de mes no hay nada que recordar');
+ok(f(null, t(2026, 10, 2)) === '2026-09-30', 'sin ningun corte todavia, en la ventana: falta');
+ok(f('2026-11-30', t(2027, 1, 3)) === '2026-12-31', 'cruza el año: el 3/01/2027 falta el del 31/12');
+ok(f('2026-01-31', t(2026, 2, 28)) === '2026-02-28', 'febrero termina el 28: ese dia ya recuerda');
+
+// Fuera de la ventana no se le pide nada al Worker.
+var mr = montar({ ahora: t(2026, 9, 24) });
+mr.api.btgRevisarRecordatorio();
+ok(!mr.pedidos.some(function (p) { return p.fn === 'getBtg'; }), 'el 24/09 ni pregunta: fuera de la ventana no hay pedido');
+ok(mr.el('btgRecordatorio').hidden === true, 'y el aviso no se ve');
+// En la ventana: pregunta una vez, y si falta, lo muestra.
+mr = montar({ ahora: t(2026, 10, 2) });
+mr.api.btgRevisarRecordatorio();
+var pideBtg = mr.pedidos.filter(function (p) { return p.fn === 'getBtg'; });
+ok(pideBtg.length === 1, 'el 2/10 pregunta por el ultimo corte');
+pideBtg[0].ok({ ok: true, ultimo: { fecha: '2026-08-31' } });
+var rec = mr.el('btgRecordatorio');
+ok(rec.hidden === false && /Month-end:<\/b> load BTG&rsquo;s balances of Sep 30/.test(rec.innerHTML), 'y el aviso lo dice: ' + rec.innerHTML);
+mr.api.btgRevisarRecordatorio();
+ok(mr.pedidos.filter(function (p) { return p.fn === 'getBtg'; }).length === 1, 'una sola vez por sesion (el sondeo del minuto no vuelve a preguntar)');
+// Tocarlo abre BTG desde el Inicio, y el formulario viene abierto.
+rec.onclick();
+ok(mr.espias.showAccount.length === 1 && mr.espias.showAccount[0][0].key === 'BTG' && mr.espias.showAccount[0][1] === 'inicio', 'tocarlo abre BTG, y volver regresa al Inicio');
+// Oculto, como nace en el index.html (el DOM de mentira lo crea visible y
+// asi la prueba pasaria sin que nadie lo abra).
+mr.el('accBtgForm').hidden = true;
+mr.api.mostrarBtg();
+var pideCuenta = mr.pedidos.filter(function (p) { return p.fn === 'getBtg'; });
+pideCuenta[pideCuenta.length - 1].ok(PAYLOAD);
+ok(mr.el('accBtgForm').hidden === false, 'y el formulario del corte ya esta abierto');
+// Con el corte ya cargado, en la ventana, no aparece.
+mr = montar({ ahora: t(2026, 10, 2) });
+mr.api.btgRevisarRecordatorio();
+mr.pedidos[0].ok({ ok: true, ultimo: { fecha: '2026-09-30' } });
+ok(mr.el('btgRecordatorio').hidden === true, 'con el corte de septiembre cargado, no hay aviso');
+// Guardar un corte lo vuelve a mirar (y se apaga si era el que faltaba).
+ok(/btgRevisarRecordatorio\(true\)/.test(bancos), 'guardar un corte vuelve a mirar el recordatorio (codigo escrito)');
+ok(/id="btgRecordatorio"/.test(html), 'el aviso vive en el Inicio');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

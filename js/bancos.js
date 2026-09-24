@@ -358,6 +358,8 @@ function wireBtgAbrir() {
       document.getElementById('accBtgForm').hidden = true;
       if (lastAcc) showAccount(lastAcc, accountReturnView);
       if (typeof sincronizarTodo === 'function') sincronizarTodo({ sinItau: true, previo: hecho });
+      // El recordatorio del Inicio se vuelve a mirar con el corte nuevo.
+      if (typeof btgRevisarRecordatorio === 'function') btgRevisarRecordatorio(true);
     }).withFailureHandler(function (err) {
       g.disabled = false;
       msg.textContent = msgErr ? msgErr(err, 'The snapshot') : 'It could not be saved.';
@@ -366,6 +368,69 @@ function wireBtgAbrir() {
       saldos: saldos,
       registrarFlujo: !!document.getElementById('btgFlujo').checked
     });
+  };
+})();
+
+// ---------- El recordatorio del corte de fin de mes (24/09/2026) ----------
+// A9 de la auditoria general. El corte de BTG se carga a mano una vez por
+// mes (iBanca pide token en cada acceso: no hay forma de leerlo solo) y nada
+// avisaba. Guzman: "Sin notificacion". Queda un aviso en el Inicio, desde el
+// ULTIMO dia del mes hasta el BTG_RECORDAR_HASTA_DIA del siguiente, solo si
+// el corte de ese fin de mes no esta cargado. Tocarlo abre BTG con el
+// formulario listo; guardar el corte lo apaga. Fuera de esa ventana no se le
+// pide nada al Worker.
+var BTG_RECORDAR_HASTA_DIA = 10;
+var BTG_TOLERANCIA_DIAS = 5;   // un corte del 27 al 30 tambien es "el de fin de mes"
+var btgRecordatorioPedido = false;
+var btgAbrirFormAlCargar = false;
+function btgIso(d) {
+  return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+}
+// El fin de mes cuyo corte falta, en 'aaaa-mm-dd', o null (fuera de la
+// ventana, o ya cargado). Pura: la hora y el ultimo corte entran de afuera.
+function btgCorteQueFalta(ultimaFecha, ahora) {
+  var h = new Date(ahora);
+  var y = h.getFullYear(), m = h.getMonth(), d = h.getDate();
+  var esperado;
+  if (d === new Date(y, m + 1, 0).getDate()) esperado = new Date(y, m + 1, 0);   // hoy es fin de mes
+  else if (d <= BTG_RECORDAR_HASTA_DIA) esperado = new Date(y, m, 0);          // primeros dias: el del mes pasado
+  else return null;
+  var alcanza = new Date(esperado.getFullYear(), esperado.getMonth(), esperado.getDate() - BTG_TOLERANCIA_DIAS);
+  if (ultimaFecha && String(ultimaFecha).slice(0, 10) >= btgIso(alcanza)) return null;
+  return btgIso(esperado);
+}
+function pintarBtgRecordatorio(falta) {
+  var el = document.getElementById('btgRecordatorio');
+  if (!el) return;
+  el.hidden = !falta;
+  if (!falta) { el.innerHTML = ''; return; }
+  var p = falta.split('-');
+  var dia = new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  el.innerHTML = '<b>Month-end:</b> load BTG&rsquo;s balances of ' + esc(dia) + '<span class="chev">&rsaquo;</span>';
+}
+function btgRevisarRecordatorio(forzar) {
+  var el = document.getElementById('btgRecordatorio');
+  if (!el) return;
+  // En la ventana, con CUALQUIER ultimo corte viejo: si no, ni se pregunta.
+  if (!btgCorteQueFalta(null, Date.now())) { pintarBtgRecordatorio(null); return; }
+  if (btgRecordatorioPedido && !forzar) return;   // una vez por sesion
+  btgRecordatorioPedido = true;
+  google.script.run.withSuccessHandler(function (d) {
+    if (!d || d.ok === false) return;
+    pintarBtgRecordatorio(btgCorteQueFalta(d.ultimo && d.ultimo.fecha, Date.now()));
+  }).withFailureHandler(function () {
+    btgRecordatorioPedido = false;   // sin red: se vuelve a preguntar en la proxima apertura
+  }).getBtg();
+}
+(function () {
+  var el = document.getElementById('btgRecordatorio');
+  if (!el) return;
+  if (typeof hacerTocable === 'function') hacerTocable(el);
+  el.onclick = function () {
+    var acc = ACCOUNTS.filter(function (a) { return a.key === 'BTG'; })[0];
+    if (!acc) return;
+    btgAbrirFormAlCargar = true;
+    showAccount(acc, 'inicio');
   };
 })();
 
@@ -388,6 +453,12 @@ function mostrarBtg() {
     document.getElementById('accTotal').textContent = t ? fmt(t.total) : '--';
     document.getElementById('accLiq').textContent = t ? ('Liquid: ' + fmt(t.liquido)) : '';
     renderBtg(d);
+    // Se llego desde el recordatorio del Inicio: el formulario ya abierto.
+    if (btgAbrirFormAlCargar) {
+      btgAbrirFormAlCargar = false;
+      var ab = document.getElementById('btgAbrir');
+      if (ab) ab.click();
+    }
   }).withFailureHandler(function (err) {
     if (accPedida !== 'BTG') return;
     document.getElementById('accTotal').textContent = '--';

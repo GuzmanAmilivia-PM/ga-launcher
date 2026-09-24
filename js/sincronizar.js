@@ -5,7 +5,7 @@
 // umbral de posiciones en cero tenia dos redacciones distintas.
 var BNB_CERRADAS_FRENO = 2;
 var BNB_AVISO_EARN = 'Binance: several positions show no balance (funds in Earn?). ' +
-'Nothing was applied &mdash; check it in Keys &rarr; Platforms &rarr; Binance.';
+'Nothing was applied &mdash; check it in Connections &rarr; Platforms &rarr; Binance.';
 function bnbSincronizar(cb) {
 var alOk = cb.alOk || function () {};
 var alError = cb.alError || function () {};
@@ -125,7 +125,7 @@ terminar();
 // hacia creer que "solo sincronizo Schwab e IBKR" (9/09/2026). Se dice, pero
 // solo si algun otro broker reporto: una app recien instalada sin nada
 // configurado sigue callada.
-var BNB_SIN_CLAVE = '&#8226; Binance: not synced, the API key is not on this phone (Keys &rarr; Platforms &rarr; Binance).';
+var BNB_SIN_CLAVE = '&#8226; Binance: not synced, the API key is not on this phone (Connections &rarr; Platforms &rarr; Binance).';
 function binance() {
 if (!bnbConfig()) { if (lineas.length) lineas.push(BNB_SIN_CLAVE); precios(); return; }
 paso('Syncing Binance...');

@@ -206,7 +206,8 @@ ok(!/\.galogo-sm \{[^}]*box-shadow/.test(indexCrudo),
 });
 
 console.log('\nG) el panel y las paginas: Keys, Configuracion y Data base test');
-ok(/<p class="viewtitle">Keys<\/p>/.test(indexCrudo), 'la ex Configuracion ahora se titula Keys');
+ok(/<p class="viewtitle">Connections<\/p>/.test(indexCrudo), 'la ex Configuracion se titula Connections (Keys hasta el 24/09/2026: ya tenia mas que claves)');
+ok(!/<p class="viewtitle">Keys<\/p>/.test(indexCrudo) && !/Keys &rarr;/.test(indexCrudo), 'y "Keys" no quedo en ningun titulo ni en ningun camino escrito');
 // Las CUATRO pestañas de la barra van sin titulo de pagina (pedido de Guzman,
 // 26/08/2026: la pestaña encendida ya dice donde estas; "info de mas que
 // consume espacio"). Las paginas secundarias SI lo conservan: ahi la barra no
@@ -255,7 +256,7 @@ ok(configSrc3.indexOf("toggle('active-acento'") !== -1,
 var tradeSrc = fs.readFileSync(path.join(ruta.RUTA, 'js', 'trade.js'), 'utf8');
 ok(/active-compra/.test(tradeSrc) && /active-venta/.test(tradeSrc),
   'active-compra/active-venta SIGUEN en Trades: ahi el verde/rojo es el dato (compraste o vendiste)');
-ok(/id="mConfig"[\s\S]{0,400}?Keys<\/button>/.test(indexCrudo), 'y su tile del panel dice Keys');
+ok(/id="mConfig"[\s\S]{0,400}?Connections<\/button>/.test(indexCrudo), 'y su tile del panel dice Connections');
 ok(/id="mDiseno"[\s\S]{0,400}?Settings<\/button>/.test(indexCrudo), 'el tile nuevo dice Settings');
 ok(vistasSrc.indexOf("document.getElementById('mDiseno').onclick") !== -1 && vistasSrc.indexOf("setView('diseno')") !== -1,
   'y abre la pagina view-diseno');
