@@ -322,5 +322,18 @@ ok(/updated/.test(d4) && !/Starting point/.test(d4),
   'sin el dato del backend avisa, en vez de calcular una cuenta inventada');
 ok(/not a buy or sell recommendation/i.test(d), 'aclara que no es una recomendacion de compra ni venta');
 
+console.log('\nZ) si el analisis FALLA, las otras pantallas no se quedan en "Loading..." (24/09/2026, auditoria A15)');
+m = montar();
+m.elem('anxBody').innerHTML = '<p class="loadingtxt">Analyzing your portfolio...</p>';
+m.elem('asigBody').innerHTML = '<p class="loadingtxt">Loading...</p>';
+m.elem('anxPerfilBody').innerHTML = '<p class="loadingtxt">Loading...</p>';
+m.elem('anxPerfilBody').textContent = 'Loading...';
+m.api.cargar(false);
+m.cfg.alFallar(new Error('No connection.'));
+ok(/No connection/.test(m.elem('anxBody').innerHTML), 'la pagina Analysis dice el error: ' + m.elem('anxBody').innerHTML);
+ok(/No connection/.test(m.elem('asigBody').innerHTML), 'y la tarjeta del escritorio tambien');
+ok(m.elem('anxPerfilBody').innerHTML === '', 'y el perfil deja de decir "Loading..."');
+ok(m.api.cargado() === false, 'y queda para reintentar');
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

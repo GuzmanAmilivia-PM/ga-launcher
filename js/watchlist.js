@@ -53,10 +53,17 @@ function cargarWatchlist(forzar) {
   }).withFailureHandler(function (err) {
     wlCargando = false;
     // Con cache pintado, un fallo de red no borra la lista.
-    if (!(wlData && wlData.items)) errorEnVista('wlAviso', err, 'the watchlist');
+    if (!(wlData && wlData.items)) { sinCargando(); errorEnVista('wlAviso', err, 'the watchlist'); }
   }).getWatchlist();
   function errorTexto(msj) {
+    if (!(wlData && wlData.items)) sinCargando();
     document.getElementById('wlAviso').innerHTML = '<div class="tmsg err">' + esc(msj) + '</div>';
+  }
+  // Sin lista que mostrar, el "Loading..." de abajo se va y queda el error de
+  // arriba (24/09/2026, auditoria A15): antes quedaban los dos.
+  function sinCargando() {
+    var body = document.getElementById('wlBody');
+    if (body && /Loading/.test(body.textContent || '')) body.innerHTML = '';
   }
 }
 document.getElementById('wlRefreshBtn').onclick = function () { cargarWatchlist(true); };

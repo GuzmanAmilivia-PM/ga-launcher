@@ -29,7 +29,16 @@ renderAnalisis(r);
 renderAnalisisDetalle(r);
 renderAsignacionTablero(r);   // la tarjeta del tablero, solo visible en escritorio
 },
-alFallar: function () { anaCargado = false; },
+// Las otras pantallas que pinta esta carga tambien dicen que fallo
+// (24/09/2026, auditoria A15): la pagina Analysis y la tarjeta del escritorio
+// se quedaban en "Analyzing..." / "Loading..." para siempre.
+alFallar: function (err) {
+anaCargado = false;
+var txt = '<p class="newsempty">' + esc(msgErr(err, 'The analysis')) + '</p>';
+['anxBody', 'asigBody'].forEach(function (id) { var el = document.getElementById(id); if (el) el.innerHTML = txt; });
+var perfil = document.getElementById('anxPerfilBody');
+if (perfil && /Loading|Analyzing/.test(perfil.textContent || '')) perfil.innerHTML = '';
+},
 pedir: function (ok, fail) {
 google.script.run.withSuccessHandler(ok).withFailureHandler(fail).getAnalisis({ forzar: !!forzar });
 }
@@ -374,7 +383,9 @@ return '<div class="anxfila"><span>' + esc(label) + '</span><b>' + esc(anaPct(pc
 function renderAsignacionTablero(r) {
   var el = document.getElementById('asigBody');
   if (!el) return;
-  if (!r || !r.ok) { el.innerHTML = '<p class="loadingtxt">Loading...</p>'; return; }
+  if (!r) { el.innerHTML = '<p class="loadingtxt">Loading...</p>'; return; }
+  // Un error del backend se DICE (auditoria A15): antes pintaba "Loading...".
+  if (!r.ok) { el.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>'; return; }
 
   var h = '';
   // El número que vale por todo el gráfico: cuánto pesan las cinco mayores.

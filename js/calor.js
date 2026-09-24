@@ -110,7 +110,12 @@ if (!el) return;
 // no descuenta nada y un deposito volveria a pintar el mes de verde. Es la
 // guarda del "pp vs S&P" y de la tarjeta del año; la lista llega sola al
 // abrir (arranque.js) y renderAportes vuelve a llamar aca.
-if (!aportesCargados) { el.innerHTML = '<p class="newsempty">Loading your deposits&hellip;</p>'; return; }
+if (!aportesCargados) {
+  el.innerHTML = '<p class="newsempty">' + (aportesFallo
+    ? 'Your deposits could not be loaded, so the months cannot be shown without them yet.'
+    : 'Loading your deposits&hellip;') + '</p>';
+  return;
+}
 var filas = mapaCalorMensual(fullSerie || []);
 if (!filas.length) { el.innerHTML = '<p class="newsempty">With one more month of history, the first month will appear.</p>'; return; }
 var html = '<div class="mc-fila mc-head"><span class="mc-anio"></span>' +

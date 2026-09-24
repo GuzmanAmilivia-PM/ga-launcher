@@ -22,6 +22,13 @@ try {
 // en el CLAUDE.md del repo ga-portfolio-tracker.
 var API_URL = 'https://ga-portfolio-worker.ga-portfolio.workers.dev';
 function getApiToken() { try { return localStorage.getItem('ga_token') || ''; } catch (e) { return ''; } }
+// La clave que el servidor RECHAZO (24/09/2026, auditoria A15): el poll la
+// volvia a mandar cada minuto, sumando al freno por IP; y con la clave vacia
+// (instalacion nueva, o despues de "no puedo entrar") pedia igual, y la
+// pantalla le decia "la clave guardada ya no sirve" a quien nunca habia
+// guardado una. loadData (arranque.js) no sale sin clave ni con la
+// rechazada; escribir una en la pantalla de la clave la libera.
+var claveRechazada = '';
 // hideSplash vive ACA (el primer archivo) y no en arranque.js: seguridad.js
 // la referencia al CARGAR (setTimeout(hideSplash, 700) evalua el nombre en
 // el momento) y con los archivos partidos eso era un ReferenceError que
@@ -92,7 +99,8 @@ function apiCall(fn, args) {
   var vencio = false;
   // El cuerpo se arma ANTES del reloj: si JSON.stringify tirara, apiCall
   // lanzaria de forma sincrona y el temporizador quedaria vivo para siempre.
-  var opciones = { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: getApiToken(), fn: fn, args: args || null }) };
+  var tokenUsado = getApiToken();
+  var opciones = { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: tokenUsado, fn: fn, args: args || null }) };
   var reloj = setTimeout(function () { vencio = true; if (ctrl) ctrl.abort(); }, limite);
   if (ctrl) opciones.signal = ctrl.signal;
   return fetch(API_URL, opciones)
@@ -111,6 +119,7 @@ function apiCall(fn, args) {
     })
     .then(function (j) {
       if (j && j.error === 'auth') {
+        claveRechazada = tokenUsado;
         // Este mensaje aparece cuando la clave GUARDADA dejo de servir (se
         // roto). Decirlo con todas las letras: se confundia con el bloqueo del
         // telefono y parecia que la biometria no habia funcionado.
@@ -189,6 +198,7 @@ document.getElementById('lockBtn').onclick = function () {
   var v = document.getElementById('lockInput').value.trim();
   if (!v) return;
   try { localStorage.setItem('ga_token', v); } catch (e) {}
+  claveRechazada = '';   // escribirla es pedir que se pruebe, aunque sea la misma
   document.getElementById('splashToken').style.display = 'none';
   document.getElementById('lockErr').textContent = '';
   hideSplash();

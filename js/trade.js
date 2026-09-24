@@ -1,7 +1,18 @@
 // Trade, operaciones y noticias
 // ---------- Trade ----------
 var tradeTipo = 'compra';
+// Lo REVISADO es lo que se registra (24/09/2026, auditoria A15): Confirm
+// volvia a leer el formulario, asi que cambiar la cantidad, la cuenta o
+// compra/venta despues de "Review" registraba otra cosa que la que decia el
+// resumen, y sin validar. Review guarda lo que mostro, Confirm manda eso, y
+// tocar el formulario con el resumen abierto lo cierra: hay que revisar de
+// nuevo.
+var tradeRevisado = null;
+function siCambiaElForm() {
+if (tradeRevisado) cerrarConfirm();
+}
 function setTipo(t) {
+if (t !== tradeTipo) siCambiaElForm();
 tradeTipo = t;
 document.getElementById('btnCompra').className = 'tipobtn' + (t === 'compra' ? ' active-compra' : '');
 document.getElementById('btnVenta').className = 'tipobtn' + (t === 'venta' ? ' active-venta' : '');
@@ -50,7 +61,10 @@ el.textContent = 'USD ' + (Math.round(f.qty * f.precio * 100) / 100).toLocaleStr
 }
 ['tQty', 'tPrecio'].forEach(function (id) {
 document.getElementById(id).addEventListener('input', actualizarMonto);
+document.getElementById(id).addEventListener('input', siCambiaElForm);
 });
+document.getElementById('tCuenta').addEventListener('change', siCambiaElForm);
+document.getElementById('tSymbol').addEventListener('input', siCambiaElForm);
 document.getElementById('tSymbol').addEventListener('input', function () {
 // Autocompletar precio con el precio actual conocido de la posición
 if (!lastData) return;
@@ -82,14 +96,17 @@ document.getElementById('tConfirmTxt').innerHTML =
 ' = <b>USD ' + esc(monto.toLocaleString('en-US')) + '</b><br>in ' + esc(nombre) + '. This updates quantity, average price and cash.';
 document.getElementById('tConfirmWrap').style.display = '';
 this.style.display = 'none';
+tradeRevisado = f;
 };
 function cerrarConfirm() {
+tradeRevisado = null;
 document.getElementById('tConfirmWrap').style.display = 'none';
 document.getElementById('tRevisar').style.display = '';
 }
 document.getElementById('tCancelar').onclick = cerrarConfirm;
 document.getElementById('tConfirmar').onclick = function () {
-var f = leerForm();
+var f = tradeRevisado;
+if (!f) { cerrarConfirm(); return; }
 var btn = this;
 btn.disabled = true; btn.textContent = 'Recording...';
 google.script.run.withSuccessHandler(function (res) {

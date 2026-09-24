@@ -172,7 +172,7 @@ ajustarAlturaDeck();
 limpiarMarca(cfg.avisoId);
 // Con datos ya pintados, un fallo de red no borra la pantalla.
 if (cache) { marcaActualizando(cfg.avisoId, cache.t, 'could not update'); return; }
-if (cfg.alFallar) cfg.alFallar();
+if (cfg.alFallar) cfg.alFallar(err);
 document.getElementById(cfg.bodyId).innerHTML =
 '<p class="newsempty">' + esc(msgErr(err, 'This screen')) + '</p>';
 ajustarAlturaDeck();
@@ -219,7 +219,7 @@ ajustarAlturaDeck();
 } catch (e) { try { console.error('aplicarExtras:', e); } catch (e2) {} }
 }
 
-var divChartInstance = null, divDatos = null;
+var divChartInstance = null, divDatos = null, divError = '';
 function cargarDividendos(forzar) {
 divCargado = true;
 cargarConCache({
@@ -233,8 +233,10 @@ limpiar: function () {
 document.getElementById('divDetalle').innerHTML = '';
 document.getElementById('divDetalle').removeAttribute('data-mes');
 },
-render: renderDividendos,
-alFallar: function () { divCargado = false; },
+render: function (r) { divError = ''; renderDividendos(r); },
+// El modal de dividendos tambien dice que fallo (24/09/2026, auditoria A15):
+// se quedaba en "Reading dividends..." mientras estuviera abierto.
+alFallar: function (err) { divCargado = false; divError = msgErr(err, 'The dividends'); if (typeof renderDivModal === 'function') renderDivModal(); },
 pedir: function (ok, fail) {
 google.script.run.withSuccessHandler(ok).withFailureHandler(fail).getDividendos({ forzar: !!forzar });
 }
@@ -511,7 +513,7 @@ document.getElementById('divModalDetalle').removeAttribute('data-mes');
 function renderDivModal() {
 if (document.getElementById('divModal').style.display === 'none') return;
 var brokersBox = document.getElementById('divModalBrokers');
-if (!divDatos) { brokersBox.innerHTML = '<p class="loadingtxt">Reading dividends...</p>'; return; }
+if (!divDatos) { brokersBox.innerHTML = divError ? '<p class="newsempty">' + esc(divError) + '</p>' : '<p class="loadingtxt">Reading dividends...</p>'; return; }
 var r = divDatos;
 var totalAnio = Math.round(((r.totalCobrado || 0) + (r.totalProximo || 0)) * 100) / 100;
 document.getElementById('divModalTotales').innerHTML =
@@ -577,8 +579,11 @@ avisoId: 'apoCacheAviso',
 bodyId: 'apoBody',
 cargando: 'Calculating this year\u2019s contributions...',
 forzar: !!forzar,
-render: renderAportes,
-alFallar: function () { apoCargado = false; },
+render: function (r) { aportesFallo = !(r && r.ok); renderAportes(r); },
+// Sin la lista de aportes el mapa de calor y la nota del grafico decian
+// "Loading your deposits..." para siempre (24/09/2026, auditoria A15):
+// ahora dicen que no se pudo. Se reintenta en el proximo repintado.
+alFallar: function () { apoCargado = false; aportesFallo = true; if (typeof renderMapaCalor === 'function') renderMapaCalor(); },
 pedir: function (ok, fail) {
 google.script.run.withSuccessHandler(ok).withFailureHandler(fail).getAportes();
 }
@@ -695,10 +700,17 @@ return h;
 // (probable billetera Earn fuera de la vista de la clave) NO aplica y avisa.
 // Cualquier fallo es silencioso: queda siempre el camino manual en view-bnb.
 var BNB_AUTO_MIN_MS = 30 * 60 * 1000;
+// El temporizador del aviso OK se guarda (24/09/2026, auditoria A15): un OK
+// que se borra a los 8 s, seguido de un error (la recarga que falla
+// enseguida), borraba el ERROR a los 8 s, y quedaban datos viejos sin aviso.
+// Cada aviso nuevo cancela el temporizador del anterior.
+var avisoInicioTimer = null;
 function avisoInicio(msg, esOk) {
 var el = document.getElementById('autoAviso');
 if (!el) return;
+clearTimeout(avisoInicioTimer);
+avisoInicioTimer = null;
 el.innerHTML = '<div class="tmsg ' + (esOk ? 'ok' : 'err') + '">' + msg + '</div>';
 el.style.display = '';
-if (esOk) setTimeout(function () { el.style.display = 'none'; el.innerHTML = ''; }, 8000);
+if (esOk) avisoInicioTimer = setTimeout(function () { avisoInicioTimer = null; el.style.display = 'none'; el.innerHTML = ''; }, 8000);
 }

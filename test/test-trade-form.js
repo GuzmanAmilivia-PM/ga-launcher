@@ -26,7 +26,11 @@ function montar(respuesta) {
         this.options.push(o);
         if (this.options.length === 1) this._value = o.value;
       },
-      addEventListener: function () {},
+      // Los oyentes se anotan, para poder simular que Guzman toca un campo
+      // (24/09/2026: cambiar el formulario con el resumen abierto lo cierra).
+      _oyentes: {},
+      addEventListener: function (tipo, fn) { (this._oyentes[tipo] = this._oyentes[tipo] || []).push(fn); },
+      disparar: function (tipo) { var self = this; (this._oyentes[tipo] || []).forEach(function (fn) { fn.call(self); }); },
       scrollIntoView: function () {}
     };
     Object.defineProperty(el, 'value', {
@@ -157,6 +161,41 @@ m.elem('tConfirmar').onclick.call(m.elem('tConfirmar'));
 av = m.avisos[m.avisos.length - 1];
 ok(av && /quedo negativo/.test(av.html), 'la advertencia viaja en el aviso: ' + (av && av.html));
 ok(av && av.persistente === true, 'y no se va sola: una advertencia que desaparece antes de leerla no avisa nada');
+
+console.log('\nD3) se registra lo REVISADO, no lo que diga el formulario al tocar Confirm (auditoria A15)');
+// Antes Confirm volvia a leer el formulario: revisar "BUY 3" y cambiar la
+// cantidad a 30 antes de confirmar registraba 30, con el resumen diciendo 3.
+m = montar();
+m.api.buildTradeForm();
+m.elem('tSymbol').value = 'VOO';
+m.elem('tQty').value = '3';
+m.elem('tPrecio').value = '700';
+m.elem('tRevisar').onclick.call(m.elem('tRevisar'));
+// Un cambio que NO dispara evento (autocompletar, un valor puesto por codigo):
+// el resumen sigue abierto, y lo que viaja es lo revisado.
+m.elem('tQty').value = '30';
+m.elem('tConfirmar').onclick.call(m.elem('tConfirmar'));
+ok(m.enviado && m.enviado.qty === 3, 'viaja la cantidad REVISADA (3), no la del campo (' + (m.enviado && m.enviado.qty) + ')');
+// Tocar un campo con el resumen abierto lo cierra: hay que revisar de nuevo.
+['tQty', 'tPrecio', 'tSymbol'].forEach(function (id) {
+  m = montar();
+  m.api.buildTradeForm();
+  m.elem('tSymbol').value = 'VOO'; m.elem('tQty').value = '3'; m.elem('tPrecio').value = '700';
+  m.elem('tRevisar').onclick.call(m.elem('tRevisar'));
+  m.elem(id).disparar('input');
+  ok(m.elem('tConfirmWrap').style.display === 'none' && m.elem('tRevisar').style.display === '', 'escribir en ' + id + ' cierra el resumen');
+  m.elem('tConfirmar').onclick.call(m.elem('tConfirmar'));
+  ok(m.enviado === null, 'y un Confirm que llegue igual no manda nada');
+});
+m = montar();
+m.api.buildTradeForm();
+m.elem('tSymbol').value = 'VOO'; m.elem('tQty').value = '3'; m.elem('tPrecio').value = '700';
+m.elem('tRevisar').onclick.call(m.elem('tRevisar'));
+m.elem('tCuenta').disparar('change');
+ok(m.elem('tConfirmWrap').style.display === 'none', 'cambiar la cuenta cierra el resumen');
+m.elem('tRevisar').onclick.call(m.elem('tRevisar'));
+m.api.setTipo('venta');
+ok(m.elem('tConfirmWrap').style.display === 'none', 'y pasar de compra a venta tambien');
 
 console.log('\nE) el toggle a VENTA viaja como venta (el bug que este arnés vino a impedir)');
 m = montar();

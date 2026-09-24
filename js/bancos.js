@@ -69,13 +69,20 @@ function itauMostrar(e) {
 // Pregunta cómo viene hasta que termine. Se rinde sola: un pedido que nadie
 // toma llega a `sin_respuesta` y ahí corta, en vez de preguntar para siempre.
 function itauSeguir() {
-  itauParar();
+  // Solo el temporizador (24/09/2026, auditoria A15): antes llamaba a
+  // itauParar(), que tambien bajaba itauActivo, y como el boton lo sube y
+  // enseguida llama aca, el refresco al terminar (abajo) no corria nunca.
+  if (itauTimer) { clearTimeout(itauTimer); itauTimer = null; }
   google.script.run.withSuccessHandler(function (e) {
-    if (!document.getElementById('accItau') || document.getElementById('accItau').hidden) return;
+    var caja = document.getElementById('accItau');
+    // Fuera de la pantalla de Itau no se sigue preguntando: seguia cada 3 s
+    // despues de volver al Inicio, hasta que la PC terminara (auditoria A15).
+    if (!caja || caja.hidden || currentView !== 'account') { itauParar(); return; }
     var sigue = itauMostrar(e);
     if (sigue) {
       itauTimer = setTimeout(itauSeguir, ITAU_ESPERA_MS);
     } else if (itauActivo && e && e.estado === 'listo') {
+      itauActivo = false;
       // Terminó bien: que la pantalla muestre el número nuevo, que es el
       // punto de haber apretado.
       // sinItau: esta llamada VIENE de Itau. Sin la bandera, la cadena volveria
@@ -462,6 +469,9 @@ function mostrarBtg() {
   }).withFailureHandler(function (err) {
     if (accPedida !== 'BTG') return;
     document.getElementById('accTotal').textContent = '--';
+    // El "Loading..." de la caja se va: el error lo dice accError (A15).
+    var cajaBtg = document.getElementById('accBtg');
+    if (cajaBtg) cajaBtg.innerHTML = '';
     errorEnVista('accError', err, 'the BTG balances');
   }).getBtg();
 }

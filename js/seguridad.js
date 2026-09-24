@@ -226,6 +226,8 @@ appBloqueada = false;
 // Si mientras estaba bloqueada la API contesto "clave vencida", esa pantalla
 // quedo esperando: se muestra ACA, en la misma pantalla, no encima del logo.
 if (!mostrarLockPendiente()) hideSplash();
+// La sync automatica de Binance espero al desbloqueo (sincronizar.js).
+if (typeof bnbAutoSync === 'function') bnbAutoSync();
 }
 // Intento de biometria. `auto` = disparado solo al abrir la app, sin toque:
 // si ese intento se rechaza NO cuenta como fallo del sensor; queda el boton

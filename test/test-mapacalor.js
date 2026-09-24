@@ -42,10 +42,10 @@ var ctx = {
 };
 var nombres = Object.keys(ctx);
 var fn = new Function(nombres.join(','),
-  'var aportesLista = [], aportesDesde = null, aportesCargados = true;\n' + piezas + '\n' + codigo +
+  'var aportesLista = [], aportesDesde = null, aportesCargados = true, aportesFallo = false;\n' + piezas + '\n' + codigo +
   '\nreturn { mapaCalorMensual: mapaCalorMensual, celdaCalor: celdaCalor, renderMapaCalor: renderMapaCalor,' +
   ' setSerie: function (s) { fullSerie = s; },' +
-  ' setAportes: function (lista, desde, cargados) { aportesLista = lista || []; aportesDesde = desde === undefined ? null : desde; aportesCargados = cargados !== false; } };');
+  ' setAportes: function (lista, desde, cargados) { aportesLista = lista || []; aportesDesde = desde === undefined ? null : desde; aportesCargados = cargados !== false; }, setFallo: function (v) { aportesFallo = v; } };');
 var api = fn.apply(null, nombres.map(function (n) { return ctx[n]; }));
 
 function punto(y, m, d, valor) { return { fecha: new Date(y, m - 1, d).getTime(), valor: valor }; }
@@ -141,6 +141,13 @@ api.setSerie(serie);
 api.renderMapaCalor();
 ok(/Loading your deposits/.test(elMapa.innerHTML) && elMapa.innerHTML.indexOf('mc-fila') === -1,
   'sin la lista de aportes cargada no dibuja los crudos: dice que la espera');
+// Si el pedido FALLO, no se queda en "Loading..." para siempre (24/09/2026,
+// auditoria A15): dice que no se pudo.
+api.setFallo(true);
+api.renderMapaCalor();
+ok(/could not be loaded/.test(elMapa.innerHTML) && !/Loading/.test(elMapa.innerHTML) && elMapa.innerHTML.indexOf('mc-fila') === -1,
+  'con el pedido de aportes fallido lo dice, y tampoco dibuja los crudos: ' + elMapa.innerHTML);
+api.setFallo(false);
 api.setAportes([], null, true);
 api.renderMapaCalor();
 ok(elMapa.innerHTML.indexOf('mc-head') !== -1, 'cargada (aunque vacia: no hubo aportes) se dibuja, con la cabecera');

@@ -29,6 +29,11 @@ alOk(r2);
 }, function () { fin(); alError('could not read balances from the phone.'); });
 }
 function bnbAutoSync() {
+// Con la app BLOQUEADA no (24/09/2026, auditoria A15): leia Binance con la
+// clave guardada en el telefono y escribia en el backend detras de Face ID,
+// y el "Binance synced" se iba sin que nadie lo viera. Corre al desbloquear
+// (abrir, en seguridad.js).
+if (appBloqueada) return;
 if (!bnbConfig() || !getApiToken() || syncEnCurso()) return;
 var ts = 0;
 try { ts = parseInt(localStorage.getItem('ga_bnb_auto_ts') || '0', 10) || 0; } catch (e) {}

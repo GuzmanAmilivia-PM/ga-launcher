@@ -46,11 +46,13 @@ function montar(respuesta) {
     document: { getElementById: function () { return { style: {}, textContent: '' }; } },
     window: {},
     API_URL: 'https://ejemplo/exec',
-    getApiToken: function () { return 'token-de-prueba'; }
+    getApiToken: function () { return 'token-de-prueba'; },
+    claveRechazada: ''
   };
   var nombres = Object.keys(ctx);
-  var fn = new Function(nombres.join(','), codigo + '\nreturn window.google.script.run;');
+  var fn = new Function(nombres.join(','), codigo + '\nwindow.__rechazada = function () { return claveRechazada; };\nreturn window.google.script.run;');
   estado.run = fn.apply(null, nombres.map(function (n) { return ctx[n]; }));
+  estado.rechazada = ctx.window.__rechazada;
   return estado;
 }
 
@@ -61,7 +63,7 @@ function correr(respuesta) {
        .withFailureHandler(function (e) { res.fallo = e; })
        .getPortfolioData();
   return new Promise(function (r) {
-    setTimeout(function () { res.lockMostrado = m.lockMostrado; res.lockMsg = m.lockMsg; r(res); }, 50);
+    setTimeout(function () { res.lockMostrado = m.lockMostrado; res.lockMsg = m.lockMsg; res.rechazada = m.rechazada(); r(res); }, 50);
   });
 }
 
@@ -77,6 +79,7 @@ function correr(respuesta) {
   ok(r.fallo !== null, 'AHORA sí llama al handler de fallo (antes no, y todo quedaba trabado)');
   ok(r.fallo && r.fallo.auth === true, 'el error viene marcado como de clave');
   ok(r.fallo && /passcode/i.test(r.fallo.message), 'el mensaje es entendible, no dice "auth"');
+  ok(r.rechazada === 'token-de-prueba', 'y anota la clave rechazada: el poll no la vuelve a mandar (auditoria A15)');
 
   console.log('\nC) el servidor devuelve HTML en vez de JSON');
   r = await correr({ body: '<!DOCTYPE html><html><body>Se excedio la cuota</body></html>' });

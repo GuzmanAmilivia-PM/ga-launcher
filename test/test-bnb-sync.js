@@ -29,6 +29,7 @@ function montar(cfg) {
     bnbConfig: function () { return cfg.configurado === false ? null : { key: 'k', secret: 's' }; },
     getApiToken: function () { return cfg.sinToken ? '' : 'tok'; },
     syncEnCurso: function () { return !!cfg.ocupado; },
+    appBloqueada: !!cfg.bloqueada,
     loadData: function () { estado.loadData++; },
     avisoInicio: function (m, esOk) { estado.avisos.push({ msg: m, ok: !!esOk }); },
     BNB_AUTO_MIN_MS: 30 * 60 * 1000,
@@ -170,6 +171,13 @@ var CERRADAS2 = { ok: true, cambios: [{ tipo: 'cerrada' }, { tipo: 'cerrada' }] 
   m.api.bnbAutoSync();
   await esperar();
   ok(m.llamadas.length === 0, 'sin clave de la API no intenta');
+
+  console.log('\nI) con la app BLOQUEADA (Face ID / PIN a la vista) la sync automatica no arranca (auditoria A15)');
+  m = montar({ dry: CAMBIO, apply: CAMBIO, bloqueada: true });
+  m.api.bnbAutoSync();
+  await esperar();
+  ok(m.llamadas.length === 0, 'no lee Binance ni escribe en el backend detras del bloqueo');
+  ok(!m.guardado['ga_bnb_auto_ts'], 'y no gasta su turno de 30 minutos: corre al desbloquear');
 
   console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
   process.exit(fallos ? 1 : 0);

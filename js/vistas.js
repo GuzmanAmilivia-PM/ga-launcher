@@ -265,6 +265,9 @@ var vistaAnterior = currentView;
 // lo que el historial guarda para devolverte ahi al volver.
 var scrollAnterior = window.scrollY || 0;
 currentView = name;
+// Salir de una cuenta corta el seguimiento de Itau (bancos.js), que si no
+// seguia preguntando cada 3 s desde el Inicio (auditoria A15).
+if (vistaAnterior === 'account' && name !== 'account' && typeof itauParar === 'function') itauParar();
 VIEWS.forEach(function (v) {
 var el = document.getElementById('view-' + v);
 if (!el) return;

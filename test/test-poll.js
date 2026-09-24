@@ -23,7 +23,10 @@ function ok(cond, msg) {
 // parece reciente y el arranque pediría lite cuando no corresponde.
 var AHORA0 = 100000000;
 function montar(cfg) {
-  var estado = { renders: [], pedidos: [], guardados: [], ahora: AHORA0 };
+  // La clave: vacia o no DURANTE la carga del archivo segun cfg.token (ver
+  // abajo); despues del arranque hay clave, salvo cfg.sinClave. loadData no
+  // sale sin clave (24/09/2026).
+  var estado = { renders: [], pedidos: [], guardados: [], ahora: AHORA0, token: cfg.token ? 'tok' : '' };
   function elemento() {
     var e = { style: {}, innerHTML: '', textContent: '', classList: { add: function () {}, contains: function () { return true; }, toggle: function () {} }, addEventListener: function () {}, appendChild: function () {}, onclick: null };
     return e;
@@ -49,11 +52,12 @@ function montar(cfg) {
     // Vacio POR DEFECTO: arranque.js dispara un loadData() propio al cargar si
     // hay token, y esa llamada fantasma desordenaba las respuestas del mock.
     // Con cfg.token la llamada del arranque es EL objeto del test (lite-first).
-    getApiToken: function () { return cfg.token ? 'tok' : ''; },
+    getApiToken: function () { return estado.token; },
+    claveRechazada: '',
     mostrarLock: function () {},
     hideSplash: function () {},
     pintarBadges: function () {},
-    avisoInicio: function () {},
+    avisoInicio: function (m) { (estado.avisos = estado.avisos || []).push(m); },
     cacheLeer: function () { return cfg.cache || null; },
     cacheGuardar: function (k, d) { estado.guardados.push(d); },
     pintarOjo: function () {},
@@ -75,7 +79,11 @@ function montar(cfg) {
               getPortfolioData: function (args) {
                 estado.pedidos.push(args);
                 var r = cfg.respuestas.shift();
-                if (r) setImmediate(function () { oks.forEach(function (f) { f(r); }); });
+                // cfg.demoras: cuanto tarda cada respuesta, en orden de pedido
+                // (para que una vieja llegue DESPUES que una nueva).
+                var demora = (cfg.demoras || [])[estado.pedidos.length - 1] || 0;
+                if (r && r.__falla) { setTimeout(function () { fails.forEach(function (f) { f(r.__falla); }); }, demora); return; }
+                if (r) setTimeout(function () { oks.forEach(function (f) { f(r); }); }, demora);
               }
             };
             return api;
@@ -102,6 +110,10 @@ function montar(cfg) {
     // se declarara un parametro llamado 2026 — y ahi el new Function ni
     // compila, con un error que no dice nada de comentarios. Paso el 02/09.
     if (/^[0-9]/.test(nom)) continue;
+    // Las funciones propias de JavaScript tampoco (24/09/2026): `Number(x)`
+    // en arranque.js se volvia un stub que devolvia undefined, y el arranque
+    // lite-first "fallaba" por el arnes, no por el codigo.
+    if (/^(Number|String|Boolean|Math|Object|Array|JSON|Date|RegExp|Error|Promise|parseInt|parseFloat|isFinite|isNaN|encodeURIComponent|decodeURIComponent)$/.test(nom)) continue;
     if (!(nom in ctx) && !propias[nom] && !/^(if|for|while|switch|catch|function|return|typeof|new)$/.test(nom)) {
       ctx[nom] = function () {};
     }
@@ -111,9 +123,10 @@ function montar(cfg) {
   // evaluarlo, conservando lo unico que el poll necesita del real
   // (fullSerie = data.serie) y registrando la llamada para los asserts.
   var fn = new Function(nombres.join(','), codigo +
-    '\nrender = function (d) { fullSerie = (d && d.serie) || fullSerie; __hookRender(d); };' +
-    '\nreturn { loadData: loadData, mercadoAbierto: mercadoAbierto };');
+    '\nrender = function (d) { lastData = d; fullSerie = (d && d.serie) || fullSerie; __hookRender(d); };' +
+    '\nreturn { loadData: loadData, mercadoAbierto: mercadoAbierto, rechazarClave: function (v) { claveRechazada = v; } };');
   estado.api = fn.apply(null, nombres.map(function (n) { return ctx[n]; }));
+  estado.token = cfg.sinClave ? '' : 'tok';
   return estado;
 }
 
@@ -181,16 +194,34 @@ var LITE_CAMBIO = { total: 111, cuentas: [{ nombre: 'CS', valor: 111 }], liquide
 
   console.log('\nG) arranque lite-first: cache fresco y completo -> el primer pedido es lite');
   var CACHE_FULL = { total: 100, cuentas: [{ nombre: 'CS', valor: 100 }], serie: [1, 2, 3], bench: { valores: [7, 8, 9] }, serieGrupo: { valores: [4, 5, 6] }, liquidez: 5, actualizado: 'c0' };
-  m = montar({ token: true, cache: { t: AHORA0 - 5 * 60 * 1000, data: Object.assign({}, CACHE_FULL) }, respuestas: [Object.assign({}, LITE_CAMBIO)] });
+  m = montar({ token: true, cache: { t: AHORA0 - 5 * 60 * 1000, data: Object.assign({ _completaMs: AHORA0 - 5 * 60 * 1000 }, CACHE_FULL) }, respuestas: [Object.assign({}, LITE_CAMBIO)] });
   await esperar();
   ok(m.pedidos.length === 1 && m.pedidos[0] && m.pedidos[0].lite === true, 'con cache de 5 min el arranque pide {lite:true}');
   ok(m.renders.length >= 1 && m.guardados.length === 1 && m.guardados[0].serie.length === 3, 'la respuesta lite hereda la serie del cache y se guarda');
   ok(!!m.guardados[0].bench && !!m.guardados[0].serieGrupo, 'bench y serieGrupo se re-adjuntan: el cache queda completo para el proximo arranque');
 
   console.log('\nH) cache viejo (>30 min): el arranque pide completo, como siempre');
-  m = montar({ token: true, cache: { t: AHORA0 - 31 * 60 * 1000, data: Object.assign({}, CACHE_FULL) }, respuestas: [Object.assign({}, COMPLETO)] });
+  m = montar({ token: true, cache: { t: AHORA0 - 31 * 60 * 1000, data: Object.assign({ _completaMs: AHORA0 - 31 * 60 * 1000 }, CACHE_FULL) }, respuestas: [Object.assign({}, COMPLETO)] });
   await esperar();
   ok(m.pedidos.length === 1 && m.pedidos[0] === null, 'primer pedido completo (args null): el grafico no se queda viejo');
+
+  console.log('\nH2) guardado hace 5 min por un poll LITE, pero la ultima COMPLETA fue hace 40: completo (auditoria A14)');
+  // Las respuestas lite tambien se guardan. Con la hora del guardado, cada
+  // reapertura dentro de los 30 min reiniciaba el reloj y la completa se
+  // postergaba sin fin: el punto de hoy de la serie no llegaba nunca.
+  m = montar({ token: true, cache: { t: AHORA0 - 5 * 60 * 1000, data: Object.assign({ _completaMs: AHORA0 - 40 * 60 * 1000 }, CACHE_FULL) }, respuestas: [Object.assign({}, COMPLETO)] });
+  await esperar();
+  ok(m.pedidos.length === 1 && m.pedidos[0] === null, 'manda la hora de la ultima completa, no la del ultimo guardado');
+  m = montar({ token: true, cache: { t: AHORA0 - 5 * 60 * 1000, data: Object.assign({}, CACHE_FULL) }, respuestas: [Object.assign({}, COMPLETO)] });
+  await esperar();
+  ok(m.pedidos.length === 1 && m.pedidos[0] === null, 'un cache de antes de este arreglo (sin la hora de la completa) carga completo');
+  m = montar({ respuestas: [Object.assign({}, COMPLETO), Object.assign({}, LITE_CAMBIO)] });
+  m.api.loadData();
+  await esperar();
+  m.ahora += 60000;
+  m.api.loadData();
+  await esperar();
+  ok(m.guardados.length === 2 && m.guardados[1]._completaMs === AHORA0, 'un guardado lite lleva la hora de la ultima COMPLETA, no la suya: ' + m.guardados[1]._completaMs);
 
   console.log('\nI) cache fresco pero sin bench/serieGrupo (anterior a v63): completo, conservador');
   m = montar({ token: true, cache: { t: AHORA0 - 5 * 60 * 1000, data: { total: 100, cuentas: [{ nombre: 'CS', valor: 100 }], serie: [1, 2, 3], liquidez: 5, actualizado: 'c2', lite: true } }, respuestas: [Object.assign({}, COMPLETO)] });
@@ -201,6 +232,48 @@ var LITE_CAMBIO = { total: 111, cuentas: [{ nombre: 'CS', valor: 111 }], liquide
   m = montar({ token: true, respuestas: [Object.assign({}, COMPLETO)] });
   await esperar();
   ok(m.pedidos.length === 1 && m.pedidos[0] === null, 'sin cache local, completo');
+
+  console.log('\nK) sin clave, o con la que el servidor rechazo, no se pide nada (auditoria A15)');
+  m = montar({ sinClave: true, respuestas: [Object.assign({}, COMPLETO)] });
+  m.api.loadData();
+  await esperar();
+  ok(m.pedidos.length === 0, 'sin clave el poll no sale (y la pantalla no dice "la clave guardada ya no sirve" a quien no guardo ninguna)');
+  m.api.rechazarClave('una-vieja');   // habia una rechazada y despues se borro la clave
+  m.api.loadData();
+  await esperar();
+  ok(m.pedidos.length === 0, 'tampoco cuando la rechazada era otra y ahora no hay ninguna');
+  m = montar({ respuestas: [Object.assign({}, COMPLETO), Object.assign({}, COMPLETO)] });
+  m.api.rechazarClave('tok');           // lo que hace apiCall con un {error:'auth'}
+  m.api.loadData();
+  await esperar();
+  ok(m.pedidos.length === 0, 'con la clave rechazada no se vuelve a mandar cada minuto (sumaba al freno por IP)');
+  m.token = 'tok-nueva';
+  m.api.loadData();
+  await esperar();
+  ok(m.pedidos.length === 1 && m.renders.length === 1, 'con una clave nueva vuelve a pedir');
+
+  console.log('\nL) una respuesta VIEJA que llega tarde no pisa a una nueva (auditoria A14)');
+  // El poll sale, Guzman registra una compra, la recarga de la compra pinta
+  // los numeros nuevos... y la respuesta del poll, que salio antes, llegaba
+  // despues y pintaba (y guardaba) la posicion y el cash de antes.
+  var VIEJO = Object.assign({}, COMPLETO, { total: 100, actualizado: 'antes' });
+  var NUEVO = Object.assign({}, COMPLETO, { total: 150, actualizado: 'despues' });
+  m = montar({ respuestas: [VIEJO, NUEVO], demoras: [40, 5] });
+  m.api.loadData();                     // el poll (tarda 40 ms)
+  m.api.loadData();                     // la recarga de la compra (tarda 5)
+  await esperar();
+  ok(m.renders.length === 1 && m.renders[0].total === 150, 'se pinta la nueva y la vieja se descarta: ' + m.renders.map(function (d) { return d.total; }).join(','));
+  ok(m.guardados.length === 1 && m.guardados[0].total === 150, 'y el cache queda con la nueva');
+  m = montar({ respuestas: [VIEJO, NUEVO], demoras: [5, 10] });
+  m.api.loadData();
+  m.api.loadData();
+  await esperar();
+  ok(m.renders.length === 2 && m.renders[1].total === 150, 'en orden, las dos se pintan como siempre');
+  m = montar({ respuestas: [{ __falla: { message: 'Could not reach the server' } }, NUEVO], demoras: [40, 5] });
+  m.api.loadData();
+  m.api.loadData();
+  await esperar();
+  ok(m.renders.length === 1 && m.renders[0].total === 150 && !(m.avisos || []).length, 'un fallo VIEJO tampoco tapa datos nuevos con un aviso de error: ' + JSON.stringify(m.avisos || []));
 
   console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
   process.exit(fallos ? 1 : 0);

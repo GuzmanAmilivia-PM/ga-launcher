@@ -388,7 +388,9 @@ function pintarNotaEvo(nota, r) {
     nota.innerHTML = '<span class="rendlin"></span>your portfolio, without deposits ' +
       '<span class="rendlin rendlin-idx"></span>' + idx + ' (dividends reinvested)';
   } else if (r.sinDatos === 'aportes') {
-    nota.textContent = 'Loading your deposits to separate them from the return…';
+    nota.textContent = aportesFallo
+      ? 'Your deposits could not be loaded, so the return cannot be separated from them yet.'
+      : 'Loading your deposits to separate them from the return…';
   } else if (r.sinDatos === 'rango') {
     nota.textContent = 'Deposits are known back to ' + new Date(r.desde).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
       ': pick a shorter range to compare without them.';
@@ -694,6 +696,9 @@ var aportesDesde = null;   // ms; hasta donde ATRAS es confiable la lista
 // de Aportes. Esta bandera hace que la tarjeta del año no se dibuje hasta
 // saberlo de verdad.
 var aportesCargados = false;
+// La lista de aportes se pidio y FALLO (24/09/2026, auditoria A15): no es lo
+// mismo que "todavia no llego", y la pantalla lo dice distinto.
+var aportesFallo = false;
 
 // 'yyyy-mm-dd' -> ms de la medianoche LOCAL. new Date('2025-03-10') parsea en
 // UTC y en Montevideo caeria el dia anterior.

@@ -438,6 +438,18 @@ function falla(nombre) { return function () { var e = new Error('x'); e.name = n
   r8.ctx.__hideSplash();
   ok(r8.el('splash').classList.contains('hide') === true, 'el splash se oculta');
 
+  console.log('\nI) la sync automatica de Binance corre AL DESBLOQUEAR, no detras del bloqueo (auditoria A15)');
+  var llamadasBnb = [];
+  var r9 = montar({ ga_token: 'tk', ga_sec: SEC_BIO }, okBio, true, function (ctx) {
+    ctx.bnbAutoSync = function () { llamadasBnb.push(ctx.__estado().appBloqueada); };
+  });
+  ok(llamadasBnb.length === 0, 'con el bloqueo a la vista no se llamo');
+  await tick();
+  r9.correrTimers();
+  await tick();
+  ok(r9.estado().appBloqueada === false, 'entro con Face ID');
+  ok(llamadasBnb.length === 1 && llamadasBnb[0] === false, 'y al entrar se llamo una vez, ya desbloqueada: ' + JSON.stringify(llamadasBnb));
+
   console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
   process.exit(fallos ? 1 : 0);
 })();

@@ -50,9 +50,15 @@ function pintarCache() {
   // usa la serie que ya se pinto. La completa llega sola cuando el cache
   // cumpla los 30 min. Sin bench o sin serieGrupo no se arriesga: carga
   // completa como siempre (un cache anterior a v63 no los guardaba).
-  if (c.t && (Date.now() - c.t) < CARGA_COMPLETA_MS &&
+  // La hora es la de la ultima carga COMPLETA (`_completaMs`), no la del
+  // ultimo guardado (24/09/2026, auditoria A14): las respuestas lite tambien
+  // se guardan, y con `c.t` cada reapertura dentro de los 30 min reiniciaba
+  // el reloj — la completa (el punto de hoy de la serie, los extras) se podia
+  // postergar sin fin. Un cache sin el campo carga completa, como antes de v63.
+  var tCompleta = Number(c.data._completaMs) || 0;
+  if (tCompleta && (Date.now() - tCompleta) < CARGA_COMPLETA_MS &&
       c.data.serie && c.data.serie.length && c.data.bench && c.data.serieGrupo) {
-    ultimaCargaCompleta = c.t;
+    ultimaCargaCompleta = tCompleta;
   }
   pintarBadges('cache');
   return true;
@@ -201,7 +207,7 @@ bnbAutoSync();
         return '[' + v.map(function (x) { return estable(x, false); }).join(',') + ']';
       }
       return '{' + Object.keys(v).sort().filter(function (k) {
-        if (k === 'actualizado' || k === 'lite') return false;
+        if (k === 'actualizado' || k === 'lite' || k === '_completaMs') return false;
         // extras (R1) tampoco entra: solo viaja en cargas completas (que
         // repintan siempre) y serializarlo en cada poll seria puro CPU.
         if (esRaiz && (k === 'serie' || k === 'bench' || k === 'serieGrupo' || k === 'extras')) return false;
@@ -218,12 +224,23 @@ bnbAutoSync();
     datosActualizando = false;
     pintarHoraDato(lastData && lastData.actualizado);
   }
+  // El orden de las respuestas (24/09/2026, auditoria A14): loadData tiene una
+  // docena de llamadores y ninguna guarda. Un poll que salio ANTES de una
+  // compra y volvia DESPUES pintaba la posicion y el cash de antes de la
+  // compra, y los guardaba. Cada pedido lleva su numero: una respuesta mas
+  // vieja que la ultima aceptada se descarta, y la marca "updating" la apaga
+  // solo el pedido mas nuevo.
+  var cargaSeq = 0, cargaAceptada = 0;
   function loadData(){
+    var tok = getApiToken();
+    if (!tok || tok === claveRechazada) return;   // ver claveRechazada (nucleo.js)
+    var mio = ++cargaSeq;
     var completa = !fullSerie || !fullSerie.length || (Date.now() - ultimaCargaCompleta > CARGA_COMPLETA_MS);
     datosActualizando = true;
     pintarHoraDato(lastData && lastData.actualizado);
     google.script.run.withFailureHandler(function(err){
-      finActualizando();
+      if (mio === cargaSeq) finActualizando();
+      if (mio < cargaAceptada) return;   // ya hay algo mas nuevo en pantalla
       // OJO con el orden: cuando el servidor rechaza la clave, apiCall ya
       // llamo a mostrarLock() y la pantalla para escribir la clave nueva
       // ESTA arriba. Un hideSplash() aca la tapaba de inmediato, asi que
@@ -252,8 +269,10 @@ bnbAutoSync();
       }
       var t=document.getElementById('total'); if(t){ t.textContent='ERR: '+err.message; }
     }).withSuccessHandler(function(data){
-      finActualizando();
+      if (mio === cargaSeq) finActualizando();
       if (!data) return;
+      if (mio < cargaAceptada) return;   // una respuesta vieja que llego tarde
+      cargaAceptada = mio;
       var vinoSerie = !!(data.serie && data.serie.length);
       if (vinoSerie) ultimaCargaCompleta = Date.now();
       else {
@@ -293,6 +312,7 @@ bnbAutoSync();
       var h = huellaDatos(data);
       if (h === ultimaHuella && !vinoSerie) return;
       ultimaHuella = h;
+      data._completaMs = ultimaCargaCompleta;   // ver pintarCache
       cacheGuardar('ga_cache_data', data);
       render(data);
     }).getPortfolioData(completa ? null : { lite: true });
