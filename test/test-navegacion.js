@@ -137,6 +137,13 @@ m.timers(); m.h.__resolver();
 ok(m.vista() === 'diseno' && m.estado().v === 'diseno' && !m.estado().menu && m.estado().p === 1, 'el tile Settings ocupa el paso del menu: ' + JSON.stringify(m.estado()));
 m.h.back(); m.h.__resolver();
 ok(m.vista() === 'inicio' && m.h.__indice() === 0, 'y volver desde Settings deja el Inicio, no el menu');
+// El velo de atras (A11, 24/09/2026): aparece con el menu y tocarlo lo cierra.
+m = montar();
+var velo = m.el('menuVelo');
+m.g.toggleMenu(true);
+ok(velo.hidden === false, 'con el menu abierto, el velo de atras esta');
+velo.onclick();
+ok(!m.el('menuPanel').classList.contains('open') && velo.hidden === true, 'tocar el velo cierra el menu y el velo se va');
 // Cerrado con su flecha (o al terminar el Sync): el paso se saca solo.
 m.g.toggleMenu(true);
 m.g.toggleMenu(false);

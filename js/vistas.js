@@ -148,6 +148,11 @@ e.innerHTML = '&#9888; No connection';
 }
 function toggleMenu(open) {
 document.getElementById('menuPanel').classList.toggle('open', open);
+// El velo de atras (24/09/2026, auditoria A11): en una pantalla ancha el menu
+// es un cajon de 380 px y no la pantalla entera; tocar afuera lo cierra. En
+// el telefono el velo no se ve (el panel lo tapa todo, estilos.css).
+var velo = document.getElementById('menuVelo');
+if (velo) { velo.hidden = !open; velo.onclick = function () { toggleMenu(false); }; }
 // El menu abierto es un paso del historial (24/09/2026): el gesto de volver
 // lo cierra. Ver "El historial" mas abajo.
 if (open) navAbrioMenu();

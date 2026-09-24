@@ -203,5 +203,11 @@ ok(!/en tus 5 mayores|Por clase|Por sector|Medido sobre/.test(bloqueAsig),
 ok(/in your top 5/.test(bloqueAsig) && /looking inside your ETFs/.test(bloqueAsig),
   'y se lee lo que hace: mira DENTRO de los ETFs');
 
+console.log('\nZ) el menu en pantalla ancha: un cajon, no la pantalla entera (auditoria A11, 24/09/2026)');
+ok(/\.menupanel\s*\{[^}]*width:\s*380px/.test(bloque) && /\.menupanel\s*\{[^}]*right:\s*auto/.test(bloque),
+  'en el @media de escritorio el menu mide 380 px y se suelta del borde derecho');
+ok(/\.menu-velo:not\(\[hidden\]\)\s*\{[^}]*display:\s*block/.test(bloque), 'y tiene un velo detras');
+ok(/\.menu-velo\s*\{\s*display:\s*none/.test(html.replace(bloque, '')), 'que en el telefono no existe (el panel lo tapa todo)');
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);
