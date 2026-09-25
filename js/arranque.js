@@ -222,7 +222,7 @@ bnbAutoSync();
   // se prende al salir y se apaga con la respuesta, buena o mala.
   function finActualizando() {
     datosActualizando = false;
-    pintarHoraDato(lastData && lastData.actualizado);
+    pintarHoraDato(lastData);
   }
   // El orden de las respuestas (24/09/2026, auditoria A14): loadData tiene una
   // docena de llamadores y ninguna guarda. Un poll que salio ANTES de una
@@ -237,7 +237,7 @@ bnbAutoSync();
     var mio = ++cargaSeq;
     var completa = !fullSerie || !fullSerie.length || (Date.now() - ultimaCargaCompleta > CARGA_COMPLETA_MS);
     datosActualizando = true;
-    pintarHoraDato(lastData && lastData.actualizado);
+    pintarHoraDato(lastData);
     google.script.run.withFailureHandler(function(err){
       if (mio === cargaSeq) finActualizando();
       if (mio < cargaAceptada) return;   // ya hay algo mas nuevo en pantalla

@@ -223,9 +223,15 @@ function textoHoraDato(ms, actualizando, ahora) {
   if (actualizando && viejo) partes.push('updating…');
   return partes.length ? '· ' + partes.join(' · ') : '';
 }
-function pintarHoraDato(ms) {
+// La hora que se muestra es la de los PRECIOS (25/09/2026): la primera
+// apertura con el mercado abierto puede venir con los del vigia de hasta 20
+// min (preciosDesde, Datos.js del Worker) y el precio en vivo llega en el
+// sondeo siguiente. Mientras tanto dice esa hora y "updating", haya o no un
+// pedido en camino.
+function horaDeLosDatos(d) { return d ? (d.preciosDesde || d.actualizado) : null; }
+function pintarHoraDato(d) {
   var hora = document.getElementById('hoyHora');
-  if (hora) hora.textContent = textoHoraDato(ms, datosActualizando);
+  if (hora) hora.textContent = textoHoraDato(horaDeLosDatos(d), datosActualizando || !!(d && d.preciosDesde));
 }
 function pintarHoy(data) {
   var linea = document.getElementById('hoyLinea');
@@ -234,7 +240,7 @@ function pintarHoy(data) {
   var pct = document.getElementById('hoyPct');
   var nota = document.getElementById('hoyNota');
   var k = calcularKpis(data);
-  pintarHoraDato(data && data.actualizado);
+  pintarHoraDato(data);
   linea.hidden = false;
   if (k.diaUsd === null) {
     val.textContent = '—'; val.className = '';

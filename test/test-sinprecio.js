@@ -260,6 +260,14 @@ ok(mh.api.textoHoraDato(ahoraH - 30000, true, ahoraH).indexOf('updating') === -1
 ok(mh.api.textoHoraDato(null, true, ahoraH) === '· updating…', 'sin ningun dato todavia, solo "updating"');
 ok(mh.api.textoHoraDato(null, false, ahoraH) === '', 'y sin pedido, nada');
 ok(mh.api.VIEJO === 2 * 60000, 'el umbral es de dos minutos');
+// Los precios del vigia en la primera apertura (25/09/2026): la hora es la de
+// los precios, no la del armado, y dice "updating" aunque no haya un pedido
+// en camino (el precio en vivo llega en el sondeo siguiente).
+var tPrecios = Date.now() - 10 * 60000;
+mh.api.pintarHoy({ total: 10000, actualizado: Date.now(), preciosDesde: tPrecios, posiciones: [{ symbol: 'A', tipo: 'accion', valor: 1000, cambioDia: 10 }] });
+ok(mh.els.hoyHora.textContent === '· ' + mh.api.horaDelDato(tPrecios) + ' · updating…', 'con preciosDesde: su hora y updating: ' + mh.els.hoyHora.textContent);
+mh.api.pintarHoy({ total: 10000, actualizado: Date.now(), preciosDesde: null, posiciones: [{ symbol: 'A', tipo: 'accion', valor: 1000, cambioDia: 10 }] });
+ok(mh.els.hoyHora.textContent.indexOf('updating') === -1, 'con los precios en vivo, la marca se va sola');
 
 // El renglon esta en el Inicio ARRIBA de Cash, lo pinta render(), y en
 // escritorio se apaga (la tira ya lo muestra). ALCANCE: mira el codigo
