@@ -1,6 +1,6 @@
 // Service worker: cachea el "cascarón" de la app para carga instantánea.
 // Los datos (POST a la API) nunca se cachean.
-var CACHE = 'ga-pwa-v242';
+var CACHE = 'ga-pwa-v243';
 // './' y NO también './index.html' (24/09/2026): son la misma página, y con
 // las dos cada versión nueva la bajaba dos veces (50 KB de más). Quien pida
 // index.html por su nombre recibe './' (ver el fetch, abajo).
@@ -54,13 +54,19 @@ self.addEventListener('push', function (e) {
   }));
 });
 
+// La del corte de BTG (30/09/2026) trae url './#btg': con la app abierta se
+// le avisa por mensaje (bancos.js abre BTG); cerrada, abre con el hash.
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();
+  var url = (e.notification.data && e.notification.data.url) || './';
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (ws) {
     for (var i = 0; i < ws.length; i++) {
-      if ('focus' in ws[i]) return ws[i].focus();
+      if ('focus' in ws[i]) {
+        if (/#btg$/.test(url)) ws[i].postMessage({ abrir: 'btg' });
+        return ws[i].focus();
+      }
     }
-    return self.clients.openWindow('./');
+    return self.clients.openWindow(url);
   }));
 });
 

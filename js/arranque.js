@@ -159,10 +159,9 @@ if (data.extras) aplicarExtras(data.extras);
 if (typeof apoCargado !== 'undefined' && !apoCargado && typeof cargarAportes === 'function' && getApiToken()) {
   setTimeout(function () { if (!apoCargado) cargarAportes(); }, 1500);
 }
-// El recordatorio del corte de BTG (24/09/2026): se mira una vez por sesion y
-// solo en la ventana del fin de mes (bancos.js decide; fuera de ella no pide
-// nada).
-if (typeof btgRevisarRecordatorio === 'function' && getApiToken()) setTimeout(btgRevisarRecordatorio, 2000);
+// Se abrio tocando la notificacion del corte de BTG (./#btg, 30/09/2026):
+// despues del pintado, para que el Inicio no le pase por encima.
+if (typeof btgAbrirSiLoPidio === 'function' && getApiToken()) btgAbrirSiLoPidio();
 if (typeof ajustarAlturaDeck === 'function') ajustarAlturaDeck();
 actualizarSymbols();
 if (document.getElementById('view-portafolio').style.display !== 'none') renderPortafolio();

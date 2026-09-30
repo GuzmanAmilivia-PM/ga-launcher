@@ -59,7 +59,7 @@ function montar(opts) {
   opts = opts || {};
   var els = {};
   var pedidos = [];   // {fn, args, ok, err}
-  var espias = { showAccount: [], sincronizarTodo: 0, syncOpts: [], errorEnVista: [], avisos: [] };
+  var espias = { showAccount: [], sincronizarTodo: 0, syncOpts: [], errorEnVista: [], avisos: [], swMensaje: null, replace: [] };
   var run = {
     _ok: null, _err: null,
     withSuccessHandler: function (fn) { run._ok = fn; return run; },
@@ -77,14 +77,18 @@ function montar(opts) {
     errorEnVista: function (id, err, que) { espias.errorEnVista.push([id, que]); },
     msgBackend: function (r) { return ((r && r.mensajes) || []).join(' '); },
     msgErr: function (err, que) { return que + ' failed: ' + String(err && err.message || err); },
-    // Las cuentas (el recordatorio abre BTG) y un reloj a mano para la ventana
-    // del fin de mes (24/09/2026).
+    // Las cuentas (la notificacion del dia 7 abre BTG), el hash con que la app
+    // abre desde ella y el service worker que le avisa si ya estaba abierta
+    // (30/09/2026).
+    location: { hash: opts.hash || '', pathname: '/app/', search: '' },
+    history: { replaceState: function (a, b, u) { espias.replace.push(u); } },
+    navigator: { serviceWorker: { addEventListener: function (tipo, fn) { if (tipo === 'message') espias.swMensaje = fn; } } },
     ACCOUNTS: [{ key: 'IB', nombre: 'Interactive Brokers' }, { key: 'BTG', nombre: 'BTG' }],
     Number: Number, isFinite: isFinite, String: String, Date: relojFalso(opts.ahora), Math: Math
   };
   var nombres = Object.keys(ctx);
   var fn = new Function(nombres.join(','), preambulo + codigo +
-    '\nreturn { esBtg: esBtg, renderBtg: renderBtg, mostrarBtg: mostrarBtg, restaurarVistaCuenta: restaurarVistaCuenta, setPedida: function (k) { accPedida = k; }, btgCorteQueFalta: btgCorteQueFalta, btgRevisarRecordatorio: btgRevisarRecordatorio };');
+    '\nreturn { esBtg: esBtg, renderBtg: renderBtg, mostrarBtg: mostrarBtg, restaurarVistaCuenta: restaurarVistaCuenta, setPedida: function (k) { accPedida = k; }, btgAbrirSiLoPidio: btgAbrirSiLoPidio };');
   var api = fn.apply(null, nombres.map(function (n) { return ctx[n]; }));
   return { api: api, els: els, pedidos: pedidos, espias: espias, el: function (id) { return ctx.document.getElementById(id); } };
 }
@@ -247,41 +251,18 @@ var cambio = (btgSrc.match(/export function cambioEntreCortes\([\s\S]*?\n\}/) ||
 ok(/totales\.total/.test(btgSrc) && /liquido:/.test(btgSrc) && /plazo:/.test(btgSrc), 'y los totales traen liquido, plazo y total');
 
 // ===========================================================================
-console.log('\nE) el recordatorio del corte de fin de mes, sin notificacion (24/09/2026)');
+console.log('\nE) el corte de BTG desde la notificacion del dia 7 (30/09/2026)');
 // ===========================================================================
-// A9 de la auditoria. Guzman: "Sin notificacion". Un aviso en el Inicio desde
-// el ULTIMO dia del mes hasta el 10 del siguiente, solo si el corte falta.
-function t(y, mes, d) { return new Date(y, mes - 1, d, 12, 0, 0).getTime(); }
-var f = montar().api.btgCorteQueFalta;
-ok(f('2026-08-31', t(2026, 9, 30)) === '2026-09-30', 'el 30/09 (fin de mes) con el ultimo corte en agosto: falta el del 30/09');
-ok(f('2026-09-30', t(2026, 9, 30)) === null, 'cargado el mismo dia: ya no');
-ok(f('2026-08-31', t(2026, 10, 4)) === '2026-09-30', 'el 4/10 todavia falta el de septiembre');
-ok(f('2026-09-28', t(2026, 10, 4)) === null, 'un corte del 28/09 cuenta como el de fin de mes (tolerancia de 5 dias)');
-ok(f('2026-09-20', t(2026, 10, 4)) === '2026-09-30', 'uno del 20/09 no: es de mitad de mes');
-ok(f('2026-08-31', t(2026, 10, 11)) === null, 'pasado el 10, se deja de recordar (el mes que viene vuelve)');
-ok(f('2026-08-31', t(2026, 9, 24)) === null, 'a mitad de mes no hay nada que recordar');
-ok(f(null, t(2026, 10, 2)) === '2026-09-30', 'sin ningun corte todavia, en la ventana: falta');
-ok(f('2026-11-30', t(2027, 1, 3)) === '2026-12-31', 'cruza el año: el 3/01/2027 falta el del 31/12');
-ok(f('2026-01-31', t(2026, 2, 28)) === '2026-02-28', 'febrero termina el 28: ese dia ya recuerda');
-
-// Fuera de la ventana no se le pide nada al Worker.
-var mr = montar({ ahora: t(2026, 9, 24) });
-mr.api.btgRevisarRecordatorio();
-ok(!mr.pedidos.some(function (p) { return p.fn === 'getBtg'; }), 'el 24/09 ni pregunta: fuera de la ventana no hay pedido');
-ok(mr.el('btgRecordatorio').hidden === true, 'y el aviso no se ve');
-// En la ventana: pregunta una vez, y si falta, lo muestra.
-mr = montar({ ahora: t(2026, 10, 2) });
-mr.api.btgRevisarRecordatorio();
-var pideBtg = mr.pedidos.filter(function (p) { return p.fn === 'getBtg'; });
-ok(pideBtg.length === 1, 'el 2/10 pregunta por el ultimo corte');
-pideBtg[0].ok({ ok: true, ultimo: { fecha: '2026-08-31' } });
-var rec = mr.el('btgRecordatorio');
-ok(rec.hidden === false && /Month-end:<\/b> load BTG&rsquo;s balances of Sep 30/.test(rec.innerHTML), 'y el aviso lo dice: ' + rec.innerHTML);
-mr.api.btgRevisarRecordatorio();
-ok(mr.pedidos.filter(function (p) { return p.fn === 'getBtg'; }).length === 1, 'una sola vez por sesion (el sondeo del minuto no vuelve a preguntar)');
-// Tocarlo abre BTG desde el Inicio, y el formulario viene abierto.
-rec.onclick();
-ok(mr.espias.showAccount.length === 1 && mr.espias.showAccount[0][0].key === 'BTG' && mr.espias.showAccount[0][1] === 'inicio', 'tocarlo abre BTG, y volver regresa al Inicio');
+// El aviso fijo del Inicio se fue: ahora el Worker manda un push el dia 7
+// (Alertas.js) y tocarlo abre BTG con el formulario listo.
+ok(!/btgRecordatorio/.test(html) && !/btgRecordatorio|btgRevisarRecordatorio/.test(bancos), 'el aviso fijo del Inicio ya no existe');
+var mr = montar();
+mr.api.btgAbrirSiLoPidio();
+ok(mr.espias.showAccount.length === 0, 'sin #btg, abrir la app no toca nada');
+mr = montar({ hash: '#btg' });
+mr.api.btgAbrirSiLoPidio();
+ok(mr.espias.showAccount.length === 1 && mr.espias.showAccount[0][0].key === 'BTG' && mr.espias.showAccount[0][1] === 'inicio', 'con #btg abre BTG, y volver regresa al Inicio');
+ok(mr.espias.replace[0] === '/app/', 'y borra el hash: recargar no lo vuelve a abrir');
 // Oculto, como nace en el index.html (el DOM de mentira lo crea visible y
 // asi la prueba pasaria sin que nadie lo abra).
 mr.el('accBtgForm').hidden = true;
@@ -289,14 +270,16 @@ mr.api.mostrarBtg();
 var pideCuenta = mr.pedidos.filter(function (p) { return p.fn === 'getBtg'; });
 pideCuenta[pideCuenta.length - 1].ok(PAYLOAD);
 ok(mr.el('accBtgForm').hidden === false, 'y el formulario del corte ya esta abierto');
-// Con el corte ya cargado, en la ventana, no aparece.
-mr = montar({ ahora: t(2026, 10, 2) });
-mr.api.btgRevisarRecordatorio();
-mr.pedidos[0].ok({ ok: true, ultimo: { fecha: '2026-09-30' } });
-ok(mr.el('btgRecordatorio').hidden === true, 'con el corte de septiembre cargado, no hay aviso');
-// Guardar un corte lo vuelve a mirar (y se apaga si era el que faltaba).
-ok(/btgRevisarRecordatorio\(true\)/.test(bancos), 'guardar un corte vuelve a mirar el recordatorio (codigo escrito)');
-ok(/id="btgRecordatorio"/.test(html), 'el aviso vive en el Inicio');
+// Con la app ya abierta, el service worker manda un mensaje.
+mr = montar();
+ok(typeof mr.espias.swMensaje === 'function', 'escucha los mensajes del service worker');
+mr.espias.swMensaje({ data: { abrir: 'otra' } });
+ok(mr.espias.showAccount.length === 0, 'un mensaje que no es de BTG no abre nada');
+mr.espias.swMensaje({ data: { abrir: 'btg' } });
+ok(mr.espias.showAccount.length === 1 && mr.espias.showAccount[0][0].key === 'BTG', 'el de BTG abre BTG');
+var sw = fs.readFileSync(path.join(ruta.RUTA, 'sw.js'), 'utf8');
+ok(/postMessage\(\{ abrir: 'btg' \}\)/.test(sw) && /openWindow\(url\)/.test(sw), 'el service worker avisa a la app abierta, o la abre con la url del push');
+ok(/btgAbrirSiLoPidio\(\)/.test(fs.readFileSync(path.join(ruta.RUTA, 'js', 'arranque.js'), 'utf8')), 'el arranque mira el #btg despues de pintar');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);
