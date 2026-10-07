@@ -17,7 +17,7 @@ renderPortafolio();
 };
 
 // ---------- Tarjeta deslizable: Evolución / Dividendos / Aportes ----------
-var sweepIdx = 0, divCargado = false, apoCargado = false;
+var sweepIdx = 0, divCargado = false, apoCargado = false, dispCargado = false;
 // La tarjeta mide lo que mide EL PANEL ACTIVO, no el mas alto de los tres.
 // Los paneles van lado a lado (flex), asi que sin esto la tarjeta tomaba la
 // altura del mas alto: apenas Dividendos se llenaba, la Evolucion quedaba con
@@ -30,11 +30,12 @@ var alto = paneles[sweepIdx].offsetHeight;
 if (alto > 0) wrap.style.height = alto + 'px';
 }
 function sweepGo(i) {
-sweepIdx = Math.max(0, Math.min(2, i));
+sweepIdx = Math.max(0, Math.min(document.querySelectorAll('#sweepDeck .sweeppanel').length - 1, i));
 document.getElementById('sweepDeck').style.transform = 'translateX(-' + (sweepIdx * 100) + '%)';
 document.querySelectorAll('.sweepdots .sdot').forEach(function (d, j) { d.classList.toggle('active', j === sweepIdx); });
 if (sweepIdx === 1 && !divCargado) cargarDividendos(false);
 if (sweepIdx === 2 && !apoCargado) cargarAportes();
+if (sweepIdx === 3 && !dispCargado) cargarDisponible();
 ajustarAlturaDeck();
 // El panel puede seguir creciendo mientras carga (spinner -> datos): se
 // reajusta un toque despues por las dudas.
@@ -102,6 +103,7 @@ function cargarPanelesDeEscritorio() {
   if (typeof getApiToken === 'function' && !getApiToken()) return;
   if (!divCargado && typeof cargarDividendos === 'function') cargarDividendos(false);
   if (!apoCargado && typeof cargarAportes === 'function') cargarAportes();
+  if (!dispCargado) cargarDisponible();
   // La asignacion (D4): en el telefono se pide al entrar a Portfolio; en el
   // tablero esta a la vista desde el arranque, asi que hay que pedirla.
   if (typeof anaCargado !== 'undefined' && !anaCargado && typeof cargarAnalisis === 'function') {
@@ -126,7 +128,7 @@ var MESES_CORTOS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep
 // GA_CACHES: TODAS las claves de cache local con datos del portafolio. El
 // borrado de emergencia (seguridad.js) la recorre; una clave nueva que no se
 // anote aca queda viva despues de "Olvide mi clave".
-var GA_CACHES = ['ga_cache_data', 'ga_cache_div', 'ga_cache_apo', 'ga_cache_ops', 'ga_cache_ana', 'ga_cache_wl', 'ga_cache_news'];
+var GA_CACHES = ['ga_cache_data', 'ga_cache_div', 'ga_cache_apo', 'ga_cache_ops', 'ga_cache_ana', 'ga_cache_wl', 'ga_cache_news', 'ga_cache_disp'];
 function cacheLeer(clave) {
 try {
 var j = JSON.parse(localStorage.getItem(clave) || 'null');
@@ -600,6 +602,9 @@ document.getElementById('apoAnio').textContent = r.anio;
 // La lista de aportes queda guardada en graficos.js porque la comparacion
 // del grupo (htmlComparacion -> comparacionGrupo) la necesita mas abajo.
 try { aplicarAportes(r); } catch (e) {}
+// La columna Invested de Available to invest sale de esta misma lista.
+aportesRecibidos = true;
+try { if (dispUltimo) renderDisponible(); } catch (e) {}
 // Y la tarjeta "Este año vs el mercado" (Portafolio) se repinta: hasta que los
 // aportes no llegan NO se dibuja, porque sin los flujos el numero seria el
 // cambio bruto del patrimonio. Si ya estabas parado en Portafolio, aparece
@@ -693,6 +698,93 @@ var pct = Number(a.pct);
 h += '<div class="apostat"><span>' + esc(a.anio) + '</span><b class="' + (pct >= 0 ? 'up' : 'down') + '">' + (isFinite(pct) ? signoPct(pct, 1) : '&mdash;') + ' &middot; ' + esc(mask(fmtUsdEnt(a.valor))) + '</b></div>';
 });
 return h;
+}
+
+// ---------- Available to invest (7/10/2026) ----------
+// Pedido de Guzman: en el carrusel, cuanto le queda libre cada mes para
+// invertir. Lo calcula su OTRA app, la de facturacion (neto en mano + IVA
+// recuperado - gastos personales y de vivienda, a la cotizacion de su año), y
+// el Worker lo trae por adentro de Cloudflare (fn facturacion_disponible). Al
+// lado, lo que de verdad entro a la cartera ese mes: aportes menos retiros de
+// TODAS las cuentas (`total`). `grupo` dejaria afuera lo que queda en BTG
+// esperando ir a un broker, que tambien es plata apartada para invertir.
+var dispUltimo = null, aportesRecibidos = false;
+function cargarDisponible(forzar) {
+dispCargado = true;
+// La columna Invested sale de los aportes: si no se pidieron, se piden.
+if (!apoCargado && typeof cargarAportes === 'function') cargarAportes();
+cargarConCache({
+clave: 'ga_cache_disp',
+avisoId: 'dispCacheAviso',
+bodyId: 'dispBody',
+cargando: 'Reading your billing app...',
+forzar: !!forzar,
+render: renderDisponible,
+alFallar: function () { dispCargado = false; },
+pedir: function (ok, fail) {
+google.script.run.withSuccessHandler(ok).withFailureHandler(fail).getDisponibleFacturacion();
+}
+});
+}
+/**
+ * Aportes netos por mes del año ({mes: usd}), solo de los meses que la lista
+ * cubre entera: un mes que empieza antes de `aportesDesde` no se puede
+ * afirmar y queda afuera (sale "—", no un cero que mienta).
+ */
+function aportadoPorMes(anio) {
+var out = {};
+for (var m = 1; m <= 12; m++) {
+  if (aportesDesde && new Date(anio, m - 1, 1).getTime() < aportesDesde) continue;
+  out[m] = 0;
+}
+var pref = String(anio) + '-';
+aportesLista.forEach(function (r) {
+  var f = String(r.fecha || '');
+  if (f.slice(0, 5) !== pref) return;
+  var mes = parseInt(f.slice(5, 7), 10);
+  var v = aporteTotalDelDia(r);
+  if (mes in out && isFinite(v)) out[mes] += v;
+});
+return out;
+}
+function celdaDisp(v, estimado) {
+if (v === null || v === undefined) return '<b class="dispv">&mdash;</b>';
+return '<b class="dispv' + (v < 0 ? ' down' : '') + '">' + (estimado ? '&asymp;' : '') + esc(fmtUsdEnt(v)) + '</b>';
+}
+function renderDisponible(r) {
+var body = document.getElementById('dispBody');
+if (!body) return;
+if (r !== undefined) dispUltimo = r;
+r = dispUltimo;
+if (!r || !r.ok) {
+dispCargado = false;
+body.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>';
+return;
+}
+document.getElementById('dispAnio').textContent = r.anio;
+var meses = (r.meses || []).slice().reverse();   // el mes en curso arriba
+if (!meses.length) {
+body.innerHTML = '<p class="newsempty">No billing loaded for ' + esc(r.anio) + ' yet.</p>';
+return;
+}
+// Mientras los aportes no llegan, la columna dice que esta cargando.
+var puesto = aportesRecibidos ? aportadoPorMes(r.anio) : null;
+var totLibre = 0, totPuesto = 0, hayPuesto = false, hayEstimado = false;
+var h = '<div class="disprow disphead"><span></span><span>Free</span><span>Invested</span></div>';
+meses.forEach(function (m) {
+  totLibre += m.usd;
+  if (m.estimado) hayEstimado = true;
+  var p = puesto ? puesto[m.mes] : undefined;
+  if (p !== undefined) { totPuesto += p; hayPuesto = true; }
+  h += '<div class="disprow"><span>' + MESES_CORTOS[m.mes - 1] + '</span>' + celdaDisp(m.usd, m.estimado) +
+    (puesto ? celdaDisp(p, false) : '<b class="dispv">&hellip;</b>') + '</div>';
+});
+h += '<div class="disprow disptot"><span>' + esc(r.anio) + '</span>' + celdaDisp(totLibre, hayEstimado) +
+  (puesto ? celdaDisp(hayPuesto ? totPuesto : null, false) : '<b class="dispv">&hellip;</b>') + '</div>';
+h += '<p class="capnota">Free: what your billing app says is left after taxes and personal and housing expenses, at ' +
+  esc(String(r.cotizacionUsd).replace('.', ',')) + ' pesos per dollar. Invested: deposits minus withdrawals, all accounts.</p>';
+body.innerHTML = h;
+ajustarAlturaDeck();
 }
 
 // Sincronización automática: al abrir la app (y al volver a ella) lee Binance

@@ -289,7 +289,9 @@ ok(soloPwa.length === 0, 'la PWA no llama fns inexistentes' + (soloPwa.length ? 
 // ibkr_historial (15/09/2026, V17): la llama el script de la PC que carga el
 // historial anterior a la app, no el telefono. cs_historial (22/09/2026, V18):
 // lo mismo para Schwab, con el estimado de SnapTrade.
-var SOLO_BACKEND = ['mail', 'noticias_semana', 'foto', 'itau_atender', 'itau_compra', 'series', 'series_restaurar', 'ibkr_historial', 'cs_historial'];
+// itau_tc (6/10/2026): el dolar con el que Itau valuo el fondo; lo manda el
+// script de la PC en cada sync de Itau, como itau_compra.
+var SOLO_BACKEND = ['mail', 'noticias_semana', 'foto', 'itau_atender', 'itau_compra', 'itau_tc', 'series', 'series_restaurar', 'ibkr_historial', 'cs_historial'];
 var soloApi = fnsApi.filter(function (f) { return fnsPwa.indexOf(f) === -1 && SOLO_BACKEND.indexOf(f) === -1; });
 ok(soloApi.length === 0, 'ninguna fn del backend quedo sin mapear' + (soloApi.length ? ': ' + soloApi.join(', ') : ''));
 SOLO_BACKEND.forEach(function (f) {
@@ -603,7 +605,9 @@ console.log('\nL) los puntitos del carrusel se esconden SIN quedar inalcanzables
 // TACTIL, asi que sin ellos las tarjetas 2 y 3 no se pueden alcanzar con
 // teclado ni con VoiceOver. Se esconden a la vista, no del documento.
 ok(/<button class="sdot/.test(html), 'los botones del carrusel SIGUEN en el documento');
-ok((html.match(/class="sdot/g) || []).length === 3, 'uno por tarjeta, los tres');
+// Cuatro desde el 7/10/2026 (Available to invest): uno por cada panel del carrusel.
+ok((html.match(/class="sdot/g) || []).length === (html.match(/<div class="sweeppanel">/g) || []).length &&
+  (html.match(/<div class="sweeppanel">/g) || []).length === 4, 'uno por tarjeta, los cuatro');
 var cssDots = (html.match(/\.sweepdots \{[^}]*\}/) || [''])[0];
 ok(/clip-path: inset\(50%\)/.test(cssDots) && /height: 1px/.test(cssDots),
   'pero no ocupan alto: quedan recortados a 1px');

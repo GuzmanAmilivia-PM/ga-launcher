@@ -712,6 +712,13 @@ html.light .wl-detalle { background: rgba(20,40,80,.035); }
 .apostat { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
 .apostat b.up { color: var(--green); }
 .apostat b.down { color: var(--red); }
+/* Available to invest (7/10/2026): mes, libre segun la app de facturacion, invertido de verdad. */
+.disprow { display: grid; grid-template-columns: 1fr minmax(84px, auto) minmax(84px, auto); gap: 12px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 14px; font-variant-numeric: tabular-nums; }
+.disprow .dispv { text-align: right; }
+.disprow .dispv.down { color: var(--red); }
+.disphead { font-size: 11px; color: var(--muted); padding-top: 0; }
+.disphead span { text-align: right; }
+.disptot { border-bottom: none; font-weight: 700; }
 .txrow { display: flex; justify-content: space-between; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
 .txrow:last-child { border-bottom: none; }
 .txrow .txmeta { color: var(--muted); font-size: 11px; display: block; }

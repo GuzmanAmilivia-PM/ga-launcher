@@ -264,12 +264,23 @@
 <div id="apoCacheAviso" style="display:none"></div>
 <div id="apoBody"><p class="loadingtxt">Swipe to load...</p></div>
 </div>
+<!-- Available to invest (07/10/2026): lo que queda libre cada mes segun la
+     app de facturacion, al lado de lo que entro de verdad a la cartera.
+     Lo pinta paneles.js (renderDisponible). -->
+<div class="sweeppanel">
+<div class="cardhead">
+<h2>Available to invest <span class="rangepct" id="dispAnio"></span></h2>
+</div>
+<div id="dispCacheAviso" style="display:none"></div>
+<div id="dispBody"><p class="loadingtxt">Swipe to load...</p></div>
+</div>
 </div>
 </div>
 <div class="sweepdots">
 <button class="sdot active" data-sw="0" aria-label="Performance"></button>
 <button class="sdot" data-sw="1" aria-label="Dividends"></button>
 <button class="sdot" data-sw="2" aria-label="Contributions"></button>
+<button class="sdot" data-sw="3" aria-label="Available to invest"></button>
 </div>
 </div>
 <div class="card">
