@@ -1021,5 +1021,11 @@ ok(/\\\/index\\\.html\$\/\.test\(url\.pathname\) \? new Request\('\.\/'\)/.test(
 var fontsSinUso = woff2.filter(function (f) { return cssTexto.indexOf('../fonts/' + f) === -1; });
 ok(fontsSinUso.length === 0, 'cada fuente de fonts/ la usa un @font-face' + (fontsSinUso.length ? ' — SOBRAN: ' + fontsSinUso.join(', ') : ''));
 
+// Billing (07/10/2026): el acceso directo a la app de facturacion abre en
+// otra pestaña y sin darle a esa pagina acceso a esta (window.opener).
+var billing = /<a class="mtile" id="mFactura" href="([^"]+)" target="_blank" rel="noopener">[\s\S]*?Billing<\/a>/.exec(indexEnDisco);
+ok(!!billing, 'el tile Billing esta en el menu del costado, en pestaña aparte y con noopener');
+ok(billing && billing[1] === 'https://facturacion-app.ga-portfolio.workers.dev/', 'y apunta a la raiz de facturacion-app (abre el Resumen del año en curso)');
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);
