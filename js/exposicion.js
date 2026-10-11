@@ -57,7 +57,10 @@ function renderExposicion() {
     partes = partes.map(function (p) { return '<span>' + p + '</span>'; });
     h += '<div class="exprow">' +
       '<div class="exprow-top"><span class="exprank">' + (i + 1) + '</span>' +
-      '<span class="expname">' + esc(e.nombre) + ' <em>' + esc(e.s) + '</em></span>' +
+      // El simbolo ADELANTE (9/10/2026, auditoria): con un nombre largo
+      // ("Taiwan Semiconductor Manufacturing") los puntos suspensivos se
+      // comian el simbolo, que es lo que se reconoce de un vistazo.
+      '<span class="expname"><em>' + esc(e.s) + '</em> ' + esc(e.nombre) + '</span>' +
       '<b class="exppct">' + (e.pct === null || e.pct === undefined ? '—' : Number(e.pct).toFixed(1) + '%') + '</b></div>' +
       '<div class="expbar">' +
       (dir > 0 ? '<i class="expbar-dir" style="width:' + (dir / max * 100).toFixed(1) + '%"></i>' : '') +

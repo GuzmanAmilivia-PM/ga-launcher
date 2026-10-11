@@ -334,6 +334,9 @@ if (name === 'noticias') cargarResultados();
 // media hora: no pide).
 if (name === 'noticias') pedirNoticias();
 if (name === 'trade' && !opsCargadas) cargarOperaciones(false);
+// Banking muestra BTG con la fecha de su corte: si no se sabe, se pregunta
+// una vez (bancos.js, 9/10/2026). Portfolio lo hace desde renderPortafolio.
+if (name === 'cash' && typeof btgPedirCorteSiFalta === 'function') btgPedirCorteSiFalta(function () { if (lastData) render(lastData); });
 window.scrollTo(0, 0);
 navRegistrar(name, vistaAnterior, scrollAnterior);
 }
@@ -894,11 +897,17 @@ leg.innerHTML = '';
 items.forEach(function (c, i) {
 var row = document.createElement('div');
 row.className = 'pierow' + (c.acc ? ' clickable' : '');
-row.innerHTML = '<span class="lname"><span class="dot" style="background:' + coloresPie()[i % PIE_COLORS.length] + '"></span>' + esc(c.label) + '</span>' +
+// BTG lleva la fecha de su corte de fin de mes (9/10/2026, bancos.js): su
+// monto no es de hoy.
+var asOf = (c.acc && c.acc.key === 'BTG' && typeof btgAsOfHtml === 'function') ? btgAsOfHtml() : '';
+row.innerHTML = '<span class="lname"><span class="dot" style="background:' + coloresPie()[i % PIE_COLORS.length] + '"></span>' + esc(c.label) + asOf + '</span>' +
 '<span class="lpct">' + (total ? '<b>' + ((c.valor / total) * 100).toFixed(1) + '%</b><span class="lsep"></span>' : '') + esc(fmt(c.valor)) + (c.acc ? '<span class="chev">&rsaquo;</span>' : '') + '</span>';
 if (c.acc) { row.onclick = function () { showAccount(c.acc, 'portafolio'); }; if (typeof hacerTocable === 'function') hacerTocable(row); }
 leg.appendChild(row);
 });
+if (typeof btgPedirCorteSiFalta === 'function' && items.some(function (c) { return c.acc && c.acc.key === 'BTG'; })) {
+  btgPedirCorteSiFalta(function () { if (currentView === 'portafolio') renderPortafolio(); });
+}
 // La tabla con TODAS las posiciones salio de esta vista el 17/08/2026 (pedido
 // de Guzman); su rol lo cumple el detalle de cada cuenta (V8).
 // El mapa de calor mensual (V5) se calcula sobre fullSerie, ya en memoria.

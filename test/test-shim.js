@@ -116,6 +116,31 @@ function correr(respuesta) {
   ok(/API_TIMEOUT_LARGO_MS/.test(codigo) && /noticias/.test(codigo),
      'las fns lentas (noticias y las syncs) tienen un presupuesto propio, mas largo');
 
+  // Una ESCRITURA que vence no se da por perdida (9/10/2026, auditoria): el
+  // Worker pudo guardarla y perder solo la respuesta, y "Try again" duplicaba
+  // la compra o el deposito. Se corre con un reloj que vence enseguida.
+  console.log('\nH) el vencimiento de una escritura no invita a repetirla');
+  function vencido(llamar) {
+    var m3 = montar({ nuncaContesta: true });
+    return new Promise(function (r) {
+      var res = {};
+      llamar(m3.run.withSuccessHandler(function () {}).withFailureHandler(function (e) { res.fallo = e; }));
+      setTimeout(function () { r(res); }, 80);
+    });
+  }
+  var real = setTimeout;
+  // El presupuesto de 25 s vence en 5 ms (solo los relojes largos del shim).
+  global.setTimeout = function (f, ms) { return real(f, ms >= 1000 ? 5 : ms); };
+  try {
+    var w = await vencido(function (run) { run.registrarOperacion({ tipo: 'compra' }); });
+    ok(w.fallo && /may have been saved/.test(w.fallo.message) && /check before trying again/.test(w.fallo.message), 'una compra que vence dice que pudo haberse guardado: ' + (w.fallo && w.fallo.message));
+    ok(w.fallo && !/Try again in a minute/.test(w.fallo.message), 'y no invita a repetirla');
+    var c2 = await vencido(function (run) { run.registrarMovimientoCash({ monto: 1 }); });
+    ok(c2.fallo && /may have been saved/.test(c2.fallo.message), 'un deposito tambien');
+    var l = await vencido(function (run) { run.getPortfolioData(); });
+    ok(l.fallo && l.fallo.message === 'The server took too long. Try again in a minute.', 'una LECTURA sigue diciendo "Try again in a minute"');
+  } finally { global.setTimeout = real; }
+
   console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
   process.exit(fallos ? 1 : 0);
 })();

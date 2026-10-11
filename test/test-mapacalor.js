@@ -34,7 +34,7 @@ var piezas = [
   fuente(/function alUltimoPunto\(ts, tFin\) \{[\s\S]*?\n\}/, 'alUltimoPunto'),
   fuente(/function _inicioDelDia\(ts\) \{[\s\S]*?\n\}/, '_inicioDelDia'),
   fuente(/function aporteTotalDelDia\(a\) \{[\s\S]*?\n\}/, 'aporteTotalDelDia'),
-  fuente(/function _twrCadena\(serie\) \{[\s\S]*?\n\}/, '_twrCadena')
+  fuente(/function _twrCadena\(serie, cerrado\) \{[\s\S]*?\n\}/, '_twrCadena')
 ].join('\n');
 
 // DOM de mentira minimo: renderMapaCalor solo usa getElementById + innerHTML.
@@ -181,6 +181,25 @@ ok(/history/.test(elMapa.innerHTML), 'sin datos lo dice en criollo, no queda en 
 ok(/Month over month, net of deposits and withdrawals/.test(html) && !/on total net worth/.test(html), 'la nota fija de la tarjeta dice que va sin depositos');
 // Que renderAportes lo repinte al llegar la lista lo prueba test-inicio-ux.js
 // (E2) con la app cargada entera: aca el bloque no llega hasta paneles.js.
+
+console.log('\nH) un deposito la TARDE del ultimo dia de un mes cerrado (9/10/2026, auditoria A12)');
+// Las fotos son de las 8:00: la del 30/09 no tiene los 10.000 que entraron
+// esa tarde, la del 1/10 si. Mercado quieto: septiembre y octubre dan 0 %.
+// Con la regla del "flujo de hoy" aplicada a un mes CERRADO, el deposito se
+// traia a la foto del 30/09 y septiembre salia −9,09 %.
+function foto(y, m, d, valor) { return { fecha: new Date(y, m - 1, d, 8, 0, 0).getTime(), valor: valor }; }
+var quieto = [foto(2026, 8, 31, 100000), foto(2026, 9, 15, 100000), foto(2026, 9, 30, 100000),
+  foto(2026, 10, 1, 110000), foto(2026, 10, 5, 110000), { fecha: new Date(2026, 9, 9, 15, 0, 0).getTime(), valor: 110000 }];
+api.setAportes([{ fecha: '2026-09-30', grupo: 10000, total: 10000 }], new Date(2026, 0, 1).getTime(), true);
+var fq = api.mapaCalorMensual(quieto);
+ok(fq.length === 1 && fq[0].meses[8] === 0, 'septiembre (cerrado) da 0 %, no una perdida: ' + (fq[0] && fq[0].meses[8]));
+ok(fq[0].meses[9] === 0, 'octubre (en curso) tambien 0 %: el deposito no cuenta como ganancia: ' + fq[0].meses[9]);
+// El tramo EN CURSO sigue con la regla del flujo de hoy: un deposito de HOY
+// ya esta en el valor de ahora y se descuenta.
+var conHoy = [foto(2026, 9, 30, 100000), foto(2026, 10, 9, 100000), { fecha: new Date(2026, 9, 9, 15, 0, 0).getTime(), valor: 105000 }];
+api.setAportes([{ fecha: '2026-10-09', grupo: 5000, total: 5000 }], new Date(2026, 0, 1).getTime(), true);
+var fh2 = api.mapaCalorMensual(conHoy);
+ok(fh2[0].meses[9] === 0, 'en el mes en curso, lo depositado HOY se descuenta del valor de ahora: ' + fh2[0].meses[9]);
 
 console.log('\nG) la interfaz va en INGLES');
 api.setAportes(APORTES, new Date(2026, 1, 15).getTime(), true);

@@ -54,6 +54,9 @@ function montar(cfg) {
     // Con cfg.token la llamada del arranque es EL objeto del test (lite-first).
     getApiToken: function () { return estado.token; },
     claveRechazada: '',
+    // La marca "updating" del renglon Today (tablero.js la declara); aca es
+    // un parametro para poder leerla desde afuera (estadoCarga, abajo).
+    datosActualizando: false,
     mostrarLock: function () {},
     hideSplash: function () {},
     pintarBadges: function () {},
@@ -124,7 +127,8 @@ function montar(cfg) {
   // (fullSerie = data.serie) y registrando la llamada para los asserts.
   var fn = new Function(nombres.join(','), codigo +
     '\nrender = function (d) { lastData = d; fullSerie = (d && d.serie) || fullSerie; __hookRender(d); };' +
-    '\nreturn { loadData: loadData, mercadoAbierto: mercadoAbierto, rechazarClave: function (v) { claveRechazada = v; } };');
+    '\nreturn { loadData: loadData, mercadoAbierto: mercadoAbierto, rechazarClave: function (v) { claveRechazada = v; },' +
+    ' estadoCarga: function () { return { seq: cargaSeq, aceptada: cargaAceptada, actualizando: datosActualizando }; } };');
   estado.api = fn.apply(null, nombres.map(function (n) { return ctx[n]; }));
   estado.token = cfg.sinClave ? '' : 'tok';
   return estado;
@@ -274,6 +278,22 @@ var LITE_CAMBIO = { total: 111, cuentas: [{ nombre: 'CS', valor: 111 }], liquide
   m.api.loadData();
   await esperar();
   ok(m.renders.length === 1 && m.renders[0].total === 150 && !(m.avisos || []).length, 'un fallo VIEJO tampoco tapa datos nuevos con un aviso de error: ' + JSON.stringify(m.avisos || []));
+
+  console.log('\nM) el PRIMER pedido de la apertura tambien lleva su numero (9/10/2026, auditoria)');
+  // El que sale solo al cargar el archivo (arranque con clave). Con cargaSeq
+  // declarado despues de esa linea salia con NaN: su respuesta se aceptaba
+  // aunque llegara tarde y nunca apagaba el "updating".
+  m = montar({ token: true, respuestas: [VIEJO, NUEVO], demoras: [40, 5] });
+  m.api.loadData();                     // una compra antes de que vuelva el primero
+  await esperar();
+  ok(m.renders.length === 1 && m.renders[0].total === 150, 'la respuesta del arranque que llega tarde no pisa a la nueva: ' + m.renders.map(function (d) { return d.total; }).join(','));
+  ok(m.guardados.length === 1 && m.guardados[0].total === 150, 'ni se guarda en el cache');
+  ok(m.api.estadoCarga().actualizando === false, '"updating" se apaga');
+  m = montar({ token: true, respuestas: [Object.assign({}, COMPLETO)] });
+  await esperar();
+  var ec = m.api.estadoCarga();
+  ok(ec.seq === 1 && ec.aceptada === 1, 'el pedido del arranque es el numero 1 y queda aceptado: ' + JSON.stringify(ec));
+  ok(ec.actualizando === false, 'y su respuesta apaga "updating" (antes quedaba prendido hasta el sondeo siguiente)');
 
   console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
   process.exit(fallos ? 1 : 0);

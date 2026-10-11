@@ -766,12 +766,22 @@ function twrEnRango(serie) {
 // queda con la punta; la vista en % del grafico dibuja todos. Una sola cuenta
 // para los dos, asi la curva no puede terminar en otro numero que el "pp vs
 // S&P" que tiene arriba.
-function _twrCadena(serie) {
+//
+// `cerrado` (9/10/2026, auditoria, A12): el tramo termina en una FOTO vieja
+// (un mes cerrado del mapa de calor), no en "ahora". La regla del flujo de
+// hoy (alUltimoPunto) es solo para el tramo EN CURSO: su ultimo punto es el
+// valor de este momento, que ya tiene adentro lo depositado hoy. La foto del
+// ultimo dia de un mes es la de las 8:00, ANTES de lo depositado esa tarde:
+// traer ese deposito a esa foto lo contaba como perdida (un deposito de 10.000
+// el 30/09 con el mercado quieto pintaba septiembre con −9,09 %). En un tramo
+// cerrado ese flujo queda afuera: es del mes siguiente, y ahi la regla de la
+// base (abajo) ya lo saltea.
+function _twrCadena(serie, cerrado) {
   if (!serie || serie.length < 2) return null;
   var tFin = serie[serie.length - 1].fecha;
   var todos = [];
   aportesLista.forEach(function (r) {
-    var ts = alUltimoPunto(apFlujoMs(r.fecha), tFin);
+    var ts = cerrado ? apFlujoMs(r.fecha) : alUltimoPunto(apFlujoMs(r.fecha), tFin);
     var m = aporteTotalDelDia(r);
     if (isFinite(ts) && isFinite(m) && m !== 0) todos.push({ ts: ts, monto: m });
   });

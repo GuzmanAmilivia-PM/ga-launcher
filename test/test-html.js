@@ -418,41 +418,30 @@ ok(/window\.__bioArranque\b/.test(segH2) && /adoptada \? previa\.promesa : bioVe
 // y lo dice en su propio mensaje. La regla está bien; la cita estaba mal, y se
 // repitió a `CLAUDE.md` desde acá. Auditoría del 24/08/2026.)
 console.log('\nI) la version del cache sube cuando cambia el cascaron');
-var cpH = require('child_process');
-function gitEnLauncher(cmd) {
-  try {
-    return cpH.execSync('git ' + cmd, { cwd: ruta.RUTA, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-  } catch (e) { return null; }
-}
 var versionActual = (sw.match(/var CACHE = '([^']+)'/) || [])[1] || '';
 ok(/^ga-pwa-v\d+$/.test(versionActual), 'la version tiene la forma esperada: ' + versionActual);
 
-// Archivos del cascarón que cambiaron en el último commit, y si ese commit
-// tocó también sw.js. Si git no está disponible, el chequeo se saltea con aviso
-// en vez de romper (el arnés tiene que poder correr en cualquier lado).
-var tocados = gitEnLauncher('show --name-only --pretty=format: HEAD');
-if (tocados === null) {
+// Lo que todavia no se commiteo PRIMERO (9/10/2026, auditoria): npm test se
+// corre antes de commitear, y mirar solo el ultimo commit dejaba pasar en
+// verde un cambio sin bump. La logica vive en _bump.js (test-bump.js la
+// prueba con repos de mentira). Sin git, se saltea con aviso.
+var bump = require('./_bump').revisarBump(ruta.RUTA);
+if (bump === null) {
   console.log('  (sin git en ' + ruta.RUTA + ': me salteo el chequeo del bump)');
 } else {
-  var lista = tocados.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
-  var esCascaron = function (f) { return f === 'index.html' || /^js\/[\w-]+\.js$/.test(f) || /^css\/[\w-]+\.css$/.test(f); };
-  var cambiaronDelCascaron = lista.filter(esCascaron);
-  var subioSw = lista.indexOf('sw.js') !== -1;
-  ok(cambiaronDelCascaron.length === 0 || subioSw,
-     'el ultimo commit toco ' + (cambiaronDelCascaron.join(', ') || 'nada del cascaron') +
-     (cambiaronDelCascaron.length ? ' y por eso TIENE que tocar sw.js' : ''));
-
-  // Y que la version haya subido de verdad respecto del commit anterior.
-  if (cambiaronDelCascaron.length) {
-    var swAnterior = gitEnLauncher('show HEAD~1:sw.js');
-    if (swAnterior) {
-      var vAnterior = (swAnterior.match(/var CACHE = 'ga-pwa-v(\d+)'/) || [])[1];
-      var vAhora = (versionActual.match(/v(\d+)$/) || [])[1];
-      ok(vAnterior === undefined || Number(vAhora) > Number(vAnterior),
-         'y el numero SUBIO: v' + vAnterior + ' -> ' + versionActual);
-    }
-  }
+  bump.forEach(function (c) { ok(c.ok, c.msg); });
 }
+
+// El README lista los js/ en el orden del index.html (9/10/2026, auditoria):
+// le faltaban bancos, rendimiento, exposicion y libro, y "el orden es
+// semantica" es su primera regla.
+var readme = fsA.readFileSync(pathA.join(ruta.RUTA, 'README.md'), 'utf8');
+var listaReadme = ((readme.match(/`js\/((?:[\w-]+\|)+[\w-]+)\.js`/) || [])[1] || '').split('|');
+var ordenIndex = (ruta.leerIndexCrudo().match(/<script src="\.\/js\/[\w-]+\.js"><\/script>/g) || [])
+  .map(function (s) { return s.match(/js\/([\w-]+)\.js/)[1]; })
+  .filter(function (n) { return n !== 'nucleo' && n !== 'gagraf' && n !== 'arranque'; });
+ok(listaReadme.join(',') === ordenIndex.join(','), 'el README lista los js/ del medio en el orden del index.html' +
+  (listaReadme.join(',') === ordenIndex.join(',') ? '' : ': README ' + listaReadme.join(',') + ' / index ' + ordenIndex.join(',')));
 
 
 console.log('\nJ) el grafico de Evolucion arranca COMPACTO, y se toca el grafico');

@@ -393,7 +393,13 @@ function wireEditPrecios(td, pos) {
     google.script.run.withSuccessHandler(function (r) {
       btn.disabled = false;
       if (!r || !r.ok) { if (msg) msg.textContent = msgBackend(r) || 'Could not save.'; return; }
-      if (msg) msg.textContent = (r.mensajes || []).join(' ');
+      // El resultado va al aviso FLOTANTE (9/10/2026, auditoria, resto de
+      // A2): se escribia en esta fila y la linea de abajo repinta la tabla de
+      // la cuenta, asi que el mensaje se iba en el mismo instante.
+      if (msg) msg.textContent = '';
+      if (typeof avisoFlotante === 'function') {
+        avisoFlotante('&#10003; ' + (esc((r.mensajes || []).join(' ')) || 'Prices saved.'), true);
+      }
       // La cuenta abierta se refresca con los numeros nuevos; la funcion
       // vive en vistas.js (ambito global compartido, cargado antes).
       if (typeof recargarCuentaAbierta === 'function') recargarCuentaAbierta();

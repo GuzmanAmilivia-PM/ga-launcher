@@ -44,7 +44,8 @@ mejora toca las dos. Leerlo antes de proponer trabajo sobre esta app.
   `css/estilos.css` (desde el 6/09/2026) y el código en `js/`.
 - `js/nucleo.js` — shim de la API, helpers. Se carga primero.
 - `js/gagraf.js` — gráficos propios (reemplazo de Chart.js, misma interfaz).
-- `js/vistas|trade|graficos|tablero|calor|config|brokers|paneles|analisis|sincronizar|ia|seguridad|buscador|watchlist.js`
+- `js/vistas|bancos|trade|graficos|tablero|calor|config|brokers|paneles|rendimiento|analisis|sincronizar|ia|seguridad|buscador|watchlist|exposicion|libro.js`
+  — en ESTE orden, el mismo del `index.html` (test-html.js lo cruza).
 - `js/arranque.js` — pintado instantáneo, carga, poll. Se carga último.
 - `sw.js` — service worker (shell offline). `servidor-local.js` — solo para
   probar en local (`node servidor-local.js` → http://localhost:8788).

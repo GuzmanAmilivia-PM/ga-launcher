@@ -128,7 +128,7 @@ var MESES_CORTOS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep
 // GA_CACHES: TODAS las claves de cache local con datos del portafolio. El
 // borrado de emergencia (seguridad.js) la recorre; una clave nueva que no se
 // anote aca queda viva despues de "Olvide mi clave".
-var GA_CACHES = ['ga_cache_data', 'ga_cache_div', 'ga_cache_apo', 'ga_cache_ops', 'ga_cache_ana', 'ga_cache_wl', 'ga_cache_news', 'ga_cache_disp'];
+var GA_CACHES = ['ga_cache_data', 'ga_cache_div', 'ga_cache_apo', 'ga_cache_ops', 'ga_cache_ana', 'ga_cache_wl', 'ga_cache_news', 'ga_cache_disp', 'ga_cache_btg'];
 function cacheLeer(clave) {
 try {
 var j = JSON.parse(localStorage.getItem(clave) || 'null');
@@ -155,7 +155,8 @@ if (el) { el.style.display = 'none'; el.innerHTML = ''; }
  * (dividendos respetaba el boton de refrescar y aportes no).
  */
 function cargarConCache(cfg) {
-var cache = cfg.forzar ? null : cacheLeer(cfg.clave);
+var guardado = cacheLeer(cfg.clave);
+var cache = cfg.forzar ? null : guardado;
 if (cache) {
 cfg.render(cache.data);
 marcaActualizando(cfg.avisoId, cache.t);
@@ -164,7 +165,20 @@ if (cfg.limpiar) cfg.limpiar();
 document.getElementById(cfg.bodyId).innerHTML = '<p class="loadingtxt">' + cfg.cargando + '</p>';
 }
 ajustarAlturaDeck();
+// Lo guardado se queda —o vuelve, si el boton de refrescar lo habia sacado—
+// con la marca "could not update" (9/10/2026, auditoria). Antes solo un fallo
+// de RED lo respetaba: una respuesta {ok:false} del Worker (la app de
+// facturacion que no contesta, un broker caido) pasaba como exito y el
+// render pisaba con el mensaje de error los meses que ya se veian.
+function quedaLoGuardado() {
+if (!guardado) return false;
+if (!cache) cfg.render(guardado.data);
+marcaActualizando(cfg.avisoId, guardado.t, 'could not update');
+ajustarAlturaDeck();
+return true;
+}
 cfg.pedir(function (r) {
+if (!(r && r.ok) && quedaLoGuardado()) return;
 limpiarMarca(cfg.avisoId);
 if (r && r.ok) cacheGuardar(cfg.clave, r);
 cfg.render(r);
@@ -173,7 +187,7 @@ ajustarAlturaDeck();
 }, function (err) {
 limpiarMarca(cfg.avisoId);
 // Con datos ya pintados, un fallo de red no borra la pantalla.
-if (cache) { marcaActualizando(cfg.avisoId, cache.t, 'could not update'); return; }
+if (quedaLoGuardado()) return;
 if (cfg.alFallar) cfg.alFallar(err);
 document.getElementById(cfg.bodyId).innerHTML =
 '<p class="newsempty">' + esc(msgErr(err, 'This screen')) + '</p>';
@@ -581,11 +595,14 @@ avisoId: 'apoCacheAviso',
 bodyId: 'apoBody',
 cargando: 'Calculating this year\u2019s contributions...',
 forzar: !!forzar,
-render: function (r) { aportesFallo = !(r && r.ok); renderAportes(r); },
+// La columna Invested de Available to invest tambien se entera de que los
+// aportes fallaron (9/10/2026, auditoria): quedaba en "…" (cargando) para
+// siempre. renderAportes la repinta cuando llegan bien.
+render: function (r) { aportesFallo = !(r && r.ok); renderAportes(r); if (aportesFallo) repintarDisponible(); },
 // Sin la lista de aportes el mapa de calor y la nota del grafico decian
 // "Loading your deposits..." para siempre (24/09/2026, auditoria A15):
 // ahora dicen que no se pudo. Se reintenta en el proximo repintado.
-alFallar: function () { apoCargado = false; aportesFallo = true; if (typeof renderMapaCalor === 'function') renderMapaCalor(); },
+alFallar: function () { apoCargado = false; aportesFallo = true; if (typeof renderMapaCalor === 'function') renderMapaCalor(); repintarDisponible(); },
 pedir: function (ok, fail) {
 google.script.run.withSuccessHandler(ok).withFailureHandler(fail).getAportes();
 }
@@ -604,7 +621,7 @@ document.getElementById('apoAnio').textContent = r.anio;
 try { aplicarAportes(r); } catch (e) {}
 // La columna Invested de Available to invest sale de esta misma lista.
 aportesRecibidos = true;
-try { if (dispUltimo) renderDisponible(); } catch (e) {}
+repintarDisponible();
 // Y la tarjeta "Este año vs el mercado" (Portafolio) se repinta: hasta que los
 // aportes no llegan NO se dibuja, porque sin los flujos el numero seria el
 // cambio bruto del patrimonio. Si ya estabas parado en Portafolio, aparece
@@ -653,8 +670,9 @@ return '<p class="capval ' + (v >= 0 ? 'up' : 'down') + '">' + signoPct(v, 1) + 
 }
 // El rendimiento en plata: lo que las apps valen hoy menos su capital (el
 // valor con el que arrancó la medición más lo que entró después).
+// El signo adelante en los dos sentidos (9/10/2026): una perdida decia "US$ -320".
 var rendUsd = Math.round(c.valor - c.capital);
-h += '<div class="apostat"><span>Return</span><b class="' + (rendUsd >= 0 ? 'up' : 'down') + '">' + esc(mask((rendUsd >= 0 ? '+' : '') + 'US$ ' + rendUsd.toLocaleString('en-US'))) + '</b></div>';
+h += '<div class="apostat"><span>Return</span><b class="' + (rendUsd >= 0 ? 'up' : 'down') + '">' + esc(mask((rendUsd >= 0 ? '+' : '−') + 'US$ ' + Math.abs(rendUsd).toLocaleString('en-US'))) + '</b></div>';
 h += '<div class="caprow">';
 h += '<div><p class="lbl">Returned</p>' + pct(c.pct) + '</div>';
 h += '<div><p class="lbl">The portfolio</p>' + pct(c.twrPct) + '</div>';
@@ -751,24 +769,36 @@ function celdaDisp(v, estimado) {
 if (v === null || v === undefined) return '<b class="dispv">&mdash;</b>';
 return '<b class="dispv' + (v < 0 ? ' down' : '') + '">' + (estimado ? '&asymp;' : '') + esc(fmtUsdEnt(v)) + '</b>';
 }
+// Repinta la tarjeta con lo ultimo que tiene (los aportes cambiaron de estado).
+function repintarDisponible() {
+try { if (dispUltimo) renderDisponible(); } catch (e) {}
+}
 function renderDisponible(r) {
 var body = document.getElementById('dispBody');
 if (!body) return;
-if (r !== undefined) dispUltimo = r;
-r = dispUltimo;
-if (!r || !r.ok) {
+// Solo una respuesta SANA pasa a ser "lo ultimo" (9/10/2026): un {ok:false}
+// no pisa los meses que ya se veian (cargarConCache los conserva con
+// "could not update"); sin nada guardado, se dice el error.
+if (r !== undefined && r && r.ok) dispUltimo = r;
+if (r !== undefined && !(r && r.ok) && !dispUltimo) {
 dispCargado = false;
 body.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>';
 return;
 }
+r = dispUltimo;
+if (!r) return;
 document.getElementById('dispAnio').textContent = r.anio;
 var meses = (r.meses || []).slice().reverse();   // el mes en curso arriba
 if (!meses.length) {
 body.innerHTML = '<p class="newsempty">No billing loaded for ' + esc(r.anio) + ' yet.</p>';
 return;
 }
-// Mientras los aportes no llegan, la columna dice que esta cargando.
+// Mientras los aportes no llegan, la columna dice que esta cargando; si
+// FALLARON, lo dice con "—" y una linea (9/10/2026, auditoria): el "…" de
+// cargando quedaba para siempre.
 var puesto = aportesRecibidos ? aportadoPorMes(r.anio) : null;
+var sinAportes = !puesto && typeof aportesFallo !== 'undefined' && aportesFallo;
+var vacia = sinAportes ? '<b class="dispv">&mdash;</b>' : '<b class="dispv">&hellip;</b>';
 var totLibre = 0, totPuesto = 0, hayPuesto = false, hayEstimado = false;
 var h = '<div class="disprow disphead"><span></span><span>Free</span><span>Invested</span></div>';
 meses.forEach(function (m) {
@@ -777,12 +807,15 @@ meses.forEach(function (m) {
   var p = puesto ? puesto[m.mes] : undefined;
   if (p !== undefined) { totPuesto += p; hayPuesto = true; }
   h += '<div class="disprow"><span>' + MESES_CORTOS[m.mes - 1] + '</span>' + celdaDisp(m.usd, m.estimado) +
-    (puesto ? celdaDisp(p, false) : '<b class="dispv">&hellip;</b>') + '</div>';
+    (puesto ? celdaDisp(p, false) : vacia) + '</div>';
 });
 h += '<div class="disprow disptot"><span>' + esc(r.anio) + '</span>' + celdaDisp(totLibre, hayEstimado) +
-  (puesto ? celdaDisp(hayPuesto ? totPuesto : null, false) : '<b class="dispv">&hellip;</b>') + '</div>';
+  (puesto ? celdaDisp(hayPuesto ? totPuesto : null, false) : vacia) + '</div>';
+if (sinAportes) h += '<p class="capnota">Your deposits could not be loaded, so Invested is blank for now.</p>';
+// La cotizacion con punto decimal, como el resto de la app en ingles (decia
+// "40,25 pesos per dollar").
 h += '<p class="capnota">Free: what your billing app says is left after taxes and personal and housing expenses, at ' +
-  esc(String(r.cotizacionUsd).replace('.', ',')) + ' pesos per dollar. Invested: deposits minus withdrawals, all accounts.</p>';
+  esc(Number(r.cotizacionUsd).toLocaleString('en-US', { maximumFractionDigits: 2 })) + ' pesos per dollar. Invested: deposits minus withdrawals, all accounts.</p>';
 body.innerHTML = h;
 ajustarAlturaDeck();
 }

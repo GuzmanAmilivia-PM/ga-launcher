@@ -408,43 +408,113 @@ function pushSoportado() {
   return 'serviceWorker' in navigator && 'PushManager' in window && window.Notification;
 }
 
-function suscribirPush() {
-  if (!pushSoportado() || Notification.permission !== 'granted') return;
-  navigator.serviceWorker.ready.then(function (reg) {
+// La suscripcion REAL (9/10/2026, auditoria). Hasta hoy el telefono se
+// suscribia solo al guardar una alerta de precio, y la tarjeta decia "Alerts
+// will notify this phone" por un dato guardado (ga_push_ok) que nunca se
+// borraba: si iOS cambiaba la suscripcion, o se reinstalaba la app, el Worker
+// la borraba al primer 404/410 y la pantalla seguia diciendo que andaba.
+// Desde v243 ese push es el UNICO recordatorio del corte de BTG del dia 7.
+// Ahora, al abrir o desbloquear, se le pregunta al navegador (getSubscription):
+// si no hay, se suscribe solo; si hay, se re-registra en el Worker como mucho
+// una vez por dia (alla es un upsert: pisa, no duplica). Si suscribir sin un
+// toque falla, la tarjeta ofrece "Enable notifications".
+var PUSH_REGISTRO_MS = 24 * 60 * 60 * 1000;
+// sub: true/false cuando se sabe, null mientras no se pregunto.
+var pushEstado = { sub: null, necesitaToque: false };
+try { localStorage.removeItem('ga_push_ok'); } catch (e) {}   // la marca vieja ya no dice nada
+
+function registrarSub(sub, forzar) {
+  var ultimo = 0;
+  try { ultimo = parseInt(localStorage.getItem('ga_push_reg') || '0', 10) || 0; } catch (e) {}
+  if (!forzar && ultimo && Date.now() - ultimo >= 0 && Date.now() - ultimo < PUSH_REGISTRO_MS) return;
+  google.script.run.withSuccessHandler(function (res) {
+    if (res && res.ok) { try { localStorage.setItem('ga_push_reg', String(Date.now())); } catch (e) {} }
+  }).withFailureHandler(function () { /* el proximo arranque reintenta */ })
+    .registrarPush({ sub: sub.toJSON() });
+}
+function pushQuedo(sub) {
+  pushEstado.sub = !!sub;
+  pushEstado.necesitaToque = !sub;
+  pintarEstadoPush();
+}
+// `conToque`: viene de un boton (iOS solo deja pedir permiso dentro de un
+// toque). Sin toque, si el permiso no esta dado, solo pinta el estado.
+function suscribirPush(conToque) {
+  if (!pushSoportado() || Notification.permission !== 'granted') { pintarEstadoPush(); return Promise.resolve(false); }
+  return navigator.serviceWorker.ready.then(function (reg) {
     return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: wlB64aBytes(VAPID_PUBLIC) });
   }).then(function (sub) {
-    google.script.run.withSuccessHandler(function (res) {
-      if (res && res.ok) {
-        try { localStorage.setItem('ga_push_ok', '1'); } catch (e) {}
-        pintarEstadoPush();
-      }
-    }).withFailureHandler(function () { /* el proximo guardado reintenta */ })
-      .registrarPush({ sub: sub.toJSON() });
-  }).catch(function (e) {
-    // En iOS suscribir puede fallar si la PWA no esta instalada en la
-    // pantalla de inicio; el estado de abajo lo explica.
-    pintarEstadoPush();
+    registrarSub(sub, true);
+    pushQuedo(sub);
+    return true;
+  }).catch(function () {
+    // En iOS suscribir puede fallar sin un toque, o si la PWA no esta
+    // instalada en la pantalla de inicio: el estado ofrece el boton.
+    pushQuedo(null);
+    return false;
   });
 }
+// Al abrir (arranque.js) y al desbloquear (seguridad.js).
+function revisarPush() {
+  if (!pushSoportado() || Notification.permission !== 'granted' || (typeof getApiToken === 'function' && !getApiToken())) {
+    pintarEstadoPush();
+    return Promise.resolve(null);
+  }
+  return navigator.serviceWorker.ready.then(function (reg) {
+    return reg.pushManager.getSubscription();
+  }).then(function (sub) {
+    if (!sub) return suscribirPush(false);
+    registrarSub(sub, false);
+    pushQuedo(sub);
+    return true;
+  }).catch(function () { pushQuedo(null); return false; });
+}
 
+// Lo que avisa este telefono, nombrado entero: desde el 30/09 y el 2/10 no
+// son solo las alertas de precio.
+var PUSH_QUE = 'price alerts, sharp moves in your positions, and the BTG reminder on the 7th';
 function pintarEstadoPush() {
   var el = document.getElementById('wlPushEstado');
   var btn = document.getElementById('wlPushProbar');
+  var act = document.getElementById('wlPushActivar');
   if (!el) return;
-  var registrado = false;
-  try { registrado = localStorage.getItem('ga_push_ok') === '1'; } catch (e) {}
-  btn.style.display = 'none';
+  if (btn) btn.style.display = 'none';
+  if (act) act.style.display = 'none';
   if (!pushSoportado()) {
     el.innerHTML = 'This browser cannot receive push notifications. On iPhone, the app must be added to the Home Screen.';
   } else if (Notification.permission === 'denied') {
     el.innerHTML = 'Notifications are blocked. Enable them for this app in iOS Settings &rarr; Notifications.';
-  } else if (Notification.permission === 'granted' && registrado) {
-    el.innerHTML = 'Alerts will notify this phone, even with the app closed.';
-    btn.style.display = '';
+  } else if (Notification.permission === 'granted' && pushEstado.sub === true) {
+    el.innerHTML = 'This phone gets ' + PUSH_QUE + ', even with the app closed.';
+    if (btn) btn.style.display = '';
+  } else if (Notification.permission === 'granted' && pushEstado.sub === null) {
+    el.innerHTML = 'Checking notifications on this phone&hellip;';
+  } else if (Notification.permission === 'granted') {
+    el.innerHTML = 'Notifications are not reaching this phone right now. Tap to turn them back on: ' + PUSH_QUE + '.';
+    if (act) act.style.display = '';
   } else {
-    el.innerHTML = 'Save a price alert to enable notifications on this phone.';
+    el.innerHTML = 'Turn on notifications to get ' + PUSH_QUE + '.';
+    if (act) act.style.display = '';
   }
 }
+
+// El boton: pedir permiso (si falta) y suscribir, DENTRO del toque.
+(function () {
+  var act = document.getElementById('wlPushActivar');
+  if (!act) return;
+  act.onclick = function () {
+    if (!pushSoportado()) { pintarEstadoPush(); return; }
+    act.disabled = true;
+    var listo = function () { act.disabled = false; };
+    if (Notification.permission === 'default') {
+      try {
+        Notification.requestPermission().then(function () { return suscribirPush(true); }).then(listo, listo);
+      } catch (e) { listo(); }
+      return;
+    }
+    suscribirPush(true).then(listo, listo);
+  };
+})();
 
 document.getElementById('wlPushProbar').onclick = function () {
   var btn = this;

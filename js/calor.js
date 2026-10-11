@@ -34,7 +34,11 @@ var k = claves[i];
 if (claves[i - 1] !== k - 1) continue; // hueco: sin cierre del mes anterior
 var tramo = serie.slice(ultimo[k - 1], ultimo[k] + 1);
 var fueraDeLista = aportesDesde !== null && tramo[0].fecha < aportesDesde - 86400000;
-var c = fueraDeLista ? null : _twrCadena(tramo);
+// Solo el mes que termina en el ultimo punto de la serie (el de "ahora") esta
+// EN CURSO; los demas terminan en la foto de las 8:00 de su ultimo dia y no
+// se traen los depositos de esa tarde (9/10/2026, auditoria: ver _twrCadena).
+var cerrado = ultimo[k] !== serie.length - 1;
+var c = fueraDeLista ? null : _twrCadena(tramo, cerrado);
 var anio = Math.floor(k / 12), mes = k % 12;
 if (!porAnio[anio]) {
 porAnio[anio] = { meses: [], conFlujo: [], sinLista: [] };
@@ -81,9 +85,11 @@ var dif = (c.idxPct !== null && isFinite(c.idxPct)) ? (c.pct - c.idxPct) : null;
 var h = '<div class="caprow">';
 h += '<div><p class="lbl">Your portfolio</p>' + pct(c.pct) + '</div>';
 h += '<div><p class="lbl">' + esc(c.idxNombre || 'Index') + '</p>' + pct(c.idxPct) + '</div>';
+// La diferencia en PUNTOS (9/10/2026, auditoria): es una resta de dos %, y el
+// Inicio y Performance la dicen "pp". Con "%" se leia como un rendimiento.
 if (dif !== null) {
 h += '<div><p class="lbl">Difference</p><p class="capval ' + (dif >= 0 ? 'up' : 'down') + '">' +
-signoPct(dif, 1) + '</p></div>';
+(dif >= 0 ? '+' : '−') + Math.abs(dif).toFixed(1) + ' pp</p></div>';
 }
 h += '</div>';
 

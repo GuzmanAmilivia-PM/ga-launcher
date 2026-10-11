@@ -75,7 +75,9 @@ ok(pedidos === 1, 'pide exposicion');
 respuesta.ok(PAYLOAD);
 var h = elemento('expBody').innerHTML;
 ok((h.match(/class="exprow"/g) || []).length === 3, 'una fila por empresa');
-ok(h.indexOf('<span class="exprank">1</span><span class="expname">NVIDIA <em>NVDA</em></span><b class="exppct">4.0%</b>') !== -1, 'puesto, nombre, simbolo y % de la cartera');
+// El simbolo va ADELANTE del nombre desde el 9/10/2026 (auditoria): con un
+// nombre largo, los puntos suspensivos se comian el simbolo.
+ok(h.indexOf('<span class="exprank">1</span><span class="expname"><em>NVDA</em> NVIDIA</span><b class="exppct">4.0%</b>') !== -1, 'puesto, simbolo, nombre y % de la cartera');
 ok(h.indexOf('<span>USD 2,000</span> &middot; <span>VOO USD 1,200</span> &middot; <span>QQQ USD 800</span>') !== -1, 'NVIDIA: el total y de que fondo viene cada parte, cada una sin cortarse');
 ok(h.indexOf('<span>USD 1,500</span> &middot; <span>Direct USD 1,000</span> &middot; <span>VOO USD 300</span>') !== -1, 'META: primero lo directo');
 ok(h.indexOf('<span>USD 500</span> &middot; <span>all direct</span>') !== -1 && h.indexOf('Direct USD 500') === -1, 'sin fondos no repite el monto: all direct');

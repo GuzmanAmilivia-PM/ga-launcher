@@ -140,6 +140,23 @@ porNombre.BTG.onclick();
 ok(m.espias.cuentas[1] && m.espias.cuentas[1][0] === 'BTG', 'BTG tambien');
 ok(porNombre['Cuenta rara'] && !porNombre['Cuenta rara'].onclick && !/clickable/.test(porNombre['Cuenta rara'].className),
   'una cuenta sin pagina no promete un toque que no lleva a ningun lado');
+// BTG con la fecha de su corte (9/10/2026): su saldo es el de fin de mes.
+ok(!/last snapshot/.test(porNombre.BTG.innerHTML), 'sin la fecha del corte anotada, BTG no dice "last snapshot" (no la inventa)');
+m = montar(true);
+m.g.apoCargado = true;
+m.g.localStorage.setItem('ga_cache_btg', JSON.stringify({ t: 1, data: { fecha: '2026-09-30' } }));
+m.g.render(payload());
+var filaBtg = m.el('cashList').filas.filter(function (f) { return /BTG/.test(f.innerHTML); })[0];
+ok(filaBtg && /BTG <span class="desc">last snapshot Sep 30(, 2026)?<\/span>/.test(filaBtg.innerHTML), 'con la fecha anotada, Banking dice "BTG last snapshot Sep 30": ' + (filaBtg && filaBtg.innerHTML.slice(0, 70)));
+var filaIb = m.el('cashList').filas.filter(function (f) { return /IBKR/.test(f.innerHTML); })[0];
+ok(filaIb && !/last snapshot/.test(filaIb.innerHTML), 'y solo BTG (las otras cuentas son de hoy)');
+// La torta de Portfolio (modo Custodian), la misma fecha.
+var filasTorta = [];
+m.el('pieLegend').appendChild = function (r) { filasTorta.push(r); return r; };
+m.g.Chart = function () { return { destroy: function () {} }; };
+m.g.renderPortafolio();
+var tortaBtg = filasTorta.filter(function (f) { return /BTG/.test(f.innerHTML); })[0];
+ok(tortaBtg && /BTG<span class="desc">|BTG <span class="desc">last snapshot Sep 30/.test(tortaBtg.innerHTML) && /last snapshot Sep 30/.test(tortaBtg.innerHTML), 'y la torta tambien: ' + (tortaBtg && tortaBtg.innerHTML.replace(/<span class="dot"[^>]*><\/span>/, '').slice(0, 80)));
 
 console.log('\nD) lo que se ve en el HTML y el CSS');
 // ALCANCE: esto mira el HTML y el CSS ESCRITOS, no los mide. La medida real
@@ -224,6 +241,13 @@ var anual = m.el('anualBody').innerHTML;
 ok(/Your portfolio/.test(anual) && !/Tu cartera/.test(anual), 'el rotulo en ingles ("Tu cartera" se habia escapado)');
 ok(!/doesn.t pay dividends/.test(anual), 'ya no afirma que el indice no paga dividendos (falso desde V17)');
 ok(/dividends reinvested/.test(anual), 'dice que el indice cuenta sus dividendos reinvertidos, como las cuentas');
+// La diferencia en puntos, como el Inicio y Performance (9/10/2026, auditoria).
+ok(/<p class="lbl">Difference<\/p><p class="capval up">\+1\.0 pp<\/p>/.test(anual), 'la diferencia dice "+1.0 pp", no "+1.0%": ' + ((anual.match(/Difference<\/p><p[^>]*>[^<]*/) || [''])[0]));
+m.g.comparacionAnual = function () {
+  return { pct: 2, idxPct: 4.5, idxNombre: 'S&P 500', desde: new Date(2025, 11, 30).getTime(), bruto: 3, aportes: 0 };
+};
+m.g.renderAnual();
+ok(/<p class="capval down">−2\.5 pp<\/p>/.test(m.el('anualBody').innerHTML), 'y en contra, "−2.5 pp" en rojo');
 
 console.log('\nG) el banner "GA platforms ›" del menu lleva a algun lado (A7)');
 // ALCANCE: el onclick se engancha AL CARGAR vistas.js, antes de que este

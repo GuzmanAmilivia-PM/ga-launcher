@@ -19,6 +19,13 @@
    puedan cambiar el acento entero desde una sola familia de variables: antes
    esos tres valores estaban clavados en hexadecimal por todo el CSS. */
 * { box-sizing: border-box; }
+/* Ningun campo por debajo de 16 px (9/10/2026, auditoria): Safari en iOS
+   agranda la pagina al enfocar un campo de letra mas chica y la deja
+   agrandada hasta que se pellizca. Los de Trades, Banking, el buscador, la
+   alerta de la Watchlist, editar precio y el corte de BTG tenian 15 px o el
+   13,33 del navegador. Las reglas por clase de abajo repiten el 16: tienen
+   mas peso que esta. El viewport NO se toca (pellizcar tiene que poder). */
+input, select, textarea { font-size: 16px; }
 html { overflow-x: hidden; max-width: 100%; background: var(--navy); }
 html, body { margin: 0; padding: 0; width: 100%; overflow-x: hidden; }
 body { font-family: 'Manrope', -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: var(--navy); color: var(--text); letter-spacing: .01em; max-width: 860px; margin: 0 auto; overflow-x: hidden; padding-top: env(safe-area-inset-top, 0px); }
@@ -194,6 +201,14 @@ button.menu-banner:active { opacity: .8; }
    algun lado (la misma › de "Positions" y de las cuentas). */
 .vsbench { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .vsbench:not(:empty)::after { content: ' \203A'; font-weight: 800; }
+/* La linea vs S&P medía 361x16 de toque (9/10/2026, auditoria). La capa es
+   ::before (::after es la flecha): 8 px arriba (el margen) y 20 abajo, 44 en
+   total. Lo que puede quedar debajo y se toca (el grafico abierto, las
+   pastillas de DEPOSIT) va despues en la pagina y con posicion, asi que
+   queda ENCIMA de la capa: su toque es suyo. */
+.vsbench { position: relative; }
+.vsbench:not(:empty)::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; bottom: -20px; }
+#evoChartBox { z-index: 1; }
 .up { color: var(--green); font-weight: 700; }
 .down { color: var(--red); font-weight: 700; }
 /* caprow/capval/capnota: los numeros y la nota de la comparacion (V7).
@@ -252,6 +267,11 @@ button.menu-banner:active { opacity: .8; }
 /* Título de card que navega (el "Posiciones" del Inicio): mismo estilo que
    cualquier h2, más el cursor y la flechita dorada que avisan que se toca. */
 .h2link { cursor: pointer; }
+/* "POSITIONS ›" medía 361x15 de toque (9/10/2026, auditoria): la capa crece
+   hacia arriba, sobre el margen de la tarjeta, y apenas hacia abajo (ahi
+   esta el encabezado de la tabla, que no se toca). 44 de alto. */
+#posTitulo { position: relative; -webkit-tap-highlight-color: transparent; }
+#posTitulo::after { content: ''; position: absolute; left: 0; right: 0; top: -16px; bottom: -13px; }
 .h2link .chev { color: var(--gold); font-weight: 800; margin-left: 2px; }
 .grid2 { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 16px; }
 @media (max-width: 760px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
@@ -272,10 +292,20 @@ canvas { max-width: 100%; }
 .detedit-botones .detedit-guardar { color: var(--text); border-color: var(--gold); }
 .detedit-form { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; max-width: 320px; }
 .detedit-form[hidden] { display: none; }
-.detedit-form label { display: flex; flex-direction: column; gap: 4px; }
-.detedit-form input { padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--text); font-size: 15px; font-family: inherit; font-weight: 600; outline: none; }
-.detedit-form input:focus { border-color: var(--gold); }
+/* El formulario del corte de BTG (#accBtgForm) usa el MISMO estilo (9/10/2026,
+   auditoria): no tenia ninguna regla, y sus campos median 177x21 con letra
+   de 13 px, el fondo blanco del navegador y las etiquetas desalineadas. */
+.detedit-form label, #accBtgForm .detgrid label, #accBtgForm > label:first-of-type { display: flex; flex-direction: column; gap: 4px; }
+#accBtgForm .detgrid { gap: 10px; }
+#accBtgForm .detgrid label { flex: 1 1 140px; }
+.detedit-form input, #accBtgForm input:not([type="checkbox"]) { padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--text); font-size: 16px; font-family: inherit; font-weight: 600; outline: none; }
+#accBtgForm input:not([type="checkbox"]) { width: 100%; min-height: 44px; }
+.detedit-form input:focus, #accBtgForm input:focus { border-color: var(--gold); }
 .detedit-botones { display: flex; gap: 8px; }
+/* Save / Cancel con area de toque de 44 px (9/10/2026, auditoria): los de
+   BTG median 31 de alto. Como A4, una capa invisible arriba y abajo. */
+.detedit-botones button { position: relative; -webkit-tap-highlight-color: transparent; }
+.detedit-botones button::after { content: ''; position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; }
 .detedit-msg { margin: 0; font-size: 12.5px; color: var(--muted); }
 /* Indicadores del detalle (V14, 26/08/2026): dos columnas nombre/valor y el
    contexto historico debajo, ocupando la fila entera. Sin hexadecimales. */
@@ -417,6 +447,9 @@ button.backlink { background: none; border: 0; padding: 0; font-family: inherit;
 .spark { color: var(--red); }
 .spark.sube { color: var(--green); }
 .morebtn { position: relative; z-index: 5; display: none; width: 100%; margin-top: 10px; padding: 9px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid var(--border); color: var(--muted); font-size: 11.5px; font-weight: 700; cursor: pointer; }
+/* "See more" medía 32 de alto (9/10/2026, auditoria): la capa crece hacia
+   abajo (arriba esta la ultima fila, que se toca). */
+.morebtn::after { content: ''; position: absolute; left: 0; right: 0; top: 0; bottom: -12px; }
 @media (max-width: 560px) { .col-pct { display: none; } .holdtable { font-size: 13.5px; } .holdtable td, .holdtable th { padding: 11px 5px; } .holdav { width: 34px; height: 34px; font-size: 11.5px; } .holdtable .sym { font-size: 17.5px; } .holdtable .col-precio { font-size: 20px; } .holdtable .daychg { font-size: 12.5px; } .postable td, .postable th { padding-left: 4px; padding-right: 4px; } .postable .col-pc { font-size: 12.5px; } .postable .col-precio { font-size: 17px; } .postable .col-valor { font-size: 15.5px; } }
 
 /* --- Rango del gráfico + modal --- */
@@ -425,6 +458,14 @@ button.backlink { background: none; border: 0; padding: 0; font-family: inherit;
 .rangebtn { flex: 0 0 auto; padding: 7px 13px; border-radius: 8px; background: rgba(255,255,255,.04); color: var(--muted); font-size: 12.5px; font-weight: 700; border: 1px solid var(--border); cursor: pointer; white-space: nowrap; }
 .rangebtn.active { background: var(--gold); color: var(--on-gold); border-color: var(--gold); }
 .expandbtn { background: transparent; border: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 4px 6px; line-height: 1; }
+/* ↻, ⛶ y el ▾ de Historical performance median 25x24 (9/10/2026, auditoria).
+   Area de toque de 45x44 con una capa invisible, como A4. Donde van de a dos
+   (↻ ⛶) el segundo no crece hacia el primero; al lado de los rangos, el ⛶
+   crece hacia la derecha y no tapa el ultimo rango. */
+.expandbtn { position: relative; -webkit-tap-highlight-color: transparent; }
+.expandbtn::after { content: ''; position: absolute; top: -10px; bottom: -10px; left: -10px; right: -10px; }
+.expandbtn + .expandbtn::after { left: -2px; right: -18px; }
+.evocontrols .expandbtn::after { left: -6px; right: -14px; }
 .expandbtn:hover { color: var(--gold); }
 /* La mini de Evolucion: el area del grafico ES el control, plegada y
    desplegada. Compacta muestra la misma linea que las filas de posiciones. */
@@ -549,6 +590,10 @@ button.backlink { background: none; border: 0; padding: 0; font-family: inherit;
 .depositbtn:active { opacity: .8; }
 .depositpick { display: flex; gap: 8px; margin-top: 10px; }
 .depositpick .pillbtn { flex: none; padding: 7px 16px; font-size: 12.5px; border-radius: 16px; }
+/* Las pastillas BTG / Itaú medían 59x33 (9/10/2026, auditoria): la capa crece
+   hacia abajo, sobre el renglon Today, que no se toca. */
+.depositpick .pillbtn { position: relative; -webkit-tap-highlight-color: transparent; }
+.depositpick .pillbtn::after { content: ''; position: absolute; left: 0; right: 0; top: 0; bottom: -11px; }
 /* --- Watchlist (27/08/2026) --- Filas a mano (no .holdtable): cada una
    lleva dos botones (campana y quitar) y un formulario plegable abajo. La
    campana usa el acento cuando la alerta esta ARMADA y el verde cuando ya
@@ -602,7 +647,7 @@ html.light .wl-detalle { background: rgba(20,40,80,.035); }
 
 /* --- Trade --- */
 .tradeform label { display: block; color: var(--muted); font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin: 14px 0 6px; }
-.tradeform input, .tradeform select { width: 100%; padding: 12px 12px; border-radius: 12px; background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--text); font-size: 15px; font-family: inherit; font-weight: 600; outline: none; }
+.tradeform input, .tradeform select { width: 100%; padding: 12px 12px; border-radius: 12px; background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--text); font-size: 16px; font-family: inherit; font-weight: 600; outline: none; }
 .tradeform input:focus, .tradeform select:focus { border-color: var(--gold); }
 .tradeform select { appearance: none; }
 .tipobar { display: flex; gap: 8px; }
@@ -875,7 +920,7 @@ html.light .navtab-center .cbtn { border-color: var(--navy2); background: linear
 html.light .rangebtn, html.light .morebtn, html.light .tipobtn, html.light .filtrobtn { background: rgba(20,40,80,.05); }
 html.light .rangebtn.active { background: var(--gold); color: #fff; border-color: var(--gold); }
 html.light .tradeform input, html.light .tradeform select { background: #fff; border-color: rgba(20,40,80,.18); }
-html.light .detedit-form input { background: #fff; border-color: rgba(20,40,80,.18); }
+html.light .detedit-form input, html.light #accBtgForm input:not([type="checkbox"]) { background: #fff; border-color: rgba(20,40,80,.18); }
 html.light .detrow td { background: rgba(20,40,80,.035); }
 html.light #splash { background: linear-gradient(180deg,#f7f9fd,#e9edf5); }
 html.light #splash input { background: #fff; }
@@ -1150,7 +1195,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 .exprow-top { display: flex; align-items: baseline; gap: 8px; }
 .exprank { flex: 0 0 18px; color: var(--muted); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .expname { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.expname em { font-style: normal; color: var(--muted); font-size: 11px; font-weight: 700; margin-left: 2px; }
+.expname em { font-style: normal; color: var(--muted); font-size: 11px; font-weight: 700; margin-right: 2px; }
 .exppct { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .expbar { display: flex; height: 6px; border-radius: 4px; background: rgba(255,255,255,.06); overflow: hidden; margin: 6px 0 5px 26px; }
 .expbar i { display: block; height: 100%; }
@@ -1161,6 +1206,13 @@ html.light .expbar { background: rgba(20,40,80,.08); }
    pagina Performance con cuatro columnas, y el total resaltado. */
 .libanios { flex-wrap: wrap; margin: 2px 0 6px; }
 .libtabla td em { font-style: normal; color: var(--muted); font-size: 11px; }
+/* La tabla no se sale de la tarjeta (9/10/2026, auditoria): a 393 px la de
+   brokers terminaba 8 px afuera y la de "por papel" afuera de la pantalla,
+   con los montos pegados. Se desliza adentro de su caja; la primera columna
+   (papel y broker) puede partirse en dos renglones y los montos se separan. */
+.libscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+.libtabla td:first-child { white-space: normal; }
+.libtabla th + th, .libtabla td + td { padding-left: 10px; }
 .libtabla tr.libtotal td { font-weight: 700; color: var(--text); }
 .libsub { font-size: 12px; color: var(--gold); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin: 16px 0 4px; }
 .libdet { margin: 14px 0 4px; font-size: 13px; }

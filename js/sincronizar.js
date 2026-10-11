@@ -44,11 +44,14 @@ alOk: function (r) {
 var n = (r.cambios || []).length;
 if (!n) return; // sin cambios: no vale la pena molestar
 loadData();
-avisoInicio('&#10003; Binance synced: ' + n + ' change' + (n === 1 ? '' : 's') + ' applied.', true);
+// Al aviso FLOTANTE (9/10/2026, auditoria, resto de A2): avisoInicio
+// escribe en #autoAviso, que solo existe en el Inicio, y esta sync corre en
+// cada render — tambien con la app parada en Portfolio o en una cuenta.
+avisoFlotante('&#10003; Binance synced: ' + n + ' change' + (n === 1 ? '' : 's') + ' applied.', true);
 },
 // La sync automatica es silenciosa salvo el caso de Earn, que es el unico
-// que pide una decision del usuario.
-alError: function (msg) { if (msg === BNB_AVISO_EARN) avisoInicio('&#9888; ' + msg); }
+// que pide una decision del usuario (por eso queda hasta que se toca).
+alError: function (msg) { if (msg === BNB_AVISO_EARN) avisoFlotante('&#9888; ' + msg, false); }
 });
 }
 

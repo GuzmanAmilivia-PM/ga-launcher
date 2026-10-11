@@ -49,5 +49,20 @@ ok(conMail.length === 0, 'ninguno trae un mail' + (conMail.length ? ': ' + conMa
 // partido en dos para que el barrido no encuentre a este mismo archivo.
 ok(MAIL.test('la cuenta alguien@' + 'ejemplo.com') && !MAIL.test('icons/eth@2x.png'), 'el detector reconoce un mail y no confunde un icono');
 
+console.log('\nB) el autor de los commits tampoco publica un mail (9/10/2026, auditoria)');
+// A20 saco el mail de los ARCHIVOS, pero cada commit nuevo lo volvia a
+// publicar como autor (v241 a v245): GitHub muestra el mail de cada commit de
+// un repo publico. El mail del repo tiene que ser el anonimo que da GitHub
+// (<id>+<usuario>@users.noreply.github.com). No se imprime el mail: solo si
+// cumple.
+var mailAutor = null;
+try { mailAutor = cp.execFileSync('git', ['config', 'user.email'], { cwd: ruta.RUTA, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); }
+catch (e) { mailAutor = null; }
+if (mailAutor === null) {
+  console.log('  (sin git o sin user.email en ' + ruta.RUTA + ': me salteo el autor)');
+} else {
+  ok(/@users\.noreply\.github\.com$/.test(mailAutor), 'git config user.email de este repo es el anonimo de GitHub (@users.noreply.github.com)');
+}
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

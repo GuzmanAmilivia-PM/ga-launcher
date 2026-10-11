@@ -73,5 +73,20 @@ m = montar({ respuestas: [{ estado: 'listo', mensaje: 'Updated.' }] });
 m.api.seguir();           // sin activar: nadie apreto el boton en esta pantalla
 ok(m.syncs === 0, 'solo muestra el estado');
 
+console.log('\nD) el resultado dice DE CUANDO es (9/10/2026, auditoria)');
+// "Fund updated: 712.44 UYU per unit." no decia cuando: puede ser de dias
+// atras. Se usa horaDelDato, la del renglon Today (tablero.js, la real).
+var tablero = fs.readFileSync(path.join(ruta.RUTA, 'js', 'tablero.js'), 'utf8');
+var hdd = (tablero.match(/function horaDelDato\(ms, ahora\) \{[\s\S]*?\n\}/) || [''])[0];
+ok(!!hdd, 'encuentro horaDelDato en tablero.js');
+var textoDe = new Function('esc', 'document', 'google', 'setTimeout', 'clearTimeout', hdd + '\n' + codigo + '\nreturn itauTexto;')(
+  function (s) { return String(s); }, { getElementById: function () { return null; } }, {}, function () {}, function () {});
+var finAyer = new Date(2026, 9, 8, 14, 5, 0).getTime();
+var t = textoDe({ estado: 'listo', mensaje: 'Fund updated: 712.44 UYU per unit.', fin: finAyer });
+ok(/Fund updated: 712\.44 UYU per unit\. <span class="detsec">as of Oct 8, 2:05\s?PM<\/span>/.test(t), 'el resultado lleva "as of" con el dia y la hora: ' + t);
+ok(!/as of/.test(textoDe({ estado: 'listo', mensaje: 'Updated.' })), 'sin hora del fin no inventa una');
+ok(!/as of/.test(textoDe({ estado: 'error', mensaje: 'Bad password.', fin: finAyer })), 'un error no lleva "as of" (no hay dato nuevo)');
+ok(!/UYU today/.test(src), 'la tabla del fondo ya no dice "today" del precio (puede ser de dias atras)');
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

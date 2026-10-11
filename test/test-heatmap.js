@@ -35,7 +35,7 @@ ok(!/\.heat\s*\{|\.heatwrap\s*\{/.test(css), 'su CSS se fue con ella');
 console.log('\nB) la grilla que queda es la de Portfolio, sin depositos');
 ok(/function mapaCalorMensual\(serie\)/.test(html), 'el mapa de calor de Portfolio sigue');
 var calor = fs.readFileSync(path.join(ruta.RUTA, 'js', 'calor.js'), 'utf8');
-ok(/_twrCadena\(tramo\)/.test(calor), 'y mide cada mes con _twrCadena: la MISMA cuenta que el "pp vs S&P" y la tarjeta del año');
+ok(/_twrCadena\(tramo, cerrado\)/.test(calor),'y mide cada mes con _twrCadena: la MISMA cuenta que el "pp vs S&P" y la tarjeta del año');
 ok(/if \(!aportesCargados\)/.test(calor), 'y sin la lista de aportes no se dibuja (los crudos mentirian)');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');

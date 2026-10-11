@@ -1,0 +1,8 @@
+# Todo en LF (9/10/2026, auditoria). El git de Windows de esta PC tiene
+# core.autocrlf=true en la configuracion del sistema: cualquier checkout,
+# pull o restore escribia los archivos en CRLF, y con CRLF nueve arneses de
+# test/ se ponen rojos sin que cambie una linea de codigo (buscan el cierre
+# de una funcion con salto de linea LF, y marcas parecidas). Con esta linea
+# el archivo de trabajo queda en LF aunque autocrlf diga otra cosa. Los
+# binarios (png, woff2) los detecta text=auto solo.
+* text=auto eol=lf

@@ -59,6 +59,7 @@ function montar(opts) {
   opts = opts || {};
   var els = {};
   var pedidos = [];   // {fn, args, ok, err}
+  var cache = opts.cache || {};
   var espias = { showAccount: [], sincronizarTodo: 0, syncOpts: [], errorEnVista: [], avisos: [], swMensaje: null, replace: [] };
   var run = {
     _ok: null, _err: null,
@@ -84,13 +85,19 @@ function montar(opts) {
     history: { replaceState: function (a, b, u) { espias.replace.push(u); } },
     navigator: { serviceWorker: { addEventListener: function (tipo, fn) { if (tipo === 'message') espias.swMensaje = fn; } } },
     ACCOUNTS: [{ key: 'IB', nombre: 'Interactive Brokers' }, { key: 'BTG', nombre: 'BTG' }],
-    Number: Number, isFinite: isFinite, String: String, Date: relojFalso(opts.ahora), Math: Math
+    Number: Number, isFinite: isFinite, String: String, Date: relojFalso(opts.ahora), Math: Math,
+    // La fecha del ultimo corte se anota en el cache local (9/10/2026): la
+    // torta y Banking la muestran como "as of".
+    cacheGuardar: function (k, d) { cache[k] = { t: 1, data: d }; },
+    cacheLeer: function (k) { return cache[k] || null; },
+    getApiToken: function () { return opts.sinClave ? '' : 'x'; }
   };
   var nombres = Object.keys(ctx);
   var fn = new Function(nombres.join(','), preambulo + codigo +
-    '\nreturn { esBtg: esBtg, renderBtg: renderBtg, mostrarBtg: mostrarBtg, restaurarVistaCuenta: restaurarVistaCuenta, setPedida: function (k) { accPedida = k; }, btgAbrirSiLoPidio: btgAbrirSiLoPidio };');
+    '\nreturn { esBtg: esBtg, renderBtg: renderBtg, mostrarBtg: mostrarBtg, restaurarVistaCuenta: restaurarVistaCuenta, setPedida: function (k) { accPedida = k; }, btgAbrirSiLoPidio: btgAbrirSiLoPidio,' +
+    ' btgAsOfHtml: btgAsOfHtml, btgFechaTexto: btgFechaTexto, btgPedirCorteSiFalta: btgPedirCorteSiFalta };');
   var api = fn.apply(null, nombres.map(function (n) { return ctx[n]; }));
-  return { api: api, els: els, pedidos: pedidos, espias: espias, el: function (id) { return ctx.document.getElementById(id); } };
+  return { api: api, els: els, pedidos: pedidos, espias: espias, cache: cache, el: function (id) { return ctx.document.getElementById(id); } };
 }
 
 // El payload con la FORMA que produce getBtg (Btg.js) y montos INVENTADOS (los
@@ -117,11 +124,12 @@ ok(box.hidden === false, 'el bloque de BTG se muestra');
 ok(/Snapshot of 2026-09-13/.test(box.innerHTML), 'dice de que fecha es el corte');
 ok(/Liquid<\/span><b>[^<]*4,000/.test(box.innerHTML), 'el liquido en dolares (4.000)');
 ok(/Fixed deposit<\/span><b>[^<]*0/.test(box.innerHTML), 'el plazo fijo en cero, que es un dato');
-// fmt() redondea a dolares enteros: +1.59 se ve "+USD 2" y -20.6, "USD -21".
+// fmt() redondea a dolares enteros: +1.59 se ve "+USD 2" y -20.6, "−USD 21".
 ok(/Since 2026-08-31/.test(box.innerHTML) && /You put in \/ took out<\/span><b>\+USD 2</.test(box.innerHTML),
    'el cambio contra el corte anterior, con el FLUJO aparte (+1.59 -> "+USD 2"): ' + (box.innerHTML.match(/took out<\/span><b>[^<]*/) || [''])[0]);
-// (fmt pone el signo despues de la moneda: "USD -21".)
-ok(/Peso vs dollar<\/span><b class="down">USD -21</.test(box.innerHTML), 'y el efecto del peso aparte, en rojo (-20.6 -> "USD -21")');
+// fmt pone el signo ADELANTE de la moneda desde el 9/10/2026 (auditoria):
+// "−USD 21", como el resto de la app. Antes salia "USD -21".
+ok(/Peso vs dollar<\/span><b class="down">−USD 21</.test(box.innerHTML), 'y el efecto del peso aparte, en rojo (-20.6 -> "−USD 21")');
 ok(/id="btgAbrir"/.test(box.innerHTML) && typeof m.el('btgAbrir').onclick === 'function', 'el boton de cargar un corte nuevo queda cableado');
 
 var m0 = montar();
@@ -280,6 +288,66 @@ ok(mr.espias.showAccount.length === 1 && mr.espias.showAccount[0][0].key === 'BT
 var sw = fs.readFileSync(path.join(ruta.RUTA, 'sw.js'), 'utf8');
 ok(/postMessage\(\{ abrir: 'btg' \}\)/.test(sw) && /openWindow\(url\)/.test(sw), 'el service worker avisa a la app abierta, o la abre con la url del push');
 ok(/btgAbrirSiLoPidio\(\)/.test(fs.readFileSync(path.join(ruta.RUTA, 'js', 'arranque.js'), 'utf8')), 'el arranque mira el #btg despues de pintar');
+
+// ===========================================================================
+console.log('\nF) BTG sin red: el error se VE, con el boton de cargar (9/10/2026)');
+// ===========================================================================
+// El error iba a #accError, que vive adentro de la tabla de posiciones (oculta
+// en BTG): quedaba "BTG --" y una tarjeta vacia. Y el pedido de la
+// notificacion quedaba armado para la proxima entrada.
+var mf = montar({ hash: '#btg' });
+mf.api.btgAbrirSiLoPidio();             // la notificacion arma el formulario
+mf.el('accBtgForm').hidden = true;
+mf.api.mostrarBtg();
+var pf = mf.pedidos.filter(function (p) { return p.fn === 'getBtg'; });
+pf[pf.length - 1].err(new Error('No connection. Try again once you have signal.'));
+ok(mf.el('accBtg').hidden === false && /No connection/.test(mf.el('accBtg').innerHTML), 'el error queda en la caja de BTG, a la vista: ' + mf.el('accBtg').innerHTML.slice(0, 60));
+ok(mf.espias.errorEnVista.length === 0, 'y no en #accError (escondido con la tabla)');
+ok(mf.el('accTotal').textContent === '--', 'el total dice que no hay dato');
+ok(/id="btgAbrir"/.test(mf.el('accBtg').innerHTML), 'con el boton de cargar un corte nuevo');
+mf.el('btgAbrir').click();
+ok(mf.el('accBtgForm').hidden === false, 'que abre el formulario aunque no haya red para leer el ultimo');
+mf.el('accBtgForm').hidden = true;
+mf.api.mostrarBtg();                    // vuelve a entrar, ahora con señal
+pf = mf.pedidos.filter(function (p) { return p.fn === 'getBtg'; });
+pf[pf.length - 1].ok(PAYLOAD);
+ok(mf.el('accBtgForm').hidden === true, 'el pedido de la notificacion se apago: la proxima entrada no abre el formulario sola');
+
+// ===========================================================================
+console.log('\nG) "as of": la fecha del corte, para la torta y Banking (9/10/2026)');
+// ===========================================================================
+// El monto de BTG en la torta y en Banking es el del ULTIMO corte: sin fecha
+// se leia como de hoy. Se anota la que trae getBtg.
+var mg = montar();
+ok(mg.api.btgAsOfHtml() === '', 'sin corte conocido no dice nada (ni inventa una fecha)');
+mg.api.mostrarBtg();
+mg.pedidos[0].ok(PAYLOAD);
+ok(mg.cache.ga_cache_btg && mg.cache.ga_cache_btg.data.fecha === '2026-09-13', 'abrir BTG anota la fecha del ultimo corte');
+// "last snapshot" y no "as of" (9/10/2026): el monto de BTG es el del corte
+// MAS lo registrado a mano despues (un deposito posterior), asi que "as of"
+// al lado de ese monto decia una fecha que el numero ya no es.
+ok(/<span class="desc">last snapshot Sep 13(, 2026)?<\/span>/.test(mg.api.btgAsOfHtml()), 'y se escribe "last snapshot Sep 13": ' + mg.api.btgAsOfHtml());
+ok(mg.api.btgFechaTexto('2024-12-31') === 'Dec 31, 2024', 'un corte de otro año lleva el año');
+// Si no se sabe, se pregunta una vez por sesion; si lo anotado es reciente, no.
+var hoyMs = Date.UTC(2026, 9, 9, 15, 0, 0);
+mg = montar({ ahora: hoyMs });
+var avisado = 0;
+mg.api.btgPedirCorteSiFalta(function () { avisado++; });
+ok(mg.pedidos.length === 1 && mg.pedidos[0].fn === 'getBtg', 'sin fecha anotada, la pregunta (getBtg)');
+mg.pedidos[0].ok({ ultimo: { fecha: '2026-09-30' } });
+ok(mg.cache.ga_cache_btg.data.fecha === '2026-09-30' && avisado === 1, 'la anota y avisa para repintar');
+mg.cache.ga_cache_btg = undefined;
+mg.api.btgPedirCorteSiFalta(function () {});
+ok(mg.pedidos.length === 1, 'una sola vez por sesion');
+mg = montar({ ahora: hoyMs, cache: { ga_cache_btg: { t: 1, data: { fecha: '2026-09-30' } } } });
+mg.api.btgPedirCorteSiFalta(function () {});
+ok(mg.pedidos.length === 0, 'con un corte de hace 9 dias no pregunta nada');
+mg = montar({ ahora: Date.UTC(2026, 10, 10, 15, 0, 0), cache: { ga_cache_btg: { t: 1, data: { fecha: '2026-09-30' } } } });
+mg.api.btgPedirCorteSiFalta(function () {});
+ok(mg.pedidos.length === 1, 'con uno de hace mas de 35 dias, si (ya deberia haber otro)');
+mg = montar({ sinClave: true });
+mg.api.btgPedirCorteSiFalta(function () {});
+ok(mg.pedidos.length === 0, 'sin la clave de la API no pregunta');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

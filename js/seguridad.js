@@ -228,6 +228,8 @@ appBloqueada = false;
 if (!mostrarLockPendiente()) hideSplash();
 // La sync automatica de Binance espero al desbloqueo (sincronizar.js).
 if (typeof bnbAutoSync === 'function') bnbAutoSync();
+// Y la suscripcion push (9/10/2026): que siga viva (watchlist.js).
+if (typeof revisarPush === 'function') revisarPush();
 }
 // Intento de biometria. `auto` = disparado solo al abrir la app, sin toque:
 // si ese intento se rechaza NO cuenta como fallo del sensor; queda el boton

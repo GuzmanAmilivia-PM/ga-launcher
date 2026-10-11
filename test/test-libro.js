@@ -101,6 +101,13 @@ ok(h.indexOf('ETH <em>Binance · app</em><span class="libfecha">2026-07-01</span
 ok(/Dividends by holding \(2\)/.test(h) && h.indexOf('ASML <em>IBKR · EUR</em>') !== -1, 'el detalle por papel, con la moneda si no es USD');
 ok(/Sales without a realized result/.test(h), 'los avisos del Worker');
 ok(/A record, not a tax return/.test(h) && /kept IBKR since 2025-02-18/.test(h), 'dice que no es una declaracion y desde cuando guarda');
+// A 393 px las tablas se salian de la tarjeta (9/10/2026, auditoria): cada una
+// va adentro de una caja que se desliza sola, y el CSS la deja deslizar.
+var tablas = (h.match(/<table class="rendtabla libtabla">/g) || []).length;
+var envueltas = (h.match(/<div class="libscroll"><table class="rendtabla libtabla">/g) || []).length;
+ok(tablas === 3 && envueltas === tablas, 'las ' + tablas + ' tablas van adentro de .libscroll (' + envueltas + ')');
+var cssLib = fs.readFileSync(path.join(RUTA, 'css', 'estilos.css'), 'utf8');
+ok(/\.libscroll \{[^}]*overflow-x: auto/.test(cssLib) && /\.libtabla th \+ th, \.libtabla td \+ td \{[^}]*padding-left/.test(cssLib), 'y en el CSS se desliza y separa los montos (regla escrita)');
 ok(elemento('libCsv').onclick !== null || /id="libCsv"/.test(h), 'el boton del CSV');
 ok(!/ADR fees/.test(h), 'sin comisiones de ADR, no hay nota');
 api.cargar(2026, true); pendientes.shift().ok(anioPayload(2026, {
@@ -164,6 +171,44 @@ ok(csvE[1] === 'sale,2026,2026-03-01,Binance,BTC,USD,0.01,,,,,700,550,broker,cos
 ok(csvE[2] === 'reward,2026,,Binance,USDT,USD,2.75,,,,,,,broker,,2.75', 'y trae los premios');
 api.cargar(2026, true); pendientes.shift().ok(anioPayload(2026));
 ok(elemento('libBody').innerHTML.indexOf('Crypto rewards') === -1 && elemento('libBody').innerHTML.indexOf('≈ estimated') === -1, 'sin premios ni estimados, nada de eso');
+
+console.log('\nG) Download CSV: en el iPhone instalado, la hoja de compartir (9/10/2026)');
+// Una descarga de blob en la web app de la pantalla de inicio de iOS no es
+// confiable; ahi se comparte el archivo. En cualquier otro lado, la descarga.
+function montarCsv(nav) {
+  var ev = { compartido: null, descargas: [] };
+  var doc = {
+    getElementById: function () { return null; },
+    createElement: function () { var a = { click: function () { ev.descargas.push(a.download); }, remove: function () {} }; return a; },
+    body: { appendChild: function () {} }
+  };
+  function Archivo(partes, nombre, opts) { this.partes = partes; this.name = nombre; this.type = opts && opts.type; }
+  var f = new Function('document', 'esc', 'fmtUsd', 'msgErr', 'msgBackend', 'volver', 'google', 'Blob', 'URL', 'navigator', 'File', 'setTimeout',
+    src + '\nreturn libDescargarCsv;')(doc, function (s) { return String(s); }, function (n) { return String(n); }, function () {}, function () {}, function () {},
+    google, function () {}, { createObjectURL: function () { return 'blob:x'; }, revokeObjectURL: function () {} }, nav, Archivo, function () {});
+  return { bajar: f, ev: ev };
+}
+function navIos(cfg) {
+  return { standalone: cfg.standalone, canShare: function (d) { return cfg.puede && !!(d && d.files && d.files.length); },
+    share: function (d) { cfg.ev.compartido = d; return cfg.falla ? Promise.reject(cfg.falla) : Promise.resolve(); } };
+}
+var cfgIos = { standalone: true, puede: true };
+var mc = montarCsv(navIos(cfgIos)); cfgIos.ev = mc.ev;
+mc.bajar(anioPayload(2026));
+ok(mc.ev.compartido && mc.ev.compartido.files.length === 1 && mc.ev.compartido.files[0].name === 'tax-book-2026.csv', 'instalada en iOS: comparte el archivo tax-book-2026.csv');
+ok(mc.ev.compartido && /^type,year,date/.test(mc.ev.compartido.files[0].partes[0]) && mc.ev.compartido.files[0].type === 'text/csv', 'con el CSV adentro');
+ok(mc.ev.descargas.length === 0, 'y no intenta la descarga');
+var cfgSafari = { standalone: false, puede: true };
+mc = montarCsv(navIos(cfgSafari)); cfgSafari.ev = mc.ev;
+mc.bajar(anioPayload(2026));
+ok(!mc.ev.compartido && mc.ev.descargas[0] === 'tax-book-2026.csv', 'en Safari comun (no instalada), la descarga de siempre');
+var cfgNo = { standalone: true, puede: false };
+mc = montarCsv(navIos(cfgNo)); cfgNo.ev = mc.ev;
+mc.bajar(anioPayload(2026));
+ok(!mc.ev.compartido && mc.ev.descargas[0] === 'tax-book-2026.csv', 'si no puede compartir archivos, tambien la descarga');
+mc = montarCsv({});
+mc.bajar(anioPayload(2025));
+ok(mc.ev.descargas[0] === 'tax-book-2025.csv', 'en la computadora (sin share), la descarga');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

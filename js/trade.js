@@ -344,12 +344,16 @@ body.innerHTML = '<div class="vacio"><span class="vic">&#128240;</span><b>No new
 return;
 }
 
-// 1) Movimientos bruscos (±3% o más en 24h), siempre arriba.
+// 1) Movimientos bruscos, siempre arriba. El texto no nombra un umbral
+// (9/10/2026, auditoria): decia "±3%", y el push avisa con el criterio de
+// cada posicion (tres veces su movimiento normal, con piso) — VOO −2,7 %
+// notificaba "brusco" y esta tarjeta decia que nada se habia movido ±3 %. El
+// Worker pasa a usar el mismo criterio para las dos; el payload no cambia.
 var card = document.createElement('div');
 card.className = 'card';
 var html = '<span class="newssym">Sharp moves (24h)</span>';
 if (!data.bruscos || !data.bruscos.length) {
-html += '<p class="newsempty">No position moved &plusmn;3% in the last 24h.</p>';
+html += '<p class="newsempty">No position moved sharply in the last 24h.</p>';
 } else {
 data.bruscos.forEach(function (b) {
 var up = Number(b.cambio) >= 0;

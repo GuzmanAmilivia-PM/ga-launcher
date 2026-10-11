@@ -36,6 +36,13 @@ buildCashForm();
 var CARGA_COMPLETA_MS = 30 * 60 * 1000;
 var ultimaCargaCompleta = 0;
 var avisoDelPoll = false;   // el banner del Inicio lo puso un poll fallido
+// El numero de cada pedido (A14, ver loadData) tambien va ACA (9/10/2026,
+// auditoria): declarado abajo, junto a loadData, el primer pedido de la
+// apertura salia con cargaSeq sin valor (NaN). Esa respuesta se aceptaba
+// aunque llegara despues de una mas nueva —una compra hecha antes de que
+// volviera pintaba la posicion de antes y la guardaba— y nunca apagaba el
+// "updating" del renglon Today.
+var cargaSeq = 0, cargaAceptada = 0;
 
 var ultimaHuella = '';
 // Pintado instantáneo: al abrir se muestran los últimos datos vistos
@@ -66,6 +73,10 @@ function pintarCache() {
 // Las noticias tambien salen de lo guardado (23/09/2026): la tarjeta del mundo
 // del Inicio aparece con la app y no segundos despues (vistas.js).
 if (getApiToken()) { pintarCache(); pintarNoticiasCache(); loadData(); } else { mostrarLock(); }
+// La suscripcion push se revisa al abrir (9/10/2026, watchlist.js): sigue
+// viva, o se rehace. Despues del primer pedido, para no competir con el; con
+// la app bloqueada espera al desbloqueo (seguridad.js la llama ahi).
+if (typeof revisarPush === 'function') setTimeout(function () { if (!appBloqueada) revisarPush(); }, 2500);
 // En pantalla ancha el carrusel del Inicio se despliega y los tres paneles se
 // ven de una: Dividendos y Aportes hay que pedirlos, porque su carga colgaba
 // del gesto de deslizar (paneles.js). En el telefono esto no hace nada.
@@ -98,7 +109,9 @@ data.cuentas.forEach(function (c) {
 var acc = accountByName(c.nombre);
 var row = document.createElement('div');
 row.className = 'row' + (acc ? ' clickable' : '');
-row.innerHTML = '<span>' + esc(nombrePlataforma(c.nombre)) + '</span><span>' + fmt(c.liquido) + (acc ? '<span class="chev">&rsaquo;</span>' : '') + '</span>';
+// BTG con la fecha de su corte (9/10/2026, bancos.js): su saldo es el de fin de mes.
+var asOf = (acc && acc.key === 'BTG' && typeof btgAsOfHtml === 'function') ? btgAsOfHtml() : '';
+row.innerHTML = '<span>' + esc(nombrePlataforma(c.nombre)) + asOf + '</span><span>' + fmt(c.liquido) + (acc ? '<span class="chev">&rsaquo;</span>' : '') + '</span>';
 if (acc) { row.onclick = function () { showAccount(acc, 'cash'); }; if (typeof hacerTocable === 'function') hacerTocable(row); }
 cashListEl.appendChild(row);
 });
@@ -228,8 +241,8 @@ bnbAutoSync();
   // compra y volvia DESPUES pintaba la posicion y el cash de antes de la
   // compra, y los guardaba. Cada pedido lleva su numero: una respuesta mas
   // vieja que la ultima aceptada se descarta, y la marca "updating" la apaga
-  // solo el pedido mas nuevo.
-  var cargaSeq = 0, cargaAceptada = 0;
+  // solo el pedido mas nuevo. (cargaSeq y cargaAceptada se declaran arriba,
+  // antes del primer loadData.)
   function loadData(){
     var tok = getApiToken();
     if (!tok || tok === claveRechazada) return;   // ver claveRechazada (nucleo.js)
@@ -338,4 +351,7 @@ setInterval(function () {
   ultimoPoll = Date.now();
   loadData();
 }, 60000);
-document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ ultimoPoll = Date.now(); loadData(); } });
+document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ ultimoPoll = Date.now(); loadData();
+  // Volver a la app es "abrirla" en iOS, que la mantiene viva dias. Si al
+  // volver se re-bloqueo, la revision la hace el desbloqueo.
+  if (typeof revisarPush === 'function' && !appBloqueada) revisarPush(); } });

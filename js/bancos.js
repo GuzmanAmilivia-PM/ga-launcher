@@ -44,12 +44,23 @@ function itauTexto(e) {
   switch (e && e.estado) {
     case 'pendiente': return 'Requested. Waiting for your PC...';
     case 'actualizando': return 'Reading Ita&uacute;...';
-    case 'listo': return '&#10003; ' + esc(m || 'Updated.');
+    case 'listo': return '&#10003; ' + esc(m || 'Updated.') + itauCuando(e);
     case 'error': return '&#9888; ' + esc(m || 'It could not be updated.');
     case 'sin_respuesta': return '&#9888; Your PC did not answer. Is it on?';
     case 'abandonado': return '&#9888; It started and never finished. Check the PC.';
     default: return '';
   }
+}
+
+// De cuando es el dato (9/10/2026, auditoria): "Fund updated: 712.44 UYU per
+// unit" no decia CUANDO, y puede ser de dias atras (la PC atiende de lunes a
+// viernes). `fin` es la hora en que la PC termino; horaDelDato (tablero.js)
+// la escribe como el renglon Today: la hora si es de hoy, el dia si no.
+function itauCuando(e) {
+  var t = Number(e && e.fin);
+  if (!isFinite(t) || t <= 0 || typeof horaDelDato !== 'function') return '';
+  var cuando = horaDelDato(t);
+  return cuando ? ' <span class="detsec">as of ' + esc(cuando) + '</span>' : '';
 }
 
 function itauParar() {
@@ -225,7 +236,7 @@ function comprasItauHtml(data, r) {
   // —que el dolar de cada compra nadie lo guardo— ya vive arriba, en el bloque
   // que pide los dolares aportados.
   out += '</tbody></table>' +
-    '<p class="detlbl">In pesos &middot; unit at ' + esc(fmtNum(precioHoy)) + ' UYU today</p>';
+    '<p class="detlbl">In pesos &middot; unit at ' + esc(fmtNum(precioHoy)) + ' UYU</p>';   // sin "today": puede ser de dias atras (la fecha va arriba, 9/10/2026)
   return out;
 }
 
@@ -392,9 +403,13 @@ function btgAbrirDesdeAviso() {
 }
 // Lo llama el arranque despues del primer pintado (si fuera antes, el
 // Inicio le pasaria por encima). Una sola vez: el hash se borra.
+// Se borra CONSERVANDO el estado de la entrada (9/10/2026, auditoria): con
+// `null` se perdia la marca {ga, v:'inicio'} que vistas.js anoto en la raiz,
+// y el gesto de volver desde BTG no hacia nada (navAlVolver ignora un estado
+// vacio). Pasaba cada vez que se abria la app tocando la notificacion.
 function btgAbrirSiLoPidio() {
   if (location.hash !== '#btg') return;
-  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  try { history.replaceState(history.state, '', location.pathname + location.search); } catch (e) {}
   btgAbrirDesdeAviso();
 }
 if (navigator.serviceWorker && navigator.serviceWorker.addEventListener) {
@@ -422,6 +437,7 @@ function mostrarBtg() {
     document.getElementById('accTotal').textContent = t ? fmt(t.total) : '--';
     document.getElementById('accLiq').textContent = t ? ('Liquid: ' + fmt(t.liquido)) : '';
     renderBtg(d);
+    btgAnotarCorte(d && d.ultimo && d.ultimo.fecha);
     // Se llego desde la notificacion del dia 7: el formulario ya abierto.
     if (btgAbrirFormAlCargar) {
       btgAbrirFormAlCargar = false;
@@ -431,11 +447,70 @@ function mostrarBtg() {
   }).withFailureHandler(function (err) {
     if (accPedida !== 'BTG') return;
     document.getElementById('accTotal').textContent = '--';
-    // El "Loading..." de la caja se va: el error lo dice accError (A15).
+    // El error va EN la caja de BTG, con el boton de cargar un corte (9/10/2026,
+    // auditoria). Iba a #accError, que vive adentro de la tabla de posiciones
+    // —y en BTG la tabla esta escondida—: sin señal quedaba "BTG --" y una
+    // tarjeta vacia, justo en la pantalla que abre la notificacion del dia 7.
+    // Y el pedido de abrir el formulario se apaga: si no, quedaba armado y se
+    // abria solo la proxima vez que se entrara a BTG por cualquier camino.
+    btgAbrirFormAlCargar = false;
     var cajaBtg = document.getElementById('accBtg');
-    if (cajaBtg) cajaBtg.innerHTML = '';
-    errorEnVista('accError', err, 'the BTG balances');
+    if (cajaBtg) {
+      cajaBtg.hidden = false;
+      cajaBtg.innerHTML = '<p class="newsempty">' + esc(msgErr(err, 'The BTG balances')) + ' Come back in to retry.</p>' +
+        '<div class="detedit"><button type="button" class="ghostbtn" id="btgAbrir">Load a new snapshot</button></div>';
+      wireBtgAbrir();
+    }
   }).getBtg();
+}
+
+// ---------- La fecha del corte de BTG en la torta y en Banking (9/10/2026) ----------
+// BTG aparecia en la torta de Portfolio y en Banking con su monto y sin fecha,
+// y ese monto sale del ULTIMO CORTE de fin de mes: el 20 de octubre se lee
+// como de hoy y es del 30/09. Dice "last snapshot" y no "as of": al monto se
+// le suma lo registrado a mano despues del corte (un deposito cargado en
+// octubre sobre el corte de septiembre), asi que la fecha es la del corte, no
+// la del numero. El payload del Inicio no trae la fecha del
+// corte, asi que se anota la que trae getBtg cada vez que se abre BTG (y al
+// guardar un corte, que reabre la pantalla). Si no se sabe, o el anotado
+// tiene mas de 35 dias (ya deberia haber uno nuevo), se pregunta UNA vez por
+// sesion, recien al entrar a Portfolio o a Banking.
+var BTG_CORTE_CLAVE = 'ga_cache_btg';
+var BTG_CORTE_VIEJO_MS = 35 * 86400000;
+var btgCortePedido = false;
+function btgAnotarCorte(fecha) {
+  var f = String(fecha || '').slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(f)) cacheGuardar(BTG_CORTE_CLAVE, { fecha: f });
+}
+function btgCorteFecha() {
+  var c = cacheLeer(BTG_CORTE_CLAVE);
+  return (c && c.data && /^\d{4}-\d{2}-\d{2}$/.test(c.data.fecha)) ? c.data.fecha : null;
+}
+// 'Sep 30' (con el año si no es el de hoy).
+function btgFechaTexto(ymd) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || ''));
+  if (!m) return '';
+  var MES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var t = MES[Number(m[2]) - 1] + ' ' + Number(m[3]);
+  return Number(m[1]) === new Date().getFullYear() ? t : t + ', ' + m[1];
+}
+// Lo que va al lado del nombre "BTG": vacio si la fecha no se sabe.
+function btgAsOfHtml() {
+  var f = btgCorteFecha();
+  return f ? ' <span class="desc">last snapshot ' + esc(btgFechaTexto(f)) + '</span>' : '';
+}
+function btgPedirCorteSiFalta(alLlegar) {
+  var f = btgCorteFecha();
+  if (f && Date.now() - new Date(f + 'T12:00:00').getTime() < BTG_CORTE_VIEJO_MS) return;
+  if (btgCortePedido || !getApiToken()) return;
+  btgCortePedido = true;
+  google.script.run.withSuccessHandler(function (d) {
+    var nueva = d && d.ultimo && d.ultimo.fecha;
+    if (!nueva) return;
+    var antes = btgCorteFecha();
+    btgAnotarCorte(nueva);
+    if (alLlegar && btgCorteFecha() !== antes) alLlegar();
+  }).withFailureHandler(function () { /* sin fecha, sin "as of": nada que avisar */ }).getBtg();
 }
 
 // Al abrir cualquier OTRA cuenta hay que devolver la tabla y esconder BTG: sin

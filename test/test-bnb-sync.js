@@ -15,7 +15,7 @@ function ok(cond, msg) {
 }
 
 function montar(cfg) {
-  var estado = { llamadas: [], guardado: {}, avisos: [], loadData: 0 };
+  var estado = { llamadas: [], guardado: {}, avisos: [], avisosInicio: [], loadData: 0 };
   var ctx = {
     localStorage: {
       getItem: function (k) { return estado.guardado[k] || null; },
@@ -31,7 +31,11 @@ function montar(cfg) {
     syncEnCurso: function () { return !!cfg.ocupado; },
     appBloqueada: !!cfg.bloqueada,
     loadData: function () { estado.loadData++; },
-    avisoInicio: function (m, esOk) { estado.avisos.push({ msg: m, ok: !!esOk }); },
+    // Desde el 9/10/2026 los avisos de la sync automatica van al aviso FLOTANTE
+    // (se ve desde cualquier pantalla); avisoInicio queda espiado aparte para
+    // exigir que NO se use (solo existe en el Inicio).
+    avisoFlotante: function (m, esOk) { estado.avisos.push({ msg: m, ok: !!esOk }); },
+    avisoInicio: function (m) { estado.avisosInicio.push(m); },
     BNB_AUTO_MIN_MS: 30 * 60 * 1000,
     bnbEnCurso: false,
     Date: Date,
@@ -137,7 +141,8 @@ var CERRADAS2 = { ok: true, cambios: [{ tipo: 'cerrada' }, { tipo: 'cerrada' }] 
   m = montar({ dry: CAMBIO, apply: CAMBIO });
   m.api.bnbAutoSync();
   await esperar();
-  ok(m.avisos.length === 1 && m.avisos[0].ok === true, 'avisa el exito con cambios');
+  ok(m.avisos.length === 1 && m.avisos[0].ok === true, 'avisa el exito con cambios, en el aviso flotante');
+  ok(m.avisosInicio.length === 0, 'y no en el aviso del Inicio (desde otra pantalla no se veia)');
   ok(m.loadData === 1, 'recarga la pantalla');
 
   m = montar({ dry: { ok: true, cambios: [] } });
@@ -148,7 +153,7 @@ var CERRADAS2 = { ok: true, cambios: [{ tipo: 'cerrada' }, { tipo: 'cerrada' }] 
   m = montar({ dry: CERRADAS2 });
   m.api.bnbAutoSync();
   await esperar();
-  ok(m.avisos.length === 1 && /Earn/.test(m.avisos[0].msg), 'el caso Earn si avisa');
+  ok(m.avisos.length === 1 && /Earn/.test(m.avisos[0].msg) && m.avisos[0].ok === false, 'el caso Earn si avisa, y queda hasta que se toca');
 
   m = montar({ dry: 'FALLA' });
   m.api.bnbAutoSync();

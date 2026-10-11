@@ -92,6 +92,17 @@ function esAborto(e) {
 }
 var MSJ_SIN_RED = 'No connection. Try again once you have signal.';
 var MSJ_TARDO = 'The server took too long. Try again in a minute.';
+// Una ESCRITURA que tarda no se puede dar por perdida (9/10/2026, auditoria):
+// el Worker pudo haberla guardado y perdido solo la respuesta. Invitar a
+// repetirla duplicaba la compra o el deposito (el Worker no deduplica los
+// manuales). El corte de BTG no tiene el problema (guarda por fecha) pero el
+// mensaje igual es cierto. Las de configuracion se repiten sin daño.
+var FNS_ESCRITURA = {
+  trade: 1, cash: 1, btg_guardar: 1, posicion_editar: 1, itau_aportado: 1,
+  plataforma_agregar: 1, plataforma_editar: 1, plataforma_quitar: 1,
+  watchlist_agregar: 1, watchlist_quitar: 1, watchlist_alerta: 1, restaurar: 1
+};
+var MSJ_TARDO_ESCRITURA = 'The server took too long to answer. It may have been saved — check before trying again.';
 
 function apiCall(fn, args) {
   var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -150,7 +161,7 @@ function apiCall(fn, args) {
         // mensaje amable justo en el caso para el que existe: senal mala y
         // respuesta grande. Segunda auditoria del 22/08/2026.
         if (e && e.auth) throw e;                       // clave vencida: intacto
-        if (vencio || esAborto(e)) throw new Error(MSJ_TARDO);
+        if (vencio || esAborto(e)) throw new Error(FNS_ESCRITURA[fn] ? MSJ_TARDO_ESCRITURA : MSJ_TARDO);
         if (esErrorDeRed(e)) throw new Error(MSJ_SIN_RED);
         throw e;
       }
@@ -232,6 +243,13 @@ if ('serviceWorker' in navigator) {
     if (!swInicial) { swInicial = navigator.serviceWorker.controller; return; }
     var el = document.getElementById('updateAviso');
     if (el) el.style.display = '';
+    // Y en el aviso FLOTANTE (9/10/2026, auditoria): #updateAviso vive en el
+    // Inicio, y parado en Portfolio o en Trades la version nueva esperaba
+    // escondida —mientras el menu ya mostraba su numero con el codigo viejo
+    // corriendo—. Queda hasta que se toca: Update recarga, el resto lo cierra.
+    avisoFlotante('There&rsquo;s a new version of the app.<button type="button" class="avisoflot-accion" id="updateBtnFlot">Update</button>', true, true);
+    var b = document.getElementById('updateBtnFlot');
+    if (b) b.onclick = function (ev) { if (ev && ev.stopPropagation) ev.stopPropagation(); aplicarActualizacion(); };
   });
 }
 } catch (eSw) { }
@@ -349,10 +367,14 @@ if (_animTotalRaf) { cancelAnimationFrame(_animTotalRaf); _animTotalRaf = null; 
 el.textContent = fmt(_ultimoTotalPintado);
 }, DURACION + 150);
 }
+// El signo de un negativo va ADELANTE de la moneda, con el menos tipografico
+// (9/10/2026, auditoria): "\u2212USD 95", como fmtSigno y la tira del escritorio.
+// Salia "USD -150" en BTG y "US$ -320" en Available to invest.
 function fmt(n) {
 if (montosOcultos) return '****';
 if (n === null || n === undefined || isNaN(n)) return '\u2014';
-return 'USD ' + Math.round(n).toLocaleString('en-US');
+var r = Math.round(n);
+return (r < 0 ? '\u2212' : '') + 'USD ' + Math.abs(r).toLocaleString('en-US');
 }
 function fmtNum(n) {
 if (n === null || n === undefined || n === '') return '\u2014';
@@ -382,8 +404,17 @@ function fmtSigno(n) { return (n >= 0 ? '+' : '−') + fmt(Math.abs(n)); }
 // paneles.js. fmtUsd: 2 decimales; fmtUsdEnt: redondeado, con miles (en-US).
 // La etiqueta difiere A PROPOSITO: el patrimonio y los trades dicen "USD"
 // (fmt/opsMonto), los paneles de ingresos "US$" (auditoria 19/08/2026).
-function fmtUsd(n) { return mask('US$ ' + (Number(n) || 0).toFixed(2)); }
-function fmtUsdEnt(n) { return mask('US$ ' + Math.round(Number(n) || 0).toLocaleString('en-US')); }
+// fmtUsd con separador de miles (9/10/2026, auditoria): era el unico monto de
+// la app sin el ("US$ 12450.25" en Tax book, "US$ 1253.35" en Dividends). Los
+// dos ponen el signo de un negativo adelante, como fmt.
+function fmtUsd(n) {
+var r = Math.round((Number(n) || 0) * 100) / 100;
+return mask((r < 0 ? '−' : '') + 'US$ ' + Math.abs(r).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+}
+function fmtUsdEnt(n) {
+var r = Math.round(Number(n) || 0);
+return mask((r < 0 ? '−' : '') + 'US$ ' + Math.abs(r).toLocaleString('en-US'));
+}
 // fmtPctRaw y chipClass se fueron el 18/08/2026: su unico llamador era la
 // tabla del detalle de cuenta, que se podo a los mismos helpers del Inicio
 // (daychgHtml/gananciaHtml en graficos.js).

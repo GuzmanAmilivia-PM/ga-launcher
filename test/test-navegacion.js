@@ -309,5 +309,17 @@ ok(fila.clicks === 2, 'Enter en otra cosa (un campo de texto) no hace nada raro'
   .forEach(function (s) { ok(html.indexOf(s) !== -1, 'la usa: ' + s.slice(0, 32)); });
 ok((html.match(/hacerTocable\(tr\)/g) || []).length === 3, 'y las tres tablas de posiciones (Inicio, Positions, cada cuenta)');
 
+console.log('\nJ) abrir BTG desde la notificacion con la app cerrada (./#btg): el gesto vuelve (9/10/2026)');
+// btgAbrirSiLoPidio (bancos.js) borra el hash del arranque. Con
+// replaceState(null) se llevaba tambien la marca de la raiz, y el primer
+// gesto de volver desde BTG no hacia nada.
+m = montar();
+m.g.location.hash = '#btg'; m.g.location.pathname = '/ga-launcher/'; m.g.location.search = '';
+m.g.btgAbrirSiLoPidio();
+ok(m.vista() === 'account' && m.estado().acc === 'BTG', 'abre la cuenta BTG');
+ok(m.h.__pila()[0] && m.h.__pila()[0].ga === 1 && m.h.__pila()[0].v === 'inicio', 'la raiz conserva su marca: ' + JSON.stringify(m.h.__pila()[0]));
+m.h.back(); m.h.__resolver();
+ok(m.vista() === 'inicio', 'el gesto de volver deja el Inicio a la vista: ' + m.vista());
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

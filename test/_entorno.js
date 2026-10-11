@@ -88,7 +88,12 @@ function fuentes() {
  * `storage` es el localStorage inicial (el escenario que se quiera probar).
  * Nunca tira: los fallos de carga se informan en `errores`, con el archivo.
  */
-function cargar(storage) {
+function cargar(storage, opciones) {
+  opciones = opciones || {};
+  // Los oyentes del service worker (9/10/2026): el aviso de version nueva
+  // escucha 'controllerchange', y un arnes lo dispara con __dispararSw.
+  // opciones.swControla: la app ya estaba bajo un SW (no es la primera visita).
+  var oyentesSw = {};
   var store = Object.assign({}, storage || {});
   var oyentes = {};
   var oyentesDoc = {};
@@ -118,7 +123,10 @@ function cargar(storage) {
     },
     navigator: {
       credentials: { create: function () { return new Promise(function () {}); }, get: function () { return new Promise(function () {}); } },
-      serviceWorker: { register: function () { return Promise.resolve({}); }, addEventListener: function () {}, controller: null }
+      serviceWorker: { register: function () { return Promise.resolve({}); },
+        addEventListener: function (tipo, fn) { (oyentesSw[tipo] = oyentesSw[tipo] || []).push(fn); },
+        __dispararSw: function (tipo, ev) { (oyentesSw[tipo] || []).forEach(function (f) { f(ev || {}); }); },
+        controller: opciones.swControla ? {} : null }
     },
     location: { hostname: 'localhost', reload: function () {}, href: 'http://localhost/' },
     crypto: {
@@ -137,6 +145,8 @@ function cargar(storage) {
     AbortController: function () { return { abort: function () {}, signal: {} }; },
     // El CSV del Tax book (24/09/2026): un archivo que se baja desde la app.
     Blob: function (partes, opts) { this.partes = partes; this.type = opts && opts.type; },
+    // Y desde el 9/10/2026 se COMPARTE como archivo en el iPhone instalado.
+    File: function (partes, nombre, opts) { this.partes = partes; this.name = nombre; this.type = opts && opts.type; },
     isSecureContext: true,
     PublicKeyCredential: { isUserVerifyingPlatformAuthenticatorAvailable: function () { return Promise.resolve(false); } },
     btoa: function (s) { return Buffer.from(s, 'binary').toString('base64'); },
@@ -159,6 +169,16 @@ function cargar(storage) {
     scrollY: 0,
     history: historialFalso(oyentes)
   };
+  // El reloj del PROCESO, no el del contexto (9/10/2026, auditoría): cada
+  // contexto de vm trae su propio `Date` intrínseco, y ese no lo alcanzan ni
+  // test/_reloj.js (fijarReloj cambia el `Date` global del proceso) ni la
+  // precarga de test/_futuro.js. El código de la app seguía viendo la fecha
+  // real: test-ytd-coherente fijaba su historia en 2026 y graficos.js buscaba
+  // el YTD del año de hoy, una bomba para el 1/01/2027 que el guardián de
+  // "+100 días" no podía ver. Es un getter, así un fijarReloj posterior a
+  // cargar() también llega. Mezclar este Date con el realm de vm no rompe
+  // nada: la app solo hace `new Date(...)`, `Date.now()` y `Date.UTC`.
+  Object.defineProperty(ctx, 'Date', { get: function () { return global.Date; }, enumerable: true, configurable: true });
   vm.createContext(ctx);
   // window.X y X son lo mismo, como en el navegador. Se hace DESPUÉS de
   // contextificar para que apunte al global real del contexto.

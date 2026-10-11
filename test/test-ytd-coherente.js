@@ -26,6 +26,13 @@ function ok(cond, msg) {
 var cargado = entorno.cargar({});
 ok(cargado.errores.length === 0, 'la app carga entera' + (cargado.errores.length ? ': ' + cargado.errores.join(' | ') : ''));
 var g = cargado.ambito;
+// La APP tambien vive el 2026-06-15 (9/10/2026, auditoria): corre adentro de
+// un contexto de vm, que trae su propio Date. Sin el reloj del proceso
+// (_entorno.js), graficos.js sacaba el año de la fecha real y este arnés se
+// rompia solo el 1/01/2027 — sin que test/_futuro.js pudiera verlo.
+var ahoraApp = require('vm').runInContext('Date.now()', g);
+ok(Math.abs(ahoraApp - Date.now()) < 60000,
+  'la app ve el reloj de la historia (' + new Date(ahoraApp).toISOString().slice(0, 10) + '), no el de hoy');
 var elems = {};
 g.document.getElementById = function (id) {
   if (!elems[id]) elems[id] = entorno.elemento();

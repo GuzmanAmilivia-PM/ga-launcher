@@ -50,11 +50,15 @@ function renderLibro() {
 
   // Dividendos por broker: bruto, retenido, neto. Todo en USD con el cambio
   // que informo el broker.
-  h += '<table class="rendtabla libtabla"><tr><th></th><th>Dividends</th><th>Withheld</th><th>Net</th></tr>';
+  // Cada tabla va adentro de .libscroll (9/10/2026, auditoria): a 393 px la
+  // de brokers se salia de la tarjeta y la de "por papel" de la pantalla, con
+  // los montos pegados ("US$ 512.30US$ 153.69"). Si no entra, se desliza
+  // ADENTRO de la tarjeta; la pagina no se corre.
+  h += '<div class="libscroll"><table class="rendtabla libtabla"><tr><th></th><th>Dividends</th><th>Withheld</th><th>Net</th></tr>';
   (r.brokers || []).forEach(function (b) {
     h += '<tr><td>' + esc(b.broker) + '</td><td>' + libMonto(b.dividendos) + '</td><td>' + libMonto(libRetenido(b)) + '</td><td>' + libMonto(b.neto) + '</td></tr>';
   });
-  h += '<tr class="libtotal"><td>Total</td><td>' + libMonto(t.dividendos) + '</td><td>' + libMonto(libRetenido(t)) + '</td><td>' + libMonto(t.neto) + '</td></tr></table>';
+  h += '<tr class="libtotal"><td>Total</td><td>' + libMonto(t.dividendos) + '</td><td>' + libMonto(libRetenido(t)) + '</td><td>' + libMonto(t.neto) + '</td></tr></table></div>';
 
   // Las ventas, con el resultado que informo el broker.
   var ventas = r.ventas || [];
@@ -64,7 +68,7 @@ function renderLibro() {
   } else {
     // Tres columnas: la fecha va debajo del simbolo (con cuatro, a 375 px la
     // tabla se salia por la derecha).
-    h += '<table class="rendtabla libtabla"><tr><th></th><th>Proceeds</th><th>Result</th></tr>';
+    h += '<div class="libscroll"><table class="rendtabla libtabla"><tr><th></th><th>Proceeds</th><th>Result</th></tr>';
     ventas.forEach(function (v) {
       var res = v.resultado;
       // ≈: lo estimo el Worker (costo promedio o la hoja Ventas de Guzman), no
@@ -74,7 +78,7 @@ function renderLibro() {
         '<td>' + libMonto(v.importe) + '</td>' +
         '<td>' + (res === null || res === undefined ? '—' : '<b class="' + (res >= 0 ? 'up' : 'down') + '">' + (aprox ? '≈ ' : '') + libMonto(res) + '</b>') + '</td></tr>';
     });
-    h += '<tr class="libtotal"><td>Total</td><td>' + libMonto(t.importeVentas) + '</td><td>' + libMonto(t.resultado) + '</td></tr></table>';
+    h += '<tr class="libtotal"><td>Total</td><td>' + libMonto(t.importeVentas) + '</td><td>' + libMonto(t.resultado) + '</td></tr></table></div>';
     if (ventas.some(function (v) { return v.resultadoFuente && v.resultadoFuente !== 'broker'; })) {
       h += '<p class="capnota">≈ estimated: the broker does not report it (see the notes below).</p>';
     }
@@ -84,12 +88,12 @@ function renderLibro() {
   var sim = r.simbolos || [];
   if (sim.length) {
     h += '<details class="libdet"><summary>Dividends by holding (' + sim.length + ')</summary>' +
-      '<table class="rendtabla libtabla"><tr><th></th><th>Dividends</th><th>Withheld</th><th>Net</th></tr>';
+      '<div class="libscroll"><table class="rendtabla libtabla"><tr><th></th><th>Dividends</th><th>Withheld</th><th>Net</th></tr>';
     sim.forEach(function (s) {
       h += '<tr><td>' + esc(s.symbol || '—') + ' <em>' + esc(s.broker) + (s.moneda && s.moneda !== 'USD' ? ' · ' + esc(s.moneda) : '') + '</em></td>' +
         '<td>' + libMonto(s.dividendos) + '</td><td>' + libMonto(libRetenido(s)) + '</td><td>' + libMonto(s.neto) + '</td></tr>';
     });
-    h += '</table></details>';
+    h += '</table></div></details>';
   }
 
   // Los premios de Binance Earn y sus distribuciones (A33): ingreso, aparte
@@ -98,11 +102,11 @@ function renderLibro() {
   if (ing.length) {
     h += '<p class="libsub">Crypto rewards</p><p class="rendtitular" style="font-size:15px">' + libMonto(t.ingresos) +
       ' <span class="desc">from Binance Earn and distributions, at each day’s price</span></p>';
-    h += '<details class="libdet"><summary>Rewards by asset (' + ing.length + ')</summary><table class="rendtabla libtabla"><tr><th></th><th>Units</th><th>USD</th></tr>';
+    h += '<details class="libdet"><summary>Rewards by asset (' + ing.length + ')</summary><div class="libscroll"><table class="rendtabla libtabla"><tr><th></th><th>Units</th><th>USD</th></tr>';
     ing.forEach(function (x) {
       h += '<tr><td>' + esc(x.symbol) + ' <em>' + esc(x.broker) + '</em></td><td>' + esc(x.qty) + '</td><td>' + libMonto(x.monto) + '</td></tr>';
     });
-    h += '</table></details>';
+    h += '</table></div></details>';
   }
 
   if (Number(t.gastos)) h += '<p class="capnota">Withheld includes ' + libMonto(t.gastos) + ' of ADR fees (charged by the depositary bank, not a tax).</p>';
@@ -139,11 +143,35 @@ function libCsvTexto(r) {
   });
   return filas.map(function (f) { return f.map(c).join(','); }).join('\n') + '\n';
 }
+// En la app INSTALADA en el iPhone, la hoja de compartir (9/10/2026,
+// auditoria). Una descarga de blob con <a download> en una web app de la
+// pantalla de inicio de iOS no es confiable (puede abrir un visor sin salida),
+// y lo que Guzman quiere es mandarle el archivo al contador: la hoja de
+// compartir ofrece Mail, WhatsApp y Archivos. Solo ahi y solo si el navegador
+// dice que puede compartir el archivo; en cualquier otro caso (la
+// computadora, Safari comun) la descarga de siempre.
 function libDescargarCsv(r) {
-  var blob = new Blob([libCsvTexto(r)], { type: 'text/csv;charset=utf-8' });
+  var texto = libCsvTexto(r);
+  var nombre = 'tax-book-' + r.anio + '.csv';
+  var nav = (typeof navigator !== 'undefined') ? navigator : null;
+  if (nav && nav.standalone === true && typeof nav.share === 'function' && typeof nav.canShare === 'function' && typeof File === 'function') {
+    var archivo = null, puede = false;
+    try { archivo = new File([texto], nombre, { type: 'text/csv' }); puede = !!nav.canShare({ files: [archivo] }); } catch (e) { puede = false; }
+    if (puede) {
+      // Cerrar la hoja (AbortError) es decir que no: no se baja nada.
+      nav.share({ files: [archivo], title: 'Tax book ' + r.anio }).catch(function (e) {
+        if (!(e && e.name === 'AbortError')) libBajarCsv(texto, nombre);
+      });
+      return;
+    }
+  }
+  libBajarCsv(texto, nombre);
+}
+function libBajarCsv(texto, nombre) {
+  var blob = new Blob([texto], { type: 'text/csv;charset=utf-8' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'tax-book-' + r.anio + '.csv';
+  a.download = nombre;
   document.body.appendChild(a);
   a.click();
   setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
