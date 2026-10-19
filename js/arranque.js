@@ -51,6 +51,13 @@ function pintarCache() {
   var c = cacheLeer('ga_cache_data');
   if (!c || !c.data.cuentas) return false;
   render(c.data);
+  // La huella de lo pintado (19/10/2026, pasada de rendimiento): sin esto
+  // arrancaba vacia y la primera respuesta repintaba el Inicio entero —93
+  // cambios en el DOM y el grafico— aunque trajera exactamente lo guardado,
+  // que es lo normal con el mercado cerrado (de noche y el finde, cuando mas
+  // se abre la app). Una carga completa repinta igual: la serie no entra en
+  // la huella (ver loadData).
+  ultimaHuella = huellaDatos(c.data);
   // Arranque lite-first (R4): si el cache pintado es fresco (<30 min) y trae
   // el juego completo (serie + bench + serieGrupo), cuenta como "ultima carga
   // completa": la primera llamada sale lite (~80% menos payload) y el grafico

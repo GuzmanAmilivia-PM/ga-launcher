@@ -204,6 +204,22 @@ var LITE_CAMBIO = { total: 111, cuentas: [{ nombre: 'CS', valor: 111 }], liquide
   ok(m.renders.length >= 1 && m.guardados.length === 1 && m.guardados[0].serie.length === 3, 'la respuesta lite hereda la serie del cache y se guarda');
   ok(!!m.guardados[0].bench && !!m.guardados[0].serieGrupo, 'bench y serieGrupo se re-adjuntan: el cache queda completo para el proximo arranque');
 
+  console.log('\nG2) arranque con el cache pintado y una respuesta IGUAL: no repinta (19/10/2026, pasada de rendimiento)');
+  // La huella arrancaba vacia: la primera respuesta repintaba el Inicio entero
+  // —93 cambios en el DOM y el grafico— aunque trajera lo mismo que el cache,
+  // que es lo normal con el mercado cerrado. El cache lo pinta pintarCache al
+  // cargar (con el render real); aca solo se cuentan los renders posteriores.
+  m = montar({ token: true, cache: { t: AHORA0 - 5 * 60 * 1000, data: Object.assign({ _completaMs: AHORA0 - 5 * 60 * 1000 }, CACHE_FULL) },
+    respuestas: [{ total: 100, cuentas: [{ nombre: 'CS', valor: 100 }], liquidez: 5, actualizado: 'c1', lite: true }] });
+  await esperar();
+  ok(m.pedidos.length === 1 && m.pedidos[0] && m.pedidos[0].lite === true, 'pide lite, como en G');
+  ok(m.renders.length === 0, 'la respuesta igual a lo pintado NO repinta: ' + m.renders.length + ' render(s)');
+  ok(m.guardados.length === 0, 'ni reescribe el cache');
+  m = montar({ token: true, cache: { t: AHORA0 - 5 * 60 * 1000, data: Object.assign({ _completaMs: AHORA0 - 5 * 60 * 1000 }, CACHE_FULL) },
+    respuestas: [Object.assign({}, LITE_CAMBIO)] });
+  await esperar();
+  ok(m.renders.length === 1 && m.renders[0].total === 111, 'y una que cambio algo SI repinta');
+
   console.log('\nH) cache viejo (>30 min): el arranque pide completo, como siempre');
   m = montar({ token: true, cache: { t: AHORA0 - 31 * 60 * 1000, data: Object.assign({ _completaMs: AHORA0 - 31 * 60 * 1000 }, CACHE_FULL) }, respuestas: [Object.assign({}, COMPLETO)] });
   await esperar();

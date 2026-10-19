@@ -121,6 +121,13 @@ ok(/k !== CACHE && k !== ESTABLES/.test(sw), 'el activate conserva el cache de l
 var swPlano = sw.replace(/\n/g, ' ');
 ok(/ASSETS_ESTABLES = \[[^\]]*fonts\/[^\]]*icon-512/.test(swPlano), 'fuentes e iconos van en el cajon estable');
 ok(!/var ASSETS = \[[^\]]*fonts\//.test(swPlano), 'y ya no estan en ASSETS del cascaron');
+// La instalacion REVALIDA el cascaron (19/10/2026, pasada de rendimiento): con
+// 'reload' cada version bajaba los 24 archivos (224 KB comprimidos) aunque
+// cambiara uno; con 'no-cache' GitHub Pages contesta 304 lo que no cambio.
+// 'force-cache' o 'default' serian un error: podrian instalar una version
+// vieja de un archivo sin preguntarle al servidor.
+var modoInstall = (swPlano.match(/caches\.open\(CACHE\)[^;]*cache: '([\w-]+)'/) || [])[1];
+ok(modoInstall === 'no-cache', 'la instalacion revalida cada archivo con el servidor (no-cache), no lo rebaja entero ni lo toma sin preguntar: ' + modoInstall);
 // El contrato cache-first: responde del cache y va a la red SOLO si falta.
 // La version anterior disparaba un fetch de revalidacion en cada pedido.
 ok(/return cached \|\| fetch\(/.test(sw), 'el sw responde del cache y solo va a la red si falta');

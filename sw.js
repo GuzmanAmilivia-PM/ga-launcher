@@ -1,6 +1,6 @@
 // Service worker: cachea el "cascarón" de la app para carga instantánea.
 // Los datos (POST a la API) nunca se cachean.
-var CACHE = 'ga-pwa-v247';
+var CACHE = 'ga-pwa-v248';
 // './' y NO también './index.html' (24/09/2026): son la misma página, y con
 // las dos cada versión nueva la bajaba dos veces (50 KB de más). Quien pida
 // index.html por su nombre recibe './' (ver el fetch, abajo).
@@ -21,9 +21,16 @@ var ASSETS_ESTABLES = ['./fonts/manrope.woff2',
   './fonts/montserrat-700.woff2', './logo-menu.png', './logo-marca.png',
   './apple-touch-icon.png', './icon-512.png', './favicon.png'];
 
+// El shell se REVALIDA, no se rebaja entero (19/10/2026, pasada de
+// rendimiento). Con cache:'reload' cada version bajaba los 24 archivos de
+// nuevo —224 KB comprimidos, medidos contra GitHub Pages— aunque cambiara uno
+// solo, y se publica entre 2 y 9 veces por dia. Con 'no-cache' el navegador
+// pregunta con el ETag y GitHub Pages contesta 304 (sin cuerpo) lo que no
+// cambio: la version que toca un archivo baja ese archivo. Igual de fresco:
+// los dos modos consultan al servidor; ninguno usa una copia sin preguntar.
 self.addEventListener('install', function (e) {
   e.waitUntil(Promise.all([
-    caches.open(CACHE).then(function (c) { return c.addAll(ASSETS.map(function (u) { return new Request(u, { cache: 'reload' }); })); }),
+    caches.open(CACHE).then(function (c) { return c.addAll(ASSETS.map(function (u) { return new Request(u, { cache: 'no-cache' }); })); }),
     caches.open(ESTABLES).then(function (c) {
       return Promise.all(ASSETS_ESTABLES.map(function (u) {
         return c.match(u).then(function (hay) { return hay ? null : c.add(u); });
