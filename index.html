@@ -143,12 +143,6 @@
 <!-- Banking (la vista de depositar/retirar cash) vive ACA desde el
      27/08/2026: su lugar en la barra de abajo lo ocupa la Watchlist. -->
 <button class="mtile" id="mCash"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M8.5 10.5V4M8.5 4 5.5 7M8.5 4l3 3"/><path d="M15.5 13.5V20M15.5 20l-3-3M15.5 20l3-3"/></svg></span>Banking</button>
-<!-- Billing (07/10/2026): acceso directo al Resumen de la otra app de
-     Guzman, facturacion-app (facturacion, aportes, IVA e IRPF). Es OTRO
-     Worker con su propia base y su login por Cloudflare Access (mail): esta
-     app no le pide ni le manda nada, solo abre la pagina. Sin hash, la app
-     de facturacion abre el Resumen del año en curso. -->
-<a class="mtile" id="mFactura" href="https://facturacion-app.ga-portfolio.workers.dev/" target="_blank" rel="noopener"><span class="mtile-ic"><svg viewBox="0 0 24 24"><path d="M6 3.5h8.5L18.5 7.5v13H6z"/><path d="M14.5 3.5v4h4"/><path d="M14.2 11h-3a1.3 1.3 0 0 0 0 2.6h1.6a1.3 1.3 0 0 1 0 2.6H9.8M12.2 9.5V11M12.2 16.2v1.5"/></svg></span>Billing</a>
 </div>
 <button type="button" class="menu-banner" id="mPlataformas"><span class="mb-logo galogo-img"></span><span><b>GA</b> platforms</span><span class="mb-go">&rsaquo;</span></button>
 </div>
@@ -557,6 +551,22 @@
 <button class="ghostbtn" id="wlPushActivar" style="display:none">Enable notifications</button>
 <button class="ghostbtn" id="wlPushProbar" style="display:none">Send a test notification</button>
 <div id="wlPushMsg"></div>
+</div>
+</div>
+
+<!-- ============ GA PLATFORMS ============ -->
+<!-- GA platforms (19/10/2026): todas las apps de Guzman, una fila cada una
+     (una app nueva = una fila mas). Reemplaza al tile Billing del menu
+     (7/10/2026): MANGO es la ex app de facturacion (facturacion, aportes, IVA,
+     IRPF y gastos). Cada app es otro sitio con su base y su login; esta solo
+     abre la pagina, en pestaña aparte y sin window.opener. -->
+<div id="view-ga" style="display:none">
+<button type="button" class="backlink" id="gaBack">&larr; Back</button>
+<p class="viewtitle">GA platforms</p>
+<div class="card">
+<div class="platrow"><span>Guzmana<span class="platmeta">Investments &middot; you are here</span></span></div>
+<a class="platrow galink" id="gaMango" href="https://facturacion-app.ga-portfolio.workers.dev/" target="_blank" rel="noopener"><span>MANGO<span class="platmeta">Billing, taxes and expenses</span></span><span class="platmeta">Open &rsaquo;</span></a>
+<a class="platrow galink" id="gaPmp" href="https://pmp-simulator.pages.dev/" target="_blank" rel="noopener"><span>PMP Simulator<span class="platmeta">Exam practice</span></span><span class="platmeta">Open &rsaquo;</span></a>
 </div>
 </div>
 

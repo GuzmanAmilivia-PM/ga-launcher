@@ -252,8 +252,8 @@ ok(/<p class="capval down">−2\.5 pp<\/p>/.test(m.el('anualBody').innerHTML), '
 console.log('\nG) el banner "GA platforms ›" del menu lleva a algun lado (A7)');
 // ALCANCE: el onclick se engancha AL CARGAR vistas.js, antes de que este
 // arnes cambie el DOM de mentira; asi que se mira el codigo escrito.
-ok(/getElementById\('mPlataformas'\)\.onclick = function \(\) \{ toggleMenu\(false\); setView\('config'\); \}/.test(html),
-  'cierra el menu y abre las plataformas (Keys)');
+ok(/getElementById\('mPlataformas'\)\.onclick = function \(\) \{ toggleMenu\(false\); setView\('ga'\); \}/.test(html),
+  'cierra el menu y abre las apps GA (Guzmana y MANGO, 19/10/2026)');
 ok(/<button type="button" class="menu-banner" id="mPlataformas">/.test(html), 'y es un <button> (teclado y lector de pantalla)');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');

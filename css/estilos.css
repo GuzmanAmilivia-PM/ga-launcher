@@ -965,6 +965,7 @@ html.light[data-fondo="bosque"] { --navy: #eaf3ee; --navy2: #ffffff; --navy3: #d
 .platrow:last-child { border-bottom: none; }
 .platmeta { color: var(--muted); font-size: 11.5px; display: block; font-weight: 400; margin-top: 2px; }
 .platbtns { white-space: nowrap; }
+a.galink { color: inherit; text-decoration: none; }
 .platbtns button { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; margin-left: 6px; font-family: inherit; font-weight: 700; }
 .seclink{color:var(--muted);font-size:12.5px;text-decoration:underline;cursor:pointer;margin-top:18px;}
 /* El splash ES la pantalla de bloqueo: por eso ahora scrollea y aguanta el
