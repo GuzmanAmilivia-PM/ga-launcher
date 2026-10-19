@@ -1014,11 +1014,16 @@ ok(/\\\/index\\\.html\$\/\.test\(url\.pathname\) \? new Request\('\.\/'\)/.test(
 var fontsSinUso = woff2.filter(function (f) { return cssTexto.indexOf('../fonts/' + f) === -1; });
 ok(fontsSinUso.length === 0, 'cada fuente de fonts/ la usa un @font-face' + (fontsSinUso.length ? ' — SOBRAN: ' + fontsSinUso.join(', ') : ''));
 
-// Billing (07/10/2026): el acceso directo a la app de facturacion abre en
-// otra pestaña y sin darle a esa pagina acceso a esta (window.opener).
-var billing = /<a class="mtile" id="mFactura" href="([^"]+)" target="_blank" rel="noopener">[\s\S]*?Billing<\/a>/.exec(indexEnDisco);
-ok(!!billing, 'el tile Billing esta en el menu del costado, en pestaña aparte y con noopener');
-ok(billing && billing[1] === 'https://facturacion-app.ga-portfolio.workers.dev/', 'y apunta a la raiz de facturacion-app (abre el Resumen del año en curso)');
+// MANGO (19/10/2026, ex Billing del 07/10/2026): la app de facturacion y
+// gastos se abre desde GA platforms, en otra pestaña y sin darle a esa pagina
+// acceso a esta (window.opener).
+var mango = /<a class="platrow galink" id="gaMango" href="([^"]+)" target="_blank" rel="noopener">[\s\S]*?MANGO/.exec(indexEnDisco);
+ok(!!mango, 'MANGO esta en GA platforms, en pestaña aparte y con noopener');
+ok(mango && mango[1] === 'https://facturacion-app.ga-portfolio.workers.dev/', 'y apunta a la raiz de facturacion-app');
+var vistaGa = /<div id="view-ga"[\s\S]*?\n<\/div>\n<\/div>/.exec(indexEnDisco);
+var linksGa = vistaGa ? vistaGa[0].match(/<a [^>]*>/g) || [] : [];
+ok(linksGa.length >= 2 && linksGa.every(function (a) { return /target="_blank" rel="noopener"/.test(a); }), 'cada app de GA platforms abre aparte y con noopener (' + linksGa.length + ' apps)');
+ok(indexEnDisco.indexOf('id="mFactura"') === -1, 'y el tile Billing ya no esta en el menu (quedaria repetido)');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

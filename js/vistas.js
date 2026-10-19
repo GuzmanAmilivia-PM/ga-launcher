@@ -249,9 +249,10 @@ document.getElementById('mIA').onclick = function () { toggleMenu(false); setVie
 document.getElementById('mConfig').onclick = function () { toggleMenu(false); setView('config'); };
 document.getElementById('mDiseno').onclick = function () { toggleMenu(false); setView('diseno'); };
 // El banner "GA platforms ›" del pie del menu prometia ir a algun lado con
-// su flecha y no hacia nada (A7, 23/09/2026): lleva a las plataformas, que
-// son la primera tarjeta de Keys.
-document.getElementById('mPlataformas').onclick = function () { toggleMenu(false); setView('config'); };
+// su flecha y no hacia nada (A7, 23/09/2026). Desde el 19/10/2026 abre las
+// apps GA (Guzmana y MANGO); las plataformas siguen en Connections.
+document.getElementById('mPlataformas').onclick = function () { toggleMenu(false); setView('ga'); };
+document.getElementById('gaBack').onclick = function () { volver('inicio'); };
 // Settings era la unica pagina del menu sin volver (auditoria del 23/09/2026).
 document.getElementById('disBack').onclick = function () { volver('inicio'); };
 document.getElementById('mSeguridad').onclick = function () { toggleMenu(false); setView('seguridad'); };
@@ -268,7 +269,7 @@ document.getElementById('mExpo').onclick = function () { toggleMenu(false); setV
 document.getElementById('mLibro').onclick = function () { toggleMenu(false); setView('libro'); };
 
 // ---------- Navegación (barra inferior) ----------
-var VIEWS = ['inicio', 'portafolio', 'cash', 'watchlist', 'trade', 'noticias', 'account', 'posiciones', 'analisis', 'config', 'diseno', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb', 'cs', 'rendanual', 'exposicion', 'libro'];
+var VIEWS = ['inicio', 'portafolio', 'cash', 'watchlist', 'trade', 'noticias', 'account', 'posiciones', 'analisis', 'config', 'ga', 'diseno', 'ia', 'seguridad', 'buscar', 'ibkr', 'bnb', 'cs', 'rendanual', 'exposicion', 'libro'];
 // La barra no cambia nunca: se consulta el DOM una sola vez, no en cada setView.
 var NAVTABS = document.querySelectorAll('.navtab');
 var currentView = 'inicio';
