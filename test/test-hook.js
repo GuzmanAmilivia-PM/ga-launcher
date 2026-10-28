@@ -29,6 +29,10 @@ ok(fs.existsSync(hook), '.githooks/pre-push existe');
 var hooksPath = git(['config', '--get', 'core.hooksPath']);
 if (hooksPath === null && git(['rev-parse', '--git-dir']) === null) {
   console.log('  (no es un clon de git: no hay push que cuidar)');
+} else if (process.env.GITHUB_ACTIONS) {
+  // El workflow del Worker baja este repo solo para correr la suite: desde
+  // ahi nadie sube nada.
+  console.log('  (en GitHub Actions: no hay push que cuidar)');
 } else {
   ok(hooksPath === '.githooks', 'core.hooksPath = .githooks (hoy: ' + (hooksPath || 'sin configurar') +
     ') — arreglo: git config core.hooksPath .githooks');
