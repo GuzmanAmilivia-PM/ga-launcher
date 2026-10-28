@@ -27,6 +27,24 @@
 // apagada no va a pasar nunca. Decir "prendé la PC" es más útil que girar.
 var ITAU_ESPERA_MS = 3000;
 var itauTimer = null;
+
+// LA LECTURA AUTOMATICA ESTA APAGADA (28/10/2026). Desde el 16/10 Itau
+// reconoce dispositivos (VU Security) y a la PC le pide un token en cada
+// entrada; registrarla como dispositivo propio no anduvo, y Guzman decidio
+// cargar el fondo a mano, como BTG. La tarea de la PC quedo deshabilitada.
+// En false la pantalla no ofrece el boton y "Sincronizar todo" no deja
+// pedidos que nadie atiende. Lo de abajo queda para el dia que se pueda
+// volver a prender: es cambiar esta linea (y habilitar la tarea).
+var ITAU_AUTOMATICO = false;
+
+// Lo que ve la pantalla de Itau con la lectura apagada: como se carga a mano.
+function itauManual() {
+  var btn = document.getElementById('accItauBtn');
+  if (btn) btn.hidden = true;
+  var msg = document.getElementById('accItauMsg');
+  if (msg) msg.innerHTML = 'Ita&uacute; is updated by hand: open the fund below and use <b>Edit prices</b> ' +
+    'with the unit price from Ita&uacute; Link. Since Oct 16 Ita&uacute; asks this PC for a code, so it can no longer read it by itself.';
+}
 // Solo si el pedido lo hizo Guzman EN ESTA pantalla se recarga la cartera al
 // terminar. Sin esto, abrir la cuenta de Itau despues de una actualizacion
 // vieja disparaba una recarga entera por un resultado de hace dias.

@@ -583,7 +583,9 @@ if (itauBox) {
   if (fondoBox && itauBox.hidden) fondoBox.hidden = true;
   if (!itauBox.hidden) {
     var im = document.getElementById('accItauMsg'); if (im) im.innerHTML = '';
-    itauSeguir();
+    // Con la lectura automatica apagada (bancos.js, 28/10/2026) no hay
+    // pedido que seguir: se dice como cargarlo a mano.
+    if (ITAU_AUTOMATICO) itauSeguir(); else itauManual();
   }
 }
 // Si es la misma cuenta de la ultima visita, se pinta lo ultimo visto al

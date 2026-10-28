@@ -81,7 +81,9 @@ var syncTodoEnCurso = false;
 function sincronizarTodo(opts) {
 if (syncEnCurso()) return;
 syncTodoEnCurso = true;
-var pedirItau = !(opts && opts.sinItau);
+// ITAU_AUTOMATICO (bancos.js): con la lectura de Itau apagada no se deja un
+// pedido que nadie atiende (28/10/2026).
+var pedirItau = ITAU_AUTOMATICO && !(opts && opts.sinItau);
 var txt = document.getElementById('mRefrescarTxt');
 var lineas = [], huboError = false;
 function paso(n) { txt.textContent = n; }

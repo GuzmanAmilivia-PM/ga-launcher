@@ -88,5 +88,15 @@ ok(!/as of/.test(textoDe({ estado: 'listo', mensaje: 'Updated.' })), 'sin hora d
 ok(!/as of/.test(textoDe({ estado: 'error', mensaje: 'Bad password.', fin: finAyer })), 'un error no lleva "as of" (no hay dato nuevo)');
 ok(!/UYU today/.test(src), 'la tabla del fondo ya no dice "today" del precio (puede ser de dias atras)');
 
+// La lectura automatica apagada (28/10/2026): Itau pide un token a la PC
+// desde el 16/10 y Guzman carga el fondo a mano. La pantalla lo dice y no
+// sigue un pedido que nadie atiende.
+var fsI = require('fs'), pathI = require('path');
+var bancosSrc = fsI.readFileSync(pathI.join(ruta.RUTA, 'js', 'bancos.js'), 'utf8');
+var vistasSrc = fsI.readFileSync(pathI.join(ruta.RUTA, 'js', 'vistas.js'), 'utf8');
+ok(/var ITAU_AUTOMATICO = false;/.test(bancosSrc), 'la lectura automatica de Itau esta apagada');
+ok(/if \(ITAU_AUTOMATICO\) itauSeguir\(\); else itauManual\(\);/.test(vistasSrc), 'la pantalla de Itau usa la carga manual cuando esta apagada');
+ok(/Edit prices/.test(bancosSrc.slice(bancosSrc.indexOf('function itauManual'))), 'y dice con que boton se carga');
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

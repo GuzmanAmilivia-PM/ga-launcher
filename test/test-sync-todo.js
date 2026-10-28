@@ -46,6 +46,9 @@ function correr(nombre, cfg) {
       });
     },
     ibkrSyncEnCurso: false, csEnCurso: false, bnbEnCurso: false,
+    // La lectura de Itau por la PC (bancos.js). Los casos de abajo son de cuando
+    // estaba prendida; el apagado del 28/10/2026 tiene su propio caso (H5).
+    ITAU_AUTOMATICO: cfg.itauAuto === undefined ? true : cfg.itauAuto,
     google: {
       script: {
         run: (function () {
@@ -230,6 +233,15 @@ var OK1 = { ok: true, cambios: [{ tipo: 'qty', symbol: 'VOO' }] };
   ok(e.avisos[0] && e.avisos[0].msg.indexOf('BTG guardado') === 0, 'lo previo va primero: ' + (e.avisos[0] && e.avisos[0].msg));
   ok(e.avisos[0] && /IBKR/.test(e.avisos[0].msg) && /Schwab/.test(e.avisos[0].msg), 'y despues el resumen de la cadena');
   ok(!(e.avisosInicio && e.avisosInicio.length), 'y NADA va al aviso del Inicio, que desde otra pantalla no se ve');
+
+  // H5) LA LECTURA DE ITAU APAGADA (28/10/2026). Itau pide un token a la PC
+  // desde el 16/10 y Guzman lo carga a mano: la cadena no deja un pedido que
+  // nadie atiende ni dice "update requested".
+  e = await correr('H5) con ITAU_AUTOMATICO en false no se pide Itau', {
+    ibkr: OKV, cs: OKV, bnbConfigurado: false, refrescar: {}, itauAuto: false
+  });
+  ok(e.llamadas.indexOf('itau') === -1, 'no se pide Itau: fue ' + JSON.stringify(e.llamadas));
+  ok(e.avisos[0] && !/Ita/.test(e.avisos[0].msg), 'y el resumen no lo nombra: ' + (e.avisos[0] && e.avisos[0].msg));
 
   console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
   process.exit(fallos ? 1 : 0);
