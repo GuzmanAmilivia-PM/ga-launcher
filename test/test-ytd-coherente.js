@@ -132,6 +132,23 @@ ok(t4 && Math.abs(t4.pct) < 1e-9, 'una base de la tarde con el aporte adentro no
       [{ ts: fin((anio - 1) + '-12-31'), monto: 10000 }], dia(anio, 1, 1));
     ok(r3 && Math.abs(r3.pct - (t4 ? t4.pct : NaN)) < 0.01, 'y el mismo con la base de la tarde: ' + (r3 && r3.pct));
   }
+
+  // G) B4 (29/10/2026): la foto del 31/12 RE-ESTAMPADA al fin del dia (23:59:59,
+  // la hora de un flujo) ya tiene adentro el deposito de ese dia: sigue siendo
+  // la base y el deposito no cuenta en el año nuevo. Antes se salteaba y 2027
+  // arrancaba en la foto del 2/01. Y el mismo numero que el Worker.
+  console.log('\nG) un deposito el 31/12 no corre la base del año nuevo');
+  var dic31fin = new Date(anio - 1, 11, 31, 23, 59, 59).getTime();
+  g.fullSerie = [{ fecha: dic31fin, valor: 110000 }, { fecha: ene2, valor: 111000 }, { fecha: ene3, valor: 111000 }];
+  var t5 = g.twrEnRango(g.fullSerie);
+  ok(t5 && Math.abs(t5.pct - (111000 / 110000 - 1) * 100) < 1e-6, 'la base es la foto del cierre: +0,91 %, no 0 % (' + (t5 ? t5.pct.toFixed(2) : '-') + '%)');
+  ok(t5 && t5.aportes === 0, 'y el deposito es del año que cierra');
+  if (W && W.crecimientoSinAportes) {
+    var r5 = W.crecimientoSinAportes(
+      [{ ts: dic31fin, valor: 110000 }, { ts: ene2, valor: 111000 }, { ts: ene3, valor: 111000 }],
+      [{ ts: fin((anio - 1) + '-12-31'), monto: 10000 }], dia(anio, 1, 1));
+    ok(r5 && Math.abs(r5.pct - (t5 ? t5.pct : NaN)) < 0.01, 'el Worker da lo mismo: ' + (r5 && r5.pct));
+  }
   console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
   process.exit(fallos ? 1 : 0);
 })();

@@ -95,7 +95,7 @@ function montar(opts) {
   var nombres = Object.keys(ctx);
   var fn = new Function(nombres.join(','), preambulo + codigo +
     '\nreturn { esBtg: esBtg, renderBtg: renderBtg, mostrarBtg: mostrarBtg, restaurarVistaCuenta: restaurarVistaCuenta, setPedida: function (k) { accPedida = k; }, btgAbrirSiLoPidio: btgAbrirSiLoPidio,' +
-    ' btgAsOfHtml: btgAsOfHtml, btgFechaTexto: btgFechaTexto, btgPedirCorteSiFalta: btgPedirCorteSiFalta };');
+    ' btgAsOfHtml: btgAsOfHtml, btgFechaTexto: btgFechaTexto, btgPedirCorteSiFalta: btgPedirCorteSiFalta, btgAnotarCorte: btgAnotarCorte };');
   var api = fn.apply(null, nombres.map(function (n) { return ctx[n]; }));
   return { api: api, els: els, pedidos: pedidos, espias: espias, cache: cache, el: function (id) { return ctx.document.getElementById(id); } };
 }
@@ -348,6 +348,16 @@ ok(mg.pedidos.length === 1, 'con uno de hace mas de 35 dias, si (ya deberia habe
 mg = montar({ sinClave: true });
 mg.api.btgPedirCorteSiFalta(function () {});
 ok(mg.pedidos.length === 0, 'sin la clave de la API no pregunta');
+
+// B3 (29/10/2026): la fecha llega con la cartera (`btgCorte`, Datos.js del
+// Worker) y se anota al pintar, asi no hace falta el pedido aparte, que
+// hidrata la planilla entera.
+mg = montar({ ahora: hoyMs });
+mg.api.btgAnotarCorte('2026-09-30');
+mg.api.btgPedirCorteSiFalta(function () {});
+ok(mg.pedidos.length === 0, 'con la fecha del payload anotada no pide getBtg');
+var arranqueSrc = require('fs').readFileSync(require('path').join(require('./_ruta').RUTA, 'js', 'arranque.js'), 'utf8');
+ok(/if \(data\.btgCorte\) btgAnotarCorte\(data\.btgCorte\);/.test(arranqueSrc), 'y el Inicio la anota al llegar el payload');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

@@ -789,8 +789,12 @@ function _twrCadena(serie, cerrado) {
   // del Worker, Bench.crecimientoSinAportes): la foto no dice si el flujo ya
   // estaba adentro, y mejor un dia menos que un numero mentiroso. Los puntos
   // salteados quedan en 1: la curva arranca plana.
+  // Solo un flujo POSTERIOR a la foto la descarta (29/10/2026, B4): la foto
+  // del 31/12 se re-estampa al fin del dia (23:59:59, la hora de un flujo),
+  // asi que un deposito de ese dia YA esta adentro y saltearla corria 2027 a
+  // la foto del 1/01. La de las 8:00 se sigue salteando, como siempre.
   var i0 = 0;
-  while (i0 < serie.length - 1 && todos.some(function (a) { return _inicioDelDia(a.ts) === _inicioDelDia(serie[i0].fecha); })) i0++;
+  while (i0 < serie.length - 1 && todos.some(function (a) { return _inicioDelDia(a.ts) === _inicioDelDia(serie[i0].fecha) && a.ts > serie[i0].fecha; })) i0++;
   if (i0 >= serie.length - 1) return null;
   var t0 = serie[i0].fecha;
   var flujos = todos.filter(function (a) { return a.ts > t0 && a.ts <= tFin; });

@@ -109,6 +109,9 @@ if (typeof pedirNoticias === 'function') setTimeout(pedirNoticias, 1200);
 document.getElementById('cashTotal').textContent = fmt(data.liquidez);
 var cashListEl = document.getElementById('cashList');
 cashListEl.innerHTML = '';
+// La fecha del corte de BTG viene en el payload (29/10/2026, B3): se anota
+// ANTES de pintar, asi el "last snapshot" sale sin pedir `btg` aparte.
+if (data.btgCorte) btgAnotarCorte(data.btgCorte);
 // Cada cuenta abre su pagina (23/09/2026, auditoria general): Itau y BTG solo
 // se alcanzaban desde la torta de Portfolio, y Banking —donde uno las busca—
 // las listaba sin llevar a ningun lado. Volver regresa a Banking.
