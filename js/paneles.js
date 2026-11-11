@@ -128,7 +128,8 @@ var MESES_CORTOS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep
 // GA_CACHES: TODAS las claves de cache local con datos del portafolio. El
 // borrado de emergencia (seguridad.js) la recorre; una clave nueva que no se
 // anote aca queda viva despues de "Olvide mi clave".
-var GA_CACHES = ['ga_cache_data', 'ga_cache_div', 'ga_cache_apo', 'ga_cache_ops', 'ga_cache_ana', 'ga_cache_wl', 'ga_cache_news', 'ga_cache_disp', 'ga_cache_btg'];
+var GA_CACHES = ['ga_cache_data', 'ga_cache_div', 'ga_cache_apo', 'ga_cache_ops', 'ga_cache_ana', 'ga_cache_wl', 'ga_cache_news', 'ga_cache_disp', 'ga_cache_btg', 'ga_cache_ran',
+  'ga_cache_rend_IB', 'ga_cache_rend_CS', 'ga_cache_rend_BNB'];
 function cacheLeer(clave) {
 try {
 var j = JSON.parse(localStorage.getItem(clave) || 'null');

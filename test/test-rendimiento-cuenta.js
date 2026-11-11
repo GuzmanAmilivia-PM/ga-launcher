@@ -79,9 +79,22 @@ var sandbox = {
   } } }
 };
 var cuerpo = src + '\nreturn { cargarAnual: cargarRendAnual, render: renderRendimiento, mostrar: mostrarRendimiento, medibles: rendRangosMedibles, setDatos: function (d) { rendDatos = d; }, setRango: function (r) { rendRango = r; }, rango: function () { return rendRango; }, abierto: function () { return rendAbierto; } };';
-var api = new Function('document', 'esc', 'mask', 'signoPct', 'fmtUsdEnt', 'fechaCortaMs', 'apISOaMs', 'msgErr', 'msgBackend', 'colorAcento', 'acentoRgba', 'buildChartOptions', 'Chart', 'google', 'nombrePlataforma', 'setView', cuerpo)(
-  sandbox.document, sandbox.esc, sandbox.mask, sandbox.signoPct, sandbox.fmtUsdEnt, sandbox.fechaCortaMs, sandbox.apISOaMs, sandbox.msgErr, sandbox.msgBackend, sandbox.colorAcento, sandbox.acentoRgba, sandbox.buildChartOptions, sandbox.Chart, sandbox.google,
-  function (n) { return n; }, function (v) { vistas.push(v); });
+// El cache local (paneles.js), de mentira: `guardados` hace de localStorage y
+// `marcas` anota que aviso quedo a la vista. montarApi() es una app recien
+// abierta: ranDatos arranca en null, como al abrir la app en el telefono.
+var guardados = {};
+var marcas = {};
+function montarApi() {
+  return new Function('document', 'esc', 'mask', 'signoPct', 'fmtUsdEnt', 'fechaCortaMs', 'apISOaMs', 'msgErr', 'msgBackend', 'colorAcento', 'acentoRgba', 'buildChartOptions', 'Chart', 'google', 'nombrePlataforma', 'setView',
+    'cacheLeer', 'cacheGuardar', 'marcaActualizando', 'limpiarMarca', cuerpo)(
+    sandbox.document, sandbox.esc, sandbox.mask, sandbox.signoPct, sandbox.fmtUsdEnt, sandbox.fechaCortaMs, sandbox.apISOaMs, sandbox.msgErr, sandbox.msgBackend, sandbox.colorAcento, sandbox.acentoRgba, sandbox.buildChartOptions, sandbox.Chart, sandbox.google,
+    function (n) { return n; }, function (v) { vistas.push(v); },
+    function (clave) { return guardados[clave] || null; },
+    function (clave, data) { guardados[clave] = { t: 1234, data: data }; },
+    function (id, cuando) { marcas[id] = cuando; },
+    function (id) { delete marcas[id]; });
+}
+var api = montarApi();
 
 // ---- el payload, con la forma del Worker ----
 var HOY = Date.now(), DIA = 86400000;
@@ -262,6 +275,71 @@ ok(elemento('ranCartera').innerHTML === hc, 'un fallo de red con datos ya pintad
 var vacio = { ok: true, indice: { nombre: 'S&P 500' }, cartera: [], cuentas: [], avisos: [] };
 api.cargarAnual(true); respuestaPendiente.ok(vacio);
 ok(/closes on December 31/.test(elemento('ranCartera').innerHTML), 'sin ningun año todavia lo dice, no deja la tarjeta vacia');
+
+console.log('\nG) Performance pinta lo guardado en el telefono y refresca por atras (11/11/2026)');
+ok(guardados.ga_cache_ran && guardados.ga_cache_ran.data === vacio, 'una respuesta sana queda guardada para la proxima apertura');
+ok(/'ga_cache_ran'/.test((fs.readFileSync(path.join(RUTA,'js', 'paneles.js'), 'utf8').match(/var GA_CACHES = \[[^\]]*\]/) || [''])[0]), 'ga_cache_ran esta en GA_CACHES (el borrado de emergencia la recorre)');
+ok(/id="ranAviso"/.test(fs.readFileSync(path.join(RUTA,'index.html'), 'utf8')), 'la pagina tiene donde decir de cuando es lo guardado');
+// La app recien abierta, con los años de ayer guardados.
+guardados = { ga_cache_ran: { t: 5678, data: ANUAL } };
+marcas = {};
+elemento('ranCartera').innerHTML = ''; elemento('ranCuentas').innerHTML = '';
+var api2 = montarApi();
+var antesAnual = pedidosAnual.length;
+api2.cargarAnual(false);
+ok(elemento('ranCartera').innerHTML === hc && elemento('ranCuentas').innerHTML === ha, 'al abrir se ven los años guardados, antes de que conteste el Worker');
+ok(marcas.ranAviso === 5678, 'y dice de cuando son (Data from ... updating)');
+ok(pedidosAnual.length === antesAnual + 1 && !pedidosAnual[pedidosAnual.length - 1].forzar, 'igual pide los frescos por atras, sin forzar');
+respuestaPendiente.ok({ ok: false, mensajes: ['broker down'] });
+ok(elemento('ranCartera').innerHTML === hc && guardados.ga_cache_ran.data === ANUAL, 'un ok:false no pisa lo que se ve ni lo guardado');
+ok(marcas.ranAviso === undefined, 'y la marca de "updating" se va');
+api2.cargarAnual(false);
+var ANUAL2 = JSON.parse(JSON.stringify(ANUAL)); ANUAL2.cartera[0].twr = 20.5; ANUAL2.cartera[0].pp = 6.4;
+respuestaPendiente.ok(ANUAL2);
+ok(elemento('ranCartera').innerHTML.indexOf('+20.5%') !== -1 && guardados.ga_cache_ran.data === ANUAL2, 'la respuesta fresca reemplaza la pantalla y lo guardado');
+// Sin nada guardado y sin red: el error de siempre.
+guardados = {}; marcas = {};
+elemento('ranCartera').innerHTML = '';
+var api3 = montarApi();
+api3.cargarAnual(false);
+ok(marcas.ranAviso === undefined, 'sin nada guardado no hay marca');
+respuestaPendiente.fail(new Error('red'));
+ok(/ERR red/.test(elemento('ranCartera').innerHTML), 'sin nada guardado, un fallo de red se dice');
+
+console.log('\nH) la tarjeta de cada cuenta tambien pinta lo guardado (11/11/2026)');
+var panelesSrc = (fs.readFileSync(path.join(RUTA, 'js', 'paneles.js'), 'utf8').match(/var GA_CACHES = \[[^\]]*\]/) || [''])[0];
+ok(['IB', 'CS', 'BNB'].every(function (k) { return panelesSrc.indexOf("'ga_cache_rend_" + k + "'") !== -1; }), 'las tres claves por cuenta estan en GA_CACHES (el borrado de emergencia las recorre)');
+ok(/id="rendAviso"/.test(fs.readFileSync(path.join(RUTA, 'index.html'), 'utf8')), 'la tarjeta tiene donde decir de cuando es lo guardado');
+// Una respuesta sana se guarda con la clave de SU cuenta; la tardia de otra, no.
+guardados = {}; marcas = {};
+var api5 = montarApi();
+api5.mostrar({ key: 'IB', nombre: 'Interactive Brokers' });
+var respIB5 = respuestaPendiente;
+api5.mostrar({ key: 'CS', nombre: 'Charles Schwab' });
+respIB5.ok(PAYLOAD);
+ok(guardados.ga_cache_rend_IB === undefined && guardados.ga_cache_rend_CS === undefined, 'la respuesta tardia de otra cuenta no se guarda');
+respuestaPendiente.ok(SCHWAB);
+ok(guardados.ga_cache_rend_CS && guardados.ga_cache_rend_CS.data === SCHWAB && guardados.ga_cache_rend_IB === undefined, 'una respuesta sana queda guardada con la clave de SU cuenta');
+// La app recien abierta, con Schwab guardada de ayer.
+guardados = { ga_cache_rend_CS: { t: 4321, data: SCHWAB } };
+marcas = {};
+elemento('rendBody').innerHTML = '';
+var api4 = montarApi();
+var antesCta = pedidos.length;
+api4.mostrar({ key: 'CS', nombre: 'Charles Schwab' });
+ok(/YTD vs S&P 500/.test(elemento('rendBody').innerHTML), 'al abrir Schwab se ve lo guardado, sin "Calculating..."');
+ok(marcas.rendAviso === 4321, 'y dice de cuando es');
+ok(pedidos.length === antesCta + 1 && pedidos[pedidos.length - 1].cuenta === 'CS', 'igual pide lo fresco por atras');
+var conLoGuardado = elemento('rendBody').innerHTML;
+respuestaPendiente.ok({ ok: false, mensajes: ['broker down'] });
+ok(elemento('rendBody').innerHTML === conLoGuardado && guardados.ga_cache_rend_CS.data === SCHWAB && marcas.rendAviso === undefined, 'un ok:false no pisa lo que se ve ni lo guardado, y la marca se va');
+// Lo guardado de una cuenta NO se pinta en otra.
+api4.mostrar({ key: 'IB', nombre: 'Interactive Brokers' });
+ok(/Calculating your history/.test(elemento('rendBody').innerHTML) && marcas.rendAviso === undefined, 'IBKR sin nada guardado: calcula, no muestra lo de Schwab');
+// Una clave con los datos de OTRA cuenta (no deberia pasar) tampoco se pinta.
+guardados.ga_cache_rend_BNB = { t: 1, data: SCHWAB };
+api4.mostrar({ key: 'BNB', nombre: 'Binance' });
+ok(/Calculating your history/.test(elemento('rendBody').innerHTML), 'una clave con datos de otra cuenta no se pinta');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

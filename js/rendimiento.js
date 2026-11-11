@@ -47,6 +47,7 @@ var REND_RANGOS = [
 // plata: valuando las cantidades de hoy con los precios de cada dia desde el
 // 17/08, el valor calza con lo estampado — el +36 % de ese mes fue mercado.
 // BTG e Itau no: el sueldo y el plazo fijo no se comparan contra un indice.
+var REND_CACHE = 'ga_cache_rend_';
 function rendEsCuenta(acc) {
   var k = String((acc && acc.key) || '');
   return k === 'IB' || k === 'CS' || k === 'BNB';
@@ -77,17 +78,29 @@ function mostrarRendimiento(acc) {
   rendAbierto = false;
   rendRango = 'ytd';
   var mismo = rendDatos && rendDatos.cuenta === acc.key;
+  // Lo ultimo que se vio de ESTA cuenta queda en el telefono (11/11/2026,
+  // igual que la pagina Performance): la tarjeta esperaba al Worker en cada
+  // apertura de la app, con "Calculating..." a la vista. Una clave por cuenta
+  // (REND_CACHE + key), las tres anotadas en GA_CACHES.
+  var guardado = mismo ? null : cacheLeer(REND_CACHE + acc.key);
+  if (guardado && guardado.data.ok && guardado.data.cuenta === acc.key) { rendDatos = guardado.data; mismo = true; }
+  else guardado = null;
   if (mismo) renderRendimiento();
   else {
     rendDatos = null;
     document.getElementById('rendBody').innerHTML = '<p class="loadingtxt">Calculating your history against SPY...</p>';
   }
+  if (guardado) marcaActualizando('rendAviso', guardado.t); else limpiarMarca('rendAviso');
   google.script.run.withSuccessHandler(function (r) {
     if (rendCuenta !== acc.key) return;
+    limpiarMarca('rendAviso');
+    if (!(r && r.ok) && mismo) return;   // un ok:false no pisa lo que ya se ve
     rendDatos = r;
+    if (r && r.ok) cacheGuardar(REND_CACHE + acc.key, r);
     renderRendimiento();
   }).withFailureHandler(function (err) {
     if (rendCuenta !== acc.key) return;
+    limpiarMarca('rendAviso');
     if (mismo) return;   // con datos ya pintados, un fallo de red no borra la pantalla
     document.getElementById('rendBody').innerHTML = '<p class="newsempty">' + esc(msgErr(err, 'The performance history')) + '</p>';
   }).getRendimientoCuenta({ cuenta: acc.key });
@@ -259,16 +272,34 @@ function dibujarRendimiento(g) {
 // nuevo aparece solo como una fila mas.
 var ranDatos = null;
 var ranPidiendo = false;
+// Lo ultimo que se vio queda en el telefono (11/11/2026): era la unica pagina
+// de datos que no pintaba lo guardado, y la primera apertura esperaba al
+// Worker entero —entre 1,8 y 5,1 s medidos cuando su cache de una hora ya
+// vencio—. Ahora se ve al instante con su fecha ("Data from ... updating") y
+// se refresca por atras, igual que Dividends, Contributions y Analysis.
+var RAN_CACHE = 'ga_cache_ran';
 function cargarRendAnual(forzar) {
+  var deCache = null;
+  if (!ranDatos && !forzar) {
+    deCache = cacheLeer(RAN_CACHE);
+    if (deCache) ranDatos = deCache.data;
+  }
   if (ranDatos && !forzar) renderRendAnual();
+  if (deCache) marcaActualizando('ranAviso', deCache.t);
   if (ranPidiendo) return;
   ranPidiendo = true;
   google.script.run.withSuccessHandler(function (r) {
     ranPidiendo = false;
+    limpiarMarca('ranAviso');
+    // Un {ok:false} del Worker no pisa los años que ya se ven (la regla del
+    // 9/10/2026 para todo lo guardado).
+    if (!(r && r.ok) && ranDatos && ranDatos.ok) return;
     ranDatos = r;
+    if (r && r.ok) cacheGuardar(RAN_CACHE, r);
     renderRendAnual();
   }).withFailureHandler(function (err) {
     ranPidiendo = false;
+    limpiarMarca('ranAviso');
     if (ranDatos) return;   // con datos ya pintados, un fallo de red no borra la pantalla
     var el = document.getElementById('ranCartera');
     if (el) el.innerHTML = '<p class="newsempty">' + esc(msgErr(err, 'Performance')) + '</p>';
