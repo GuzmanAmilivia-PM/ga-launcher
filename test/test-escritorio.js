@@ -209,5 +209,34 @@ ok(/\.menupanel\s*\{[^}]*width:\s*380px/.test(bloque) && /\.menupanel\s*\{[^}]*r
 ok(/\.menu-velo:not\(\[hidden\]\)\s*\{[^}]*display:\s*block/.test(bloque), 'y tiene un velo detras');
 ok(/\.menu-velo\s*\{\s*display:\s*none/.test(html.replace(bloque, '')), 'que en el telefono no existe (el panel lo tapa todo)');
 
+console.log('\nI) el resto de las pantallas tambien son de escritorio (21/11/2026)');
+// Guzman: "la pagina version web es muy mala". Solo el Inicio tenia diseño
+// ancho, y a medias: la columna derecha terminaba a los 330 px al lado de una
+// izquierda de 1.800, y todas las demas pantallas eran la del telefono
+// estirada a 1.250 px. Como todo este arnes: mira las REGLAS, no la geometria
+// (eso se miro en Chrome a 1536 px con los datos reales; ver HISTORIAL.md).
+ok(/#view-inicio > \.grid2\s*\{[^}]*display:\s*contents/.test(bloque) &&
+   /#view-inicio > \.grid2 > \.card:first-child\s*\{[^}]*float:\s*left/.test(bloque),
+  'Inicio: la tarjeta alta flota y la otra columna baja sola (dos altos independientes)');
+ok(/#view-inicio > #macroCard,\s*#view-inicio > \.asigcard\s*\{[^}]*margin-left:/.test(bloque),
+  'las noticias y la asignacion van a la columna derecha, no abajo a todo el ancho');
+ok(/\.sweepdeck\s*\{[^}]*grid-template-rows:\s*auto auto 1fr/.test(bloque),
+  'adentro de la tarjeta alta la ultima fila es 1fr (si no, Dividends separa a las otras dos)');
+ok(/#view-portafolio\s*\{[^}]*display:\s*grid/.test(bloque), 'Portfolio va en dos columnas');
+ok(/#view-watchlist\s*\{[^}]*display:\s*grid/.test(bloque), 'Watchlist: la lista y las notificaciones al costado');
+ok(/#noticiasBody\s*\{[^}]*columns:\s*2/.test(bloque), 'News: los bloques en dos columnas');
+ok(/\.mainarea > \[id\^="view-"\]:not\(#view-inicio\)[^{]*\{[^}]*max-width:\s*920px/.test(bloque),
+  'y las listas y formularios tienen tope de ancho: el nombre y su numero no quedan a un monitor de distancia');
+[
+  ['#view-inicio > .grid2', 'display: contents', 'el desarmado de la reja del Inicio'],
+  ['#view-portafolio', 'display: grid', 'las dos columnas de Portfolio'],
+  ['#view-watchlist', 'display: grid', 'las dos columnas de Watchlist'],
+  ['#noticiasBody', 'columns: 2', 'las dos columnas de News'],
+  ['.sweeppanel:first-child > p.cashline', 'display: none', 'el ocultado del renglon Cash']
+].forEach(function (t) {
+  ok(!sueltaEnTelefono(t[0], t[1]), t[2] + ' NO se le escapa al telefono (' + t[0] + ')');
+});
+ok(/\.grid2 \{ display: grid;/.test(sinBloque), 'la reja del telefono sigue escrita igual');
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

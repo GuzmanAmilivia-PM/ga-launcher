@@ -1109,7 +1109,8 @@ a.galink { color: inherit; text-decoration: none; }
   /* --- La reja del Inicio ---
      Izquierda la columna alta (total + grafico + dividendos + aportes),
      derecha las posiciones y el detalle por cuenta. */
-  .grid2 { grid-template-columns: minmax(0, 1.25fr) minmax(340px, .85fr); gap: 20px; align-items: start; }
+  /* (21/11/2026: la reja de dos columnas se reemplazo por dos columnas
+     independientes — ver "El Inicio" mas abajo.) */
 
   /* Con ancho de sobra, la columna del % vuelve (en el telefono se oculta
      abajo de 560px) y la tabla puede respirar. */
@@ -1156,6 +1157,73 @@ a.galink { color: inherit; text-decoration: none; }
   .asig-t:first-child { margin-top: 0; }
   .asig-t span { letter-spacing: .02em; text-transform: none; font-size: 11px; opacity: .8; }
   .asig-nota { font-size: 11px; color: var(--muted); margin: 10px 0 0; line-height: 1.5; }
+
+  /* --- El Inicio: dos columnas INDEPENDIENTES (21/11/2026) ---
+     Guzman: "la pagina version web es muy mala". Medido a 1536 px: la
+     columna derecha terminaba a los 330 px y dejaba 1.500 px de vacio al
+     lado de una tarjeta izquierda de 1.800, y las noticias y la asignacion
+     iban abajo, a todo el ancho, con barras de 1.200 px.
+     La tarjeta alta flota a la izquierda y Positions, las noticias y la
+     asignacion bajan por la derecha: cada columna tiene su propio alto, asi
+     que abrir "See more" no le abre un hueco a la otra (con una reja
+     compartida, si). */
+  #view-inicio { display: flow-root; }
+  #view-inicio > .grid2 { display: contents; }
+  #view-inicio > .grid2 > .card:first-child { float: left; width: calc(64% - 10px); }
+  #view-inicio > .grid2 > .card + .card,
+  #view-inicio > #macroCard,
+  #view-inicio > .asigcard { margin-left: calc(64% + 10px); }
+  /* Adentro de la tarjeta alta: el total arriba a todo el ancho, y debajo
+     Dividends a la izquierda con Contributions y Available a la derecha.
+     La ultima fila es 1fr para que el alto de Dividends (que cruza dos) no
+     se reparta y separe a las otras dos. */
+  .sweepdeck {
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    grid-template-rows: auto auto 1fr;
+    gap: 22px 0;
+  }
+  .sweeppanel:nth-child(1) { grid-column: 1 / -1; }
+  .sweeppanel:nth-child(2) { grid-column: 1; grid-row: 2 / span 2; padding-right: 22px; }
+  .sweeppanel:nth-child(3) { grid-column: 2; grid-row: 2; }
+  .sweeppanel:nth-child(4) { grid-column: 2; grid-row: 3; }
+  .sweeppanel:nth-child(n+3) { padding-left: 22px; border-left: 1px solid var(--border); }
+
+  /* --- Portfolio: dos columnas ---
+     Izquierda la torta y "This year vs. the market"; derecha el analisis,
+     que cruza las dos filas; el mapa mensual abajo a todo el ancho (doce
+     meses agradecen el ancho). */
+  #view-portafolio {
+    display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    grid-template-rows: auto 1fr auto; column-gap: 20px;
+  }
+  #view-portafolio > .card:nth-child(1) { grid-column: 1; grid-row: 1; }
+  #view-portafolio > #anualCard { grid-column: 1; grid-row: 2; }
+  #view-portafolio > .card:nth-child(3) { grid-column: 2; grid-row: 1 / span 2; }
+  #view-portafolio > .card:nth-child(4) { grid-column: 1 / -1; grid-row: 3; }
+
+  /* --- Watchlist: la lista y, al costado, las notificaciones --- */
+  #view-watchlist {
+    display: grid; grid-template-columns: minmax(0,1.7fr) minmax(300px,1fr);
+    column-gap: 20px; align-items: start; max-width: 1240px;
+  }
+
+  /* --- News: los bloques en dos columnas --- */
+  #noticiasBody { columns: 2; column-gap: 20px; }
+  #noticiasBody > * { break-inside: avoid; }
+
+  /* --- Todo lo demas: una columna de lectura ---
+     Listas y formularios (Trades, Positions, cada cuenta, Settings...) son
+     filas con el nombre a la izquierda y el numero a la derecha: a 1.250 px
+     el ojo tiene que cruzar medio monitor para unirlos. Se topean y se
+     centran en el espacio que deja la columna del menu. */
+  .mainarea > [id^="view-"]:not(#view-inicio):not(#view-portafolio):not(#view-watchlist):not(#view-noticias) {
+    max-width: 920px; margin-left: auto; margin-right: auto;
+  }
+  #view-watchlist, #view-noticias { margin-left: auto; margin-right: auto; }
+  #view-noticias { max-width: 1320px; }
+  /* "Cash" ya esta en la tira de indicadores: el renglon del telefono
+     la repetiria justo arriba, como pasaba con "Today". */
+  .sweeppanel:first-child > p.cashline { display: none; }
 }
 
 /* Las compras del fondo de Itaú, una por línea (13/09/2026). Mismo peso
