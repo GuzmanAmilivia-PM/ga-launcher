@@ -305,59 +305,152 @@ function cargarRendAnual(forzar) {
     if (el) el.innerHTML = '<p class="newsempty">' + esc(msgErr(err, 'Performance')) + '</p>';
   }).getRendimientoAnual(forzar ? { forzar: true } : {});
 }
+// El rediseño del 21/11/2026. Pedido de Guzman: "parece una pagina de excel,
+// deberia darnos mas informacion en grande, menos texto chico, alguna grafica
+// de barras comparativa por año vs sp500". Antes eran hasta cinco tarjetas con
+// la misma tabla apilada; ahora es UNA: un selector (Total, Brokers, cada
+// cuenta), el año mas nuevo en grande, las barras año por año (vos con el
+// acento, el indice en gris), tres cifras de resumen y la letra chica plegada.
+// Los numeros son los mismos del Worker: aca no se recalcula ningun año. Lo
+// unico que se cuenta aca es el resumen (encadenar los años, contar cuantos
+// le ganaron al indice), que sale de esos mismos numeros.
+var ranSerie = 'total';
+function ranTiene(v) { return v !== null && v !== undefined && isFinite(v); }
+// Las series que se pueden mirar. "Total" es la cartera entera; como solo
+// existe desde que hay app, los años anteriores se completan con los brokers
+// juntos, MARCADOS (aprox): se dibujan atenuados y dicen "brokers only".
+function ranSeries(r) {
+  var s = [];
+  var cartera = r.cartera || [];
+  var br = (r.brokers && r.brokers.anios && r.brokers.anios.length) ? r.brokers : null;
+  if (cartera.length) {
+    var masViejo = cartera[cartera.length - 1].anio;
+    var previos = [];
+    if (br) br.anios.forEach(function (a) {
+      if (a.anio >= masViejo) return;
+      var c = {}; for (var k in a) c[k] = a[k];
+      c.aprox = true; previos.push(c);
+    });
+    s.push({ key: 'total', label: 'Total', anios: cartera.concat(previos), aprox: previos.length > 0, desde: cartera[cartera.length - 1].desde });
+  }
+  if (br) s.push({ key: 'brokers', label: 'Brokers', anios: br.anios, aprox: true, brokers: br });
+  (r.cuentas || []).forEach(function (c) {
+    s.push({ key: 'c:' + (c.cuenta || c.nombre), label: nombrePlataforma(c.nombre), anios: c.anios || [], cuenta: c });
+  });
+  return s.filter(function (x) { return x.anios.length; });
+}
+function ranPp(pp) {
+  if (!ranTiene(pp)) return '';
+  return '<span class="rendpp ' + (pp >= 0 ? 'up' : 'down') + '">' + (pp >= 0 ? '+' : '−') + Math.abs(pp).toFixed(1) + ' pp</span>';
+}
+// Las barras: una fila doble por año, las dos sobre la misma escala y con el
+// cero en el mismo lugar (un año negativo crece hacia la izquierda).
+function ranBarras(anios, idx) {
+  var max = 0, min = 0;
+  anios.forEach(function (a) {
+    [a.twr, a.spy].forEach(function (v) { if (ranTiene(v)) { if (v > max) max = v; if (v < min) min = v; } });
+  });
+  var span = (max - min) || 1;
+  var cero = (0 - min) / span * 100;
+  function barra(v, clase) {
+    if (!ranTiene(v)) return '<span class="rantrack"></span><b>&mdash;</b>';
+    var w = Math.max(Math.abs(v) / span * 100, 1.5);
+    var izq = v >= 0 ? cero : Math.max(cero - w, 0);
+    return '<span class="rantrack"><i class="ranbar ' + clase + '" style="left:' + izq.toFixed(1) + '%;width:' + w.toFixed(1) + '%"></i></span>' +
+      '<b>' + signoPct(Number(v), 1) + '</b>';
+  }
+  var h = '<div class="ranbars">';
+  anios.forEach(function (a) {
+    var sub = a.aprox ? 'brokers only' : a.enCurso ? 'so far' : a.parcial ? 'from ' + new Date(a.desde).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    h += '<div class="rananio' + (a.aprox ? ' aprox' : '') + '">' +
+      '<div class="rananio-cab"><span><b>' + a.anio + '</b>' + (sub ? ' <em>' + esc(sub) + '</em>' : '') + '</span>' + ranPp(a.pp) + '</div>' +
+      '<div class="ranfila">' + barra(a.twr, 'yo') + '</div>' +
+      '<div class="ranfila idx">' + barra(a.spy, 'ind') + '</div></div>';
+  });
+  h += '</div>';
+  h += '<p class="ranleyenda"><span><i class="ranbar yo"></i>You</span><span><i class="ranbar ind"></i>' + esc(idx) + '</span></p>';
+  return h;
+}
+// El resumen en tres cifras. Solo con dos años o mas: con uno, es el titular.
+function ranResumen(anios, idx, aprox) {
+  var v = anios.filter(function (a) { return ranTiene(a.twr) && ranTiene(a.spy); });
+  if (v.length < 2) return '';
+  var yo = 1, ind = 1, gano = 0, mejor = v[0];
+  v.forEach(function (a) {
+    yo *= 1 + a.twr / 100; ind *= 1 + a.spy / 100;
+    if (a.twr > a.spy) gano++;
+    if (a.twr > mejor.twr) mejor = a;
+  });
+  var yoPct = (yo - 1) * 100, indPct = (ind - 1) * 100;
+  return '<div class="rantiles">' +
+    '<div><span>Since ' + v[v.length - 1].anio + (aprox ? ' &asymp;' : '') + '</span><b class="' + (yoPct >= 0 ? 'up' : 'down') + '">' + signoPct(yoPct, 0) + '</b><em>Index ' + signoPct(indPct, 0) + '</em></div>' +
+    '<div><span>Ahead in</span><b>' + gano + ' of ' + v.length + '</b><em>years</em></div>' +
+    '<div><span>Best year</span><b class="' + (mejor.twr >= 0 ? 'up' : 'down') + '">' + signoPct(Number(mejor.twr), 0) + '</b><em>' + mejor.anio + '</em></div>' +
+    '</div>';
+}
+// La letra chica de cada serie, plegada: que se midio, desde cuando y por que
+// algo es aproximado (U2: lo que falta se dice, pero no tapa los numeros).
+function ranNota(s, r) {
+  var t;
+  if (s.key === 'total') {
+    t = 'All accounts, banks included, without deposits. The whole portfolio is measured from ' +
+      esc(rendFechaConAnio(s.desde)) + ', when the app started keeping it; a new year is added every January 1.' +
+      (s.aprox ? ' Earlier years are your brokers added together, without the banks: approximate.' : '');
+  } else if (s.key === 'brokers') {
+    t = 'Approximate: ' + (s.brokers.cuentas || []).map(function (c) {
+      return esc(nombrePlataforma(c.nombre)) + ' since ' + esc(rendFechaConAnio(c.desde));
+    }).join(', ') +
+      ', added together day by day. No banks, without deposits; an account counts from the day its records start, and a day with no data keeps its last known value. Schwab’s history before the app is an estimate.';
+  } else {
+    t = 'Since ' + esc(rendFechaConAnio(s.cuenta.desde)) +
+      (s.cuenta.importado ? ', with the broker’s own records before the app' : '') + '. Without deposits, like the whole portfolio.';
+  }
+  if (r.indice && r.indice.nota) t += ' Index: ' + esc(r.indice.nota) + '.';
+  return '<details class="rannota"><summary>How this is measured</summary><p class="capnota">' + t + '</p></details>';
+}
+function ranElegir(key) { ranSerie = key; renderRendAnual(); }
 function renderRendAnual() {
   var elC = document.getElementById('ranCartera');
-  var elA = document.getElementById('ranCuentas');
-  if (!elC || !elA) return;
+  if (!elC) return;
   var r = ranDatos;
   if (!r) return;
-  if (!r.ok) { elC.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>'; elA.innerHTML = ''; return; }
+  if (!r.ok) { elC.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>'; return; }
   var idx = (r.indice && r.indice.nombre) || 'S&P 500';
-  var cartera = r.cartera || [];
+  var series = ranSeries(r);
   var h = '';
-  if (!cartera.length) {
+  if (!series.length) {
     h += '<p class="capnota">The first year closes on December 31: until then there is nothing to compare.</p>';
   } else {
-    // El titular: el año mas nuevo, en puntos contra el indice.
-    var a = cartera[0];
-    var pp = (a.pp === null || a.pp === undefined) ? null : a.pp;
-    h += '<p class="rendtitular">' + rendPct(a.twr) + ' <span class="desc">you in ' + a.anio + (a.enCurso ? ' so far' : '') + '</span> &nbsp;vs&nbsp; ' +
-      rendPct(a.spy) + ' <span class="desc">' + esc(idx) + '</span>' +
-      (pp !== null ? ' <span class="rendpp ' + (pp >= 0 ? 'up' : 'down') + '">' + (pp >= 0 ? '+' : '−') + Math.abs(pp).toFixed(1) + ' pp</span>' : '') + '</p>';
-    h += rendTablaAnios(cartera, idx, '');
-    var ultimo = cartera[cartera.length - 1];
-    h += '<p class="capnota">All accounts, banks included, without deposits. The whole portfolio is measured from ' +
-      esc(rendFechaConAnio(ultimo.desde)) + ', when the app started keeping it; a new year is added every January 1.' +
-      (r.indice && r.indice.nota ? ' Index: ' + esc(r.indice.nota) + '.' : '') + '</p>';
+    var s = series[0];
+    series.forEach(function (x) { if (x.key === ranSerie) s = x; });
+    if (series.length > 1) {
+      h += '<div class="rangebar" id="ranSel">';
+      series.forEach(function (x) {
+        h += '<button type="button" class="rangebtn' + (x === s ? ' active' : '') + '" data-serie="' + esc(x.key) + '">' + esc(x.label) + '</button>';
+      });
+      h += '</div>';
+    }
+    // El titular: el año mas nuevo, en grande, y el veredicto en puntos.
+    var a = s.anios[0];
+    h += '<p class="detlbl ranlbl">' + a.anio + (a.enCurso ? ' so far' : '') + '</p>';
+    h += '<div class="ranhero"><div>' + rendPct(a.twr) + '<span>You</span></div>' +
+      '<div><b>' + (ranTiene(a.spy) ? signoPct(Number(a.spy), 1) : '&mdash;') + '</b><span>' + esc(idx) + '</span></div></div>';
+    if (ranTiene(a.pp)) {
+      h += '<p class="ranveredicto ' + (a.pp >= 0 ? 'up' : 'down') + '">' + (a.pp >= 0 ? '+' : '−') + Math.abs(a.pp).toFixed(1) +
+        ' pp ' + (a.pp >= 0 ? 'ahead of' : 'behind') + ' the ' + esc(idx) + '</p>';
+    }
+    h += ranResumen(s.anios, idx, s.aprox);
+    h += '<p class="detlbl ranlbl">Year by year</p>';
+    h += ranBarras(s.anios, idx);
+    h += ranNota(s, r);
   }
   (r.avisos || []).forEach(function (x) { h += '<p class="newsempty" style="font-size:12px">&#9888; ' + esc(x) + '</p>'; });
   elC.innerHTML = h;
-  // Los brokers JUNTOS (21/11/2026). Pedido de Guzman: un balance general de
-  // los años anteriores, "aproximado al menos", con lo que informan los
-  // brokers — la cartera entera de arriba no tiene pasado antes de la app. La
-  // suma la hace el Worker (Rendimiento.js, brokersPorAnio); aca se dibuja con
-  // la MISMA tabla, y la nota dice lo que la hace aproximada: sin bancos, cada
-  // cuenta entra cuando empiezan sus registros, y los dias sin dato arrastran
-  // el ultimo valor.
-  var hc = '';
-  var br = r.brokers;
-  if (br && br.anios && br.anios.length) {
-    hc += '<div class="card" id="ranBrokers"><div class="cardtop"><h2>Brokers combined</h2></div>';
-    hc += rendTablaAnios(br.anios, idx, '');
-    hc += '<p class="capnota">Approximate: ' +
-      (br.cuentas || []).map(function (c) {
-        return esc(nombrePlataforma(c.nombre)) + ' since ' + esc(rendFechaConAnio(c.desde));
-      }).join(', ') +
-      ', added together day by day. No banks, without deposits; an account counts from the day its records start, and a day with no data keeps its last known value. Schwab’s history before the app is an estimate.</p></div>';
+  // Sin manejadores inline (la CSP los bloquea): el selector de serie.
+  var chips = elC.querySelectorAll('#ranSel [data-serie]');
+  for (var i = 0; i < chips.length; i++) {
+    chips[i].addEventListener('click', function (ev) { ranElegir(ev.currentTarget.getAttribute('data-serie')); });
   }
-  // Cada broker con historia propia, en su tarjeta.
-  (r.cuentas || []).forEach(function (c) {
-    hc += '<div class="card"><div class="cardtop"><h2>' + esc(nombrePlataforma(c.nombre)) + '</h2></div>';
-    hc += rendTablaAnios(c.anios, idx, '');
-    hc += '<p class="capnota">Since ' + esc(rendFechaConAnio(c.desde)) +
-      (c.importado ? ', with the broker’s own records before the app' : '') + '. Without deposits, like the whole portfolio.</p></div>';
-  });
-  elA.innerHTML = hc;
 }
 (function () {
   var back = document.getElementById('ranBack');

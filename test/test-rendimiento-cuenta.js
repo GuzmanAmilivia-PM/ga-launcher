@@ -78,7 +78,7 @@ var sandbox = {
     getRendimientoAnual: function (args) { pedidosAnual.push(args); respuestaPendiente = { ok: this._ok, fail: this._fail }; }
   } } }
 };
-var cuerpo = src + '\nreturn { cargarAnual: cargarRendAnual, render: renderRendimiento, mostrar: mostrarRendimiento, medibles: rendRangosMedibles, setDatos: function (d) { rendDatos = d; }, setRango: function (r) { rendRango = r; }, rango: function () { return rendRango; }, abierto: function () { return rendAbierto; } };';
+var cuerpo = src + '\nreturn { cargarAnual: cargarRendAnual, elegirSerie: ranElegir,render: renderRendimiento, mostrar: mostrarRendimiento, medibles: rendRangosMedibles, setDatos: function (d) { rendDatos = d; }, setRango: function (r) { rendRango = r; }, rango: function () { return rendRango; }, abierto: function () { return rendAbierto; } };';
 // El cache local (paneles.js), de mentira: `guardados` hace de localStorage y
 // `marcas` anota que aviso quedo a la vista. montarApi() es una app recien
 // abierta: ranDatos arranca en null, como al abrir la app en el telefono.
@@ -261,13 +261,25 @@ if (fuenteWorker) {
 api.cargarAnual(false);
 ok(pedidosAnual.length === 1, 'abrir la pagina pide rendimiento_anual una vez');
 respuestaPendiente.ok(ANUAL);
-var hc = elemento('ranCartera').innerHTML, ha = elemento('ranCuentas').innerHTML;
-ok(hc.indexOf('you in 2026 so far') !== -1 && hc.indexOf('<span class="rendpp up">+4.8 pp</span>') !== -1, 'el titular: el año mas nuevo contra el indice, en puntos');
-ok(hc.indexOf('<td>2026*</td><td><b class="up">+18.9%</b></td><td><b class="up">+14.1%</b></td>') !== -1, 'la tabla de la cartera, con la misma forma que las tarjetas');
-ok(hc.indexOf('Year by year') === -1, 'sin repetir el titulo: la tarjeta ya dice que es');
-ok(/banks included, without deposits/.test(hc) && /a new year is added every January 1/.test(hc), 'dice que es TODO, sin depositos, y que cada año se suma solo');
-ok((ha.match(/class="card"/g) || []).length === 2 && ha.indexOf('Interactive Brokers') !== -1 && ha.indexOf('Charles Schwab') !== -1, 'una tarjeta por broker con historia');
-ok(ha.indexOf('2023*') !== -1 && ha.indexOf('broker’s own records') !== -1, 'IBKR con sus años viejos y de donde salen');
+// Rediseño del 21/11/2026 (pedido de Guzman: "parece una pagina de excel...
+// mas informacion en grande, menos texto chico, alguna grafica de barras").
+// UNA tarjeta: selector de serie, el año mas nuevo en grande, barras por año.
+// Los asserts de la tabla se dieron vuelta: en esta pagina ya no hay tabla.
+var hc = elemento('ranCartera').innerHTML;
+ok(hc.indexOf('<div class="ranhero"><div><b class="up">+18.9%</b><span>You</span></div><div><b>+14.1%</b><span>S&P 500</span></div></div>') !== -1, 'el titular: el año mas nuevo en grande, vos y el indice');
+ok(hc.indexOf('2026 so far') !== -1 && hc.indexOf('<p class="ranveredicto up">+4.8 pp ahead of the S&P 500</p>') !== -1, 'dice que año es y el veredicto en puntos');
+ok(hc.indexOf('rendtabla') === -1 && hc.indexOf('<td>') === -1, 'sin tabla: la pagina dejo de ser una planilla');
+ok(hc.indexOf('class="ranbar yo" style="left:0.0%;width:100.0%"') !== -1 && hc.indexOf('class="ranbar ind" style="left:0.0%;width:74.5%"') !== -1, 'las barras del año: las dos sobre la MISMA escala (14.1 / 18.93 = 74.5%)');
+ok(hc.indexOf('rantiles') === -1, 'con un solo año no hay resumen: seria repetir el titular');
+ok(/<details class="rannota">/.test(hc) && /banks included, without deposits/.test(hc) && /a new year is added every January 1/.test(hc), 'la letra chica queda plegada, y dice que es TODO, sin depositos, y que cada año se suma solo');
+ok((hc.match(/data-serie="/g) || []).length === 3 && hc.indexOf('data-serie="total">Total<') !== -1 && hc.indexOf('data-serie="c:IB">Interactive Brokers<') !== -1 && hc.indexOf('data-serie="c:CS">Charles Schwab<') !== -1, 'el selector: Total y un boton por broker con historia');
+ok(/class="rangebtn active" data-serie="total"/.test(hc), 'arranca en Total');
+api.elegirSerie('c:IB');
+var hib = elemento('ranCartera').innerHTML;
+ok(/class="rangebtn active" data-serie="c:IB"/.test(hib) && hib.indexOf('<b>2023</b> <em>from ') !== -1 && hib.indexOf('broker’s own records') !== -1, 'IBKR con sus años viejos, el año a medias dicho al lado y de donde salen');
+ok(hib.indexOf('rantiles') !== -1 && /Ahead in<\/span><b>\d of \d<\/b>/.test(hib), 'con varios años aparece el resumen: cuantos le ganaron al indice');
+api.elegirSerie('total');
+ok(elemento('ranCartera').innerHTML === hc, 'volver a Total pinta lo mismo');
 api.cargarAnual(true);
 ok(pedidosAnual.length === 2 && pedidosAnual[1].forzar === true, 'el boton de refrescar pide sin cache');
 respuestaPendiente.fail(new Error('red'));
@@ -283,11 +295,11 @@ ok(/id="ranAviso"/.test(fs.readFileSync(path.join(RUTA,'index.html'), 'utf8')), 
 // La app recien abierta, con los años de ayer guardados.
 guardados = { ga_cache_ran: { t: 5678, data: ANUAL } };
 marcas = {};
-elemento('ranCartera').innerHTML = ''; elemento('ranCuentas').innerHTML = '';
+elemento('ranCartera').innerHTML = '';
 var api2 = montarApi();
 var antesAnual = pedidosAnual.length;
 api2.cargarAnual(false);
-ok(elemento('ranCartera').innerHTML === hc && elemento('ranCuentas').innerHTML === ha, 'al abrir se ven los años guardados, antes de que conteste el Worker');
+ok(elemento('ranCartera').innerHTML === hc, 'al abrir se ven los años guardados, antes de que conteste el Worker');
 ok(marcas.ranAviso === 5678, 'y dice de cuando son (Data from ... updating)');
 ok(pedidosAnual.length === antesAnual + 1 && !pedidosAnual[pedidosAnual.length - 1].forzar, 'igual pide los frescos por atras, sin forzar');
 respuestaPendiente.ok({ ok: false, mensajes: ['broker down'] });
@@ -312,15 +324,27 @@ ANUAL_B.brokers = {
   ]
 };
 api2.cargarAnual(true); respuestaPendiente.ok(ANUAL_B);
-var hb = elemento('ranCuentas').innerHTML;
-ok(hb.indexOf('id="ranBrokers"') !== -1 && hb.indexOf('<h2>Brokers combined</h2>') !== -1, 'la tarjeta de los brokers juntos');
-ok(hb.indexOf('<h2>Brokers combined</h2>') < hb.indexOf('<h2>Interactive Brokers</h2>'), 'va antes de las tarjetas de cada broker');
-ok(hb.indexOf('<td>2023</td><td><b class="up">+12.5%</b></td>') !== -1 && hb.indexOf('2022*') !== -1, 'con la misma tabla año por año, y el año parcial marcado');
+// Desde el rediseño del 21/11/2026 son un boton del selector ("Brokers"), y
+// ademas completan los años de Total anteriores a la app, MARCADOS.
+var ht = elemento('ranCartera').innerHTML;
+ok(ht.indexOf('data-serie="brokers">Brokers<') !== -1 && ht.indexOf('data-serie="total"') < ht.indexOf('data-serie="brokers"') && ht.indexOf('data-serie="brokers"') < ht.indexOf('data-serie="c:IB"'), 'el boton de los brokers juntos, entre Total y cada broker');
+ok((ht.match(/class="rananio aprox"/g) || []).length === 2 && (ht.match(/<em>brokers only<\/em>/g) || []).length === 2, 'Total completa 2023 y 2022 con los brokers juntos, atenuados y dicho al lado');
+ok(ht.indexOf('<div class="rananio"><div class="rananio-cab"><span><b>2026</b> <em>so far</em>') !== -1, 'el año de la cartera entera NO va marcado como aproximado');
+ok(/Since 2022 &asymp;/.test(ht) && /Earlier years are your brokers added together, without the banks: approximate/.test(ht), 'el resumen y la letra chica de Total dicen que lo anterior es aproximado');
+// 1.1893 * 1.125 * 0.80 = 1.0704 -> +7%; el indice 1.141 * 1.261 * 0.948 = 1.364 -> +36%
+ok(/<b class="up">\+7%<\/b><em>Index \+36%<\/em>/.test(ht) && /Ahead in<\/span><b>1 of 3<\/b>/.test(ht) && /Best year<\/span><b class="up">\+19%<\/b><em>2026<\/em>/.test(ht), 'las tres cifras: los años encadenados contra el indice, cuantos le gano y el mejor');
+ok(/class="ranbar yo" style="left:43\.4%;width:41\.1%"/.test(ht) && /class="ranbar yo" style="left:0\.0%;width:43\.4%"/.test(ht), 'un año negativo crece hacia la izquierda del MISMO cero (escala de -20 a 26.1)');
+api2.elegirSerie('brokers');
+var hb = elemento('ranCartera').innerHTML;
+ok(/class="rangebtn active" data-serie="brokers"/.test(hb) && hb.indexOf('2023 so far') === -1 && hb.indexOf('<p class="detlbl ranlbl">2023</p>') !== -1, 'la serie de los brokers: su año mas nuevo en el titular');
+ok(hb.indexOf('<p class="ranveredicto down">−13.6 pp behind the S&P 500</p>') !== -1, 'un año peor que el indice lo dice en rojo');
+ok(hb.indexOf('rananio aprox') === -1 && /<b>2022<\/b> <em>from [A-Z][a-z]{2} \d+<\/em>/.test(hb), 'ahi no se atenua nada (toda la serie es la misma), y el año a medias dice desde cuando');
 ok(/Approximate: Binance since [A-Z][a-z]{2} \d+, 2022, Interactive Brokers since [A-Z][a-z]{2} \d+, 2023/.test(hb), 'dice que es aproximado y desde cuando cuenta cada broker');
 ok(/No banks, without deposits/.test(hb) && /keeps its last known value/.test(hb), 'y por que: sin bancos, y los dias sin dato arrastran el ultimo valor');
-ok((hb.match(/class="card"/g) || []).length === 3, 'las dos tarjetas de los brokers siguen estando');
 api2.cargarAnual(true); respuestaPendiente.ok(ANUAL);
-ok(elemento('ranCuentas').innerHTML.indexOf('ranBrokers') === -1, 'sin `brokers` en la respuesta (un Worker anterior, o una sola cuenta) la tarjeta no aparece');
+var hs = elemento('ranCartera').innerHTML;
+ok(hs.indexOf('data-serie="brokers"') === -1 && hs.indexOf('rananio aprox') === -1 && /class="rangebtn active" data-serie="total"/.test(hs), 'sin `brokers` en la respuesta (un Worker anterior, o una sola cuenta) el boton no aparece y se vuelve a Total');
+ok(fs.readFileSync(path.join(RUTA, 'index.html'), 'utf8').indexOf('ranCuentas') === -1, 'las tarjetas apiladas por broker ya no existen en la pagina');
 // Sin nada guardado y sin red: el error de siempre.
 guardados = {}; marcas = {};
 elemento('ranCartera').innerHTML = '';

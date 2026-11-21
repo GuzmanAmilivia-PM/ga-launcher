@@ -1252,6 +1252,43 @@ a.galink { color: inherit; text-decoration: none; }
 .rendtabla th:first-child, .rendtabla td:first-child { text-align: left; color: var(--muted); }
 .rendtabla td { text-align: right; padding: 7px 0; border-top: 1px solid var(--border); white-space: nowrap; }
 .rendtabla td .up { color: var(--green); } .rendtabla td .down { color: var(--red); }
+/* La pagina Performance (rediseño del 21/11/2026): el año mas nuevo en grande,
+   barras por año (vos con el acento, el indice en gris, las dos sobre la misma
+   escala) y tres cifras de resumen. Los años que solo tienen brokers (.aprox)
+   van atenuados. La letra chica queda plegada en un <details>. */
+.ranlbl { margin: 16px 0 6px; }
+.ranhero { display: flex; gap: 28px; align-items: flex-end; }
+.ranhero div { display: flex; flex-direction: column; }
+.ranhero b { font-size: 34px; font-weight: 800; line-height: 1.05; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.ranhero div + div b { font-size: 24px; color: var(--muted); }
+.ranhero span { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+.ranhero .up, .rantiles .up, .ranveredicto.up { color: var(--green); }
+.ranhero .down, .rantiles .down, .ranveredicto.down { color: var(--red); }
+.ranveredicto { font-size: 15px; font-weight: 700; margin: 10px 0 0; }
+.rantiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+.rantiles div { display: flex; flex-direction: column; gap: 2px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; min-width: 0; }
+.rantiles span { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; font-weight: 700; white-space: nowrap; }
+.rantiles b { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rantiles em { font-size: 11.5px; color: var(--muted); font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ranbars { display: flex; flex-direction: column; gap: 14px; }
+.rananio-cab { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 5px; }
+.rananio-cab b { font-size: 16px; font-weight: 800; }
+.rananio-cab em { font-size: 11.5px; color: var(--muted); font-style: normal; margin-left: 4px; }
+.ranfila { display: grid; grid-template-columns: 1fr 62px; align-items: center; gap: 8px; margin-top: 4px; }
+.ranfila b { font-size: 14.5px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.ranfila.idx b { color: var(--muted); font-weight: 600; }
+.rantrack { position: relative; height: 16px; border-radius: 5px; background: rgba(255,255,255,.04); overflow: hidden; }
+.ranfila.idx .rantrack { height: 10px; }
+.ranbar { position: absolute; top: 0; bottom: 0; border-radius: 5px; }
+.ranbar.yo { background: var(--gold); }
+.ranbar.ind { background: rgba(144,160,184,.6); }
+.rananio.aprox .ranbar { opacity: .5; }
+.ranleyenda { display: flex; gap: 16px; font-size: 12.5px; color: var(--muted); margin: 14px 0 0; }
+.ranleyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.ranleyenda .ranbar { position: static; display: inline-block; width: 14px; height: 10px; border-radius: 3px; }
+.rannota { margin-top: 14px; }
+.rannota summary { font-size: 12.5px; color: var(--muted); font-weight: 700; cursor: pointer; }
+html.light .rantrack { background: rgba(20,40,80,.06); }
 /* Exposure (24/09/2026, A28): una fila por empresa, la barra partida en lo
    directo (el acento lleno) y lo que viene de los fondos (el acento tenue). Las
    barras se miden contra la primera fila. Solo familias vivas de color. */
