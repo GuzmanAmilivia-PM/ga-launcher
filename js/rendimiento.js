@@ -332,8 +332,25 @@ function renderRendAnual() {
   }
   (r.avisos || []).forEach(function (x) { h += '<p class="newsempty" style="font-size:12px">&#9888; ' + esc(x) + '</p>'; });
   elC.innerHTML = h;
-  // Cada broker con historia propia, en su tarjeta.
+  // Los brokers JUNTOS (21/11/2026). Pedido de Guzman: un balance general de
+  // los años anteriores, "aproximado al menos", con lo que informan los
+  // brokers — la cartera entera de arriba no tiene pasado antes de la app. La
+  // suma la hace el Worker (Rendimiento.js, brokersPorAnio); aca se dibuja con
+  // la MISMA tabla, y la nota dice lo que la hace aproximada: sin bancos, cada
+  // cuenta entra cuando empiezan sus registros, y los dias sin dato arrastran
+  // el ultimo valor.
   var hc = '';
+  var br = r.brokers;
+  if (br && br.anios && br.anios.length) {
+    hc += '<div class="card" id="ranBrokers"><div class="cardtop"><h2>Brokers combined</h2></div>';
+    hc += rendTablaAnios(br.anios, idx, '');
+    hc += '<p class="capnota">Approximate: ' +
+      (br.cuentas || []).map(function (c) {
+        return esc(nombrePlataforma(c.nombre)) + ' since ' + esc(rendFechaConAnio(c.desde));
+      }).join(', ') +
+      ', added together day by day. No banks, without deposits; an account counts from the day its records start, and a day with no data keeps its last known value. Schwab’s history before the app is an estimate.</p></div>';
+  }
+  // Cada broker con historia propia, en su tarjeta.
   (r.cuentas || []).forEach(function (c) {
     hc += '<div class="card"><div class="cardtop"><h2>' + esc(nombrePlataforma(c.nombre)) + '</h2></div>';
     hc += rendTablaAnios(c.anios, idx, '');

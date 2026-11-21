@@ -297,6 +297,30 @@ api2.cargarAnual(false);
 var ANUAL2 = JSON.parse(JSON.stringify(ANUAL)); ANUAL2.cartera[0].twr = 20.5; ANUAL2.cartera[0].pp = 6.4;
 respuestaPendiente.ok(ANUAL2);
 ok(elemento('ranCartera').innerHTML.indexOf('+20.5%') !== -1 && guardados.ga_cache_ran.data === ANUAL2, 'la respuesta fresca reemplaza la pantalla y lo guardado');
+// Los brokers JUNTOS (21/11/2026). Pedido de Guzman: un balance general
+// aproximado de los años anteriores con lo que informan los brokers. La suma
+// la hace el Worker (`brokers` en rendimiento_anual); aca se dibuja en su
+// tarjeta, ANTES de las de cada broker, y dice por que es aproximada.
+if (fuenteWorker) ok(fuenteWorker.indexOf('brokers: brokers') !== -1 && fuenteWorker.indexOf('cuentas: c.cuentas') !== -1, "el Worker escribe 'brokers' con sus cuentas en rendimiento_anual");
+var ANUAL_B = JSON.parse(JSON.stringify(ANUAL));
+ANUAL_B.brokers = {
+  desde: Date.UTC(2022, 6, 26, 20),
+  cuentas: [{ nombre: 'Binance', desde: Date.UTC(2022, 6, 26, 20) }, { nombre: 'Interactive Brokers', desde: Date.UTC(2023, 3, 11, 20) }],
+  anios: [
+    { anio: 2023, twr: 12.5, spy: 26.1, pp: -13.6, parcial: false, enCurso: false, con: ['Binance', 'Interactive Brokers'] },
+    { anio: 2022, twr: -20, spy: -5.2, pp: -14.8, parcial: true, enCurso: false, desde: Date.UTC(2022, 6, 26, 20), con: ['Binance'] }
+  ]
+};
+api2.cargarAnual(true); respuestaPendiente.ok(ANUAL_B);
+var hb = elemento('ranCuentas').innerHTML;
+ok(hb.indexOf('id="ranBrokers"') !== -1 && hb.indexOf('<h2>Brokers combined</h2>') !== -1, 'la tarjeta de los brokers juntos');
+ok(hb.indexOf('<h2>Brokers combined</h2>') < hb.indexOf('<h2>Interactive Brokers</h2>'), 'va antes de las tarjetas de cada broker');
+ok(hb.indexOf('<td>2023</td><td><b class="up">+12.5%</b></td>') !== -1 && hb.indexOf('2022*') !== -1, 'con la misma tabla año por año, y el año parcial marcado');
+ok(/Approximate: Binance since [A-Z][a-z]{2} \d+, 2022, Interactive Brokers since [A-Z][a-z]{2} \d+, 2023/.test(hb), 'dice que es aproximado y desde cuando cuenta cada broker');
+ok(/No banks, without deposits/.test(hb) && /keeps its last known value/.test(hb), 'y por que: sin bancos, y los dias sin dato arrastran el ultimo valor');
+ok((hb.match(/class="card"/g) || []).length === 3, 'las dos tarjetas de los brokers siguen estando');
+api2.cargarAnual(true); respuestaPendiente.ok(ANUAL);
+ok(elemento('ranCuentas').innerHTML.indexOf('ranBrokers') === -1, 'sin `brokers` en la respuesta (un Worker anterior, o una sola cuenta) la tarjeta no aparece');
 // Sin nada guardado y sin red: el error de siempre.
 guardados = {}; marcas = {};
 elemento('ranCartera').innerHTML = '';

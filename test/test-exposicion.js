@@ -104,6 +104,60 @@ api.cargar(true); respuesta.ok({ ok: true, empresas: [], fondos: [], sinTabla: [
 ok(/No companies in the portfolio yet/.test(elemento('expBody').innerHTML), 'sin empresas lo dice');
 ok(api.fecha('2026-08-31') === 'Aug 31' && api.fecha('2026-12-05') === 'Dec 5', 'la fecha corta de cada lista');
 
+console.log('\nT) By theme (21/11/2026): la misma cuenta agrupada por tema');
+// Pedido de Guzman: "ademas del top 10, por sector (semis, finance tech,
+// emergente, etc)". Los temas los arma el Worker; aca se dibujan con la MISMA
+// fila que el top 10. Los numeros son inventados.
+if (fuenteWorker) {
+  ['temas', 'sinTema', 'tema', 'top', 'emergentes', 'pais'].forEach(function (c) {
+    ok(fuenteWorker.indexOf(c + ':') !== -1, "el Worker escribe '" + c + "'");
+  });
+  ok(/out\.resto = true/.test(fuenteWorker) && /out\.sinClasificar = true/.test(fuenteWorker), 'y marca los dos renglones que no son un tema');
+}
+var CON_TEMAS = JSON.parse(JSON.stringify(PAYLOAD));
+CON_TEMAS.temas = [
+  { tema: 'Semiconductors', valor: 4000, pct: 8, directo: 1000, fondos: [{ s: 'VOO', valor: 2000 }, { s: 'SMH', valor: 1000 }], top: [{ s: 'NVDA', valor: 2500 }, { s: 'ASML', valor: 1000 }] },
+  { tema: 'Fintech & payments', valor: 1000, pct: 2, directo: 1000, fondos: [], top: [{ s: 'NU', valor: 1000 }] },
+  { tema: 'Rest of your funds', valor: 9000, pct: 18, directo: 0, fondos: [{ s: 'VOO', valor: 9000 }], top: [], resto: true },
+  { tema: 'Not classified', valor: 500, pct: 1, directo: 500, fondos: [], top: [{ s: 'ZZZT', valor: 500 }], sinClasificar: true }
+];
+CON_TEMAS.sinTema = ['ZZZT'];
+// "emergente me referia a paises emergentes" (Guzman, 21/11/2026): un corte
+// aparte, por pais, que se superpone con los temas.
+CON_TEMAS.emergentes = { valor: 1400, pct: 2.8, directo: 1000, fondos: [{ s: 'SMH', valor: 400 }],
+  empresas: [{ s: 'NU', pais: 'Brazil', valor: 1000 }, { s: 'TSM', pais: 'Taiwan', valor: 400 }] };
+ocultos = false;
+api.cargar(true); respuesta.ok(CON_TEMAS);
+ok((elemento('expBody').innerHTML.match(/class="exprow"/g) || []).length === 3, 'al abrir sigue siendo el top 10: tres empresas');
+ok(/id="expVerEmpresas"/.test(html) && /id="expVerTemas"/.test(html) && /id="expTitulo"/.test(html), 'los dos botones y el titulo viven en el HTML');
+ok(/class="tipobtn active-acento" id="expVerEmpresas"/.test(html) && html.indexOf('active-compra" id="expVer') === -1, 'con active-acento (active-compra es solo de Trades)');
+elemento('expVerTemas').onclick();
+var ht = elemento('expBody').innerHTML;
+ok(elemento('expVerTemas').className === 'tipobtn active-acento' && elemento('expVerEmpresas').className === 'tipobtn', 'tocar By theme lo enciende y apaga el otro');
+ok(elemento('expTitulo').textContent === 'By theme, funds included', 'y el titulo de la tarjeta lo dice');
+ok((ht.match(/class="exprow"/g) || []).length === 5, 'una fila por tema, mas los dos renglones aparte, mas el corte por pais');
+ok(/By country<\/p><div class="exprow">[\s\S]*?<span class="expname">Emerging countries<\/span><b class="exppct">2\.8%<\/b>/.test(ht), 'los paises emergentes, bajo su propio titulo');
+ok(/<span>NU \(Brazil\) USD 1,000<\/span> &middot; <span>TSM \(Taiwan\) USD 400<\/span>/.test(ht), 'con cada empresa, su pais y su monto');
+ok(/also counted in their themes above/.test(ht), 'y dice que se superpone con los temas');
+ok(ht.indexOf('By country') > ht.indexOf('Not classified'), 'va despues de todos los temas');
+ok(/<span class="exprank">1<\/span><span class="expname">Semiconductors<\/span><b class="exppct">8\.0%<\/b>/.test(ht), 'puesto, tema y % de la cartera');
+ok(/<span>USD 4,000<\/span> &middot; <span>Direct USD 1,000<\/span> &middot; <span>VOO USD 2,000<\/span> &middot; <span>SMH USD 1,000<\/span>/.test(ht), 'el total del tema y de donde viene cada parte');
+ok(/Mostly <span>NVDA<\/span>, <span>ASML<\/span>/.test(ht), 'y las empresas que mas pesan adentro');
+ok(/expbar-dir" style="width:25\.0%"/.test(ht) && /expbar-fondo" style="width:75\.0%"/.test(ht), 'la barra del tema mas grande llena la fila: 1000 directo y 3000 por fondos');
+ok(/<span class="exprank">&middot;<\/span><span class="expname">Rest of your funds<\/span>/.test(ht) && /beyond their 25 largest holdings/.test(ht), 'el resto de los fondos va sin numero y dice que es');
+ok(/expbar-fondo" style="width:100\.0%"/.test(ht), 'y su barra se topea: no aplasta a los temas aunque sea mas grande');
+ok(/Not classified yet: ZZZT/.test(ht), 'una empresa sin tema se nombra');
+ok(/cash is left out/.test(ht) && /Each company counts under one theme/.test(ht) && /are a floor/.test(ht), 'la nota: sin cash, una empresa un tema, y que es un piso');
+ocultos = true; api.render();
+ok(elemento('expBody').innerHTML.indexOf('USD 4,000') === -1 && /8\.0%/.test(elemento('expBody').innerHTML), 'con el ojito cerrado no hay montos y los % siguen');
+ocultos = false;
+elemento('expVerEmpresas').onclick();
+ok((elemento('expBody').innerHTML.match(/class="exprow"/g) || []).length === 3 && elemento('expTitulo').textContent === 'Top 10 companies, funds included', 'Top 10 vuelve a lo de siempre');
+elemento('expVerTemas').onclick();
+api.cargar(true); respuesta.ok(PAYLOAD);
+ok(/No themes to show yet/.test(elemento('expBody').innerHTML), 'un Worker que todavia no manda temas no rompe: lo dice');
+elemento('expVerEmpresas').onclick();
+
 console.log('\nD) el menu, la vista y la vuelta');
 ok(/<button class="mtile" id="mExpo">[\s\S]*?Exposure<\/button>/.test(html), 'el boton Exposure en el menu del costado');
 ok(/<div id="view-exposicion" style="display:none">/.test(html) && /id="expBody"/.test(html) && /id="expBack"/.test(html), 'la vista con su cuerpo y su Back');

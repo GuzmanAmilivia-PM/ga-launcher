@@ -39,6 +39,11 @@
 // Google (corte a D1 del 29/08/2026). El comentario de la era-1 decía "el 2
 // sería salir de la planilla" — salió, y este número lo cuenta.
 var VERSION_GENERACION = '2';
+// El 22: dos lecturas nuevas (21/11/2026, pedido de Guzman). Exposure «By
+// theme»: la misma cuenta del top 10 agrupada por tema (semis, fintech...),
+// mirando adentro de los fondos, y aparte el corte por PAISES emergentes. Y Performance «Brokers
+// combined»: los brokers sumados año por año desde 2022, aproximado, para
+// tener un balance de los años anteriores a la app.
 // El 21: la pagina Tax book en el menu del costado (24/09/2026, A27): el libro
 // fiscal de cada año (dividendos, retenciones y ventas que informaron los
 // brokers, guardados para siempre por el Worker) con su CSV para el contador.
@@ -88,7 +93,7 @@ var VERSION_GENERACION = '2';
 // El 8 fue editar a mano los precios del fondo de Itau desde su pagina
 // (29/08/2026, V16); el 7, la Watchlist con alertas y push; el 6, los
 // indicadores del detalle.
-var VERSION_FUNCION = '21';
+var VERSION_FUNCION = '22';
 // El armado vive aparte y es PURO —entra el nombre del cache, sale el texto—
 // justamente para que se pueda probar ejecutandolo. Cuando esto vivia adentro
 // de versionShell, lo unico que lo custodiaba eran expresiones regulares sobre

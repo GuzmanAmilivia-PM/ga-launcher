@@ -1192,6 +1192,12 @@ a.galink { color: inherit; text-decoration: none; }
 .expley i + i, .expley-fondo { margin-left: 8px; }
 .expley-dir, .expbar-dir { background: var(--gold); }
 .expley-fondo, .expbar-fondo { background: rgba(var(--gold-rgb), .38); }
+/* El selector Top 10 / By theme (21/11/2026): .tipobtn con active-acento,
+   como el de la proyeccion de dividendos. */
+.expsel { display: flex; gap: 8px; margin: 0 0 10px; }
+.expsel .tipobtn { padding: 7px 10px; font-size: 12px; font-weight: 700; }
+/* El corte por pais, debajo de los temas: su titulo toma aire de la lista. */
+.expcorte { margin: 18px 0 4px; }
 .exprow { padding: 9px 0; border-top: 1px solid var(--border); }
 .exprow-top { display: flex; align-items: baseline; gap: 8px; }
 .exprank { flex: 0 0 18px; color: var(--muted); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
