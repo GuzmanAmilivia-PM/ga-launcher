@@ -343,32 +343,39 @@ function ranPp(pp) {
   if (!ranTiene(pp)) return '';
   return '<span class="rendpp ' + (pp >= 0 ? 'up' : 'down') + '">' + (pp >= 0 ? '+' : '−') + Math.abs(pp).toFixed(1) + ' pp</span>';
 }
-// Las barras: una fila doble por año, las dos sobre la misma escala y con el
-// cero en el mismo lugar (un año negativo crece hacia la izquierda).
+// Las barras (verticales desde el 21/11/2026, segundo pedido de Guzman: "el
+// año deberia estar en el eje X y el % en el eje Y, mucho mas minimalista").
+// Un par por año, del mas viejo al mas nuevo, las dos sobre la misma escala y
+// con el cero en la misma linea (un año negativo cuelga hacia abajo). Arriba
+// de cada barra su numero sin decimales; abajo el año y los puntos contra el
+// indice. Lo demas (año a medias, "brokers only") se fue a la leyenda y a la
+// nota plegada: en el dibujo no hay texto de mas.
 function ranBarras(anios, idx) {
-  var max = 0, min = 0;
+  var max = 0, min = 0, hayAprox = false;
   anios.forEach(function (a) {
+    if (a.aprox) hayAprox = true;
     [a.twr, a.spy].forEach(function (v) { if (ranTiene(v)) { if (v > max) max = v; if (v < min) min = v; } });
   });
   var span = (max - min) || 1;
   var cero = (0 - min) / span * 100;
   function barra(v, clase) {
-    if (!ranTiene(v)) return '<span class="rantrack"></span><b>&mdash;</b>';
-    var w = Math.max(Math.abs(v) / span * 100, 1.5);
-    var izq = v >= 0 ? cero : Math.max(cero - w, 0);
-    return '<span class="rantrack"><i class="ranbar ' + clase + '" style="left:' + izq.toFixed(1) + '%;width:' + w.toFixed(1) + '%"></i></span>' +
-      '<b>' + signoPct(Number(v), 1) + '</b>';
+    if (!ranTiene(v)) return '<span class="ranslot"></span>';
+    var alto = Math.max(Math.abs(v) / span * 100, 1.5);
+    var txt = '<b style="' + (v >= 0 ? 'bottom:' + (cero + alto).toFixed(1) : 'top:' + (100 - cero + alto).toFixed(1)) + '%">' + signoPct(Number(v), 0).replace('%', '') + '</b>';
+    return '<span class="ranslot"><i class="ranbar ' + clase + '" style="bottom:' + (v >= 0 ? cero : cero - alto).toFixed(1) + '%;height:' + alto.toFixed(1) + '%"></i>' + txt + '</span>';
   }
-  var h = '<div class="ranbars">';
-  anios.forEach(function (a) {
-    var sub = a.aprox ? 'brokers only' : a.enCurso ? 'so far' : a.parcial ? 'from ' + new Date(a.desde).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-    h += '<div class="rananio' + (a.aprox ? ' aprox' : '') + '">' +
-      '<div class="rananio-cab"><span><b>' + a.anio + '</b>' + (sub ? ' <em>' + esc(sub) + '</em>' : '') + '</span>' + ranPp(a.pp) + '</div>' +
-      '<div class="ranfila">' + barra(a.twr, 'yo') + '</div>' +
-      '<div class="ranfila idx">' + barra(a.spy, 'ind') + '</div></div>';
+  var h = '<div class="ranplot">';
+  anios.slice().reverse().forEach(function (a) {
+    h += '<div class="rancol' + (a.aprox ? ' aprox' : '') + '">' +
+      '<div class="ranarea' + (min < 0 ? ' neg' : '') + '">' + barra(a.twr, 'yo') + barra(a.spy, 'ind') +
+      '<u class="rancero" style="bottom:' + cero.toFixed(1) + '%"></u></div>' +
+      '<b>' + a.anio + '</b>' +
+      (ranTiene(a.pp) ? '<em class="' + (a.pp >= 0 ? 'up' : 'down') + '">' + (a.pp >= 0 ? '+' : '−') + Math.abs(a.pp).toFixed(1) + ' pp</em>' : '') +
+      '</div>';
   });
   h += '</div>';
-  h += '<p class="ranleyenda"><span><i class="ranbar yo"></i>You</span><span><i class="ranbar ind"></i>' + esc(idx) + '</span></p>';
+  h += '<p class="ranleyenda"><span><i class="ranbar yo"></i>You</span><span><i class="ranbar ind"></i>' + esc(idx) + '</span>' +
+    (hayAprox ? '<span>Faded: brokers only</span>' : '') + '</p>';
   return h;
 }
 // El resumen en tres cifras. Solo con dos años o mas: con uno, es el titular.
@@ -405,6 +412,10 @@ function ranNota(s, r) {
     t = 'Since ' + esc(rendFechaConAnio(s.cuenta.desde)) +
       (s.cuenta.importado ? ', with the broker’s own records before the app' : '') + '. Without deposits, like the whole portfolio.';
   }
+  // Los años a medias se dicen aca (en el dibujo no hay lugar ni hace falta).
+  s.anios.forEach(function (a) {
+    if (a.parcial && !a.enCurso && a.desde) t += ' ' + a.anio + ' counts from ' + esc(rendFechaConAnio(a.desde)) + '.';
+  });
   if (r.indice && r.indice.nota) t += ' Index: ' + esc(r.indice.nota) + '.';
   return '<details class="rannota"><summary>How this is measured</summary><p class="capnota">' + t + '</p></details>';
 }
@@ -440,7 +451,7 @@ function renderRendAnual() {
         ' pp ' + (a.pp >= 0 ? 'ahead of' : 'behind') + ' the ' + esc(idx) + '</p>';
     }
     h += ranResumen(s.anios, idx, s.aprox);
-    h += '<p class="detlbl ranlbl">Year by year</p>';
+    h += '<p class="detlbl ranlbl">Year by year, %</p>';
     h += ranBarras(s.anios, idx);
     h += ranNota(s, r);
   }

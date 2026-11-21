@@ -101,7 +101,13 @@ function expHtmlEmpresas(r) {
   if (!emp.length) return '<p class="newsempty">No companies in the portfolio yet.</p>';
   // Las barras se miden contra la primera: la mas larga llena la fila.
   var max = Number(emp[0].valor) || 1;
-  var h = '<p class="expley"><i class="expley-dir"></i>direct <i class="expley-fondo"></i>through funds</p>';
+  // La suma de las diez (21/11/2026, pedido de Guzman: "pequeño en la parte
+  // de arriba la suma del % de las primeras 10"). Son empresas distintas y
+  // cada % es sobre la cartera entera, asi que se suman tal cual.
+  var suma = 0, hayPct = false;
+  emp.forEach(function (e) { if (e.pct !== null && e.pct !== undefined && isFinite(e.pct)) { suma += Number(e.pct); hayPct = true; } });
+  var h = hayPct ? '<p class="expsuma">' + (emp.length === 1 ? 'It is' : 'These ' + emp.length + ' add up to') + ' <b>' + suma.toFixed(1) + '%</b> of the portfolio</p>' : '';
+  h += '<p class="expley"><i class="expley-dir"></i>direct <i class="expley-fondo"></i>through funds</p>';
   emp.forEach(function (e, i) {
     var dir = Math.max(0, Number(e.directo) || 0);
     // El simbolo ADELANTE (9/10/2026, auditoria): con un nombre largo

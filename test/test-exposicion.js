@@ -75,6 +75,8 @@ ok(pedidos === 1, 'pide exposicion');
 respuesta.ok(PAYLOAD);
 var h = elemento('expBody').innerHTML;
 ok((h.match(/class="exprow"/g) || []).length === 3, 'una fila por empresa');
+// La suma de las que se ven, chica y arriba (21/11/2026, pedido de Guzman).
+ok(h.indexOf('<p class="expsuma">These 3 add up to <b>8.0%</b> of the portfolio</p>') === 0, 'arriba de todo, la suma del % de las empresas listadas (4 + 3 + 1)');
 // El simbolo va ADELANTE del nombre desde el 9/10/2026 (auditoria): con un
 // nombre largo, los puntos suspensivos se comian el simbolo.
 ok(h.indexOf('<span class="exprank">1</span><span class="expname"><em>NVDA</em> NVIDIA</span><b class="exppct">4.0%</b>') !== -1, 'puesto, simbolo, nombre y % de la cartera');
