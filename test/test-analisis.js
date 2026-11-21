@@ -315,6 +315,21 @@ ok(/anates ok">[\s\S]*?META[\s\S]*?Reviewed 10\/11\/2026</.test(hk), 'con tesis 
 ok(/anates vencida">[\s\S]*?KO[\s\S]*?Reviewed 01\/06\/2026 — due for review/.test(hk), 'vencida: lo dice');
 ok(hk.indexOf('Thesis by position') > hk.indexOf('anachk') && hk.indexOf('Thesis by position') < hk.indexOf('Distance from your high'),
   'va despues de los chequeos y antes de la distancia al maximo');
+ok(!/below cost/.test(hk) && !/below their cost/.test(hk), 'sin posiciones caidas (backend de la primera tanda) no se habla de costo');
+// La segunda tanda: una apuesta muy caida entra a la lista aunque pese poco,
+// y la fila dice por que esta ahi.
+var CAIDAS = JSON.parse(JSON.stringify(CON_TESIS));
+CAIDAS.tesis.caidaDesde = 0.30;
+CAIDAS.tesis.lista[0].caida = null; CAIDAS.tesis.lista[0].porPeso = true;
+CAIDAS.tesis.lista.push({ symbol: 'BABA', pct: 0.021, tiene: false, fecha: null, vencida: false, porPeso: false, caida: 0.352 });
+CAIDAS.tesis.lista.push({ symbol: 'PYPL', pct: 0.014, tiene: true, fecha: new Date(2026, 10, 10).getTime(), vencida: false, porPeso: false, caida: 0.55 });
+mt.api.renderDetalle(CAIDAS);
+var hc = mt.elem('anxBody').innerHTML;
+ok(/Companies above 5\.0% of what’s invested, and bets 30% or more below their cost\./.test(hc), 'el encabezado nombra los dos motivos');
+ok(/anates sin">[\s\S]*?BABA[\s\S]*?2\.1%[\s\S]*?No thesis yet · 35% below cost/.test(hc), 'la caida se dice en la fila');
+ok(/PYPL[\s\S]*?Reviewed 10\/11\/2026 · 55% below cost/.test(hc), 'tambien en una ya revisada');
+ok(!/NVDA[^<]*<\/span><b>15\.8%<\/b><em>No thesis yet ·/.test(hc), 'y la que entra solo por peso no dice nada de costo');
+mt.api.renderDetalle(CON_TESIS);
 var bts = mt.elem('anxBody')._botones['data-tesis'];
 ok(bts.length === 5, 'NVDA tiene un boton (marcar); META y KO, dos (renovar y quitar): ' + bts.length);
 ok(bts.filter(function (b) { return b.getAttribute('data-tesis') === 'NVDA'; }).length === 1, 'sin tesis no hay nada que quitar');

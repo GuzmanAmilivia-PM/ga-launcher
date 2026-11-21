@@ -265,13 +265,18 @@ var anaTesisError = '';
 function anaTesisHtml(t) {
 if (!t || !t.lista || !t.lista.length) return '';
 var h = '<p class="anasub">Thesis by position</p>';
-h += '<p class="anadesg-nota">Companies above ' + esc(anaPct(t.desde, 1)) + ' of what’s invested. ' +
+// Desde la segunda tanda (21/11/2026) entran por DOS motivos: las empresas que
+// pesan, y las apuestas muy caidas contra su costo (`caida`, que se dice en
+// la fila: es la razon por la que esta ahi una posicion chica).
+h += '<p class="anadesg-nota">Companies above ' + esc(anaPct(t.desde, 1)) + ' of what’s invested' +
+  (t.caidaDesde ? ', and bets ' + esc(anaPct(t.caidaDesde, 0)) + ' or more below their cost' : '') + '. ' +
   'Mark one when you have written or reviewed its thesis' +
   (t.vigenciaDias ? '; after ' + Number(t.vigenciaDias) + ' days it asks for a new review.' : '.') + '</p>';
 t.lista.forEach(function (x) {
 var estado = !x.tiene ? 'sin' : (x.vencida ? 'vencida' : 'ok');
 var txt = !x.tiene ? 'No thesis yet'
   : ('Reviewed ' + anaFecha(x.fecha) + (x.vencida ? ' — due for review' : ''));
+if (typeof x.caida === 'number' && x.caida > 0) txt += ' · ' + anaPct(x.caida, 0) + ' below cost';
 var guardando = anaTesisGuardando === x.symbol;
 h += '<div class="anates ' + estado + '"><i class="luz"></i>' +
   '<span class="asym">' + esc(x.symbol) + '</span>' +
