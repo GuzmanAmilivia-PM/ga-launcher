@@ -54,7 +54,7 @@ var RESPUESTA = {
 };
 
 function montar() {
-  var estado = { pedidos: [], perfiles: [], vistas: [], respuestaPerfil: null };
+  var estado = { pedidos: [], perfiles: [], vistas: [], respuestaPerfil: null, tesis: [] };
   var elems = {};
   function nuevoElem(id) {
     var el = { id: id, style: {}, className: '', hijos: [], _html: '', _listeners: {} };
@@ -132,6 +132,14 @@ function montar() {
             estado.perfiles.push(args);
             var r = estado.respuestaPerfil || { ok: true, perfil: args.perfil };
             oks.forEach(function (f) { f(r); });
+          },
+          guardarTesis: function (args) {
+            estado.tesis.push(args);
+            if (estado.fallaTesis) { fails.forEach(function (f) { f(new Error(estado.fallaTesis)); }); return; }
+            // `tesisPendiente` deja el pedido en vuelo, para mirar la pantalla
+            // mientras guarda.
+            if (estado.tesisPendiente) { estado.resolverTesis = function () { oks.forEach(function (f) { f({ ok: true }); }); }; return; }
+            oks.forEach(function (f) { f(estado.respuestaTesis || { ok: true, symbol: args.symbol, tiene: args.tiene }); });
           }
         };
         return api;
@@ -281,6 +289,75 @@ var hv = m2.elem('anxBody').innerHTML;
 ok(/70\/100/.test(hv) && !/What you hold/.test(hv) && !/Sectors,/.test(hv),
   'el detalle omite las secciones cuyo dato no llego, sin inventar');
 ok(/Volatility<\/span><b>—/.test(hv) && /not enough history/.test(hv), 'sin historial, guion y explicacion');
+ok(!/Thesis by position/.test(hv), 'y sin la lista de tesis (backend viejo, o no se pudo leer) el bloque no aparece');
+
+// Las posiciones grandes y su tesis (21/11/2026): el backend manda la lista
+// resuelta; aca se prueba que se pinte cada estado, que el boton viaje con
+// el simbolo y la marca correctos, y que al guardar se recalcule el puntaje.
+console.log('\nK) la tesis de las posiciones grandes: se ve el estado y se marca desde aca');
+var mt = montar();
+var CON_TESIS = JSON.parse(JSON.stringify(RESPUESTA));
+CON_TESIS.tesis = {
+  desde: 0.05, vigenciaDias: 120,
+  lista: [
+    { symbol: 'NVDA', pct: 0.158, tiene: false, fecha: null, vencida: false },
+    { symbol: 'META', pct: 0.063, tiene: true, fecha: new Date(2026, 10, 10).getTime(), vencida: false },
+    { symbol: 'KO', pct: 0.052, tiene: true, fecha: new Date(2026, 5, 1).getTime(), vencida: true }
+  ]
+};
+mt.api.cargar(false);            // deja anaUltima con la respuesta del doble
+mt.api.renderDetalle(CON_TESIS);
+var hk = mt.elem('anxBody').innerHTML;
+ok(/Thesis by position/.test(hk) && /Companies above 5\.0% of what’s invested/.test(hk) && /after 120 days/.test(hk),
+  'el bloque dice desde que peso se pide y cuando vence');
+ok(/anates sin">[\s\S]*?NVDA[\s\S]*?15\.8%[\s\S]*?No thesis yet/.test(hk), 'sin tesis: en rojo y dicho');
+ok(/anates ok">[\s\S]*?META[\s\S]*?Reviewed 10\/11\/2026</.test(hk), 'con tesis vigente: la fecha de la ultima revision');
+ok(/anates vencida">[\s\S]*?KO[\s\S]*?Reviewed 01\/06\/2026 — due for review/.test(hk), 'vencida: lo dice');
+ok(hk.indexOf('Thesis by position') > hk.indexOf('anachk') && hk.indexOf('Thesis by position') < hk.indexOf('Distance from your high'),
+  'va despues de los chequeos y antes de la distancia al maximo');
+var bts = mt.elem('anxBody')._botones['data-tesis'];
+ok(bts.length === 5, 'NVDA tiene un boton (marcar); META y KO, dos (renovar y quitar): ' + bts.length);
+ok(bts.filter(function (b) { return b.getAttribute('data-tesis') === 'NVDA'; }).length === 1, 'sin tesis no hay nada que quitar');
+var antes = mt.pedidos.length;
+bts.filter(function (b) { return b.getAttribute('data-tesis') === 'NVDA'; })[0].onclick();
+ok(mt.tesis.length === 1 && mt.tesis[0].symbol === 'NVDA' && mt.tesis[0].tiene === true, 'marcar llama tesis_set con el simbolo y tiene:true');
+ok(mt.pedidos.length === antes + 1 && mt.pedidos[mt.pedidos.length - 1].forzar === true,
+  'y tras guardar se recalcula el analisis con forzar (el backend ya invalido su cache)');
+mt.api.renderDetalle(CON_TESIS);
+bts = mt.elem('anxBody')._botones['data-tesis'];
+bts.filter(function (b) { return b.getAttribute('data-tesis') === 'META' && b.getAttribute('data-tiene') === '0'; })[0].onclick();
+ok(mt.tesis.length === 2 && mt.tesis[1].symbol === 'META' && mt.tesis[1].tiene === false, 'Remove viaja con tiene:false');
+
+// Mientras guarda: la fila lo dice y no ofrece botones (un segundo toque no
+// manda dos pedidos).
+var mp = montar();
+mp.api.cargar(false);
+mp.api.renderDetalle(CON_TESIS);
+mp.tesisPendiente = true;
+mp.elem('anxBody')._botones['data-tesis'][0].onclick();
+// La pantalla se repinto con anaUltima (la del doble, sin tesis): se pinta
+// de nuevo la que tiene la lista para mirar la fila en vuelo.
+mp.api.renderDetalle(CON_TESIS);
+var hg = mp.elem('anxBody').innerHTML;
+ok(/NVDA[\s\S]*?Saving\.\.\./.test(hg), 'la fila que se esta guardando dice Saving...');
+ok((mp.elem('anxBody')._botones['data-tesis'] || []).filter(function (b) { return b.getAttribute('data-tesis') === 'NVDA'; }).length === 0,
+  'y no ofrece botones mientras tanto');
+mp.elem('anxBody')._botones['data-tesis'][0].onclick();
+ok(mp.tesis.length === 1, 'con un guardado en vuelo, otro toque no manda un segundo pedido');
+mp.resolverTesis();
+
+// Si falla, se dice y los botones vuelven.
+var mf = montar();
+mf.api.cargar(false);
+mf.api.renderDetalle(CON_TESIS);
+mf.fallaTesis = 'sin red';
+var pedidosAntes = mf.pedidos.length;
+mf.elem('anxBody')._botones['data-tesis'][0].onclick();
+ok(mf.pedidos.length === pedidosAntes, 'si el guardado falla no se recalcula nada');
+mf.api.renderDetalle(CON_TESIS);
+ok(/sin red/.test(mf.elem('anxBody').innerHTML), 'el error queda dicho en el bloque');
+ok(mf.elem('anxBody')._botones['data-tesis'].length === 5, 'y los botones vuelven para reintentar');
+ok(/against the S&amp;P 500/.test(mt.api.anaDesgloseHtml(RESPUESTA)), 'el desglose dice que el puntaje tambien mira el momento');
 
 console.log('\nJ) la carga y el boton de actualizar');
 m = montar();

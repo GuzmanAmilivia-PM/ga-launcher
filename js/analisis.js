@@ -101,8 +101,11 @@ if (total !== pj) {
 h += '<p class="anadesg-nota">Heads up: the score above says ' + pj + ' and this math gives ' + total + '. ' +
 'This is our mistake, not a problem with your data.</p>';
 }
+// Desde el 21/11/2026 no mide SOLO como esta armada: tambien el momento
+// (contra el S&P 500, el cash segun el mercado, las tesis).
 h += '<p class="anadesg-nota">This measures how the portfolio is <b>built</b> against your investor profile, ' +
-'not how much it returned. It is not a buy or sell recommendation.</p>';
+'plus where it stands today: against the S&amp;P 500, its cash given the market, and whether your big positions have a thesis. ' +
+'It is not a buy or sell recommendation.</p>';
 return h;
 }
 
@@ -222,6 +225,10 @@ html += '<p class="anasub">Checks</p>';
 html += '<div class="anachk ' + esc(q.estado) + '"><i class="luz"></i><div><b>' + esc(q.titulo) + '</b><em>' + esc(q.detalle) + '</em></div></div>';
 });
 
+// Las posiciones grandes y su tesis (21/11/2026): la marca que mueve dos de
+// los chequeos de arriba se pone aca.
+html += anaTesisHtml(r.tesis);
+
 html += anaCaidaHtml(r.riesgo || {});
 // D10 (la grilla mes a mes) se fue de esta pagina el 23/09/2026: la app tenia
 // DOS grillas mes a mes que se contradecian (esta restaba los aportes con
@@ -231,6 +238,75 @@ html += anaCaidaHtml(r.riesgo || {});
 html += '<p class="newsempty" style="margin-top:6px">This describes how your portfolio is built against the profile you chose. It is not a buy or sell recommendation.</p>';
 
 body.innerHTML = html;
+
+// Cableado DESPUES de escribir el html, desde JS (la politica de contenido
+// no permite onclick inline).
+var bt = body.querySelectorAll('button[data-tesis]');
+for (var i = 0; i < bt.length; i++) {
+(function (b) {
+b.onclick = function () { guardarTesisDe(b.getAttribute('data-tesis'), b.getAttribute('data-tiene') === '1'); };
+})(bt[i]);
+}
+}
+
+// ---------- Las posiciones grandes y su tesis (21/11/2026) ----------
+//
+// Pedido de Guzman: "si tengo % alto en una accion, ej. 15%, sin validar" — y
+// validar es que tenga tesis. La tesis se escribe en otro lado (el proyecto
+// de claude.ai); aca vive solo la MARCA de que existe y cuando se reviso por
+// ultima vez. El backend manda la lista ya resuelta (que empresas la
+// necesitan por su peso, cual esta vencida): aca se pinta y se marca.
+//
+// "Reviewed today" sirve para las dos cosas —marcarla por primera vez y
+// renovarla despues de un balance—, porque lo que el analisis mira es la
+// fecha de la ultima revision.
+var anaTesisGuardando = null;   // el simbolo que se esta guardando, o null
+var anaTesisError = '';
+function anaTesisHtml(t) {
+if (!t || !t.lista || !t.lista.length) return '';
+var h = '<p class="anasub">Thesis by position</p>';
+h += '<p class="anadesg-nota">Companies above ' + esc(anaPct(t.desde, 1)) + ' of what’s invested. ' +
+  'Mark one when you have written or reviewed its thesis' +
+  (t.vigenciaDias ? '; after ' + Number(t.vigenciaDias) + ' days it asks for a new review.' : '.') + '</p>';
+t.lista.forEach(function (x) {
+var estado = !x.tiene ? 'sin' : (x.vencida ? 'vencida' : 'ok');
+var txt = !x.tiene ? 'No thesis yet'
+  : ('Reviewed ' + anaFecha(x.fecha) + (x.vencida ? ' — due for review' : ''));
+var guardando = anaTesisGuardando === x.symbol;
+h += '<div class="anates ' + estado + '"><i class="luz"></i>' +
+  '<span class="asym">' + esc(x.symbol) + '</span>' +
+  '<b>' + esc(anaPct(x.pct, 1)) + '</b>' +
+  '<em>' + esc(guardando ? 'Saving...' : txt) + '</em>' +
+  '<span class="anates-acc">';
+if (!guardando) {
+h += '<button type="button" class="tipobtn" data-tesis="' + esc(x.symbol) + '" data-tiene="1">Reviewed today</button>';
+if (x.tiene) h += '<button type="button" class="tipobtn" data-tesis="' + esc(x.symbol) + '" data-tiene="0">Remove</button>';
+}
+h += '</span></div>';
+});
+if (anaTesisError) h += '<p class="newsempty">' + esc(anaTesisError) + '</p>';
+return h;
+}
+
+function guardarTesisDe(symbol, tiene) {
+if (anaTesisGuardando || !symbol) return;
+anaTesisGuardando = symbol;
+anaTesisError = '';
+if (anaUltima) renderAnalisisDetalle(anaUltima);
+google.script.run.withSuccessHandler(function (out) {
+anaTesisGuardando = null;
+if (!out || out.ok === false) {
+anaTesisError = msgBackend(out);
+if (anaUltima) renderAnalisisDetalle(anaUltima);
+return;
+}
+// Guardado: el backend ya invalido su cache — el puntaje se recalcula.
+cargarAnalisis(true);
+}).withFailureHandler(function (err) {
+anaTesisGuardando = null;
+anaTesisError = msgErr(err, 'The thesis mark');
+if (anaUltima) renderAnalisisDetalle(anaUltima);
+}).guardarTesis({ symbol: symbol, tiene: !!tiene });
 }
 
 // ---------- D9: distancia al maximo (1/09/2026) ----------

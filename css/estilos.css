@@ -856,6 +856,18 @@ html.light .anxfila .pista { background: rgba(20,40,80,.08); }
 .anxopts { display: flex; flex-direction: column; gap: 6px; }
 .anxopts .tipobtn { flex: none; text-align: left; font-size: 12.5px; font-weight: 600; padding: 10px 12px; }
 .anxacciones { display: flex; gap: 8px; margin-top: 12px; }
+/* Las posiciones grandes y su tesis (21/11/2026). La fila envuelve: en el
+   telefono los botones bajan a la segunda linea, alineados a la derecha. */
+.anates { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 9px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.anates:last-of-type { border-bottom: none; }
+.anates .luz { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
+.anates.vencida .luz { background: var(--gold); }
+.anates.sin .luz { background: var(--red); }
+.anates .asym { font-weight: 700; min-width: 48px; }
+.anates b { font-variant-numeric: tabular-nums; }
+.anates em { color: var(--muted); font-style: normal; }
+.anates-acc { display: flex; gap: 6px; margin-left: auto; }
+.anates-acc .tipobtn { flex: none; padding: 7px 11px; font-size: 11.5px; }
 .opsresumen { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; font-size: 12.5px; }
 .opsresumen span { display: block; color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; }
 .opsresumen b { font-size: 14px; font-weight: 700; }
