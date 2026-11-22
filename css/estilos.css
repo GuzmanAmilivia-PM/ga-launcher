@@ -565,6 +565,13 @@ button.backlink { background: none; border: 0; padding: 0; font-family: inherit;
 .evocontrols .evorow { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; flex: 1 1 100%; min-width: 0; }
 .evocontrols .evorow .modobar { gap: 2px; }
 .evocontrols .evorow .modobar .rangebtn { padding: 6px 6px; font-size: 12px; }
+/* El "$" quedo en 20 px de ancho: un blanco chico para el dedo (bucle de
+   mejora, vuelta 3, 22/11/2026). Ensancharlo no se puede (a la fila le sobran
+   23-27 px y nada mas), asi que crece solo el area de toque, como .ranpill:
+   10 px arriba y abajo, y 1 px a los costados, porque el hueco con el "%" es
+   de 2 px y una capa mas ancha taparia al vecino. Nada se mueve. */
+.evocontrols .evorow .modobar .rangebtn { position: relative; }
+.evocontrols .evorow .modobar .rangebtn::after { content: ''; position: absolute; top: -10px; bottom: -10px; left: -1px; right: -1px; }
 .evocontrols .evorow .rangebar { flex: 1 1 auto; gap: 3px; scroll-snap-type: x proximity; }
 .evocontrols .evorow .rangebar .rangebtn { flex: 1 0 auto; padding: 6px 4px; font-size: 11.5px; scroll-snap-align: start; }
 .evocontrols .evorow .expandbtn { flex: 0 0 28px; width: 28px; margin-left: 2px; padding: 4px 0; text-align: center; }
@@ -608,6 +615,10 @@ button.backlink { background: none; border: 0; padding: 0; font-family: inherit;
 .pierow.clickable:active { opacity: .7; }
 .dot { width: 11px; height: 11px; border-radius: 3px; display: inline-block; margin-right: 9px; flex-shrink: 0; }
 .lname { display: flex; align-items: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* "BTGlast snapshot": el espacio con que empieza la fecha de BTG
+   (btgAsOfHtml, bancos.js) se pierde porque .lname es flex. El aire lo pone
+   el margen (bucle de mejora, vuelta 3, 22/11/2026). */
+.lname .desc { margin-left: .3em; }
 /* El % en blanco y negrita (es lo que la torta cuenta); el monto en gris, el
    detalle. Pedido de Guzman, 7/09/2026. */
 .lpct { font-weight: 600; white-space: nowrap; color: var(--muted); }
@@ -727,6 +738,11 @@ html.light .wl-detalle { background: rgba(20,40,80,.035); }
 .bigbtn { display: block; width: 100%; margin-top: 16px; padding: 14px; border-radius: 13px; background: linear-gradient(135deg, var(--gold), var(--gold2)); border: none; color: var(--on-gold); font-size: 15px; font-weight: 800; cursor: pointer; font-family: inherit; }
 .bigbtn:disabled { opacity: .45; }
 .ghostbtn { display: block; width: 100%; margin-top: 8px; padding: 12px; border-radius: 13px; background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+/* El display:block de arriba le ganaba al atributo hidden y el boton de Itau
+   seguia a la vista con la lectura apagada: tocarlo dejaba un pedido que nadie
+   contesta (bucle de mejora, vuelta 3, 22/11/2026). Acotado a .ghostbtn, no
+   un [hidden] global que pise otras reglas. */
+.ghostbtn[hidden] { display: none; }
 .tconfirm { margin-top: 16px; padding: 14px; border-radius: 13px; background: rgba(var(--gold-rgb),.08); border: 1px solid rgba(var(--gold-rgb),.35); font-size: 14.5px; line-height: 1.5; }
 .tmsg { margin-top: 14px; font-size: 13.5px; line-height: 1.5; padding: 12px 14px; border-radius: 12px; }
 .tmsg.ok { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.35); color: var(--text); }
@@ -844,6 +860,10 @@ html.light .wl-detalle { background: rgba(20,40,80,.035); }
 .dispbig { display: block; font-size: clamp(24px, 7vw, 32px); font-weight: 700; letter-spacing: -.01em; line-height: 1.2; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .dispbig.down { color: var(--red); }
 .dispside { display: flex; flex-direction: column; align-items: flex-end; min-width: 0; padding-bottom: 4px; }
+/* Cuando lo invertido baja solo a su renglon, space-between lo dejaba a la
+   izquierda: el margen automatico lo empuja a la derecha en los dos casos
+   (bucle de mejora, vuelta 3, 22/11/2026). */
+.dispside { margin-left: auto; }
 .dispside span { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
 .dispside .dispv { font-size: 15px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .dispside .dispv.down { color: var(--red); }
@@ -1461,9 +1481,24 @@ html.light .ranpill.active { background: var(--gold); color: #fff; border-color:
 .expdet { margin: 0 0 0 26px; font-size: 11.5px; color: var(--muted); line-height: 1.4; }
 .expdet span { white-space: nowrap; }
 html.light .expbar { background: rgba(20,40,80,.08); }
-/* Tax book (24/09/2026, A27): los años como botones, las tablas de la
-   pagina Performance con cuatro columnas, y el total resaltado. */
-.libanios { flex-wrap: wrap; margin: 2px 0 6px; }
+/* Tax book (24/09/2026, A27): las tablas de la pagina Performance y el
+   total resaltado. */
+/* Vuelta 3 (22/11/2026): los años son .ranpill debajo del titular; aca solo
+   se acerca el renglon al titular (la regla compartida trae 14 px arriba). */
+.libanios { margin: 6px 0 12px; }
+/* Una fila por broker en vez de la tabla (vuelta 3, 22/11/2026): el nombre
+   a la izquierda, el Net grande a la derecha sin partir. flex-wrap: si no
+   entran juntos, el Net baja entero y sigue a la derecha (margin-left:auto);
+   nunca se recorta ni se esconde detras de un deslizamiento. El nombre NO
+   lleva elipsis: "Charles Schwab" se lee entero. */
+.libbrokers { margin: 4px 0 2px; }
+.libbrk { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.libbrkn { font-size: 14px; font-weight: 600; color: var(--text); }
+.libbrkneto { margin-left: auto; white-space: nowrap; font-size: 17px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.libbrkdet { flex-basis: 100%; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+.libbrkdet span { white-space: nowrap; }
+.libbrk.libtotal { border-bottom: 0; }
+.libbrk.libtotal .libbrkn { font-weight: 700; }
 .libtabla td em { font-style: normal; color: var(--muted); font-size: 11px; }
 /* La tabla no se sale de la tarjeta (9/10/2026, auditoria): a 393 px la de
    brokers terminaba 8 px afuera y la de "por papel" afuera de la pantalla,
@@ -1477,5 +1512,4 @@ html.light .expbar { background: rgba(20,40,80,.08); }
 .libdet { margin: 14px 0 4px; font-size: 13px; }
 .libdet summary { cursor: pointer; color: var(--gold); font-weight: 600; padding: 6px 0; }
 .libcsv { margin-top: 12px; }
-.libanios .tipobtn { flex: 0 0 auto; padding: 6px 16px; }
 .libfecha { display: block; color: var(--muted); font-size: 11px; }

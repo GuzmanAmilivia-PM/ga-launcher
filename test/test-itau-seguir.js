@@ -98,5 +98,20 @@ ok(/var ITAU_AUTOMATICO = false;/.test(bancosSrc), 'la lectura automatica de Ita
 ok(/if \(ITAU_AUTOMATICO\) itauSeguir\(\); else itauManual\(\);/.test(vistasSrc), 'la pantalla de Itau usa la carga manual cuando esta apagada');
 ok(/Edit prices/.test(bancosSrc.slice(bancosSrc.indexOf('function itauManual'))), 'y dice con que boton se carga');
 
+// El boton "Update from Itau" de verdad desaparece (bucle de mejora, vuelta 3,
+// 22/11/2026): itauManual pone hidden=true, pero .ghostbtn{display:block} le
+// ganaba al atributo y el boton se veia. Hace falta la regla acotada.
+var cssI = fsI.readFileSync(pathI.join(ruta.RUTA, 'css', 'estilos.css'), 'utf8');
+ok(/\.ghostbtn\[hidden\]\s*\{\s*display:\s*none;?\s*\}/.test(cssI), 'el CSS tiene .ghostbtn[hidden]{display:none}');
+ok(!/(^|[\s,}])\[hidden\]\s*\{/.test(cssI), 'y no un [hidden] global');
+var manIni = bancosSrc.indexOf('function itauManual');
+var manFin = bancosSrc.indexOf('\n}', manIni) + 2;
+var elsI = {};
+new Function('document', bancosSrc.slice(manIni, manFin) + '\nitauManual();')(
+  { getElementById: function (id) { return elsI[id] || (elsI[id] = { hidden: false, innerHTML: '' }); } });
+ok(elsI.accItauBtn && elsI.accItauBtn.hidden === true, 'itauManual deja hidden=true en #accItauBtn');
+var htmlI = fsI.readFileSync(pathI.join(ruta.RUTA, 'index.html'), 'utf8');
+ok(/class="ghostbtn" type="button" id="accItauBtn"/.test(htmlI), 'y ese boton es un .ghostbtn (la regla lo alcanza)');
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

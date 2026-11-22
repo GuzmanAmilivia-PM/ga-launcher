@@ -198,7 +198,9 @@ function apiCall(fn, args) {
       if (err && err.auth) return; // la pantalla de clave ya se mostro
       if (window.console && console.warn) console.warn('Fallo ' + name + ':', err);
       if (typeof avisoInicio === 'function' && typeof msgErr === 'function') {
-        avisoInicio('&#9888; ' + esc(msgErr(err, 'Algo')));
+        // 'Something' y no 'Algo': la interfaz va en ingles (bucle de mejora,
+        // vuelta 3, 22/11/2026).
+        avisoInicio('&#9888; ' + esc(msgErr(err, 'Something')));
       }
     } catch (e) {}
   }

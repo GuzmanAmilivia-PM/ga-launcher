@@ -35,5 +35,20 @@ g.renderNoticias({ bruscos: [{ symbol: 'VOO', nombre: 'Vanguard S&P 500', cambio
 primera = tarjetas[0] ? tarjetas[0].innerHTML : '';
 ok(/VOO/.test(primera) && /-2\.70%/.test(primera) && /class="down"/.test(primera), 'un brusco se lista con su % y en rojo');
 
+// Bucle de mejora, vuelta 3 (22/11/2026): una empresa sin titulares no dibuja
+// tarjeta; una con titulares si. La de mercado vacia sigue diciendolo.
+tarjetas = [];
+g.renderNoticias({ bruscos: [], mercado: [], macro: [], empresas: [
+  { symbol: 'ACME', nombre: 'Acme Corp', noticias: [] },
+  { symbol: 'ZETA', nombre: 'Zeta Inc', noticias: [{ titulo: 'Zeta sube', link: 'https://example.com/z', fuente: 'Y' }] },
+  { symbol: 'OMEGA', nombre: 'Omega Ltd' }
+] });
+var todo = tarjetas.map(function (t) { return t.innerHTML; });
+ok(todo.length === 3, 'bruscos + mercado + solo la empresa con titulares: ' + todo.length + ' tarjetas');
+ok(!todo.some(function (h) { return /ACME|OMEGA/.test(h); }), 'las empresas sin titulares no dibujan tarjeta');
+ok(todo.some(function (h) { return /ZETA/.test(h) && /Zeta sube/.test(h); }), 'la empresa con titulares si se dibuja');
+var conSerious = todo.filter(function (h) { return /serious media/.test(h); });
+ok(conSerious.length === 1 && /US Market/.test(conSerious[0]), '"serious media" solo aparece en la tarjeta de mercado');
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

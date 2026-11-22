@@ -496,6 +496,10 @@ function pintarEstadoPush() {
     el.innerHTML = 'This browser cannot receive push notifications. On iPhone, the app must be added to the Home Screen.';
   } else if (Notification.permission === 'denied') {
     el.innerHTML = 'Notifications are blocked. Enable them for this app in iOS Settings &rarr; Notifications.';
+    // Bloqueadas no se arreglan desde la Watchlist (ahi no hay boton que valga:
+    // iOS ya no vuelve a preguntar), sino en los ajustes de iOS. Settings
+    // mandaba a la pestaña equivocada (bucle de mejora, vuelta 3, 22/11/2026).
+    corto = 'Blocked: allow them in iOS Settings &rarr; Notifications.';
   } else if (Notification.permission === 'granted' && pushEstado.sub === true) {
     el.innerHTML = 'This phone gets ' + PUSH_QUE + ', even with the app closed.';
     corto = 'On: this phone gets alerts even with the app closed.';

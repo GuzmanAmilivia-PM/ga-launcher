@@ -379,12 +379,16 @@ html += (data.mercado && data.mercado.length) ? newsItemsHtml(data.mercado) : '<
 card.innerHTML = html;
 body.appendChild(card);
 
-// 3) Noticias por empresa (sin ETFs).
+// 3) Noticias por empresa (sin ETFs). Una empresa sin titulares NO dibuja
+// tarjeta (bucle de mejora, vuelta 3, 22/11/2026): eran 95 px por empresa que
+// solo repetian "no news", y en un dia tranquilo empujaban lo que si hay. La
+// de mercado y la de bruscos siguen mostrando su vacio a proposito.
 (data.empresas || []).forEach(function (item) {
+if (!item || !item.noticias || !item.noticias.length) return;
 var c = document.createElement('div');
 c.className = 'card';
 var h = '<span class="newssym">' + esc(item.symbol) + (item.nombre ? ' — ' + esc(item.nombre) : '') + '</span>';
-h += (item.noticias && item.noticias.length) ? newsItemsHtml(item.noticias) : '<p class="newsempty">No news from serious media outlets for now.</p>';
+h += newsItemsHtml(item.noticias);
 c.innerHTML = h;
 body.appendChild(c);
 });
@@ -434,7 +438,10 @@ function podcastHtml(r) {
 // r.audioBase64 solo trae el alfabeto base64 (A-Za-z0-9+/=): no hace falta
 // esc(), y escaparlo igual no cambiaria nada.
 return '<audio controls preload="none" style="width:100%" src="data:' + esc(r.mime || 'audio/mpeg') + ';base64,' + r.audioBase64 + '"></audio>' +
-'<p class="ia-p" style="margin-top:10px">' + esc(r.guion || '') + '</p>' +
+// El guion va plegado (bucle de mejora, vuelta 3, 22/11/2026): impreso
+// entero empujaba todo News hacia abajo; el audio es lo principal y queda
+// fuera del <details>, a la vista. Sigue escapado: no es HTML de confianza.
+'<details class="rannota"><summary>Script</summary><p class="ia-p" style="margin-top:10px">' + esc(r.guion || '') + '</p></details>' +
 '<button type="button" class="ghostbtn mini" id="podcastRegen">Regenerate</button>';
 }
 function generarPodcast(forzar) {
@@ -450,7 +457,7 @@ google.script.run.withSuccessHandler(function (r) {
 podcastCargando = false;
 if (!r || !r.ok) {
 var msg = (r && r.sinClave)
-? 'Configure your Anthropic key in Configuration → AI Insights to generate the podcast.'
+? 'Configure your Anthropic key in Connections → AI Insights to generate the podcast.'
 : msgBackend(r) || 'Error';
 out.innerHTML = podcastErrorHtml(msg);
 wirePodcastBtn('podcastBtn', false);

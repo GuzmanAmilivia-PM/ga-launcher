@@ -40,25 +40,36 @@ function renderLibro() {
   var r = libDatos;
   if (!r) return;
   if (!r.ok) { el.innerHTML = '<p class="newsempty">' + esc(msgBackend(r)) + '</p>'; return; }
-  var h = '<div class="tipobar libanios">';
+  var t = r.totales || {};
+  var h = '<p class="rendtitular">' + libMonto(t.neto) + ' <span class="desc">net dividends in ' + r.anio + (r.enCurso ? ' so far' : '') + '</span></p>';
+  // Los años en burbujas chicas DEBAJO del titular (bucle de mejora, vuelta 3,
+  // 22/11/2026): eran .tipobtn grandes arriba, y el gusto de Guzman es lo
+  // principal primero y los selectores chicos debajo (.ranpill, como en
+  // Performance). Los data-anio siguen: el click de abajo los engancha igual.
+  h += '<div class="ranpills libanios">';
   (r.anios || []).forEach(function (a) {
-    h += '<button type="button" class="tipobtn' + (a === r.anio ? ' active-acento' : '') + '" data-anio="' + a + '">' + a + '</button>';
+    h += '<button type="button" class="ranpill' + (a === r.anio ? ' active' : '') + '" data-anio="' + a + '">' + a + '</button>';
   });
   h += '</div>';
-  var t = r.totales || {};
-  h += '<p class="rendtitular">' + libMonto(t.neto) + ' <span class="desc">net dividends in ' + r.anio + (r.enCurso ? ' so far' : '') + '</span></p>';
 
-  // Dividendos por broker: bruto, retenido, neto. Todo en USD con el cambio
-  // que informo el broker.
-  // Cada tabla va adentro de .libscroll (9/10/2026, auditoria): a 393 px la
-  // de brokers se salia de la tarjeta y la de "por papel" de la pantalla, con
-  // los montos pegados ("US$ 512.30US$ 153.69"). Si no entra, se desliza
-  // ADENTRO de la tarjeta; la pagina no se corre.
-  h += '<div class="libscroll"><table class="rendtabla libtabla"><tr><th></th><th>Dividends</th><th>Withheld</th><th>Net</th></tr>';
+  // Dividendos por broker, una fila por broker sin <table> (vuelta 3,
+  // 22/11/2026): con cuatro columnas de montos a 375 px el Net —lo que
+  // importa— quedaba cortado detras del deslizamiento y "Charles Schwab"
+  // partia en dos. Ahora el nombre a la izquierda y el Net grande a la
+  // derecha en su propio elemento sin partir; si no entran en un renglon, el
+  // Net BAJA ENTERO (flex-wrap), no se recorta: no depende de entrar justo.
+  // Lo bruto y lo retenido van chicos debajo, cada uno sin partir, asi el
+  // corte cae en el "·". Todo en USD con el cambio que informo el broker.
+  function filaBroker(nombre, x, clase) {
+    return '<div class="libbrk' + (clase ? ' ' + clase : '') + '"><span class="libbrkn">' + esc(nombre) + '</span>' +
+      '<b class="libbrkneto">' + libMonto(x.neto) + '</b>' +
+      '<span class="libbrkdet"><span>Dividends ' + libMonto(x.dividendos) + '</span> · <span>Withheld ' + libMonto(libRetenido(x)) + '</span></span></div>';
+  }
+  h += '<div class="libbrokers">';
   (r.brokers || []).forEach(function (b) {
-    h += '<tr><td>' + esc(b.broker) + '</td><td>' + libMonto(b.dividendos) + '</td><td>' + libMonto(libRetenido(b)) + '</td><td>' + libMonto(b.neto) + '</td></tr>';
+    h += filaBroker(typeof nombrePlataforma === 'function' ? nombrePlataforma(b.broker) : b.broker, b);
   });
-  h += '<tr class="libtotal"><td>Total</td><td>' + libMonto(t.dividendos) + '</td><td>' + libMonto(libRetenido(t)) + '</td><td>' + libMonto(t.neto) + '</td></tr></table></div>';
+  h += filaBroker('Total', t, 'libtotal') + '</div>';
 
   // Las ventas, con el resultado que informo el broker.
   var ventas = r.ventas || [];

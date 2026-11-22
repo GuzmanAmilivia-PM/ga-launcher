@@ -79,6 +79,12 @@ console.log('\nC) exito: reproductor con el audio del backend + el guion escapad
 run.estado.onOk({ ok: true, guion: 'Hola, buenas tardes. <b>Test</b> & mas', audioBase64: 'QUJD', mime: 'audio/mpeg' });
 ok(podBody.innerHTML.indexOf('data:audio/mpeg;base64,QUJD') !== -1, 'el audio va como data: URI con el base64 que mando el backend');
 ok(podBody.innerHTML.indexOf('&lt;b&gt;Test&lt;/b&gt; &amp; mas') !== -1, 'el guion se escapa (no es HTML de confianza)');
+// Bucle de mejora, vuelta 3 (22/11/2026): el guion va plegado en un
+// <details> cerrado y el audio queda afuera, a la vista.
+var plegado = /<details class="rannota"><summary>Script<\/summary>([\s\S]*?)<\/details>/.exec(podBody.innerHTML);
+ok(!!plegado && plegado[1].indexOf('&lt;b&gt;Test&lt;/b&gt; &amp; mas') !== -1, 'el guion (escapado) va dentro de <details><summary>Script');
+ok(!/<details[^>]*\bopen\b/.test(podBody.innerHTML), 'el <details> del guion arranca cerrado (sin open)');
+ok(!!plegado && plegado[1].indexOf('<audio') === -1 && podBody.innerHTML.indexOf('<audio') < podBody.innerHTML.indexOf('<details'), 'el audio queda fuera del plegado, antes del guion');
 ok(typeof btn._onclick === 'function', 'Regenerate queda enganchado');
 ok(/class="ghostbtn mini" id="podcastRegen"/.test(podBody.innerHTML), 'Regenerate es el boton chico, como el de generar');
 
@@ -96,6 +102,11 @@ ok(run.estado.pedido && run.estado.pedido.forzar === false, 'el reintento tras u
 console.log('\nF) sin clave de Anthropic: aviso especifico, no el mensaje crudo del backend');
 run.estado.onOk({ ok: false, sinClave: true, mensajes: ['Falta configurar tu clave de Anthropic en Configuración → IA Insights.'] });
 ok(podBody.innerHTML.indexOf('AI Insights') !== -1, 'el aviso manda a configurar la clave, en vez de repetir el texto del backend');
+// La pagina se llama Connections desde el 24/09/2026 (v231): ningun texto de
+// trade.js puede seguir mandando a "Configuration →" (vuelta 3, 22/11/2026).
+ok(podBody.innerHTML.indexOf('Connections → AI Insights') !== -1, 'el aviso nombra la pagina de hoy: Connections → AI Insights');
+var tradeJs = require('fs').readFileSync(require('path').join(ruta.RUTA, 'js', 'trade.js'), 'utf8');
+ok(tradeJs.indexOf('Configuration →') === -1, 'no queda "Configuration →" en js/trade.js');
 
 console.log('\nG) fallo de red: pasa por msgErr con el sujeto correcto, no un dump del error');
 btn._onclick();

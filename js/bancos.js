@@ -316,18 +316,23 @@ function renderBtg(data) {
   }
   var t = u.totales;
   var c = data.cambio;
+  // Sin Total ni Liquid en la grilla (bucle de mejora, vuelta 3, 22/11/2026):
+  // mostrarBtg ya escribe fmt(t.total) en #accTotal y 'Liquid: ' + fmt(t.liquido)
+  // en #accLiq, el encabezado de la misma pantalla. Repetirlos era leer cada
+  // numero dos veces. Queda lo que el encabezado no dice: el plazo fijo.
+  // Y las fechas como el resto de la app ("Sep 13"), nunca en ISO.
+  var fCorte = btgFechaTexto(String(u.fecha || '').slice(0, 10));
   var html = '<div class="detgrid">' +
-    '<span><span class="detlbl">Liquid</span><b>' + fmt(t.liquido) + '</b></span>' +
     '<span><span class="detlbl">Fixed deposit</span><b>' + fmt(t.plazo) + '</b></span>' +
-    '<span><span class="detlbl">Total</span><b>' + fmt(t.total) + '</b></span>' +
     '</div>' +
-    '<p class="detlbl" style="margin-top:6px">Snapshot of ' + esc(u.fecha) + '</p>';
+    (fCorte ? '<p class="detlbl" style="margin-top:6px">Snapshot of ' + esc(fCorte) + '</p>' : '');
+  var fDesde = c ? btgFechaTexto(String(c.desde || '').slice(0, 10)) : '';
   if (c) {
     // Las dos mitades del cambio. El flujo es plata que entro o salio; el
     // efecto del peso es lo que se movio el dolar sobre lo que ya estaba.
     // Separarlas es lo que evita que una transferencia parezca ganancia.
     html += '<div class="detgrid" style="margin-top:10px">' +
-      '<span><span class="detlbl">Since ' + esc(c.desde) + '</span><b class="' + (c.delta >= 0 ? 'up' : 'down') + '">' + btgPct(c.delta) + '</b></span>' +
+      '<span><span class="detlbl">Since ' + (fDesde ? esc(fDesde) : 'last snapshot') + '</span><b class="' + (c.delta >= 0 ? 'up' : 'down') + '">' + btgPct(c.delta) + '</b></span>' +
       '<span><span class="detlbl">You put in / took out</span><b>' + btgPct(c.flujo) + '</b></span>' +
       '<span><span class="detlbl">Peso vs dollar</span><b class="' + (c.efectoFx >= 0 ? 'up' : 'down') + '">' + btgPct(c.efectoFx) + '</b></span>' +
       '</div>' +

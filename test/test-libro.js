@@ -48,7 +48,7 @@ var google = { script: { run: {
   withFailureHandler: function (f) { this._fail = f; return this; },
   getLibroFiscal: function (a) { pedidos.push(a); pendientes.push({ ok: this._ok, fail: this._fail }); }
 } } };
-var api = new Function('document', 'esc', 'fmtUsd', 'msgErr', 'msgBackend', 'volver', 'google', 'Blob', 'URL',
+var api = new Function('document', 'esc', 'fmtUsd', 'msgErr', 'msgBackend', 'volver', 'google', 'Blob', 'URL', 'nombrePlataforma',
   src + '\nreturn { cargar: cargarLibro, csv: libCsvTexto, anio: function () { return libAnio; } };')(
   { getElementById: function (id) { return /^lib/.test(id) ? elemento(id) : null; } },
   function (s) { return String(s === null || s === undefined ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); },
@@ -56,7 +56,9 @@ var api = new Function('document', 'esc', 'fmtUsd', 'msgErr', 'msgBackend', 'vol
   function (e) { return 'ERR ' + (e && e.message); },
   function (r) { return (r && r.mensajes || ['could not load']).join(' '); },
   function (v) { vueltas.push(v); },
-  google, function () {}, {});
+  google, function () {}, {},
+  // la misma regla que nucleo.js: la marca corta de Interactive Brokers
+  function (n) { return /interactive brokers/i.test(String(n || '')) ? 'IBKR' : String(n || ''); });
 
 function anioPayload(anio, extra) {
   return Object.assign({
@@ -92,10 +94,19 @@ api.cargar(null, false);
 ok(pedidos.length === 1 && JSON.stringify(pedidos[0]) === '{}', 'sin año elegido pide el del Worker (el en curso)');
 pendientes.shift().ok(anioPayload(2026));
 var h = elemento('libBody').innerHTML;
-ok(/<button type="button" class="tipobtn active-acento" data-anio="2026">2026<\/button>/.test(h) && /data-anio="2025">2025</.test(h), 'los años con datos, el actual marcado');
+ok(/<button type="button" class="ranpill active" data-anio="2026">2026<\/button>/.test(h) && /data-anio="2025">2025</.test(h), 'los años con datos, el actual marcado');
 ok(h.indexOf('US$ 77.50 <span class="desc">net dividends in 2026 so far</span>') !== -1, 'el titular: neto del año, en curso');
-ok(h.indexOf('<tr><td>IBKR</td><td>US$ 32.00</td><td>US$ -4.50</td><td>US$ 27.50</td></tr>') !== -1, 'dividendos, retenido y neto por broker');
-ok(h.indexOf('<tr class="libtotal"><td>Total</td><td>US$ 82.00</td>') !== -1, 'el total');
+// Vuelta 3 (22/11/2026): los años en burbujas chicas DEBAJO del titular, sin
+// la barra grande de antes.
+ok(h.indexOf('tipobar') === -1 && h.indexOf('class="tipobtn') === h.indexOf('class="tipobtn libcsv'), 'cero tipobar (y ningun tipobtn salvo el del CSV)');
+var iTit = h.indexOf('class="rendtitular"'), iPills = h.indexOf('<div class="ranpills libanios">');
+ok(iTit !== -1 && iPills > iTit && iPills < h.indexOf('libbrokers'), 'las burbujas de años van despues del titular y antes de los brokers');
+// Vuelta 3: una fila por broker, sin <table>; el Net en su propio elemento.
+function bloqueBrokers(x) { var a = x.indexOf('<div class="libbrokers">'); return a === -1 ? '' : x.slice(a, x.indexOf('<p class="libsub">', a)); }
+var bb = bloqueBrokers(h);
+ok(bb !== '' && bb.indexOf('<table') === -1, 'la lista de brokers no usa <table>');
+ok(bb.indexOf('<div class="libbrk"><span class="libbrkn">IBKR</span><b class="libbrkneto">US$ 27.50</b><span class="libbrkdet"><span>Dividends US$ 32.00</span> · <span>Withheld US$ -4.50</span></span></div>') !== -1, 'nombre, Net grande y debajo dividendos · retenido por broker');
+ok(bb.indexOf('<div class="libbrk libtotal"><span class="libbrkn">Total</span><b class="libbrkneto">US$ 77.50</b><span class="libbrkdet"><span>Dividends US$ 82.00</span>') !== -1, 'el total, con el mismo criterio');
 ok(h.indexOf('MSFT <em>IBKR</em><span class="libfecha">2026-04-10</span></td><td>US$ 800.00</td><td><b class="up">US$ 120.00</b></td>') !== -1, 'una venta con su fecha y su resultado');
 ok(h.indexOf('ETH <em>Binance · app</em><span class="libfecha">2026-07-01</span></td><td>US$ 300.00</td><td>—</td>') !== -1, 'la venta registrada en la app, sin resultado: guion');
 ok(/Dividends by holding \(2\)/.test(h) && h.indexOf('ASML <em>IBKR · EUR</em>') !== -1, 'el detalle por papel, con la moneda si no es USD');
@@ -105,9 +116,18 @@ ok(/A record, not a tax return/.test(h) && /kept IBKR since 2025-02-18/.test(h),
 // va adentro de una caja que se desliza sola, y el CSS la deja deslizar.
 var tablas = (h.match(/<table class="rendtabla libtabla">/g) || []).length;
 var envueltas = (h.match(/<div class="libscroll"><table class="rendtabla libtabla">/g) || []).length;
-ok(tablas === 3 && envueltas === tablas, 'las ' + tablas + ' tablas van adentro de .libscroll (' + envueltas + ')');
+// Vuelta 3: la de brokers dejo de ser tabla; quedan ventas y por papel.
+ok(tablas === 2 && envueltas === tablas, 'las ' + tablas + ' tablas (ventas y por papel) van adentro de .libscroll (' + envueltas + ')');
 var cssLib = fs.readFileSync(path.join(RUTA, 'css', 'estilos.css'), 'utf8');
 ok(/\.libscroll \{[^}]*overflow-x: auto/.test(cssLib) && /\.libtabla th \+ th, \.libtabla td \+ td \{[^}]*padding-left/.test(cssLib), 'y en el CSS se desliza y separa los montos (regla escrita)');
+// Que entre no depende de entrar justo: la fila parte (flex-wrap) y el Net
+// baja ENTERO (nowrap, a la derecha); el nombre no se recorta con elipsis.
+function reglaCss(sel) { var m = new RegExp('(^|\\n)' + sel.replace(/\./g, '\\.') + ' \\{([^}]*)\\}').exec(cssLib); return m ? m[2] : null; }
+var rFila = reglaCss('.libbrk'), rNeto = reglaCss('.libbrkneto'), rNom = reglaCss('.libbrkn');
+ok(rFila !== null && /display: flex/.test(rFila) && /flex-wrap: wrap/.test(rFila), 'la fila del broker es flex con flex-wrap: wrap');
+ok(rNeto !== null && /white-space: nowrap/.test(rNeto) && /margin-left: auto/.test(rNeto) && !/overflow: hidden/.test(rNeto), 'el Net no parte, va a la derecha y no se recorta');
+ok(rNom !== null && !/ellipsis|overflow: hidden|nowrap/.test(rNom) && !/\.libbrk[^{]*\{[^}]*text-overflow/.test(cssLib), 'el nombre del broker sin elipsis ni recorte');
+ok(/\.libbrkdet span \{[^}]*white-space: nowrap/.test(cssLib), 'el detalle parte en el "·", no adentro de un monto');
 ok(elemento('libCsv').onclick !== null || /id="libCsv"/.test(h), 'el boton del CSV');
 ok(!/ADR fees/.test(h), 'sin comisiones de ADR, no hay nota');
 api.cargar(2026, true); pendientes.shift().ok(anioPayload(2026, {
@@ -115,7 +135,17 @@ api.cargar(2026, true); pendientes.shift().ok(anioPayload(2026, {
   simbolos: [{ broker: 'Schwab', symbol: 'BABA', dividendos: 50, retenciones: -15, gastos: -0.5, neto: 34.5, moneda: 'USD' }],
   totales: { dividendos: 50, retenciones: -15, gastos: -0.5, neto: 34.5, importeVentas: 0, resultado: 0 } }));
 var hg = elemento('libBody').innerHTML;
-ok(hg.indexOf('<tr><td>Schwab</td><td>US$ 50.00</td><td>US$ -15.50</td><td>US$ 34.50</td></tr>') !== -1, 'Withheld suma la retencion y la comision del ADR');
+ok(hg.indexOf('<span class="libbrkn">Schwab</span><b class="libbrkneto">US$ 34.50</b><span class="libbrkdet"><span>Dividends US$ 50.00</span> · <span>Withheld US$ -15.50</span>') !== -1, 'Withheld suma la retencion y la comision del ADR');
+// El caso real con todo puesto (BUCLE.md): "Charles Schwab" y montos de 6
+// cifras, y el nombre de IBKR pasa por nombrePlataforma como en el resto.
+api.cargar(2026, true); pendientes.shift().ok(anioPayload(2026, {
+  brokers: [{ broker: 'Charles Schwab', dividendos: 123456.78, retenciones: -18518.52, neto: 104938.26 },
+    { broker: 'Interactive Brokers', dividendos: 234567.89, retenciones: -35185.18, neto: 199382.71 }],
+  totales: { dividendos: 358024.67, retenciones: -53703.70, neto: 304320.97, importeVentas: 0, resultado: 0 } }));
+var hs = elemento('libBody').innerHTML, bs = bloqueBrokers(hs);
+ok(bs.indexOf('<span class="libbrkn">Charles Schwab</span><b class="libbrkneto">US$ 104938.26</b>') !== -1, '"Charles Schwab" y un Net de 6 cifras, cada uno en su elemento');
+ok(bs.indexOf('<span class="libbrkn">IBKR</span><b class="libbrkneto">US$ 199382.71</b>') !== -1, 'Interactive Brokers se muestra IBKR (nombrePlataforma)');
+ok(bs.indexOf('<b class="libbrkneto">US$ 304320.97</b>') !== -1 && bs.indexOf('<table') === -1, 'el total de 6 cifras, sin tabla');
 ok(hg.indexOf('Withheld includes US$ -0.50 of ADR fees') !== -1, 'y lo dice');
 ok(api.csv(anioPayload(2026, { simbolos: [{ broker: 'Schwab', symbol: 'BABA', dividendos: 50, retenciones: -15, gastos: -0.5, neto: 34.5, moneda: 'USD' }], ventas: [] })).split('\n')[1] === 'dividend,2026,,Schwab,BABA,USD,,50,-15,-0.5,34.5,,,broker,,', 'el CSV separa la comision');
 

@@ -137,13 +137,17 @@ var SUB = { toJSON: function () { return { endpoint: 'https://push.example/vieja
   m = montar({ permiso: 'default', respuestaPermiso: 'denied', sub: null });
   m.el('wlPushActivar').click(); await espera(); await espera();
   ok(m.suscripciones === 0 && /blocked/.test(m.texto()), 'si dice que no, queda "blocked" y no se suscribe');
-  ok(m.tarjeta() && /Off on this phone/.test(m.ajustes()), 'y la tarjeta sigue a la vista para decirlo');
+  ok(m.tarjeta() && /^Blocked:/.test(m.ajustes()), 'y la tarjeta sigue a la vista para decirlo, y Settings dice "Blocked": ' + m.ajustes());
 
   console.log('\nE) bordes');
   m = montar({ permiso: 'denied', sub: SUB });
   await m.api.revisarPush(); await espera();
   ok(m.registros.length === 0 && /blocked/.test(m.texto()), 'bloqueadas: no se registra nada');
   ok(m.tarjeta() && !m.prueba(), 'bloqueadas: la tarjeta se ve (Settings de iOS), sin boton de prueba');
+  // Vuelta 3 del bucle (22/11/2026): bloqueadas se arreglan en los ajustes de
+  // iOS, no desde la Watchlist; Settings mandaba a la pestaña equivocada.
+  ok(!/Watchlist tab/.test(m.ajustes()) && /iOS Settings/.test(m.ajustes()), 'bloqueadas: Settings manda a los ajustes de iOS, no a la Watchlist: ' + m.ajustes());
+  ok(/Notifications are blocked\. Enable them for this app in iOS Settings/.test(m.texto()), 'el texto de la tarjeta de la Watchlist no cambio');
   m = montar({ sinClave: true, sub: SUB });
   await m.api.revisarPush(); await espera();
   ok(m.registros.length === 0, 'sin la clave de la API no se le escribe al Worker');

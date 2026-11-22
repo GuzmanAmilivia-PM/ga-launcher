@@ -121,11 +121,15 @@ var m = montar();
 m.api.renderBtg(PAYLOAD);
 var box = m.el('accBtg');
 ok(box.hidden === false, 'el bloque de BTG se muestra');
-ok(/Snapshot of 2026-09-13/.test(box.innerHTML), 'dice de que fecha es el corte');
-ok(/Liquid<\/span><b>[^<]*4,000/.test(box.innerHTML), 'el liquido en dolares (4.000)');
+// Las fechas como el resto de la app, nunca en ISO; y ni Total ni Liquid en la
+// grilla: ya los dice el encabezado (#accTotal, #accLiq). Bucle de mejora,
+// vuelta 3, 22/11/2026.
+ok(/Snapshot of Sep 13(, 2026)?</.test(box.innerHTML), 'dice de que fecha es el corte, legible ("Sep 13")');
+ok(!/\d{4}-\d{2}-\d{2}/.test(box.innerHTML.replace(/<[^>]*>/g, '')), 'ninguna fecha ISO a la vista en el bloque de BTG');
+ok(!/>Total</.test(box.innerHTML) && !/>Liquid</.test(box.innerHTML), 'la grilla no repite Total ni Liquid del encabezado');
 ok(/Fixed deposit<\/span><b>[^<]*0/.test(box.innerHTML), 'el plazo fijo en cero, que es un dato');
 // fmt() redondea a dolares enteros: +1.59 se ve "+USD 2" y -20.6, "−USD 21".
-ok(/Since 2026-08-31/.test(box.innerHTML) && /You put in \/ took out<\/span><b>\+USD 2</.test(box.innerHTML),
+ok(/Since Aug 31(, 2026)?</.test(box.innerHTML) && /You put in \/ took out<\/span><b>\+USD 2</.test(box.innerHTML),
    'el cambio contra el corte anterior, con el FLUJO aparte (+1.59 -> "+USD 2"): ' + (box.innerHTML.match(/took out<\/span><b>[^<]*/) || [''])[0]);
 // fmt pone el signo ADELANTE de la moneda desde el 9/10/2026 (auditoria):
 // "−USD 21", como el resto de la app. Antes salia "USD -21".
@@ -219,7 +223,21 @@ ok(m2.el('accBtg').hidden === false && /Loading/.test(m2.el('accBtg').innerHTML)
 ok(m2.pedidos.length === 1 && m2.pedidos[0].fn === 'getBtg', 'pide getBtg');
 m2.pedidos[0].ok(PAYLOAD);
 ok(/4,000/.test(m2.el('accTotal').textContent) && /Liquid: /.test(m2.el('accLiq').textContent), 'al llegar, el total y el liquido arriba');
-ok(/Snapshot of 2026-09-13/.test(m2.el('accBtg').innerHTML), 'y el corte pintado');
+ok(/Snapshot of Sep 13(, 2026)?</.test(m2.el('accBtg').innerHTML), 'y el corte pintado');
+
+// El total y el liquido UNA vez en toda la pagina (encabezado + bloque), con
+// montos inventados distintos entre si para que no se confundan (vuelta 3).
+var m2b = montar();
+m2b.api.mostrarBtg();
+m2b.pedidos[0].ok({ ultimo: { fecha: '2026-10-31', filas: [],
+  totales: { liquido: 2500.13, plazo: 1500.13, total: 4000.26 } },
+  cambio: { desde: '2026-09-30', hasta: '2026-10-31', delta: 10, efectoFx: -5, flujo: 15 } });
+var paginaBtg = m2b.el('accTotal').textContent + ' | ' + m2b.el('accLiq').textContent + ' | ' +
+  m2b.el('accBtg').innerHTML.replace(/<[^>]*>/g, ' ');
+var veces = function (s) { return paginaBtg.split(s).length - 1; };
+ok(veces('USD 4,000') === 1, 'el total aparece una sola vez en la pagina (' + veces('USD 4,000') + ')');
+ok(veces('USD 2,500') === 1, 'y el liquido tambien (' + veces('USD 2,500') + ')');
+ok(!/\d{4}-\d{2}-\d{2}/.test(paginaBtg), 'sin fechas ISO en la pagina: ' + (paginaBtg.match(/\d{4}-\d{2}-\d{2}/) || [''])[0]);
 
 // Una respuesta TARDIA de BTG cuando ya se abrio otra cuenta no pinta nada.
 var m3 = montar();
