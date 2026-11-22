@@ -434,16 +434,44 @@ wirePodcastBtn('podcastBtn', false);
 function podcastErrorHtml(msg) {
 return '<p class="newsempty">' + esc(msg) + '</p><button type="button" class="ghostbtn mini" id="podcastBtn">Generate</button>';
 }
-function podcastHtml(r) {
-// r.audioBase64 solo trae el alfabeto base64 (A-Za-z0-9+/=): no hace falta
-// esc(), y escaparlo igual no cambiaria nada.
-return '<audio controls preload="none" style="width:100%" src="data:' + esc(r.mime || 'audio/mpeg') + ';base64,' + r.audioBase64 + '"></audio>' +
+// El reproductor. `src` es la URL del audio: un blob armado en el telefono
+// con los tramos (desde el 22/11/2026), o el data: URI de un backend anterior
+// que todavia manda el audio entero en `audioBase64`. Ni una ni la otra traen
+// caracteres que haya que escapar fuera de esc().
+function podcastHtml(r, src) {
+var url = src || ('data:' + (r.mime || 'audio/mpeg') + ';base64,' + (r.audioBase64 || ''));
+var min = r.palabras ? Math.max(1, Math.round(r.palabras / 150)) : null;
+return '<audio controls preload="metadata" style="width:100%" src="' + esc(url) + '"></audio>' +
+(min ? '<p class="podmeta">Weekly briefing &middot; about ' + min + ' min</p>' : '') +
+// Si la voz natural (Gemini) no anduvo y salio la de respaldo, se dice: el
+// arreglo es un permiso en Google Cloud, y sin el aviso no se sabria.
+(r.avisoVoz ? '<p class="podmeta">Standard voices: the natural ones are not enabled in Google Cloud yet.</p>' : '') +
 // El guion va plegado (bucle de mejora, vuelta 3, 22/11/2026): impreso
 // entero empujaba todo News hacia abajo; el audio es lo principal y queda
 // fuera del <details>, a la vista. Sigue escapado: no es HTML de confianza.
 '<details class="rannota"><summary>Script</summary><p class="ia-p" style="margin-top:10px">' + esc(r.guion || '') + '</p></details>' +
-'<button type="button" class="ghostbtn mini" id="podcastRegen">Regenerate</button>';
+'<button type="button" class="ghostbtn mini" id="podcastRegen" style="margin-top:12px">Regenerate</button>';
 }
+
+// Los tramos de voz llegan en base64 (uno o varios pedazos de MP3 cada uno):
+// se pasan a bytes y se pegan en UN blob. Los frames MP3 se concatenan sin
+// recodificar. Se hace aca y no en el Worker: el plan gratis le da 10 ms de
+// CPU por pedido, y pegar 15 minutos de audio no entra (22/11/2026).
+function podcastBlob(tramos) {
+var bufs = [];
+tramos.forEach(function (t) {
+  (t.partes || []).forEach(function (b64) {
+    var bin = atob(b64);
+    var arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    bufs.push(arr);
+  });
+});
+return new Blob(bufs, { type: 'audio/mpeg' });
+}
+
+var podcastUrl = null;
+var PODCAST_EN_PARALELO = 2;   // tramos de voz pedidos a la vez
 function generarPodcast(forzar) {
 if (podcastCargando) return;
 podcastCargando = true;
@@ -452,23 +480,57 @@ var out = document.getElementById('podcastBody');
 // ancho (la tarjeta compacta del 9/09/2026): el reproductor y el guion no
 // entran al lado del título.
 out.className = 'podfull';
-out.innerHTML = '<p class="loadingtxt">Writing the script and generating the voice... this can take up to a minute.</p>';
+out.innerHTML = '<p class="loadingtxt">Writing this week’s briefing... about a minute.</p>';
+function fallo(msg) {
+  podcastCargando = false;
+  out.innerHTML = podcastErrorHtml(msg);
+  wirePodcastBtn('podcastBtn', false);
+}
 google.script.run.withSuccessHandler(function (r) {
-podcastCargando = false;
 if (!r || !r.ok) {
-var msg = (r && r.sinClave)
+fallo((r && r.sinClave)
 ? 'Configure your Anthropic key in Connections → AI Insights to generate the podcast.'
-: msgBackend(r) || 'Error';
-out.innerHTML = podcastErrorHtml(msg);
-wirePodcastBtn('podcastBtn', false);
+: msgBackend(r) || 'Error');
 return;
 }
+// Un backend anterior al 22/11/2026 manda el audio entero en el mismo pedido.
+if (r.audioBase64 || !r.nTramos) {
+podcastCargando = false;
 out.innerHTML = podcastHtml(r);
 wirePodcastBtn('podcastRegen', true);
+return;
+}
+// La voz, tramo por tramo (cada uno es un pedido aparte: 15 minutos no
+// entran en uno). De a dos a la vez; un tramo ya grabado vuelve del cache.
+var n = r.nTramos, listos = 0, siguiente = 0, tramos = new Array(n), cortado = false, avisoVoz = false;
+function progreso() {
+  out.innerHTML = '<p class="loadingtxt">Recording the voices... ' + listos + ' of ' + n + '</p>';
+}
+function pedir() {
+  if (cortado || siguiente >= n) return;
+  var i = siguiente++;
+  google.script.run.withSuccessHandler(function (a) {
+    if (cortado) return;
+    if (!a || !a.ok) { cortado = true; fallo(msgBackend(a) || 'Error'); return; }
+    tramos[i] = a;
+    if (a.motor === 'chirp') avisoVoz = true;
+    listos++;
+    if (listos < n) { progreso(); pedir(); return; }
+    podcastCargando = false;
+    if (podcastUrl && typeof URL !== 'undefined' && URL.revokeObjectURL) URL.revokeObjectURL(podcastUrl);
+    podcastUrl = URL.createObjectURL(podcastBlob(tramos));
+    out.innerHTML = podcastHtml({ guion: r.guion, palabras: r.palabras, avisoVoz: avisoVoz }, podcastUrl);
+    wirePodcastBtn('podcastRegen', true);
+  }).withFailureHandler(function (err) {
+    if (cortado) return;
+    cortado = true;
+    fallo(msgErr(err, 'The podcast'));
+  }).getPodcastAudio({ i: i, id: r.id });
+}
+progreso();
+for (var k = 0; k < Math.min(PODCAST_EN_PARALELO, n); k++) pedir();
 }).withFailureHandler(function (err) {
-podcastCargando = false;
-out.innerHTML = podcastErrorHtml(msgErr(err, 'The podcast'));
-wirePodcastBtn('podcastBtn', false);
+fallo(msgErr(err, 'The podcast'));
 }).getPodcast({ forzar: !!forzar });
 }
 

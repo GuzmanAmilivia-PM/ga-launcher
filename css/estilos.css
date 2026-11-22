@@ -1019,6 +1019,9 @@ html.light .anxfila .pista { background: rgba(20,40,80,.08); }
 .newsbrief .newsrow .newssym { margin: 0; }
 #podcastBody { margin-left: auto; min-width: 0; }
 #podcastBody.podfull { flex-basis: 100%; margin-left: 0; }
+/* La linea chica debajo del reproductor: cuanto dura y, si hace falta, que
+   voces salieron (22/11/2026, el informe semanal de 15 minutos). */
+.podmeta { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
 .ghostbtn.mini { display: inline-block; width: auto; margin: 0; padding: 6px 14px; font-size: 12.5px; border-radius: 10px; }
 .newssep { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; }
 /* Resultados sin nada inminente: título + estado en una sola línea plegada */

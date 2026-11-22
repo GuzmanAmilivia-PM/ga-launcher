@@ -232,7 +232,7 @@ var iBrief = html.indexOf('<div class="card newsbrief">', iNot);
 var iFinBrief = html.indexOf('</div>\n<div id="noticiasBody">', iBrief);
 ok(iBrief > iNot && iFinBrief > iBrief, 'existe la tarjeta compacta .newsbrief antes de los titulares');
 var brief = html.slice(iBrief, iFinBrief);
-ok(/<div class="newsrow"><span class="newssym">Daily podcast<\/span><div id="podcastBody"><button type="button" class="ghostbtn mini" id="podcastBtn">Generate<\/button><\/div><\/div>/.test(brief),
+ok(/<div class="newsrow"><span class="newssym">Weekly podcast<\/span><div id="podcastBody"><button type="button" class="ghostbtn mini" id="podcastBtn">Generate<\/button><\/div><\/div>/.test(brief),
   'el podcast es una fila: titulo + boton chico (ghostbtn mini) a la derecha');
 ok(/<div id="resultadosBody"><\/div>/.test(brief), 'y resultadosBody vive DENTRO de esa misma tarjeta');
 ok((html.slice(iNot, html.indexOf('<div id="noticiasBody">', iNot)).match(/<div class="card/g) || []).length === 1, 'view-noticias tiene una sola tarjeta escrita a mano (las de titulares las arma el JS)');

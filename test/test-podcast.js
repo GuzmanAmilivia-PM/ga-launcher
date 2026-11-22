@@ -130,5 +130,61 @@ run2.estado.onOk({ ok: true, guion: 'listo', audioBase64: 'QQ==', mime: 'audio/m
 api2.generarPodcast(false);
 ok(run2.estado.pedido !== pedidoUno, 'una vez resuelto el primero, un click nuevo SI pide de nuevo');
 
+console.log('\nI) el informe semanal (22/11/2026): guion primero, la voz tramo por tramo, y el audio se arma en el telefono');
+// El backend nuevo manda el guion partido en tramos y SIN audio; cada tramo se
+// pide aparte (getPodcastAudio) y la app los pega en un blob.
+var podBody3 = nodo('div'), btn3 = nodo('button');
+var est3 = { guion: null, audios: [] };
+function mkRun3(ok, fail) {
+  return {
+    withSuccessHandler: function (f) { return mkRun3(f, fail); },
+    withFailureHandler: function (f) { return mkRun3(ok, f); },
+    getPodcast: function (args) { est3.guion = { args: args, ok: ok, fail: fail }; },
+    getPodcastAudio: function (args) { est3.audios.push({ args: args, ok: ok, fail: fail }); }
+  };
+}
+var blobs = [], urls = 0, revocadas = 0;
+var ctx3 = Object.assign({}, ctx, {
+  document: { getElementById: function (id) { return id === 'podcastBody' ? podBody3 : btn3; } },
+  google: { script: { run: mkRun3(null, null) } },
+  atob: function (s) { return Buffer.from(s, 'base64').toString('binary'); },
+  Blob: function (partes, opts) { this.partes = partes; this.type = opts && opts.type; blobs.push(this); },
+  URL: { createObjectURL: function () { urls++; return 'blob:podcast-' + urls; }, revokeObjectURL: function () { revocadas++; } }
+});
+var fn3 = new Function(Object.keys(ctx3).join(','), codigo + '\nreturn { generarPodcast: generarPodcast };');
+var api3 = fn3.apply(null, Object.keys(ctx3).map(function (k) { return ctx3[k]; }));
+api3.generarPodcast(false);
+est3.guion.ok({ ok: true, id: 'g1', nTramos: 3, palabras: 2250, guion: 'Valeria: Buenas.' });
+ok(est3.audios.length === 2, 'pide los tramos de a DOS a la vez, no los tres de una: ' + est3.audios.length);
+ok(est3.audios[0].args.i === 0 && est3.audios[1].args.i === 1 && est3.audios[0].args.id === 'g1', 'con su numero y el id del guion');
+ok(/Recording the voices\.\.\. 0 of 3/.test(podBody3.innerHTML), 'dice cuantos tramos lleva grabados');
+// Llegan desordenados: el 1 antes que el 0. El audio igual queda en orden.
+est3.audios[1].ok({ ok: true, partes: [Buffer.from([2]).toString('base64')], motor: 'gemini' });
+ok(est3.audios.length === 3 && est3.audios[2].args.i === 2, 'al terminar uno, pide el siguiente');
+ok(/1 of 3/.test(podBody3.innerHTML), 'y avanza el progreso');
+est3.audios[2].ok({ ok: true, partes: [Buffer.from([3]).toString('base64'), Buffer.from([4]).toString('base64')], motor: 'chirp' });
+est3.audios[0].ok({ ok: true, partes: [Buffer.from([1]).toString('base64')], motor: 'gemini' });
+ok(blobs.length === 1 && blobs[0].type === 'audio/mpeg', 'arma UN blob de audio');
+ok(JSON.stringify(blobs[0].partes.map(function (u) { return Array.from(u); })) === '[[1],[2],[3],[4]]',
+  'con los tramos en ORDEN aunque hayan llegado desordenados, y cada pedazo como bytes');
+ok(podBody3.innerHTML.indexOf('src="blob:podcast-1"') !== -1, 'el reproductor usa el blob, no un data: gigante');
+ok(/about 15 min/.test(podBody3.innerHTML), 'dice cuanto dura (2.250 palabras a 150 por minuto)');
+ok(/Standard voices/.test(podBody3.innerHTML), 'si algun tramo salio con la voz de respaldo, lo avisa');
+ok(/<details class="rannota"><summary>Script/.test(podBody3.innerHTML) && /id="podcastRegen"/.test(podBody3.innerHTML), 'guion plegado y Regenerate, como siempre');
+// Regenerar libera el blob anterior.
+btn3._onclick();
+est3.guion.ok({ ok: true, id: 'g2', nTramos: 1, palabras: 100, guion: 'x' });
+est3.audios[est3.audios.length - 1].ok({ ok: true, partes: [Buffer.from([9]).toString('base64')], motor: 'gemini' });
+ok(revocadas === 1 && podBody3.innerHTML.indexOf('blob:podcast-2') !== -1, 'el audio anterior se libera de la memoria');
+ok(!/Standard voices/.test(podBody3.innerHTML), 'con todo en voz natural no hay aviso');
+// Un tramo que falla corta todo con su mensaje y deja reintentar.
+btn3._onclick();
+est3.guion.ok({ ok: true, id: 'g3', nTramos: 2, palabras: 300, guion: 'x' });
+var n0 = est3.audios.length;
+est3.audios[n0 - 2].ok({ ok: false, mensajes: ['El guion cambió mientras se grababa.'] });
+ok(/El guion cambió/.test(podBody3.innerHTML) && /id="podcastBtn">Generate/.test(podBody3.innerHTML), 'un tramo fallido muestra el motivo y el boton para reintentar');
+est3.audios[n0 - 1].ok({ ok: true, partes: ['QQ=='], motor: 'gemini' });
+ok(/El guion cambió/.test(podBody3.innerHTML), 'y lo que llega despues del corte no pisa el error');
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);
