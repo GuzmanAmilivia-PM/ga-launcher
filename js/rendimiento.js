@@ -333,11 +333,20 @@ function ranSeries(r) {
     });
     s.push({ key: 'total', label: 'Total', anios: cartera.concat(previos), aprox: previos.length > 0, desde: cartera[cartera.length - 1].desde });
   }
-  if (br) s.push({ key: 'brokers', label: 'Brokers', anios: br.anios, aprox: true, brokers: br });
   (r.cuentas || []).forEach(function (c) {
-    s.push({ key: 'c:' + (c.cuenta || c.nombre), label: nombrePlataforma(c.nombre), anios: c.anios || [], cuenta: c });
+    s.push({ key: 'c:' + (c.cuenta || c.nombre), label: ranCorto(c.nombre), anios: c.anios || [], cuenta: c });
   });
   return s.filter(function (x) { return x.anios.length; });
+}
+// El nombre corto de cada burbuja (21/11/2026, pedido de Guzman: "no pongas
+// brokers, solo ibkr, bnb y CSchwab, y pequeño"). Los brokers JUNTOS dejaron
+// de ser una serie aparte: siguen completando los años viejos de Total.
+function ranCorto(n) {
+  n = String(n || '');
+  if (/interactive brokers|ibkr/i.test(n)) return 'IBKR';
+  if (/schwab/i.test(n)) return 'CSchwab';
+  if (/binance/i.test(n)) return 'BNB';
+  return n;
 }
 function ranPp(pp) {
   if (!ranTiene(pp)) return '';
@@ -378,22 +387,29 @@ function ranBarras(anios, idx) {
     (hayAprox ? '<span>Faded: brokers only</span>' : '') + '</p>';
   return h;
 }
-// El resumen en tres cifras. Solo con dos años o mas: con uno, es el titular.
+// El resumen, DEBAJO de la grafica (21/11/2026, tercer pedido de Guzman: "la
+// grafica tendria que estar en el centro optico; arriba hay informacion casi
+// repetida o que podria estar abajo"). Tres cifras: el año mas nuevo con su
+// decimal (en la barra va redondeado), los años encadenados y cuantos le
+// ganaron al indice. Con un solo año, solo la primera. El titular grande, el
+// veredicto en puntos y "Best year" se fueron: ya se leen en las barras.
 function ranResumen(anios, idx, aprox) {
-  var v = anios.filter(function (a) { return ranTiene(a.twr) && ranTiene(a.spy); });
-  if (v.length < 2) return '';
-  var yo = 1, ind = 1, gano = 0, mejor = v[0];
-  v.forEach(function (a) {
-    yo *= 1 + a.twr / 100; ind *= 1 + a.spy / 100;
-    if (a.twr > a.spy) gano++;
-    if (a.twr > mejor.twr) mejor = a;
-  });
-  var yoPct = (yo - 1) * 100, indPct = (ind - 1) * 100;
-  return '<div class="rantiles">' +
-    '<div><span>Since ' + v[v.length - 1].anio + (aprox ? ' &asymp;' : '') + '</span><b class="' + (yoPct >= 0 ? 'up' : 'down') + '">' + signoPct(yoPct, 0) + '</b><em>Index ' + signoPct(indPct, 0) + '</em></div>' +
-    '<div><span>Ahead in</span><b>' + gano + ' of ' + v.length + '</b><em>years</em></div>' +
-    '<div><span>Best year</span><b class="' + (mejor.twr >= 0 ? 'up' : 'down') + '">' + signoPct(Number(mejor.twr), 0) + '</b><em>' + mejor.anio + '</em></div>' +
-    '</div>';
+  var a = anios[0];
+  var h = '<div class="rantiles">' +
+    '<div><span>' + a.anio + (a.enCurso ? ' so far' : '') + '</span>' + rendPct(a.twr) +
+    '<em>Index ' + (ranTiene(a.spy) ? signoPct(Number(a.spy), 1) : '&mdash;') + '</em></div>';
+  var v = anios.filter(function (x) { return ranTiene(x.twr) && ranTiene(x.spy); });
+  if (v.length >= 2) {
+    var yo = 1, ind = 1, gano = 0;
+    v.forEach(function (x) {
+      yo *= 1 + x.twr / 100; ind *= 1 + x.spy / 100;
+      if (x.twr > x.spy) gano++;
+    });
+    var yoPct = (yo - 1) * 100, indPct = (ind - 1) * 100;
+    h += '<div><span>Since ' + v[v.length - 1].anio + (aprox ? ' &asymp;' : '') + '</span><b class="' + (yoPct >= 0 ? 'up' : 'down') + '">' + signoPct(yoPct, 0) + '</b><em>Index ' + signoPct(indPct, 0) + '</em></div>' +
+      '<div><span>Ahead in</span><b>' + gano + ' of ' + v.length + '</b><em>years</em></div>';
+  }
+  return h + '</div>';
 }
 // La letra chica de cada serie, plegada: que se midio, desde cuando y por que
 // algo es aproximado (U2: lo que falta se dice, pero no tapa los numeros).
@@ -403,11 +419,6 @@ function ranNota(s, r) {
     t = 'All accounts, banks included, without deposits. The whole portfolio is measured from ' +
       esc(rendFechaConAnio(s.desde)) + ', when the app started keeping it; a new year is added every January 1.' +
       (s.aprox ? ' Earlier years are your brokers added together, without the banks: approximate.' : '');
-  } else if (s.key === 'brokers') {
-    t = 'Approximate: ' + (s.brokers.cuentas || []).map(function (c) {
-      return esc(nombrePlataforma(c.nombre)) + ' since ' + esc(rendFechaConAnio(c.desde));
-    }).join(', ') +
-      ', added together day by day. No banks, without deposits; an account counts from the day its records start, and a day with no data keeps its last known value. Schwab’s history before the app is an estimate.';
   } else {
     t = 'Since ' + esc(rendFechaConAnio(s.cuenta.desde)) +
       (s.cuenta.importado ? ', with the broker’s own records before the app' : '') + '. Without deposits, like the whole portfolio.';
@@ -434,25 +445,18 @@ function renderRendAnual() {
   } else {
     var s = series[0];
     series.forEach(function (x) { if (x.key === ranSerie) s = x; });
+    // Primero la grafica: es lo que se vino a ver. El selector va DEBAJO,
+    // como burbujas (pedido de Guzman: "que no aparezca el menu de arriba,
+    // que sea tipo burbuja debajo"), y despues las cifras.
+    h += ranBarras(s.anios, idx);
     if (series.length > 1) {
-      h += '<div class="rangebar" id="ranSel">';
+      h += '<div class="ranpills" id="ranSel">';
       series.forEach(function (x) {
-        h += '<button type="button" class="rangebtn' + (x === s ? ' active' : '') + '" data-serie="' + esc(x.key) + '">' + esc(x.label) + '</button>';
+        h += '<button type="button" class="ranpill' + (x === s ? ' active' : '') + '" data-serie="' + esc(x.key) + '">' + esc(x.label) + '</button>';
       });
       h += '</div>';
     }
-    // El titular: el año mas nuevo, en grande, y el veredicto en puntos.
-    var a = s.anios[0];
-    h += '<p class="detlbl ranlbl">' + a.anio + (a.enCurso ? ' so far' : '') + '</p>';
-    h += '<div class="ranhero"><div>' + rendPct(a.twr) + '<span>You</span></div>' +
-      '<div><b>' + (ranTiene(a.spy) ? signoPct(Number(a.spy), 1) : '&mdash;') + '</b><span>' + esc(idx) + '</span></div></div>';
-    if (ranTiene(a.pp)) {
-      h += '<p class="ranveredicto ' + (a.pp >= 0 ? 'up' : 'down') + '">' + (a.pp >= 0 ? '+' : '−') + Math.abs(a.pp).toFixed(1) +
-        ' pp ' + (a.pp >= 0 ? 'ahead of' : 'behind') + ' the ' + esc(idx) + '</p>';
-    }
     h += ranResumen(s.anios, idx, s.aprox);
-    h += '<p class="detlbl ranlbl">Year by year, %</p>';
-    h += ranBarras(s.anios, idx);
     h += ranNota(s, r);
   }
   (r.avisos || []).forEach(function (x) { h += '<p class="newsempty" style="font-size:12px">&#9888; ' + esc(x) + '</p>'; });

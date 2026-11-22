@@ -1268,25 +1268,23 @@ a.galink { color: inherit; text-decoration: none; }
    barras por año (vos con el acento, el indice en gris, las dos sobre la misma
    escala) y tres cifras de resumen. Los años que solo tienen brokers (.aprox)
    van atenuados. La letra chica queda plegada en un <details>. */
-.ranlbl { margin: 16px 0 6px; }
-.ranhero { display: flex; gap: 28px; align-items: flex-end; }
-.ranhero div { display: flex; flex-direction: column; }
-.ranhero b { font-size: 34px; font-weight: 800; line-height: 1.05; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.ranhero div + div b { font-size: 24px; color: var(--muted); }
-.ranhero span { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
-.ranhero .up, .rantiles .up, .ranveredicto.up { color: var(--green); }
-.ranhero .down, .rantiles .down, .ranveredicto.down { color: var(--red); }
-.ranveredicto { font-size: 15px; font-weight: 700; margin: 10px 0 0; }
-.rantiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+.rantiles .up { color: var(--green); }
+.rantiles .down { color: var(--red); }
+.ranpills { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 14px; }
+.ranpill { padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.04); color: var(--muted); font-size: 11px; font-weight: 700; border: 1px solid var(--border); cursor: pointer; white-space: nowrap; }
+.ranpill.active { background: var(--gold); color: var(--on-gold); border-color: var(--gold); }
+html.light .ranpill { background: rgba(20,40,80,.05); }
+html.light .ranpill.active { background: var(--gold); color: #fff; border-color: var(--gold); }
+.rantiles { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; margin-top: 16px; }
 .rantiles div { display: flex; flex-direction: column; gap: 2px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; min-width: 0; }
 .rantiles span { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; font-weight: 700; white-space: nowrap; }
 .rantiles b { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rantiles em { font-size: 11.5px; color: var(--muted); font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Barras verticales (21/11/2026): el año en el eje X, el % en el Y. */
-.ranplot { display: flex; gap: 4px; overflow-x: auto; padding-top: 18px; scrollbar-width: none; }
+.ranplot { display: flex; gap: 4px; overflow-x: auto; padding-top: 22px; scrollbar-width: none; }
 .ranplot::-webkit-scrollbar { display: none; }
 .rancol { flex: 1 0 50px; min-width: 0; display: flex; flex-direction: column; align-items: center; }
-.ranarea { position: relative; width: 100%; height: 150px; display: flex; justify-content: center; gap: 6px; }
+.ranarea { position: relative; width: 100%; height: 190px; display: flex; justify-content: center; gap: 6px; }
 .ranarea.neg { margin-bottom: 16px; }
 .ranslot { position: relative; width: 20px; height: 100%; }
 .ranslot b { position: absolute; left: 50%; transform: translateX(-50%); padding: 2px 0; font-size: 10.5px; font-weight: 700; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; }

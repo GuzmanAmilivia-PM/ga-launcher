@@ -266,18 +266,21 @@ respuestaPendiente.ok(ANUAL);
 // UNA tarjeta: selector de serie, el año mas nuevo en grande, barras por año.
 // Los asserts de la tabla se dieron vuelta: en esta pagina ya no hay tabla.
 var hc = elemento('ranCartera').innerHTML;
-ok(hc.indexOf('<div class="ranhero"><div><b class="up">+18.9%</b><span>You</span></div><div><b>+14.1%</b><span>S&P 500</span></div></div>') !== -1, 'el titular: el año mas nuevo en grande, vos y el indice');
-ok(hc.indexOf('2026 so far') !== -1 && hc.indexOf('<p class="ranveredicto up">+4.8 pp ahead of the S&P 500</p>') !== -1, 'dice que año es y el veredicto en puntos');
+// Tercer pedido del 21/11/2026: "la grafica tendria que estar en el centro
+// optico... que no aparezca el menu de arriba, que sea tipo burbuja debajo".
+ok(hc.indexOf('<div class="ranplot">') === 0, 'la grafica es lo PRIMERO de la tarjeta: ni selector ni titulares arriba');
+ok(hc.indexOf('ranhero') === -1 && hc.indexOf('ranveredicto') === -1 && hc.indexOf('Year by year') === -1 && hc.indexOf('Best year') === -1, 'sin titular grande, veredicto ni subtitulos: eso ya se lee en las barras');
+ok(hc.indexOf('ranleyenda') < hc.indexOf('id="ranSel"') && hc.indexOf('id="ranSel"') < hc.indexOf('rantiles') && hc.indexOf('rantiles') < hc.indexOf('rannota'), 'el orden: grafica, burbujas, cifras, letra chica');
+ok(hc.indexOf('<div class="rantiles"><div><span>2026 so far</span><b class="up">+18.9%</b><em>Index +14.1%</em></div></div>') !== -1, 'debajo, el año mas nuevo con su decimal y el indice; con un solo año es la unica cifra');
 ok(hc.indexOf('rendtabla') === -1 && hc.indexOf('<td>') === -1, 'sin tabla: la pagina dejo de ser una planilla');
 ok(hc.indexOf('class="ranbar yo" style="bottom:0.0%;height:100.0%"></i><b style="bottom:100.0%">+19</b>') !== -1 && hc.indexOf('class="ranbar ind" style="bottom:0.0%;height:74.5%"') !== -1, 'las barras del año: las dos sobre la MISMA escala (14.1 / 18.93 = 74.5%)');
-ok(hc.indexOf('rantiles') === -1, 'con un solo año no hay resumen: seria repetir el titular');
 ok(/<details class="rannota">/.test(hc) && /banks included, without deposits/.test(hc) && /a new year is added every January 1/.test(hc), 'la letra chica queda plegada, y dice que es TODO, sin depositos, y que cada año se suma solo');
-ok((hc.match(/data-serie="/g) || []).length === 3 && hc.indexOf('data-serie="total">Total<') !== -1 && hc.indexOf('data-serie="c:IB">Interactive Brokers<') !== -1 && hc.indexOf('data-serie="c:CS">Charles Schwab<') !== -1, 'el selector: Total y un boton por broker con historia');
-ok(/class="rangebtn active" data-serie="total"/.test(hc), 'arranca en Total');
+ok((hc.match(/data-serie="/g) || []).length === 3 && hc.indexOf('data-serie="total">Total<') !== -1 && hc.indexOf('data-serie="c:IB">IBKR<') !== -1 && hc.indexOf('data-serie="c:CS">CSchwab<') !== -1, 'el selector: Total y un boton por broker con historia');
+ok(/<div class="ranpills" id="ranSel"><button type="button" class="ranpill active" data-serie="total"/.test(hc) && hc.indexOf('rangebtn') === -1, 'arranca en Total, y el selector son burbujas');
 api.elegirSerie('c:IB');
 var hib = elemento('ranCartera').innerHTML;
-ok(/class="rangebtn active" data-serie="c:IB"/.test(hib) && / 2023 counts from [A-Z][a-z]{2} \d+, 2023\./.test(hib) && hib.indexOf('<b>2023</b>') < hib.indexOf('<b>2026</b>') && hib.indexOf('broker’s own records') !== -1, 'IBKR con sus años viejos, el año a medias dicho al lado y de donde salen');
-ok(hib.indexOf('rantiles') !== -1 && /Ahead in<\/span><b>\d of \d<\/b>/.test(hib), 'con varios años aparece el resumen: cuantos le ganaron al indice');
+ok(/class="ranpill active" data-serie="c:IB"/.test(hib) && / 2023 counts from [A-Z][a-z]{2} \d+, 2023\./.test(hib) && hib.indexOf('<b>2023</b>') < hib.indexOf('<b>2026</b>') && hib.indexOf('broker’s own records') !== -1, 'IBKR con sus años viejos, el año a medias dicho al lado y de donde salen');
+ok(/Ahead in<\/span><b>\d of \d<\/b>/.test(hib), 'con varios años aparece el resumen: cuantos le ganaron al indice');
 api.elegirSerie('total');
 ok(elemento('ranCartera').innerHTML === hc, 'volver a Total pinta lo mismo');
 api.cargarAnual(true);
@@ -327,23 +330,24 @@ api2.cargarAnual(true); respuestaPendiente.ok(ANUAL_B);
 // Desde el rediseño del 21/11/2026 son un boton del selector ("Brokers"), y
 // ademas completan los años de Total anteriores a la app, MARCADOS.
 var ht = elemento('ranCartera').innerHTML;
-ok(ht.indexOf('data-serie="brokers">Brokers<') !== -1 && ht.indexOf('data-serie="total"') < ht.indexOf('data-serie="brokers"') && ht.indexOf('data-serie="brokers"') < ht.indexOf('data-serie="c:IB"'), 'el boton de los brokers juntos, entre Total y cada broker');
+// Cuarto pedido del 21/11/2026: "no pongas brokers, solo ibkr, bnb y CSchwab".
+ok(ht.indexOf('data-serie="brokers"') === -1 && ht.indexOf('>Brokers<') === -1, 'los brokers juntos NO son una burbuja: solo completan los años viejos de Total');
 ok((ht.match(/class="rancol aprox"/g) || []).length === 2 && (ht.match(/<span>Faded: brokers only<\/span>/g) || []).length === 1, 'Total completa 2023 y 2022 con los brokers juntos, atenuados, y la leyenda lo dice una vez');
 ok(/<div class="rancol">(?:(?!rancol).)*<b>2026<\/b><em class="up">\+4\.8 pp<\/em>/.test(ht), 'el año de la cartera entera NO va marcado como aproximado');
 ok(/Since 2022 &asymp;/.test(ht) && /Earlier years are your brokers added together, without the banks: approximate/.test(ht), 'el resumen y la letra chica de Total dicen que lo anterior es aproximado');
 // 1.1893 * 1.125 * 0.80 = 1.0704 -> +7%; el indice 1.141 * 1.261 * 0.948 = 1.364 -> +36%
-ok(/<b class="up">\+7%<\/b><em>Index \+36%<\/em>/.test(ht) && /Ahead in<\/span><b>1 of 3<\/b>/.test(ht) && /Best year<\/span><b class="up">\+19%<\/b><em>2026<\/em>/.test(ht), 'las tres cifras: los años encadenados contra el indice, cuantos le gano y el mejor');
+ok(/<b class="up">\+7%<\/b><em>Index \+36%<\/em>/.test(ht) && /Ahead in<\/span><b>1 of 3<\/b>/.test(ht) && /<span>2026 so far<\/span><b class="up">\+18\.9%<\/b><em>Index \+14\.1%<\/em>/.test(ht), 'las tres cifras: el año mas nuevo, los años encadenados contra el indice y cuantos le gano');
 ok(/class="ranbar yo" style="bottom:43\.4%;height:41\.1%"/.test(ht) && /class="ranbar yo" style="bottom:0\.0%;height:43\.4%"><\/i><b style="top:100\.0%">.20<\/b>/.test(ht) && ht.indexOf('<b>2022</b>') < ht.indexOf('<b>2026</b>'), 'un año negativo cuelga hacia abajo del MISMO cero (escala de -20 a 26.1), con su numero debajo, y los años van del mas viejo al mas nuevo');
+ok(/<b>2023<\/b><em class="down">−13\.6 pp<\/em>/.test(ht) && / 2022 counts from [A-Z][a-z]{2} \d+, 2022\./.test(ht), 'un año peor que el indice lo dice en rojo debajo de su barra, y el año a medias dice desde cuando');
 api2.elegirSerie('brokers');
-var hb = elemento('ranCartera').innerHTML;
-ok(/class="rangebtn active" data-serie="brokers"/.test(hb) && hb.indexOf('2023 so far') === -1 && hb.indexOf('<p class="detlbl ranlbl">2023</p>') !== -1, 'la serie de los brokers: su año mas nuevo en el titular');
-ok(hb.indexOf('<p class="ranveredicto down">−13.6 pp behind the S&P 500</p>') !== -1, 'un año peor que el indice lo dice en rojo');
-ok(hb.indexOf('rancol aprox') === -1 && hb.indexOf('Faded') === -1 && / 2022 counts from [A-Z][a-z]{2} \d+, 2022\./.test(hb), 'ahi no se atenua nada (toda la serie es la misma), y el año a medias dice desde cuando');
-ok(/Approximate: Binance since [A-Z][a-z]{2} \d+, 2022, Interactive Brokers since [A-Z][a-z]{2} \d+, 2023/.test(hb), 'dice que es aproximado y desde cuando cuenta cada broker');
-ok(/No banks, without deposits/.test(hb) && /keeps its last known value/.test(hb), 'y por que: sin bancos, y los dias sin dato arrastran el ultimo valor');
+ok(elemento('ranCartera').innerHTML === ht, 'pedir una serie que ya no existe deja Total');
+var ANUAL_N = JSON.parse(JSON.stringify(ANUAL));
+ANUAL_N.cuentas.push({ cuenta: 'BN', nombre: 'Binance', desde: Date.UTC(2022, 6, 26, 20), anios: [{ anio: 2026, twr: 3.1, spy: 14.1, pp: -11, parcial: false, enCurso: true }] });
+api2.cargarAnual(true); respuestaPendiente.ok(ANUAL_N);
+ok(elemento('ranCartera').innerHTML.indexOf('data-serie="c:BN">BNB<') !== -1, 'Binance, cuando el Worker la manda, es la burbuja BNB');
 api2.cargarAnual(true); respuestaPendiente.ok(ANUAL);
 var hs = elemento('ranCartera').innerHTML;
-ok(hs.indexOf('data-serie="brokers"') === -1 && hs.indexOf('rancol aprox') === -1 && /class="rangebtn active" data-serie="total"/.test(hs), 'sin `brokers` en la respuesta (un Worker anterior, o una sola cuenta) el boton no aparece y se vuelve a Total');
+ok(hs.indexOf('data-serie="brokers"') === -1 && hs.indexOf('rancol aprox') === -1 && /class="ranpill active" data-serie="total"/.test(hs), 'sin `brokers` en la respuesta (un Worker anterior, o una sola cuenta) el boton no aparece y se vuelve a Total');
 ok(fs.readFileSync(path.join(RUTA, 'index.html'), 'utf8').indexOf('ranCuentas') === -1, 'las tarjetas apiladas por broker ya no existen en la pagina');
 // Sin nada guardado y sin red: el error de siempre.
 guardados = {}; marcas = {};
