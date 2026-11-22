@@ -177,6 +177,11 @@ est3.guion.ok({ ok: true, id: 'g2', nTramos: 1, palabras: 100, guion: 'x' });
 est3.audios[est3.audios.length - 1].ok({ ok: true, partes: [Buffer.from([9]).toString('base64')], motor: 'gemini' });
 ok(revocadas === 1 && podBody3.innerHTML.indexOf('blob:podcast-2') !== -1, 'el audio anterior se libera de la memoria');
 ok(!/Standard voices/.test(podBody3.innerHTML), 'con todo en voz natural no hay aviso');
+// El blob tiene que poder reproducirse: la CSP de index.html no dejaba cargar
+// audio desde blob: ("Media load rejected by URL safety check", corrida real
+// del 22/11/2026). Sin esto, el reproductor aparece y no suena.
+var csp = (/media-src ([^;]*);/.exec(html) || [])[1] || '';
+ok(csp.indexOf('blob:') !== -1, 'la CSP deja reproducir el audio armado en el telefono (media-src con blob:): ' + csp);
 // Un tramo que falla corta todo con su mensaje y deja reintentar.
 btn3._onclick();
 est3.guion.ok({ ok: true, id: 'g3', nTramos: 2, palabras: 300, guion: 'x' });
