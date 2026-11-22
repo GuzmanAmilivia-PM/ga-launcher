@@ -827,8 +827,13 @@ ok(iaSrc.indexOf('holdhome') === -1, 'la tabla de la IA tampoco');
 // camino para abrir cada cuenta. Con la fila apilada: 177px, sin truncar.
 //
 // ALCANCE: mira la regla escrita, no el resultado — el arnés no tiene navegador.
-ok(/\.pierow \{ flex-direction: column/.test(html.replace(/\s+/g, ' ')),
-  'en pantalla angosta la fila de la leyenda se apila');
+// Desde el 22/11/2026 (bucle de mejora, vuelta 2) ya no se apila SIEMPRE: la
+// leyenda tiene todo el ancho y la fila envuelve; el bloque "% | monto" baja
+// entero solo si no entra (test-bucle-v2-maquetado.js, B). Ojo: la regex
+// vieja (".pierow { flex-direction: column") seguia dando verde por la de
+// escritorio (".piewrap .pierow { ..."), que la contiene.
+ok(/\n {2}\.pierow \{ flex-wrap: wrap/.test(html),
+  'en pantalla angosta la fila de la leyenda envuelve: % | monto baja entero si no entra');
 ok(/\.pierow \.lname \{[^}]*white-space: normal/.test(html),
   'y el nombre deja de truncarse: envuelve en vez de cortarse');
 ok(html.indexOf('id="cuentasList"') === -1, 'ni su nodo');

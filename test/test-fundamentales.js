@@ -35,8 +35,20 @@ var FICHA = {
   notas: []
 };
 
-function montar() {
-  var estado = { pedidos: [], respuesta: FICHA, handlers: [] };
+// El almacenamiento del telefono, de mentira (vuelta 2, 22/11/2026). Se puede
+// pasar el MISMO a dos montajes: eso es "cerrar y reabrir la app" (la cache en
+// memoria nace vacia, lo guardado sigue).
+function almacenNuevo() {
+  var datos = {};
+  return {
+    datos: datos,
+    getItem: function (k) { return Object.prototype.hasOwnProperty.call(datos, k) ? datos[k] : null; },
+    setItem: function (k, v) { datos[k] = String(v); },
+    removeItem: function (k) { delete datos[k]; }
+  };
+}
+function montar(ls) {
+  var estado = { pedidos: [], respuesta: FICHA, handlers: [], ls: ls || almacenNuevo() };
   function nuevoElem() {
     var el = { style: {}, className: '', _html: '', parentNode: { nodo: true } };
     Object.defineProperty(el, 'innerHTML', {
@@ -53,6 +65,7 @@ function montar() {
     msgErr: function (err) { return 'ERR:' + ((err && err.message) || err); },
     msgBackend: function (r) { return ((r && r.mensajes) || ['sin datos']).join(' '); },
     ajustarAlturaDeck: function () { estado.ajusto = true; },
+    localStorage: estado.ls,
     google: { script: { run: (function () {
       function mk() {
         var oks = [], fails = [];
@@ -212,6 +225,79 @@ ok(/26 holdings \(as of 2026-09-14, source stockanalysis\.com\) · top holdings 
 var caja10 = m7.nuevoElem();
 m7.api.pintar(FICHA, caja10);
 ok(!/as of/.test(caja10.innerHTML) && !/What to read here/.test(caja10.innerHTML), 'una accion no muestra nada de esto');
+
+console.log('\nI) los indicadores abren con lo guardado en el telefono (bucle de mejora, vuelta 2, 22/11/2026)');
+// La cache en memoria moria al cerrar la app: cada reapertura volvia a mostrar
+// "Loading indicators...". Ahora la ultima respuesta sana queda en UNA clave
+// (ga_cache_fund) con una lista por simbolo y tope.
+function guardadoDe(ls) {
+  try { var j = JSON.parse(ls.getItem('ga_cache_fund') || 'null'); return (j && Array.isArray(j.data)) ? j.data : []; }
+  catch (e) { return []; }
+}
+// El primer indicador guardado de la entrada mas nueva, sin reventar si no hay.
+function valorGuardado(ls) {
+  var e = guardadoDe(ls)[0];
+  return (e && e.data && e.data.indicadores && e.data.indicadores[0]) ? e.data.indicadores[0].valor : null;
+}
+var lsI = almacenNuevo();
+var mI = montar(lsI);
+mI.api.cargar('MSFT', mI.nuevoElem());
+var gI = guardadoDe(lsI);
+ok(gI.length === 1 && gI[0].s === 'MSFT' && gI[0].data && gI[0].data.indicadores.length === 4,
+  '(a) la respuesta sana queda guardada por simbolo bajo ga_cache_fund');
+ok(Object.keys(lsI.datos).length === 1, '(a) y es UNA sola clave, no una por simbolo');
+
+// "Recien abierta": otro montaje (memoria vacia) con el MISMO almacenamiento,
+// y el backend que todavia no contesto.
+var mI2 = montar(lsI);
+mI2.diferido = true;
+var cajaI2 = mI2.nuevoElem();
+mI2.api.cargar('MSFT', cajaI2);
+ok(/19\.6x/.test(cajaI2.innerHTML) && !/Loading/.test(cajaI2.innerHTML),
+  '(b) recien abierta pinta los indicadores guardados antes de que conteste el backend, sin "Loading"');
+var FRESCA = JSON.parse(JSON.stringify(FICHA));
+FRESCA.indicadores[0].valor = '21.4x';
+ok(mI2.pedidos.length === 1 && mI2.pedidos[0].symbol === 'MSFT' && /19\.6x/.test(cajaI2.innerHTML),
+  '(c) y pide lo fresco igual, por detras, con lo guardado ya a la vista');
+mI2.handlers[0].ok.forEach(function (f) { f(FRESCA); });
+ok(/21\.4x/.test(cajaI2.innerHTML) && valorGuardado(lsI) === '21.4x',
+  '(c) lo fresco reemplaza lo pintado y lo guardado');
+
+// Un ok:false (sin cobertura, plan gratis agotado...) NO pisa nada.
+var mI3 = montar(lsI);
+mI3.diferido = true;
+var cajaI3 = mI3.nuevoElem();
+mI3.api.cargar('MSFT', cajaI3);
+mI3.handlers[0].ok.forEach(function (f) { f({ ok: false, mensajes: ['Data provider limit reached.'] }); });
+ok(/21\.4x/.test(cajaI3.innerHTML) && !/limit reached/.test(cajaI3.innerHTML),
+  '(d) un ok:false no borra lo pintado');
+ok(guardadoDe(lsI).length === 1 && guardadoDe(lsI)[0].data.ok === true && valorGuardado(lsI) === '21.4x',
+  '(d) ni pisa lo guardado');
+// Un fallo de red tampoco.
+var mI4 = montar(lsI);
+mI4.diferido = true;
+var cajaI4 = mI4.nuevoElem();
+mI4.api.cargar('MSFT', cajaI4);
+mI4.handlers[0].fail.forEach(function (f) { f(new Error('offline')); });
+ok(/21\.4x/.test(cajaI4.innerHTML) && !/ERR:/.test(cajaI4.innerHTML) && guardadoDe(lsI).length === 1,
+  '(d) y un fallo de red tampoco: lo pintado y lo guardado se quedan');
+
+// El tope: 41 simbolos, el mas viejo (el primero) queda afuera.
+var lsT = almacenNuevo();
+var mT = montar(lsT);
+for (var k = 1; k <= 41; k++) {
+  mT.respuesta = { ok: true, symbol: 'S' + k, indicadores: [], estimaciones: {}, notas: [] };
+  mT.api.cargar('S' + k, mT.nuevoElem());
+}
+var gT = guardadoDe(lsT);
+var simbT = gT.map(function (e) { return e.s; });
+ok(gT.length === 40, '(e) con 41 simbolos quedan 40 guardados (' + gT.length + ')');
+ok(simbT.indexOf('S1') === -1 && simbT.indexOf('S2') !== -1 && simbT[0] === 'S41',
+  '(e) el que queda afuera es el mas viejo, y el mas nuevo va primero');
+
+var panelesSrc = require('fs').readFileSync(require('path').join(ruta.RUTA, 'js', 'paneles.js'), 'utf8');
+var listaCaches = (panelesSrc.match(/var GA_CACHES = \[[\s\S]*?\];/) || [''])[0];
+ok(/'ga_cache_fund'/.test(listaCaches), '(f) ga_cache_fund esta en GA_CACHES: el borrado de emergencia la alcanza');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

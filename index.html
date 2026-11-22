@@ -208,9 +208,12 @@
 <!-- $ / % (22/09/2026): en dolares el patrimonio solo; en % el rendimiento sin
      depositos contra el S&P 500, las dos curvas desde 0 %. La nota dice la
      leyenda o por que no se puede dibujar. -->
+<!-- $ / %, rangos y pantalla completa en UN renglon (.evorow, 22/11/2026,
+     bucle de mejora, vuelta 2): eran tres renglones. La nota queda afuera,
+     arriba y a todo el ancho. La cuenta de anchos esta en css/estilos.css. -->
 <div class="evocontrols" id="evoControls" style="display:none">
 <p class="evonota" id="evoNota" hidden></p>
-<div class="modobar" id="modoBar"></div><div class="rangebar" id="rangeBar"></div><button class="expandbtn" id="evoAmpliarBtn" title="Full screen" aria-label="Full screen">&#9974;</button>
+<div class="evorow"><div class="modobar" id="modoBar"></div><div class="rangebar" id="rangeBar"></div><button class="expandbtn" id="evoAmpliarBtn" title="Full screen" aria-label="Full screen">&#9974;</button></div>
 </div>
 <!-- Los dos bancos del atajo DEPOSIT: se muestran al tocarlo, en su propia
      fila. El deposito en si es el formulario de Banking de siempre. -->
@@ -505,6 +508,16 @@
 </div>
 <p class="capnota">The background of the whole app. Each tonality has a dark and a light version, depending on the theme.</p>
 </div>
+<!-- Notificaciones (bucle de mejora, vuelta 2, 22/11/2026): el estado "todo
+     anda" y el boton de prueba vivian en la Watchlist, ocupando una pantalla
+     de uso diario. La linea la pinta pintarEstadoPush (watchlist.js); el boton
+     conserva su id (wlPushProbar) y se movio, no se duplico. -->
+<div class="card">
+<h2>Notifications</h2>
+<p class="capnota" id="cfgPushEstado">Checking&hellip;</p>
+<button class="ghostbtn" id="wlPushProbar" style="display:none">Send a test notification</button>
+<div id="wlPushMsg"></div>
+</div>
 </div>
 
 <!-- ============ LIQUIDEZ (depositar / retirar) ============ -->
@@ -548,14 +561,16 @@
 <div id="wlAviso"></div>
 <div id="wlBody"><p class="loadingtxt">Loading...</p></div>
 </div>
-<div class="card">
+<!-- Solo cuando hay algo que hacer (bucle de mejora, vuelta 2, 22/11/2026):
+     nace oculta y pintarEstadoPush (watchlist.js) la muestra si falta permiso,
+     esta bloqueada, el telefono no puede o la suscripcion se perdio. El "todo
+     anda" y el boton de prueba se mudaron a Settings. -->
+<div class="card" id="wlPushCard" style="display:none">
 <h2>Notifications</h2>
 <p class="newsempty" id="wlPushEstado">Checking...</p>
 <!-- Enable notifications (9/10/2026): aparece cuando el permiso falta o la
      suscripcion se perdio y suscribir sin un toque no anduvo (watchlist.js). -->
 <button class="ghostbtn" id="wlPushActivar" style="display:none">Enable notifications</button>
-<button class="ghostbtn" id="wlPushProbar" style="display:none">Send a test notification</button>
-<div id="wlPushMsg"></div>
 </div>
 </div>
 

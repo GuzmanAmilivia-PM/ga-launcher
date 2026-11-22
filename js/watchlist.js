@@ -473,22 +473,38 @@ function revisarPush() {
 // Lo que avisa este telefono, nombrado entero: desde el 30/09 y el 2/10 no
 // son solo las alertas de precio.
 var PUSH_QUE = 'price alerts, sharp moves in your positions, and the BTG reminder on the 7th';
+// Dos lugares (bucle de mejora, vuelta 2, 22/11/2026): la tarjeta de la
+// Watchlist (wlPushCard) aparece SOLO cuando hay algo que hacer o avisar; el
+// "todo anda" y el boton de prueba viven en Settings (cfgPushEstado +
+// wlPushProbar). Se pintan los dos a la vez, en cada llamada: asi Settings
+// queda al dia sin tocar vistas.js (revisarPush corre al abrir, al desbloquear
+// y al volver a la app, que es cuando el permiso pudo cambiar en iOS).
+// "Checking" tambien oculta la tarjeta: es pasajero (revisarPush tarda 2,5 s
+// al abrir) y mostrarlo hacia parpadear la tarjeta en cada arranque.
 function pintarEstadoPush() {
   var el = document.getElementById('wlPushEstado');
+  var card = document.getElementById('wlPushCard');
+  var cfg = document.getElementById('cfgPushEstado');
   var btn = document.getElementById('wlPushProbar');
   var act = document.getElementById('wlPushActivar');
   if (!el) return;
   if (btn) btn.style.display = 'none';
   if (act) act.style.display = 'none';
+  var visible = true;
+  var corto = 'Off on this phone. Turn them on from the Watchlist tab.';
   if (!pushSoportado()) {
     el.innerHTML = 'This browser cannot receive push notifications. On iPhone, the app must be added to the Home Screen.';
   } else if (Notification.permission === 'denied') {
     el.innerHTML = 'Notifications are blocked. Enable them for this app in iOS Settings &rarr; Notifications.';
   } else if (Notification.permission === 'granted' && pushEstado.sub === true) {
     el.innerHTML = 'This phone gets ' + PUSH_QUE + ', even with the app closed.';
+    corto = 'On: this phone gets alerts even with the app closed.';
+    visible = false;
     if (btn) btn.style.display = '';
   } else if (Notification.permission === 'granted' && pushEstado.sub === null) {
     el.innerHTML = 'Checking notifications on this phone&hellip;';
+    corto = 'Checking&hellip;';
+    visible = false;
   } else if (Notification.permission === 'granted') {
     el.innerHTML = 'Notifications are not reaching this phone right now. Tap to turn them back on: ' + PUSH_QUE + '.';
     if (act) act.style.display = '';
@@ -496,6 +512,8 @@ function pintarEstadoPush() {
     el.innerHTML = 'Turn on notifications to get ' + PUSH_QUE + '.';
     if (act) act.style.display = '';
   }
+  if (card) card.style.display = visible ? '' : 'none';
+  if (cfg) cfg.innerHTML = corto;
 }
 
 // El boton: pedir permiso (si falta) y suscribir, DENTRO del toque.

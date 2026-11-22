@@ -133,7 +133,10 @@ var GA_CACHES = ['ga_cache_data', 'ga_cache_div', 'ga_cache_apo', 'ga_cache_ops'
   'ga_cache_rend_IB', 'ga_cache_rend_CS', 'ga_cache_rend_BNB',
   // El detalle de cada cuenta (21/11/2026): UNA clave con un mapa por cuenta
   // adentro, justamente para que esta lista fija la alcance (ver vistas.js).
-  'ga_cache_acc'];
+  'ga_cache_acc',
+  // Los indicadores del detalle (22/11/2026): UNA clave con la lista de los
+  // ultimos simbolos adentro, con tope (ver cargarFundamentales, tablero.js).
+  'ga_cache_fund'];
 function cacheLeer(clave) {
 try {
 var j = JSON.parse(localStorage.getItem(clave) || 'null');
@@ -778,6 +781,41 @@ return '<b class="dispv' + (v < 0 ? ' down' : '') + '">' + (estimado ? '&asymp;'
 function repintarDisponible() {
 try { if (dispUltimo) renderDisponible(); } catch (e) {}
 }
+// El mini-grafico de Available to invest (bucle de mejora, vuelta 2,
+// 22/11/2026), con el estilo de las barras de Performance (ranBarras): un par
+// por mes, del mas viejo al mas nuevo, libre en el acento e invertido en gris,
+// las dos sobre la misma escala y con el cero en la misma linea (un mes en
+// negativo cuelga). Sin numeros encima, a proposito: las columnas reparten el
+// ancho (flex con base 0), asi que 12 meses entran a 375 px por construccion,
+// no por suerte; los montos estan arriba y en la tabla plegada. Un mes que la
+// lista de aportes no cubre (o que todavia carga) va sin barra gris: no se
+// dibuja un cero que mienta.
+function dispBarras(cron, puesto) {
+var max = 0, min = 0;
+function num(v) { return typeof v === 'number' && isFinite(v); }
+cron.forEach(function (m) {
+  [m.usd, puesto ? puesto[m.mes] : undefined].forEach(function (v) {
+    if (num(v)) { if (v > max) max = v; if (v < min) min = v; }
+  });
+});
+var span = (max - min) || 1;
+var cero = (0 - min) / span * 100;
+function barra(v, clase) {
+  if (!num(v)) return '<span class="dispslot"></span>';
+  var alto = Math.max(Math.abs(v) / span * 100, 2);
+  // Acotada a la caja: con el alto minimo, un valor chico junto al borde no se sale.
+  var base = v >= 0 ? Math.min(cero, 100 - alto) : Math.max(0, cero - alto);
+  return '<span class="dispslot"><i class="dispbar ' + clase + '" style="bottom:' + base.toFixed(1) + '%;height:' + alto.toFixed(1) + '%"></i></span>';
+}
+var h = '<div class="dispplot" aria-hidden="true">';
+cron.forEach(function (m) {
+  h += '<div class="dispcol' + (m.estimado ? ' aprox' : '') + '"><div class="disparea">' +
+    barra(m.usd, 'libre') + barra(puesto ? puesto[m.mes] : undefined, 'inv') +
+    '<u class="dispcero" style="bottom:' + cero.toFixed(1) + '%"></u></div>' +
+    '<b>' + MESES_CORTOS[m.mes - 1].charAt(0) + '</b></div>';
+});
+return h + '</div>';
+}
 function renderDisponible(r) {
 var body = document.getElementById('dispBody');
 if (!body) return;
@@ -816,12 +854,29 @@ meses.forEach(function (m) {
 });
 h += '<div class="disprow disptot"><span>' + esc(r.anio) + '</span>' + celdaDisp(totLibre, hayEstimado) +
   (puesto ? celdaDisp(hayPuesto ? totPuesto : null, false) : vacia) + '</div>';
-if (sinAportes) h += '<p class="capnota">Your deposits could not be loaded, so Invested is blank for now.</p>';
 // La cotizacion con punto decimal, como el resto de la app en ingles (decia
 // "40,25 pesos per dollar").
 h += '<p class="capnota">Free: what your billing app says is left after taxes and personal and housing expenses, at ' +
   esc(Number(r.cotizacionUsd).toLocaleString('en-US', { maximumFractionDigits: 2 })) + ' pesos per dollar. Invested: deposits minus withdrawals, all accounts.</p>';
-body.innerHTML = h;
+// Otra jerarquia, mismos numeros (bucle de mejora, vuelta 2, 22/11/2026: "no
+// quiere pantallas tipo Excel"). Lo grande es lo LIBRE DEL AÑO: el titulo de
+// la tarjeta ya dice el año, y la pregunta que contesta es si lo que fue
+// quedando libre termino en la cartera; por eso al lado, mas chico, lo
+// invertido del año. Debajo las barras mes a mes (el mismo par, sin numeros,
+// para que 12 meses entren siempre) y la tabla de siempre plegada, con la nota
+// del tipo de cambio adentro. El punto de color de cada etiqueta es la leyenda.
+var o = '<div class="disphero"><div class="dispmain"><p class="lbl"><i class="dispdot libre"></i>Free in ' + esc(r.anio) + '</p>' +
+  '<b class="dispbig' + (totLibre < 0 ? ' down' : '') + '">' + (hayEstimado ? '&asymp;' : '') + esc(fmtUsdEnt(totLibre)) + '</b></div>' +
+  '<div class="dispside"><span><i class="dispdot inv"></i>Invested</span>' +
+  (puesto ? celdaDisp(hayPuesto ? totPuesto : null, false) : vacia) + '</div></div>';
+o += dispBarras(meses.slice().reverse(), puesto);
+if (sinAportes) o += '<p class="capnota">Your deposits could not be loaded, so Invested is blank for now.</p>';
+o += '<details class="rannota dispnota"><summary>Month by month</summary>' + h + '</details>';
+body.innerHTML = o;
+// La tarjeta vive en el carrusel, que tiene alto fijo y overflow oculto: al
+// abrir o cerrar la tabla hay que volver a medirlo, o queda cortada.
+var det = body.querySelector('details.dispnota');
+if (det) det.addEventListener('toggle', ajustarAlturaDeck);
 ajustarAlturaDeck();
 }
 

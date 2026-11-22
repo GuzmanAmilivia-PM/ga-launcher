@@ -301,6 +301,70 @@ function crearTvWidget(container, symbol) {
   container.style.position = 'relative';
   container.appendChild(a);
 }
+// UN solo signo menos en el titular del detalle (bucle de mejora, vuelta 2,
+// 22/11/2026): el monto sale de fmtSigno con el menos tipografico (U+2212) y
+// el % de signoPct con un guion, asi que una perdida se leia "−USD 125,000
+// -45.5%", dos signos distintos pegados. Se arregla SOLO aca: signoPct lo usa
+// toda la app y muchas pruebas fijan su texto.
+function pctDetalle(v, dec) { return String(signoPct(v, dec)).replace(/^-/, '−'); }
+
+// Abrir el detalle de una fila de ABAJO (vuelta 2, 22/11/2026): el resultado
+// y la grafica quedaban tapados por la barra inferior (medido en Positions,
+// ultima fila: la grafica en y=704-894 de 812). La DECISION es una funcion
+// pura para poder probarla sin navegador: recibe posiciones de ventana
+// (getBoundingClientRect) y devuelve cuantos px desplazar, 0 si ya se ve.
+//   filaTop: arriba de la fila tocada; bloqueTop/bloqueFin: lo que tiene que
+//   verse entero (resultado + grafica); arriba/abajo: la zona visible, ya
+//   descontada la barra inferior y la franja de arriba.
+// Si no se ve entero, la fila va arriba de todo (no "lo justo para que entre
+// la grafica"): asi la fila tocada sigue siendo la referencia de lo que se abrio.
+function desplazoDetalle(filaTop, bloqueTop, bloqueFin, arriba, abajo) {
+  var xs = [filaTop, bloqueTop, bloqueFin, arriba, abajo];
+  for (var i = 0; i < xs.length; i++) if (typeof xs[i] !== 'number' || !isFinite(xs[i])) return 0;
+  if (bloqueTop >= arriba && bloqueFin <= abajo) return 0;
+  return Math.round(filaTop - arriba);
+}
+// La zona visible de la ventana. Abajo: el borde de arriba de la barra
+// inferior cuando esta acostada abajo (telefono); en el escritorio la barra es
+// una columna a la izquierda y no tapa nada. Arriba: el relleno del body, que
+// es env(safe-area-inset-top) — en la app instalada la hora del iPhone va
+// encima del contenido —, mas un respiro de 8 px. No hay encabezados fijos.
+function zonaVisibleDetalle() {
+  var alto = (typeof window !== 'undefined' && window.innerHeight) || 0;
+  if (!alto) return null;
+  var abajo = alto, arriba = 0;
+  try {
+    var nav = document.querySelector('.bottomnav');
+    var rn = nav && nav.getBoundingClientRect ? nav.getBoundingClientRect() : null;
+    if (rn && rn.height > 0 && rn.top > alto / 2 && rn.top < abajo) abajo = rn.top;
+  } catch (e) {}
+  try {
+    var pt = parseFloat(window.getComputedStyle(document.body).paddingTop);
+    if (isFinite(pt) && pt > 0) arriba = pt;
+  } catch (e) {}
+  return { arriba: arriba + 8, abajo: abajo };
+}
+// Mide y, si hace falta, desplaza. Suave salvo que el sistema pida menos
+// movimiento. Sin getBoundingClientRect (los arneses viejos) no hace nada.
+function mostrarDetalleEntero(tr, td) {
+  try {
+    if (!tr || !tr.getBoundingClientRect || !td || !td.querySelector) return;
+    var res = td.querySelector('.detres');
+    var tv = td.querySelector('.tvwrap');
+    var tvVisible = tv && tv.style.display !== 'none' && tv.getBoundingClientRect;
+    var ini = res && res.getBoundingClientRect ? res : (tvVisible ? tv : null);
+    var fin = tvVisible ? tv : (res && res.getBoundingClientRect ? res : null);
+    if (!ini || !fin) return;
+    var z = zonaVisibleDetalle();
+    if (!z) return;
+    var dy = desplazoDetalle(tr.getBoundingClientRect().top, ini.getBoundingClientRect().top,
+      fin.getBoundingClientRect().bottom, z.arriba, z.abajo);
+    if (!dy) return;
+    var quieto = false;
+    try { quieto = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
+    window.scrollBy({ top: dy, left: 0, behavior: quieto ? 'auto' : 'smooth' });
+  } catch (e) {}
+}
 function toggleDetalle(tr, pos) {
   var mismo = detalleAbierto && detalleAbierto.tr === tr;
   if (detalleAbierto && detalleAbierto.det.parentNode) detalleAbierto.det.parentNode.removeChild(detalleAbierto.det);
@@ -342,7 +406,7 @@ function toggleDetalle(tr, pos) {
   if (tienePm && isFinite(pa) && pa > 0) {
     var res = (pa / pm - 1) * 100;
     html += '<div class="detres"><span class="detlbl">Result</span><b class="' + (res >= 0 ? 'up' : 'down') + '">' +
-      (gan !== null ? esc(fmtSigno(gan)) + ' <span class="detsec">' + signoPct(res, 1) + '</span>' : signoPct(res, 1)) + '</b></div>';
+      (gan !== null ? esc(fmtSigno(gan)) + ' <span class="detsec">' + pctDetalle(res, 1) + '</span>' : pctDetalle(res, 1)) + '</b></div>';
   }
   html += '<div class="tvwrap"></div>';
   html += '<div class="detgrid">' +
@@ -372,6 +436,10 @@ function toggleDetalle(tr, pos) {
   }
   detalleAbierto = { tr: tr, det: det };
   cargarFundamentales(symU, td.querySelector('.detfund'));
+  // Solo al ABRIR (cerrar sale arriba, por `mismo`). Despues de los
+  // indicadores: si vienen de lo guardado ya estan pintados, pero van debajo
+  // de la grafica y no mueven lo que se mide.
+  mostrarDetalleEntero(tr, td);
 }
 
 // El formulario de editar precios de una posicion MANUAL (V16, 29/08/2026).
@@ -430,16 +498,69 @@ function wireEditPrecios(td, pos) {
 // Cache en memoria por simbolo: el detalle se abre y se cierra todo el tiempo
 // y los fundamentales no cambian en una sesion. El backend ademas cachea 6 h.
 var fundCache = {};
+// Y una copia EN EL TELEFONO (bucle de mejora, vuelta 2, 22/11/2026): la de
+// memoria muere al cerrar la app, asi que cada vez que se reabria el detalle
+// mostraba "Loading indicators..." de nuevo. Ahora se pinta enseguida la
+// ultima respuesta sana y se pide lo fresco igual, por detras (el patron de
+// REND_CACHE en rendimiento.js y de ga_cache_acc en vistas.js).
+// UNA sola clave con una LISTA adentro, la mas reciente primero: GA_CACHES
+// (paneles.js) es una lista fija que recorre el borrado de emergencia, y una
+// clave por simbolo quedaria viva despues de "Olvide mi clave". Lista y no
+// mapa: un objeto pone primero las claves numericas (un ticker como "7203") y
+// el orden de "mas reciente" se perderia. Con TOPE, para no llenar el
+// almacenamiento con cada simbolo que se mira en la Watchlist.
+// Se lee localStorage directo y no con cacheLeer: esa vive en paneles.js, que
+// carga despues (aca se usaria igual solo en tiempo de ejecucion, pero asi
+// el bloque se prueba solo).
+var FUND_CACHE = 'ga_cache_fund';
+var FUND_TOPE = 40;
+function fundSana(r) { return !!(r && typeof r === 'object' && r.ok !== false && !r.error); }
+function fundGuardados() {
+  try {
+    var j = JSON.parse(localStorage.getItem(FUND_CACHE) || 'null');
+    return (j && Array.isArray(j.data)) ? j.data : [];
+  } catch (e) { return []; }
+}
+function fundGuardadoDe(symbol) {
+  var l = fundGuardados();
+  for (var i = 0; i < l.length; i++) {
+    if (l[i] && l[i].s === symbol && fundSana(l[i].data)) return l[i].data;
+  }
+  return null;
+}
+function fundGuardar(symbol, r) {
+  try {
+    var l = fundGuardados().filter(function (e) { return e && e.s !== symbol; });
+    l.unshift({ s: symbol, t: Date.now(), data: r });
+    if (l.length > FUND_TOPE) l = l.slice(0, FUND_TOPE);
+    localStorage.setItem(FUND_CACHE, JSON.stringify({ t: Date.now(), data: l }));
+  } catch (e) {}
+}
 function cargarFundamentales(symbol, caja) {
   if (!symbol || !caja) return;
   if (fundCache[symbol]) { pintarFundamentales(fundCache[symbol], caja); return; }
-  caja.innerHTML = '<p class="detfund-cargando">Loading indicators...</p>';
+  var guardado = fundGuardadoDe(symbol);
+  if (guardado) pintarFundamentales(guardado, caja);
+  else caja.innerHTML = '<p class="detfund-cargando">Loading indicators...</p>';
   google.script.run.withSuccessHandler(function (r) {
-    if (r) fundCache[symbol] = r;
+    if (fundSana(r)) {
+      fundCache[symbol] = r;
+      fundGuardar(symbol, r);
+    } else if (guardado) {
+      // Un ok:false (o una respuesta vacia) con algo guardado NO pisa nada:
+      // ni lo guardado ni lo que ya esta pintado.
+      fundCache[symbol] = guardado;
+      return;
+    } else if (r) {
+      fundCache[symbol] = r;
+    }
     // El detalle pudo cerrarse mientras el pedido viajaba: sin este chequeo
     // se escribiria sobre un nodo que ya no esta en la pagina.
     if (caja.parentNode) pintarFundamentales(r, caja);
   }).withFailureHandler(function (err) {
+    // Sin red, lo guardado que ya se pinto se queda; el error solo se dice
+    // cuando no habia nada que mostrar.
+    if (guardado) return;
     if (caja.parentNode) caja.innerHTML = '<p class="detfund-cargando">' + esc(msgErr(err, 'The indicators')) + '</p>';
   }).getFundamentales({ symbol: symbol });
 }

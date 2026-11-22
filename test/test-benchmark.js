@@ -49,6 +49,7 @@ function montar(opts) {
   opts = opts || {};
   var pintado = { texto: '', clase: '', titulo: '' };
   var vistasPedidas = [];
+  var medidasDeck = { n: 0 };
   var elVs = {
     set textContent(v) { pintado.texto = v; }, get textContent() { return pintado.texto; },
     set className(v) { pintado.clase = v; }, get className() { return pintado.clase; },
@@ -99,7 +100,9 @@ function montar(opts) {
     setView: function (v) { vistasPedidas.push(v); },
     huboSwipe: !!opts.huboSwipe,
     colorAcento: function () { return '#d4af37'; },
-    acentoRgba: function () { return 'rgba(1,1,1,.1)'; }
+    acentoRgba: function () { return 'rgba(1,1,1,.1)'; },
+    // El carrusel de Home se vuelve a medir cuando cambia la nota (22/11/2026).
+    ajustarAlturaDeck: function () { medidasDeck.n++; }
   };
   ctx.fullSerie = (opts.fullSerie || []).slice();
   var nombres = Object.keys(ctx);
@@ -111,6 +114,7 @@ function montar(opts) {
   var api = fn.apply(null, nombres.map(function (n) { return ctx[n]; }));
   api._pintado = pintado;
   api._vistas = vistasPedidas;
+  api._medidasDeck = medidasDeck;
   api._vs = elVs;
   api._mov = mov;
   return api;
@@ -178,8 +182,12 @@ var nota = { hidden: true, innerHTML: '', textContent: '' };
 api.__modo('pct');
 api.pintarNotaEvo(nota, rp);
 ok(nota.hidden === false && /without deposits/.test(nota.innerHTML) && /S&amp;P 500/.test(nota.innerHTML), 'en % la leyenda dice que es sin depositos y contra que indice: ' + nota.innerHTML.slice(0, 80));
+var medidasAntes = api._medidasDeck.n;
 api.pintarNotaEvo(nota, { sinDatos: 'aportes' });
 ok(/Loading your deposits/.test(nota.textContent), 'sin la lista, dice que la esta esperando');
+// Vuelta 2 del bucle (22/11/2026): la nota agranda el panel de Evolucion y el
+// carrusel tiene alto fijo; sin volver a medirlo, la linea de Cash quedaba cortada.
+ok(api._medidasDeck.n === medidasAntes + 1, 'al cambiar la nota se vuelve a medir el carrusel de Home');
 api.pintarNotaEvo(nota, rr);
 ok(/shorter range/.test(nota.textContent) && /2026/.test(nota.textContent), 'con el rango largo, dice hasta donde llega y que hacer: ' + nota.textContent);
 api.__modo('valor');

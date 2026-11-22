@@ -457,6 +457,16 @@ button.backlink { background: none; border: 0; padding: 0; font-family: inherit;
    tablas sigue con su elipsis. */
 .holdtable .desc.accval { white-space: normal; overflow: visible; text-overflow: clip; }
 .accval .daychg { display: inline-block; white-space: nowrap; margin-left: 3px; font-size: 11.5px; }
+/* El % del renglon de valor, mas chico SOLO en la tabla de la cuenta y solo
+   en el telefono (22/11/2026, bucle de mejora, vuelta 2). Caso limite medido
+   a 375 px: con precios de 6 cifras la columna del instrumento queda en 54 px
+   y "+123.35%" medía 58 a 12,5 px (la regla de <=560px de .holdtable .daychg
+   le ganaba al 11,5 de arriba): se salia 4 px y tocaba el mini-grafico. A
+   10,5 px (lo mismo que el precio medio .pcmini de esa fila) mide ~49, mas
+   2 de margen = 51: sobran 3 px en la celda y 5 hasta el dibujo. #accTabla
+   lo acota a la cuenta: el Inicio y Positions no tienen este renglon y no
+   cambian; el id ademas le gana a la regla de <=560px. */
+@media (max-width: 560px) { #accTabla .holdtable .accval .daychg { font-size: 10.5px; margin-left: 2px; } }
 .spark { display: block; margin: 0 auto; opacity: .95; }
 /* El trazo toma el color del TEMA (el claro usa otro verde y otro rojo). */
 .spark polyline { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; stroke: var(--red); }
@@ -538,6 +548,26 @@ button.backlink { background: none; border: 0; padding: 0; font-family: inherit;
 .evonota[hidden] { display: none; }
 .evocontrols-big { margin: 0 0 10px; }
 .chartmodal .evonota { margin: 0 0 10px; }
+/* Los controles del grafico del Inicio en UN renglon (22/11/2026, bucle de
+   mejora, vuelta 2). Eran tres: el $ / %, los ocho rangos (a 375 px el "2Y"
+   quedaba cortado en el borde y "5Y" escondido por scroll, sin indicio) y el
+   boton de pantalla completa solo abajo. Pasaba porque .evocontrols envuelve
+   (lo necesita la nota, que va a todo el ancho) y la barra de rangos pedia su
+   ancho entero antes de encogerse. Ahora los tres van en .evorow, que NO
+   envuelve: $ / % compacto a la izquierda, los rangos estirados al medio y el
+   ⛶ con ancho fijo al final. Cuenta a 375 px (343 utiles), con anchos de
+   letra a proposito generosos: rangos 241 + $ / % 49 + ⛶ 30 + huecos 12 = 332.
+   Si una pantalla mas angosta no los deja entrar, la barra de rangos sigue
+   con su scroll y se detiene al principio de un boton, no en el medio.
+   TODO acotado a .evocontrols .evorow: .rangebtn lo usan tambien los rangos
+   de la tarjeta de cuenta (rendimiento.js) y el modal grande, y esos no
+   cambian. test-bucle-v2-maquetado.js rehace la cuenta desde estas reglas. */
+.evocontrols .evorow { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; flex: 1 1 100%; min-width: 0; }
+.evocontrols .evorow .modobar { gap: 2px; }
+.evocontrols .evorow .modobar .rangebtn { padding: 6px 6px; font-size: 12px; }
+.evocontrols .evorow .rangebar { flex: 1 1 auto; gap: 3px; scroll-snap-type: x proximity; }
+.evocontrols .evorow .rangebar .rangebtn { flex: 1 0 auto; padding: 6px 4px; font-size: 11.5px; scroll-snap-align: start; }
+.evocontrols .evorow .expandbtn { flex: 0 0 28px; width: 28px; margin-left: 2px; padding: 4px 0; text-align: center; }
 /* Cash discreto: era un bloque propio arriba a la derecha y competia con el
    total. Ahora es un renglon al pie de la tarjeta. */
 .cashline { display: flex; align-items: baseline; gap: 8px; margin: 13px 0 0; padding-top: 11px;
@@ -591,11 +621,21 @@ button.backlink { background: none; border: 0; padding: 0; font-family: inherit;
    necesita — o sea ilegible. Y agrava que esta leyenda es AHORA el unico
    camino para abrir cada cuenta: sus etiquetas no pueden ser un muñon.
    Apilado entra todo sin truncar nada. En pantalla ancha la leyenda tiene de
-   sobra y sigue en una linea. Lo cazo la auditoria del 02/09/2026. */
+   sobra y sigue en una linea. Lo cazo la auditoria del 02/09/2026.
+   Y desde el 22/11/2026 (bucle de mejora, vuelta 2) ya no se apila SIEMPRE:
+   aquel apilado era para cuando la torta iba al costado y la leyenda tenia
+   ~130 px. Desde la vuelta 1 la torta va arriba y la leyenda tiene todo el
+   ancho (~305 px), asi que la mayoria de las cuentas entran en una linea y
+   apiladas la leyenda medía el doble. Ahora la fila ENVUELVE (flex-wrap):
+   si nombre + "% | monto" entran, una linea; si no, el bloque "% | monto"
+   baja ENTERO al renglon de abajo, pegado a la derecha (margin-left: auto).
+   El nombre sigue sin elipsis ni recorte: si solo no entrara, parte por
+   dentro. Nada de anchos fijos: lo decide el contenido, no un numero. La
+   flechita .chev vive dentro de .lpct, asi que viaja con el bloque. */
 @media (max-width: 560px) {
-  .pierow { flex-direction: column; align-items: stretch; gap: 2px; }
+  .pierow { flex-wrap: wrap; gap: 2px 8px; }
   .pierow .lname { overflow: visible; text-overflow: clip; white-space: normal; }
-  .pierow .lpct { font-size: 13px; padding-left: 16px; }
+  .pierow .lpct { font-size: 13px; white-space: nowrap; margin-left: auto; }
 }
 
 /* --- Botones Retirar / Depositar --- */
@@ -792,6 +832,33 @@ html.light .wl-detalle { background: rgba(20,40,80,.035); }
 .disphead { font-size: 11px; color: var(--muted); padding-top: 0; }
 .disphead span { text-align: right; }
 .disptot { border-bottom: none; font-weight: 700; }
+/* Vuelta 2 del bucle de mejora (22/11/2026): lo libre del año en grande, lo
+   invertido al lado y la tabla de arriba plegada. Nada depende de "entrar
+   justo": el monto grande no se parte (nowrap) y, si con 6 cifras no cabe al
+   lado, lo invertido baja entero al renglon siguiente (flex-wrap: el corte es
+   ese y no otro). Las columnas de las barras reparten el ancho con base 0 y
+   min-width 0, asi que 12 meses entran a 375 px sin scroll. */
+.disphero { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 4px 16px; }
+.dispmain { min-width: 0; max-width: 100%; }
+.dispmain .lbl { margin: 0; }
+.dispbig { display: block; font-size: clamp(24px, 7vw, 32px); font-weight: 700; letter-spacing: -.01em; line-height: 1.2; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dispbig.down { color: var(--red); }
+.dispside { display: flex; flex-direction: column; align-items: flex-end; min-width: 0; padding-bottom: 4px; }
+.dispside span { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.dispside .dispv { font-size: 15px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dispside .dispv.down { color: var(--red); }
+.dispdot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; }
+.dispdot.libre, .dispbar.libre { background: var(--gold); }
+.dispdot.inv, .dispbar.inv { background: rgba(144,160,184,.6); }
+.dispplot { display: flex; justify-content: center; gap: 2px; margin-top: 14px; }
+.dispcol { flex: 1 1 0; min-width: 0; max-width: 40px; display: flex; flex-direction: column; align-items: center; }
+.disparea { position: relative; width: 100%; height: 72px; display: flex; justify-content: center; gap: 2px; }
+.dispslot { position: relative; flex: 0 1 10px; min-width: 0; height: 100%; }
+.dispbar { position: absolute; left: 0; right: 0; border-radius: 2px; }
+.dispcol.aprox .dispbar { opacity: .5; }
+.dispcero { position: absolute; left: 0; right: 0; height: 1px; background: var(--border); }
+.dispcol > b { margin-top: 4px; font-size: 10.5px; font-weight: 700; line-height: 1; color: var(--muted); }
+.dispnota[open] summary { margin-bottom: 4px; }
 .txrow { display: flex; justify-content: space-between; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
 .txrow:last-child { border-bottom: none; }
 .txrow .txmeta { color: var(--muted); font-size: 11px; display: block; }

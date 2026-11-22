@@ -189,5 +189,92 @@ m.ultimo('getDividendos').ok({ ok: false, mensajes: ['Schwab did not answer.'] }
 ok(m.el('divBody').innerHTML + m.el('divTotalAnio').textContent === antesDiv && !/did not answer/.test(m.el('divBody').innerHTML), 'Dividends: un {ok:false} tampoco borra lo que se veia');
 ok(/could not update/.test(m.el('divCacheAviso').innerHTML), 'y lo marca');
 
+// F) La jerarquia nueva (bucle de mejora, vuelta 2, 22/11/2026): lo libre del
+// año en grande, debajo las barras por mes y la tabla de siempre PLEGADA. Cada
+// assert de aca falla con el renderDisponible anterior (la tabla suelta).
+console.log('\nF) un dato grande, las barras y la tabla plegada');
+// Monta la tarjeta con un payload y los aportes ya recibidos; devuelve el HTML
+// y lo que la tarjeta engancho en el <details>.
+function pintar(payload, lista) {
+  var mm = montar();
+  mm.g.cargarAportes = function () {};
+  mm.g.apoCargado = true;
+  var oyentes = [];
+  var cuerpo = mm.el('dispBody');
+  cuerpo.querySelector = function (sel) {
+    var e = entorno.elemento();
+    e.addEventListener = function (tipo, fn) { oyentes.push({ sel: sel, tipo: tipo, fn: fn }); };
+    return e;
+  };
+  mm.g.cargarDisponible(false);
+  mm.g.aportesLista = lista || [];
+  mm.g.aportesDesde = new Date(2026, 0, 1).getTime();
+  mm.g.aportesRecibidos = true;
+  var err = null;
+  try { mm.ultimo('getDisponibleFacturacion').ok(payload); } catch (e) { err = e; }
+  return { html: deEntidades(cuerpo.innerHTML), raw: cuerpo.innerHTML, oyentes: oyentes, err: err };
+}
+function partes(html) {
+  var i = html.indexOf('<details'), j = html.indexOf('</details>');
+  return { abre: i, cierra: j, dentro: i >= 0 && j > i ? html.slice(i, j) : '', fuera: i >= 0 ? html.slice(0, i) + html.slice(j) : html,
+    tag: i >= 0 ? html.slice(i, html.indexOf('>', i) + 1) : '' };
+}
+function cuenta(html, re) { return (html.match(re) || []).length; }
+// Las barras con su geometria: [bottom, height] en %.
+function barras(html) {
+  var out = [], re = /<i class="dispbar (libre|inv)" style="bottom:(-?[\d.]+)%;height:([\d.]+)%"><\/i>/g, x;
+  while ((x = re.exec(html)) !== null) out.push({ clase: x[1], b: parseFloat(x[2]), h: parseFloat(x[3]) });
+  return out;
+}
+var LISTA_B = [
+  { fecha: '2026-03-10', grupo: 300, total: 500 },
+  { fecha: '2026-09-02', grupo: 200, total: 200 },
+  { fecha: '2026-09-20', grupo: -50, total: -50 }
+];
+var pf = pintar(PAYLOAD, LISTA_B), pt = partes(pf.html);
+var iBig = pf.html.indexOf('class="dispbig'), iPlot = pf.html.indexOf('class="dispplot');
+ok(iBig >= 0 && iPlot > iBig && pt.abre > iPlot, 'el dato grande, despues las barras, despues el <details>: ' + [iBig, iPlot, pt.abre].join(' < '));
+ok(/class="dispbig[^"]*">≈US\$ 5,500</.test(pf.html), 'lo grande es lo libre del AÑO (con ≈ por el mes estimado)');
+ok(/class="dispside">.*Invested.*US\$ 650/.test(pt.fuera.slice(0, iPlot)), 'al lado, lo invertido del año');
+ok(filas(pt.dentro).length === 6 && filas(pt.fuera).length === 0, 'las seis filas de la tabla estan DENTRO del <details> y ninguna afuera: ' + filas(pt.dentro).length + '/' + filas(pt.fuera).length);
+ok(pt.tag !== '' && !/\bopen\b/.test(pt.tag), 'el <details> arranca cerrado: ' + pt.tag);
+ok(/<summary>[^<]{3,20}<\/summary>/.test(pt.dentro), 'con un summary corto');
+ok(/pesos per dollar/.test(pt.dentro) && !/pesos per dollar/.test(pt.fuera), 'la nota del tipo de cambio va adentro del <details>');
+ok(cuenta(pf.html, /class="dispcol/g) === 5 && cuenta(pf.html, /dispbar libre/g) === 5, 'una columna y una barra libre por mes con dato (5)');
+// La lista cubre desde el 1/01: los cinco meses tienen su barra gris (febrero
+// en cero tambien, porque ahi el cero es cierto).
+ok(cuenta(pf.html, /dispbar inv/g) === 5, 'una barra gris (invertido) por mes cubierto por los aportes: ' + cuenta(pf.html, /dispbar inv/g));
+ok(pf.oyentes.some(function (x) { return x.tipo === 'toggle'; }), 'al abrir la tabla se vuelve a medir el carrusel (toggle enganchado)');
+
+console.log('\nF2) casos borde: un mes, cero meses, 12 meses con 6 cifras, negativos y ceros');
+var p1 = pintar({ ok: true, anio: 2026, cotizacionUsd: 40, meses: [mes(10, 123456)] }, []);
+var t1 = partes(p1.html);
+ok(!p1.err && cuenta(p1.html, /class="dispcol/g) === 1 && filas(t1.dentro).length === 2 && /class="dispbig[^"]*">US\$ 123,456</.test(p1.html),
+  'un solo mes: una barra, la tabla con el mes y el año, y el dato grande' + (p1.err ? ': ' + p1.err.message : ''));
+var p0 = pintar({ ok: true, anio: 2026, cotizacionUsd: 40, meses: [] }, []);
+var pVuelta = pintar(PAYLOAD, LISTA_B);
+ok(!p0.err && /No billing loaded/.test(p0.html) && !/dispplot|<details/.test(p0.html) && /dispplot/.test(pVuelta.html),
+  'cero meses: no se rompe ni dibuja barras vacias (y con meses, si)');
+// 12 meses: 6 cifras, negativos, ceros y un aporte negativo (un retiro).
+var doce = [mes(1, 123456), mes(2, -98765), mes(3, 0), mes(4, 250000), mes(5, -250000), mes(6, 1), mes(7, 0), mes(8, 99999), mes(9, -1), mes(10, 180000), mes(11, 5), mes(12, 0, true)];
+var p12 = pintar({ ok: true, anio: 2026, cotizacionUsd: 40, meses: doce },
+  [{ fecha: '2026-02-10', grupo: 0, total: 150000 }, { fecha: '2026-05-10', grupo: 0, total: -300000 }]);
+var b12 = barras(p12.html);
+ok(!p12.err && cuenta(p12.html, /class="dispcol/g) === 12 && b12.filter(function (x) { return x.clase === 'libre'; }).length === 12,
+  '12 meses: 12 columnas con su barra libre');
+ok(b12.length === 24 && b12.every(function (x) { return x.b >= 0 && x.h > 0 && x.b + x.h <= 100.05; }),
+  'toda barra queda dentro de su caja (bottom >= 0, bottom + alto <= 100), negativos y ceros incluidos');
+ok(/class="dispbig[^"]*">≈US\$ 304,695</.test(p12.html) && /class="dispbig down/.test(pintar({ ok: true, anio: 2026, cotizacionUsd: 40, meses: [mes(3, -123456)] }, []).html),
+  'el total grande con 6 cifras, y en rojo si el año va negativo');
+// Lo que hace que entre a 375 px por construccion y no por suerte: las
+// columnas reparten el ancho (base 0, min-width 0), sin scroll lateral, y los
+// montos no se parten sino que lo invertido baja entero de renglon.
+var css = fs.readFileSync(path.join(__dirname, '..', 'css', 'estilos.css'), 'utf8');
+function regla(sel) { var mm2 = css.match(new RegExp('(^|\\n)' + sel.replace(/\./g, '\\.') + ' \\{([^}]*)\\}')); return mm2 ? mm2[2] : ''; }
+ok(/flex: 1 1 0/.test(regla('.dispcol')) && /min-width: 0/.test(regla('.dispcol')) && regla('.dispplot') !== '' && !/overflow/.test(regla('.dispplot')),
+  'las columnas reparten el ancho (flex 1 1 0, min-width 0) y el grafico no scrollea');
+ok(/flex-wrap: wrap/.test(regla('.disphero')) && /nowrap/.test(regla('.dispbig')) && /nowrap/.test(regla('.dispside .dispv')),
+  'el dato grande no se parte y lo invertido baja entero si no cabe');
+
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

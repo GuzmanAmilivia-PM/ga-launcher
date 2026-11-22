@@ -379,7 +379,15 @@ function serieRendimientoPct(serie) {
 }
 // Lo que se dice debajo del dibujo en la vista en %: la leyenda cuando hay
 // grafico, el motivo cuando no. En dolares no se dice nada.
+// La nota cambia el alto del panel de Evolucion, y el carrusel de Home tiene
+// alto fijo con overflow hidden: hay que volver a medirlo (22/11/2026, lo
+// encontro el verificador de la vuelta 2 del bucle: en modo % "Loading your
+// deposits..." empujaba la linea de Cash fuera de la tarjeta, cortada).
 function pintarNotaEvo(nota, r) {
+  pintarNotaEvoTexto(nota, r);
+  if (typeof ajustarAlturaDeck === 'function') ajustarAlturaDeck();
+}
+function pintarNotaEvoTexto(nota, r) {
   if (!nota) return;
   if (evoModo !== 'pct') { nota.hidden = true; nota.innerHTML = ''; return; }
   nota.hidden = false;
