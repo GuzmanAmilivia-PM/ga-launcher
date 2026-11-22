@@ -314,13 +314,16 @@
 <div id="view-portafolio" style="display:none">
 <div class="card">
 <h2>Allocation</h2>
-<div class="tipobar" style="margin:8px 0 12px">
-<button type="button" class="tipobtn active-acento" id="pieCuentaBtn">Custodian</button>
-<button type="button" class="tipobtn" id="pieTipoBtn">Class</button>
-</div>
 <div class="piewrap">
 <div class="pieholder"><canvas id="pieChart"></canvas></div>
 <div class="pielegend" id="pieLegend"></div>
+</div>
+<!-- El selector va AL PIE y en burbujas chicas (21/11/2026): arriba eran dos
+     botones grandes que empujaban la torta. Cual esta elegida lo marca
+     renderPortafolio (vistas.js) con .active, que sigue el acento. -->
+<div class="ranpills piesel">
+<button type="button" class="ranpill active" id="pieCuentaBtn">Custodian</button>
+<button type="button" class="ranpill" id="pieTipoBtn">Class</button>
 </div>
 </div>
 <div class="card" id="anualCard" style="display:none">
@@ -759,6 +762,22 @@
 
 <!-- ============ TRADE ============ -->
 <div id="view-trade" style="display:none">
+<!-- Bucle de mejora del 21/11/2026: la lista primero, filtros en burbujas.
+     Los trades entran solos desde los brokers, asi que lo que se viene a ver
+     es la lista; el registro a mano casi no se usa y por eso va AL PIE. Las
+     burbujas muestran solo lo elegido (el rotulo vive en la pantallita). -->
+<div class="card">
+<div class="opsfiltros">
+<button type="button" class="filtropill" id="opsFiltroRango" aria-label="Period"><b>This year</b></button>
+<button type="button" class="filtropill" id="opsFiltroTipo" aria-label="Type"><b>All types</b></button>
+<button type="button" class="filtropill" id="opsFiltroTicker" aria-label="Ticker"><b>All tickers</b></button>
+<button class="expandbtn" id="opsRefreshBtn" title="Refresh" aria-label="Refresh trades">&#8635;</button>
+</div>
+<div id="opsCacheAviso" style="display:none"></div>
+<div id="opsResumen"></div>
+<div id="opsBody"><div class="vacio"><span class="vic">&#128200;</span><b>No trades yet</b>Your buys and sells will show up here.</div></div>
+<div id="opsAvisos"></div>
+</div>
 <details class="card manualop" id="tManual">
 <summary>Log one manually<span class="opshint">broker trades come in automatically</span></summary>
 <div class="tradeform">
@@ -785,18 +804,6 @@
 <div id="tResultado"></div>
 </div>
 </details>
-<div class="card">
-<div class="opsfiltros">
-<button type="button" class="filtrobtn" id="opsFiltroRango"><span>Period</span><b>This year</b></button>
-<button type="button" class="filtrobtn" id="opsFiltroTipo"><span>Type</span><b>All</b></button>
-<button type="button" class="filtrobtn" id="opsFiltroTicker"><span>Ticker</span><b>All</b></button>
-<button class="expandbtn" id="opsRefreshBtn" title="Refresh" aria-label="Refresh trades">&#8635;</button>
-</div>
-<div id="opsCacheAviso" style="display:none"></div>
-<div id="opsResumen"></div>
-<div id="opsBody"><div class="vacio"><span class="vic">&#128200;</span><b>No trades yet</b>Your buys and sells will show up here.</div></div>
-<div id="opsAvisos"></div>
-</div>
 </div>
 
 <!-- Elegir un filtro de Trades: se abre desde los botones de arriba -->

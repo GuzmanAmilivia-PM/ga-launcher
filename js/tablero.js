@@ -328,17 +328,28 @@ function toggleDetalle(tr, pos) {
   // La cantidad y la ganancia en DOLARES (23/09/2026, auditoria general,
   // punto 13): el detalle decia precio medio, costo y un %, y no cuanto
   // tenes ni cuanta plata va ganada — lo primero que muestra un broker.
-  var html = '<div class="detgrid">' +
-    '<span><span class="detlbl">Quantity</span><b>' + esc(fmtCant(pos.qty)) + '</b></span>' +
-    '<span><span class="detlbl">Average price</span><b>' + (tienePm ? esc(fmtNum(pm)) : '&mdash;') + '</b></span>' +
-    '<span><span class="detlbl">Cost basis</span><b>' + (base ? fmt(base) : '&mdash;') + '</b></span>';
+  //
+  // EL ORDEN (21/11/2026, bucle de mejora: "lo principal en grande y la
+  // grafica en el centro optico"): el Result era el cuarto dato de la grilla,
+  // a 15 px, y la grafica quedaba despues de los indicadores, ~620 px abajo —
+  // fuera de la primera pantalla del telefono. Ahora: (1) el Result como
+  // titular, (2) la grafica, (3) la grilla con los otros tres datos, (4)
+  // editar precios, (5) los indicadores enteros, sin plegar. Son los MISMOS
+  // datos: solo cambio el orden y el tamano. Sin precio medio no hay titular
+  // (no se pinta uno vacio) y la grafica queda primera.
+  var html = '';
   var gan = gananciaUsd(pos);
   if (tienePm && isFinite(pa) && pa > 0) {
     var res = (pa / pm - 1) * 100;
-    html += '<span><span class="detlbl">Result</span><b class="' + (res >= 0 ? 'up' : 'down') + '">' +
-      (gan !== null ? esc(fmtSigno(gan)) + ' <span class="detsec">' + signoPct(res, 1) + '</span>' : signoPct(res, 1)) + '</b></span>';
+    html += '<div class="detres"><span class="detlbl">Result</span><b class="' + (res >= 0 ? 'up' : 'down') + '">' +
+      (gan !== null ? esc(fmtSigno(gan)) + ' <span class="detsec">' + signoPct(res, 1) + '</span>' : signoPct(res, 1)) + '</b></div>';
   }
-  html += '</div>';
+  html += '<div class="tvwrap"></div>';
+  html += '<div class="detgrid">' +
+    '<span><span class="detlbl">Quantity</span><b>' + esc(fmtCant(pos.qty)) + '</b></span>' +
+    '<span><span class="detlbl">Average price</span><b>' + (tienePm ? esc(fmtNum(pm)) : '&mdash;') + '</b></span>' +
+    '<span><span class="detlbl">Cost basis</span><b>' + (base ? fmt(base) : '&mdash;') + '</b></span>' +
+    '</div>';
   if (editable) {
     html += '<div class="detedit">' +
       '<button type="button" class="detedit-abrir">' + (soloCompra ? 'Set buy price' : 'Edit prices') + '</button>' +
@@ -349,7 +360,7 @@ function toggleDetalle(tr, pos) {
       '<p class="detedit-msg"></p>' +
       '</div></div>';
   }
-  html += '<div class="detfund"></div><div class="tvwrap"></div>';
+  html += '<div class="detfund"></div>';
   td.innerHTML = html;
   det.appendChild(td);
   tr.parentNode.insertBefore(det, tr.nextSibling);

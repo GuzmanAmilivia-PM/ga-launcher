@@ -287,6 +287,17 @@ canvas { max-width: 100%; }
 .detlbl { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
 .detgrid b { font-size: 15px; }
 .detgrid b .detsec { font-size: 12px; margin-left: 4px; }
+/* El Result como TITULAR del detalle (21/11/2026, bucle de mejora: "lo
+   principal en grande y la grafica en el centro optico"). Era el cuarto dato
+   de la grilla, a 15 px. El verde/rojo lo ponen .up/.down (var(--green) /
+   var(--red)), asi que sirve igual en tema claro y no necesita su par. Los
+   margenes de abajo van atados a la celda del detalle (.detrow td) para no
+   mover la grafica del buscador ni la de la watchlist, que usan .tvwrap. */
+.detres { display: flex; flex-direction: column; gap: 3px; }
+.detres b { font-size: 28px; line-height: 1.15; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.detres b .detsec { font-size: 16px; margin-left: 6px; }
+.detrow td > .tvwrap:first-child { margin-top: 0; }
+.detrow td > .tvwrap + .detgrid { margin-top: 12px; }
 .detedit { margin-top: 12px; }
 .detedit-abrir, .detedit-botones button { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 700; }
 .detedit-botones .detedit-guardar { color: var(--text); border-color: var(--gold); }
@@ -436,7 +447,16 @@ button.backlink { background: none; border: 0; padding: 0; font-family: inherit;
 /* El renglon de abajo del simbolo en el detalle de cuenta: el valor y, al
    lado, la ganancia acumulada (la misma pastilla .daychg, pero en linea). */
 .accval { color: var(--text); font-weight: 600; }
-.accval .daychg { display: inline; margin-left: 6px; font-size: 11.5px; }
+/* Este renglon NO se corta con puntos suspensivos (21/11/2026, segunda vuelta
+   del bucle de mejora). Medido a 375 px con el mini-grafico del mes en la
+   fila: quedan 78 px y "235,930 +12.34%" necesita 93-115, asi que sacar el
+   "USD " no alcanzaba y se seguia leyendo "235,930 +1…". Ahora puede partir
+   en dos renglones ENTRE el valor y el %: si entra, queda en uno; si no, el %
+   baja entero (es un bloque en linea que no se corta por dentro). Acotado a
+   .desc.accval, que solo arma renderAccount: el resto de los .desc de las
+   tablas sigue con su elipsis. */
+.holdtable .desc.accval { white-space: normal; overflow: visible; text-overflow: clip; }
+.accval .daychg { display: inline-block; white-space: nowrap; margin-left: 3px; font-size: 11.5px; }
 .spark { display: block; margin: 0 auto; opacity: .95; }
 /* El trazo toma el color del TEMA (el claro usa otro verde y otro rojo). */
 .spark polyline { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; stroke: var(--red); }
@@ -540,11 +560,19 @@ button.backlink { background: none; border: 0; padding: 0; font-family: inherit;
 .chartmodal-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .chartmodal-close { background: transparent; border: none; color: var(--muted); font-size: 26px; cursor: pointer; line-height: 1; }
 
-/* --- Portafolio: torta con leyenda al costado (estilo Binance) --- */
-.piewrap { display: flex; align-items: center; gap: 18px; }
-.pieholder { width: 150px; height: 150px; position: relative; flex-shrink: 0; }
-@media (max-width: 400px) { .pieholder { width: 128px; height: 128px; } }
-.pielegend { flex: 1; min-width: 0; }
+/* --- Portafolio: torta CENTRADA con la leyenda debajo ---
+   Bucle de mejora del 21/11/2026. Antes la torta (128 px en el telefono) iba
+   al costado de la leyenda, estilo Binance, y las dos se peleaban el ancho de
+   375 px. Ahora la torta va al medio y mas grande (176 px), la leyenda abajo
+   a todo el ancho, y el selector Custodian / Class son dos burbujas chicas al
+   pie de la tarjeta (.ranpills/.ranpill, las de Performance, que ya traen su
+   aire de arriba). En la pantalla ancha (>= 1100px, el diseño de
+   escritorio de v253) la tarjeta ocupa media pantalla y ahi SI sobra ancho:
+   se conserva la torta al costado (la regla esta en el bloque de escritorio,
+   junto a las de #view-portafolio). */
+.piewrap { display: flex; flex-direction: column; align-items: stretch; gap: 14px; margin-top: 10px; }
+.pieholder { width: 176px; height: 176px; position: relative; flex-shrink: 0; align-self: center; }
+.pielegend { min-width: 0; }
 .pierow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; font-size: 14.5px; }
 .pierow.clickable { cursor: pointer; }
 .pierow.clickable:active { opacity: .7; }
@@ -777,11 +805,22 @@ html.light .wl-detalle { background: rgba(20,40,80,.035); }
 .manualop > summary .opshint { color: var(--muted); font-size: 11px; font-weight: 600; }
 .manualop .tradeform { padding: 0 15px 15px; }
 .manualop .tradeform .tipobar { margin-top: 2px; }
-.opsfiltros { display: flex; align-items: stretch; gap: 6px; margin-bottom: 12px; }
-.filtrobtn { flex: 1; min-width: 0; text-align: left; padding: 6px 9px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,.04); color: var(--text); font-family: inherit; cursor: pointer; }
-.filtrobtn span { display: block; color: var(--muted); font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
-.filtrobtn b { display: block; font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.filtrobtn b::after { content: ' \25BE'; color: var(--gold); }
+/* Filtros en burbujas (bucle de mejora del 21/11/2026: la lista primero).
+   Eran tres cajas de 45 px con rotulo arriba y "This year" cortado; ahora un
+   renglon de burbujas con solo lo elegido. .filtropill es hermana de .ranpill
+   (mismo look) y no la reusa tal cual por dos cosas propias: la flechita que
+   avisa que abre una pantallita, y el texto en --text (aca la burbuja muestra
+   un valor, no una opcion apagada). nowrap sin ellipsis: no se corta; si un
+   ticker largo no entra, el renglon envuelve (flex-wrap) en vez de recortar. */
+.opsfiltros { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
+.filtropill { position: relative; flex: 0 0 auto; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,.04); color: var(--text); font-family: inherit; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.filtropill b { font-weight: inherit; }
+.filtropill b::after { content: ' \25BE'; color: var(--gold); }
+/* La burbuja mide ~24 px de alto: el area tactil crece hacia arriba y abajo
+   (no a los lados, que pisaria a la vecina). */
+.filtropill::after { content: ''; position: absolute; top: -10px; bottom: -10px; left: 0; right: 0; }
+.opsfiltros .expandbtn { margin-left: auto; }
+html.light .filtropill { background: rgba(20,40,80,.05); }
 .opspicker-inner { max-width: 360px; max-height: 80vh; overflow-y: auto; }
 .opspick { display: block; width: 100%; text-align: left; padding: 12px 4px; border: none; border-bottom: 1px solid var(--border); background: transparent; color: var(--text); font-size: 14.5px; font-weight: 600; font-family: inherit; cursor: pointer; }
 .opspick:last-child { border-bottom: none; }
@@ -868,9 +907,11 @@ html.light .anxfila .pista { background: rgba(20,40,80,.08); }
 .anates em { color: var(--muted); font-style: normal; }
 .anates-acc { display: flex; gap: 6px; margin-left: auto; }
 .anates-acc .tipobtn { flex: none; padding: 7px 11px; font-size: 11.5px; }
-.opsresumen { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; font-size: 12.5px; }
-.opsresumen span { display: block; color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; }
-.opsresumen b { font-size: 14px; font-weight: 700; }
+/* Resumen de Trades: una linea liviana, sin recuadro ni borde (21/11/2026).
+   Era una caja con borde propio entre los filtros y la lista. */
+.opslinea { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-bottom: 8px; font-size: 12px; color: var(--text); }
+.opslinea span { color: var(--muted); margin-right: 4px; }
+.opslinea b { font-weight: 700; font-variant-numeric: tabular-nums; }
 .opstag { color: var(--muted); font-size: 10px; border: 1px solid var(--border); border-radius: 5px; padding: 0 4px; margin-left: 5px; }
 
 /* --- Noticias --- */
@@ -929,7 +970,7 @@ html.light .mainarea { background: linear-gradient(180deg, var(--navy2), var(--n
 html.light .card { box-shadow: 0 6px 18px rgba(30,50,90,.06); }
 html.light .bottomnav { background: color-mix(in srgb, var(--navy2) 96%, transparent); }
 html.light .navtab-center .cbtn { border-color: var(--navy2); background: linear-gradient(135deg,var(--gold),var(--gold2)); }
-html.light .rangebtn, html.light .morebtn, html.light .tipobtn, html.light .filtrobtn { background: rgba(20,40,80,.05); }
+html.light .rangebtn, html.light .morebtn, html.light .tipobtn { background: rgba(20,40,80,.05); }
 html.light .rangebtn.active { background: var(--gold); color: #fff; border-color: var(--gold); }
 html.light .tradeform input, html.light .tradeform select { background: #fff; border-color: rgba(20,40,80,.18); }
 html.light .detedit-form input, html.light #accBtgForm input:not([type="checkbox"]) { background: #fff; border-color: rgba(20,40,80,.18); }
@@ -1212,6 +1253,26 @@ a.galink { color: inherit; text-decoration: none; }
   #view-portafolio > #anualCard { grid-column: 1; grid-row: 2; }
   #view-portafolio > .card:nth-child(3) { grid-column: 2; grid-row: 1 / span 2; }
   #view-portafolio > .card:nth-child(4) { grid-column: 1 / -1; grid-row: 3; }
+  /* La torta sigue AL COSTADO de su leyenda aca (21/11/2026): en el telefono
+     paso a ir centrada con la leyenda debajo, pero esta tarjeta ocupa media
+     pantalla y apilada dejaria una columna alta y medio vacia. Va en ESTE
+     bloque y no junto a .piewrap: test-escritorio toma el primer @media de
+     1100px del archivo como "el" bloque de escritorio. */
+  .piewrap { flex-direction: row; align-items: center; gap: 18px; }
+  .pielegend { flex: 1; }
+  /* Y aca la torta vuelve a 150 px (los 176 son del telefono, donde va sola):
+     medido a 1280 px, con 176 la leyenda quedaba en 264 px y "Charles Schwab"
+     con un monto de cinco cifras se recortaba en seco. */
+  .pieholder { width: 150px; height: 150px; }
+  /* La fila de la leyenda se apila tambien aca, como en el telefono (22/11/2026,
+     segunda devolucion del verificador del bucle): en una linea, que "Charles
+     Schwab" entrara dependia de los digitos del monto (con USD 80,000 se leia
+     "Charles Schwat", cortado en seco porque .lname es flex y ahi la elipsis no
+     se dibuja). Apilada no depende del ancho: el nombre arriba, entero, y el %
+     con el monto debajo. */
+  .piewrap .pierow { flex-direction: column; align-items: stretch; gap: 2px; }
+  .piewrap .pierow .lname { overflow: visible; text-overflow: clip; white-space: normal; }
+  .piewrap .pierow .lpct { font-size: 13px; padding-left: 20px; }
 
   /* --- Watchlist: la lista y, al costado, las notificaciones --- */
   #view-watchlist {
@@ -1271,7 +1332,11 @@ a.galink { color: inherit; text-decoration: none; }
 .rantiles .up { color: var(--green); }
 .rantiles .down { color: var(--red); }
 .ranpills { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 14px; }
-.ranpill { padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.04); color: var(--muted); font-size: 11px; font-weight: 700; border: 1px solid var(--border); cursor: pointer; white-space: nowrap; }
+.ranpill { position: relative; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.04); color: var(--muted); font-size: 11px; font-weight: 700; border: 1px solid var(--border); cursor: pointer; white-space: nowrap; }
+/* La burbuja mide ~22 px de alto: el area tactil crece hacia arriba y abajo
+   (21/11/2026, el mismo mecanismo que .filtropill de Trades), NO a los lados,
+   que pisaria a la burbuja vecina. No cambia como se ve. */
+.ranpill::after { content: ''; position: absolute; top: -10px; bottom: -10px; left: 0; right: 0; }
 .ranpill.active { background: var(--gold); color: var(--on-gold); border-color: var(--gold); }
 html.light .ranpill { background: rgba(20,40,80,.05); }
 html.light .ranpill.active { background: var(--gold); color: #fff; border-color: var(--gold); }

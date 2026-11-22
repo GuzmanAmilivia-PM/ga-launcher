@@ -597,8 +597,17 @@ if (itauBox) {
 // instante y el pedido corre por atras (mismo criterio que cargarConCache).
 // Antes: "Cargando..." 1,5 s aunque hubieras salido hace 10 segundos.
 var enCache = !!(lastAcc && lastAcc.key === acc.key && lastAccData);
+// Y si no es la de la ultima visita (app recien abierta, u otra cuenta en el
+// medio), lo ultimo SANO que contesto el backend para ESTA cuenta, guardado
+// en el telefono (bucle de mejora del 21/11/2026): cada cuenta mostraba
+// "Loading..." ~0,4 s en cada apertura. Lo fresco se pide igual, mas abajo, y
+// reemplaza la pantalla y lo guardado. BTG no: tiene su propio cache (bancos.js).
+var guardadoAcc = (enCache || esBtg(acc)) ? null : accCacheLeer(acc.key);
 if (enCache) {
 renderAccount(acc, lastAccData);
+} else if (guardadoAcc) {
+renderAccount(acc, guardadoAcc.data);
+enCache = true;
 } else {
 document.getElementById('accTotal').textContent = 'Loading...';
 document.getElementById('accLiq').textContent = '';
@@ -625,6 +634,11 @@ if (esBtg(acc)) { lastAcc = acc; lastAccData = null; mostrarBtg(); return; }
 restaurarVistaCuenta();
 google.script.run.withSuccessHandler(function (data) {
 if (accPedida !== acc.key) return;   // respuesta tardia de una cuenta que ya no esta abierta
+// Un {ok:false} (o una respuesta sin total) no pisa lo que ya se ve ni lo
+// guardado: la regla del 9/10/2026 para todo lo que queda en el telefono.
+var sana = accDataSana(data);
+if (!sana && enCache) return;
+if (sana) accCacheGuardar(acc.key, data);
 renderAccount(acc, data);
 })
 .withFailureHandler(function (err) {
@@ -634,6 +648,29 @@ if (enCache) return;
 document.getElementById('accTotal').textContent = '--';
 errorEnVista('accError', err, 'the account detail');
 }).getAccountData(acc.key);
+}
+// El cache del detalle de cuenta (bucle de mejora del 21/11/2026). UNA sola
+// clave con un mapa por cuenta adentro —{ IB: { t, data }, CS: ... }— y no una
+// clave por cuenta: las plataformas son dinamicas y GA_CACHES (paneles.js) es
+// una lista fija que recorre el borrado de emergencia; una clave armada con el
+// nombre de la cuenta quedaria viva despues de "Olvide mi clave".
+// cacheLeer/cacheGuardar viven en paneles.js, que carga DESPUES: se llaman
+// solo en tiempo de ejecucion, nunca al cargar este archivo.
+var ACC_CACHE = 'ga_cache_acc';
+function accDataSana(data) {
+  return !!(data && typeof data === 'object' && data.ok !== false && !data.error &&
+    data.total != null && isFinite(Number(data.total)));
+}
+function accCacheLeer(key) {
+  var g = cacheLeer(ACC_CACHE);
+  var e = g && g.data && g.data[key];
+  return (e && accDataSana(e.data)) ? e : null;
+}
+function accCacheGuardar(key, data) {
+  var g = cacheLeer(ACC_CACHE);
+  var mapa = (g && g.data && typeof g.data === 'object') ? g.data : {};
+  mapa[key] = { t: Date.now(), data: data };
+  cacheGuardar(ACC_CACHE, mapa);
 }
 document.getElementById('accBack').onclick = function () { volver(accountReturnView); };
 // La variacion intradia por simbolo ya viaja en el payload del Inicio
@@ -716,7 +753,15 @@ if (!h.nombre) h.nombre = h.descripcion || '';
 if (acc.key === 'BNB' && h.cripto === undefined) h.cripto = true;
 var compra = Number(h.precioCompra) > 0 ? '<span class="pcmini">avg ' + esc(fmtNum(h.precioCompra)) + '</span>' : '';
 var tr = document.createElement('tr');
-tr.innerHTML = '<td>' + celdaInstrumentoHtml(h, esc(fmt(h.valor)) + gananciaHtml(h)) + '</td>' +
+// El valor va SIN el "USD " adelante (bucle de mejora del 21/11/2026): este
+// renglon vive en .desc, que corta con puntos suspensivos, y a 375 px se leia
+// "USD 62,000 +2…" — el prefijo se comia el % de ganancia. valorPelado sale de
+// fmt(), asi que el ojito de ocultar montos ('****') se sigue respetando.
+// El ESPACIO entre el valor y el % es a proposito (segunda vuelta): con el
+// mini-grafico en la fila el renglon tiene 78 px y no entran los dos; .accval
+// ya no corta con puntos suspensivos y ese espacio es por donde el % baja
+// ENTERO al renglon de abajo (pegados, un numero y un signo no se separan).
+tr.innerHTML = '<td>' + celdaInstrumentoHtml(h, esc(valorPelado(h.valor)) + ' ' + gananciaHtml(h)) + '</td>' +
 '<td class="col-spark">' + sparkDe(h) + '</td>' +
 '<td class="col-precio">' + daychgHtml(h) + esc(fmtNum(h.precioActual)) + compra + '</td>';
 tr.className = corte ? 'corte-grupo asset-row' : 'asset-row';
@@ -761,6 +806,9 @@ var pedida = lastAcc;
 accPedida = pedida.key;
 google.script.run.withSuccessHandler(function (data) {
 if (accPedida !== pedida.key) return;
+// Lo fresco tambien renueva lo guardado en el telefono (21/11/2026): si no,
+// la proxima apertura pintaria un instante el precio manual de ANTES de editarlo.
+if (accDataSana(data)) accCacheGuardar(pedida.key, data);
 renderAccount(pedida, data);
 })
 .withFailureHandler(function () {})
@@ -883,6 +931,14 @@ function renderPortafolio() {
 if (!lastData) return;
 var total = lastData.total || 0;
 var items = itemsPie();
+// Las burbujas Custodian / Class del pie de la tarjeta (21/11/2026): la
+// elegida se marca ACA, a partir de pieModo, con .active (la de .ranpill, que
+// pinta con el acento vivo). Los onclick de paneles.js solo cambian pieModo y
+// llaman aca: la unica verdad de cual esta encendida es esta. NUNCA
+// active-compra (esa es solo de Trades).
+var pieBtnC = document.getElementById('pieCuentaBtn'), pieBtnT = document.getElementById('pieTipoBtn');
+if (pieBtnC && pieBtnC.classList) pieBtnC.classList.toggle('active', pieModo === 'cuenta');
+if (pieBtnT && pieBtnT.classList) pieBtnT.classList.toggle('active', pieModo === 'tipo');
 // Torta
 if (pieChartInstance) pieChartInstance.destroy();
 pieChartInstance = new Chart(document.getElementById('pieChart'), {

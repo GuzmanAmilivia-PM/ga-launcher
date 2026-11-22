@@ -146,8 +146,10 @@ ok(filaInicio.indexOf('fmt(h.valor)') === -1,
   'el Inicio YA NO muestra el monto en dolares');
 ok(filaInicio.indexOf('gananciaHtml(h)') === -1,
   'ni la ganancia acumulada: quedo como lista de mercado');
-ok(trozoCuenta && trozoCuenta.indexOf('fmt(h.valor)') !== -1,
-  'el detalle de cuenta conserva el monto: no se toco');
+// Desde el 21/11/2026 el monto va con valorPelado (sin el "USD " adelante,
+// que a 375 px le comia el % de ganancia): sigue estando, y sale de fmt().
+ok(trozoCuenta && trozoCuenta.indexOf('valorPelado(h.valor)') !== -1,
+  'el detalle de cuenta conserva el monto (sin el prefijo de moneda)');
 ok(trozoCuenta && trozoCuenta.indexOf('gananciaHtml(h)') !== -1,
   'y conserva la ganancia acumulada');
 
@@ -864,6 +866,42 @@ ok(/Result<\/span><b class="up">25</.test(htmlSinValor) && htmlSinValor.indexOf(
 // ahi nunca apareceria la ganancia en dolares.
 var vistasSrc = fs.readFileSync(path.join(ruta.RUTA, 'js', 'vistas.js'), 'utf8');
 ok(/toggleDetalle\(tr, \{[^}]*valor: h\.valor/.test(vistasSrc), 'la pagina de la cuenta pasa `valor` al detalle');
+
+console.log('\nK) el orden del detalle: resultado grande, grafica, datos, indicadores (21/11/2026)');
+// Bucle de mejora del 21/11/2026: "lo principal en grande y la grafica en el
+// centro optico". El Result era el cuarto dato de la grilla, a 15 px, y la
+// grafica quedaba ~620 px abajo, despues de los indicadores: fuera de la
+// primera pantalla del telefono. Se custodia el ORDEN del HTML que arma
+// toggleDetalle, que es lo que decide que se ve sin deslizar.
+function pos4(h, clase) { return h.indexOf('class="' + clase + '"'); }
+// La grilla solo tiene <span> adentro: su primer </div> es el suyo.
+function grillaDe(h) { var i = pos4(h, 'detgrid'); return i === -1 ? '' : h.slice(i, h.indexOf('</div>', i)); }
+var iRes = pos4(htmlG, 'detres'), iTv = pos4(htmlG, 'tvwrap'), iGrid = pos4(htmlG, 'detgrid'), iFund = pos4(htmlG, 'detfund');
+ok(iRes !== -1 && iRes < iTv, 'el resultado grande va primero, arriba de la grafica (' + iRes + ' < ' + iTv + ')');
+ok(iTv !== -1 && iTv < iGrid, 'la grafica va antes que la grilla de datos (' + iTv + ' < ' + iGrid + ')');
+ok(iGrid !== -1 && iGrid < iFund, 'y los indicadores quedan al final (' + iGrid + ' < ' + iFund + ')');
+ok(grillaDe(htmlG).indexOf('Result') === -1, 'el Result ya no se repite adentro de la grilla');
+ok(/Quantity/.test(grillaDe(htmlG)) && /Average price/.test(grillaDe(htmlG)) && /Cost basis/.test(grillaDe(htmlG)),
+  'la grilla conserva los otros tres datos: no se saco ninguno');
+ok(htmlG.split('Result</span>').length === 2, 'y el Result aparece una sola vez en todo el detalle');
+// Con formulario de editar: va entre la grilla y los indicadores.
+var htmlOrdenEd = detalleDe({ symbol: 'BTC', precioCompra: 60000, precioActual: 80000, qty: 0.0321, valor: 2568, cuenta: 'BNB', gfTicker: null, cripto: true });
+ok(pos4(htmlOrdenEd, 'detres') < pos4(htmlOrdenEd, 'tvwrap') && pos4(htmlOrdenEd, 'tvwrap') < pos4(htmlOrdenEd, 'detgrid') &&
+  pos4(htmlOrdenEd, 'detgrid') < pos4(htmlOrdenEd, 'detedit') && pos4(htmlOrdenEd, 'detedit') < pos4(htmlOrdenEd, 'detfund'),
+  'con formulario: resultado, grafica, grilla, editar, indicadores');
+// Sin precio medio no hay resultado que mostrar: no se pinta un titular vacio,
+// y la grafica sigue arriba de la grilla.
+var htmlSinPm = detalleDe({ symbol: 'VOO', precioActual: 500, qty: 3, valor: 1500, cuenta: 'CS', gfTicker: 'VOO' });
+ok(pos4(htmlSinPm, 'detres') === -1 && pos4(htmlSinPm, 'tvwrap') !== -1 && pos4(htmlSinPm, 'tvwrap') < pos4(htmlSinPm, 'detgrid'),
+  'sin precio medio no hay titular vacio, y la grafica sigue arriba');
+// El tamano lo da la hoja de estilos: el titular es mas grande que un dato de
+// la grilla, y sin colores a mano (el verde/rojo viene de .up/.down).
+var cssDet = fs.readFileSync(path.join(ruta.RUTA, 'css', 'estilos.css'), 'utf8');
+var reglaRes = (cssDet.match(/\.detres b \{[^}]*\}/) || [''])[0];
+var pxRes = Number((reglaRes.match(/font-size:\s*(\d+)px/) || [0, 0])[1]);
+var pxGrid = Number(((cssDet.match(/\.detgrid b \{[^}]*\}/) || [''])[0].match(/font-size:\s*(\d+)px/) || [0, 0])[1]);
+ok(pxRes >= 24 && pxRes > pxGrid, 'el titular es grande de verdad: ' + pxRes + ' px contra ' + pxGrid + ' de la grilla');
+ok(!/#[0-9a-fA-F]{3,8}\b/.test((cssDet.match(/\.detres[^{]*\{[^}]*\}/g) || []).join(' ')), 'sin hexadecimales en las reglas del titular');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

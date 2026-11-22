@@ -141,7 +141,10 @@ ok(filas(m) === 3, 'YTD deja fuera la del año pasado (' + filas(m) + ' filas)')
 ok(/AAPL/.test(textoFilas(m)) === false, 'la venta del año pasado no aparece');
 ok(/1[.,]600/.test(m.elem('opsResumen').innerHTML), 'el resumen suma las compras (1000 + 600 = 1600)');
 ok(/Trades/.test(m.elem('opsResumen').innerHTML) && />3</.test(m.elem('opsResumen').innerHTML), 'el resumen cuenta 3 trades');
-ok(m.etiqueta('#opsFiltroRango b') === 'This year' && m.etiqueta('#opsFiltroTicker b') === 'All', 'los botones muestran lo elegido');
+ok(m.etiqueta('#opsFiltroRango b') === 'This year' && m.etiqueta('#opsFiltroTicker b') === 'All tickers', 'los botones muestran lo elegido');
+// Sin rotulo arriba (21/11/2026), un "All" pelado no dice de que: la burbuja lo aclara.
+ok(m.etiqueta('#opsFiltroTipo b') === 'All types', 'la burbuja de tipo dice "All types", no un "All" suelto');
+ok(m.elem('opsResumen').className === 'opslinea', 'el resumen es una linea liviana (no la caja con borde .opsresumen)');
 ok(/manual/.test(textoFilas(m)), 'la cargada a mano queda marcada');
 ok(/IBKR/.test(textoFilas(m)), 'la cuenta se muestra con la etiqueta de la app');
 ok(/Trades/.test(m.elem('opsAvisos').innerHTML), 'el aviso del backend se muestra');
@@ -152,7 +155,7 @@ m.elegir('opsFiltroRango', 'Since inception');
 ok(filas(m) === 4, 'todos los trades (' + filas(m) + ')');
 ok(/AAPL/.test(textoFilas(m)), 'ahora sí aparece el del año pasado');
 // El boton usa la etiqueta CORTA (a 375 px "Since inception" no entra).
-ok(m.etiqueta('#opsFiltroRango b') === 'All', 'el boton refleja lo elegido, en corto');
+ok(m.etiqueta('#opsFiltroRango b') === 'All time', 'el boton refleja lo elegido, en corto');
 ok(m.elem('opsPicker').style.display === 'none', 'la pantallita se cierra al elegir');
 m.elegir('opsFiltroRango', 'Last 3 months');
 ok(ENERO || filas(m) === 2, 'ultimos 3 meses: solo los de hace 5 dias (' + filas(m) + ')');
@@ -173,7 +176,7 @@ ok(/USD 600/.test(m.elem('opsResumen').innerHTML), 'el resumen acompaña al filt
 // Un refresco puede traer datos donde ese ticker ya no esta: sin la guarda, la
 // pantalla quedaba vacia y el filtro invisible.
 m.api.render({ ok: true, operaciones: [DATOS.operaciones[0]], avisos: [] });
-ok(m.etiqueta('#opsFiltroTicker b') === 'All' && filas(m) === 1, 'si el ticker elegido ya no existe, vuelve a Todos');
+ok(m.etiqueta('#opsFiltroTicker b') === 'All tickers' && filas(m) === 1, 'si el ticker elegido ya no existe, vuelve a Todos');
 
 console.log('\nD) un filtro sin resultados avisa, no deja la pantalla vacía');
 m.elegir('opsFiltroRango', 'This year');
@@ -197,6 +200,32 @@ ok(m.pedidos.length === 2 && m.pedidos[1].forzar === true, 'el boton de actualiz
 m.api.render({ ok: false, mensajes: ['x'] });
 ok(/Error del backend/.test(m.elem('opsBody').innerHTML), 'una respuesta con error se muestra, no rompe');
 ok(m.api.cargado() === false, 'el ok:false resetea opsCargadas: la proxima visita reintenta sola');
+
+// Bucle de mejora del 21/11/2026: "la lista primero, filtros en burbujas".
+// La vista abria con el formulario manual (casi no se usa), tres filtros en
+// caja con rotulo y un resumen enmarcado; la lista quedaba cuarta.
+console.log('\nF) la vista Trades: la lista primero, filtros en burbujas');
+var crudo = require('fs').readFileSync(ruta.INDEX, 'utf8');
+var css = require('fs').readFileSync(require('path').join(ruta.RUTA, 'css', 'estilos.css'), 'utf8');
+var vista = ruta.bloque(crudo, '<div id="view-trade"', '<div class="chartmodal" id="opsPicker"');
+var pLista = vista.indexOf('id="opsBody"'), pManual = vista.indexOf('id="tManual"');
+var pFiltros = vista.indexOf('class="opsfiltros"'), pResumen = vista.indexOf('id="opsResumen"');
+ok(pFiltros > 0 && pResumen > 0 && pFiltros < pLista && pResumen < pLista && pLista < pManual,
+  'el orden es filtros y resumen -> lista (opsBody) -> tarjeta manual (tManual) al pie');
+['opsFiltroRango', 'opsFiltroTipo', 'opsFiltroTicker'].forEach(function (id) {
+  var b = (vista.match(new RegExp('<button[^>]*id="' + id + '"[^>]*>[\\s\\S]*?</button>')) || [''])[0];
+  ok(/class="filtropill"/.test(b), id + ' usa la clase de burbuja');
+  ok(b !== '' && !/<span/.test(b) && /^<button[^>]*><b>[^<]+<\/b><\/button>$/.test(b), id + ' ya no lleva rotulo: solo el valor en su <b>');
+});
+ok(!/filtrobtn/.test(crudo) && !/\.filtrobtn/.test(css), 'no queda nada de la caja vieja (.filtrobtn)');
+var reglaPill = (css.match(/^\.filtropill \{[^}]*\}/m) || [''])[0];
+ok(/border-radius: 999px/.test(reglaPill) && /white-space: nowrap/.test(reglaPill) && !/ellipsis/.test(reglaPill),
+  'la burbuja es redonda y no corta el texto (nowrap, sin puntos suspensivos)');
+ok(/^\.opsfiltros \{[^}]*flex-wrap: wrap/m.test(css), 'si no entran a 375 px, el renglon envuelve en vez de recortar');
+ok(!/opsresumen/.test(codigo) && !/\.opsresumen/.test(css), 'el resumen ya no usa la clase con borde (.opsresumen)');
+var reglaLinea = (css.match(/^\.opslinea \{[^}]*\}/m) || [''])[0];
+ok(reglaLinea !== '' && !/border/.test(reglaLinea) && !/padding/.test(reglaLinea), 'la linea del resumen no tiene borde ni recuadro');
+ok(/html\.light \.filtropill \{/.test(css), 'la burbuja tiene su par del tema claro');
 
 console.log('\n' + asserts + ' asserts, ' + fallos + ' fallas');
 process.exit(fallos ? 1 : 0);

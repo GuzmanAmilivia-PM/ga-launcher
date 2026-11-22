@@ -243,13 +243,61 @@ console.log('\nH) el selector Por cuenta / Por tipo usa el ACENTO, no el verde d
 // verde, sin importar la paleta elegida, porque reusaba active-compra (la
 // clase de "COMPRA" en Trades). active-compra/venta quedan SOLO para Trades,
 // donde el verde/rojo es el dato real (compraste o vendiste).
-ok(indexCrudo.indexOf('class="tipobtn active-acento" id="pieCuentaBtn"') !== -1,
-  'el HTML arranca con Por cuenta en active-acento, no active-compra');
+// Desde el 21/11/2026 el selector son dos burbujas (.ranpill) AL PIE de la
+// tarjeta Allocation, debajo de la torta y su leyenda. La intencion es la
+// misma: el elegido usa el ACENTO (.ranpill.active pinta con --gold) y jamas
+// las clases de Trades.
+ok(indexCrudo.indexOf('class="ranpill active" id="pieCuentaBtn"') !== -1 &&
+   indexCrudo.indexOf('class="ranpill" id="pieTipoBtn"') !== -1,
+  'el HTML arranca con Custodian elegido, en burbujas (.ranpill.active), no active-compra');
+ok(!/active-(compra|venta)[^>]*id="pie(Cuenta|Tipo)Btn"/.test(indexCrudo), 'ninguna de las dos lleva las clases de Trades');
+ok(/\.ranpill\.active \{ background: var\(--gold\); color: var\(--on-gold\); border-color: var\(--gold\); \}/.test(indexCrudo),
+  '.ranpill.active pinta con el acento vivo (variables, no hex)');
+var tarjetaAsig = (indexCrudo.match(/<h2>Allocation<\/h2>[\s\S]*?<div class="card" id="anualCard"/) || [''])[0];
+var iTorta = tarjetaAsig.indexOf('<div class="piewrap">'), iLey = tarjetaAsig.indexOf('id="pieLegend"');
+var iSel = tarjetaAsig.indexOf('<div class="ranpills'), iBtn = tarjetaAsig.indexOf('id="pieCuentaBtn"');
+ok(iTorta !== -1 && iLey > iTorta && iSel > iLey && iBtn > iSel,
+  'en la tarjeta Allocation el selector viene DESPUES de la torta y la leyenda (al pie): torta ' + iTorta + ', leyenda ' + iLey + ', selector ' + iSel);
+ok(tarjetaAsig.indexOf('tipobar') === -1 && tarjetaAsig.indexOf('style=') === -1, 'sin la barra de botones grandes de antes ni estilos en linea');
+var reglaWrap = (indexCrudo.match(/\n\.piewrap \{[^}]*\}/) || [''])[0];
+var reglaHolder = (indexCrudo.match(/\n\.pieholder \{[^}]*\}/) || [''])[0];
+var ladoTorta = Number((reglaHolder.match(/width: (\d+)px/) || [0, 0])[1]);
+ok(/flex-direction: column/.test(reglaWrap), 'la leyenda va DEBAJO de la torta (columna), a todo el ancho');
+ok(/align-self: center/.test(reglaHolder) && ladoTorta >= 170 && ladoTorta <= 180, 'y la torta, centrada y mas grande (170-180 px): ' + ladoTorta);
+ok(!/@media \(max-width: 400px\) \{ \.pieholder/.test(indexCrudo), 'sin la regla que la achicaba a 128 px en el telefono');
+// Cual burbuja esta encendida lo decide renderPortafolio a partir de pieModo.
+var vistasSrcPie = fs.readFileSync(path.join(ruta.RUTA, 'js', 'vistas.js'), 'utf8');
+ok(/pieBtnC\.classList\.toggle\('active', pieModo === 'cuenta'\)/.test(vistasSrcPie) && /pieBtnT\.classList\.toggle\('active', pieModo === 'tipo'\)/.test(vistasSrcPie),
+  'renderPortafolio marca la burbuja elegida con .active segun pieModo');
 ok(/\.tipobtn\.active-acento \{ background: rgba\(var\(--gold-rgb\),\.16\); border-color: var\(--gold\); color: var\(--gold\); \}/.test(indexCrudo),
   'active-acento pinta con el acento vivo');
 var panelesSrc2 = fs.readFileSync(path.join(ruta.RUTA, 'js', 'paneles.js'), 'utf8');
-ok(panelesSrc2.indexOf("classList.add('active-acento')") !== -1 && panelesSrc2.indexOf("classList.add('active-compra')") === -1,
-  'el alternador de la torta usa active-acento; el classList.add ya no toca active-compra (el comentario que cuenta la historia no cuenta)');
+// Desde el 21/11/2026 los onclick de la torta no tocan NINGUNA clase (la
+// burbuja encendida la marca renderPortafolio): se mira el trozo de los dos
+// onclick, hasta el encabezado siguiente. La intencion de siempre: nunca
+// active-compra.
+var trozoTorta = panelesSrc2.slice(panelesSrc2.indexOf("document.getElementById('pieCuentaBtn').onclick"), panelesSrc2.indexOf('// ---------- Tarjeta deslizable'));
+ok(trozoTorta.indexOf("pieModo = 'cuenta'") !== -1 && trozoTorta.indexOf("pieModo = 'tipo'") !== -1 && (trozoTorta.match(/renderPortafolio\(\);/g) || []).length === 2,
+  'los dos botones de la torta cambian pieModo y repintan');
+ok(trozoTorta.indexOf('classList') === -1 && panelesSrc2.indexOf("classList.add('active-compra')") === -1,
+  'y no tocan ninguna clase: ni active-compra (solo de Trades) ni el active-acento que sobre una burbuja no pintaba nada');
+// La torta en el escritorio: al costado de la leyenda y de 150 px (con los
+// 176 del telefono la leyenda se quedaba sin ancho a 1280 px). Se mira el
+// trozo de Portfolio DENTRO del bloque de escritorio.
+var iEsc = indexCrudo.indexOf('@media (min-width: 1100px) {');
+var trozoEsc = indexCrudo.slice(indexCrudo.indexOf('#view-portafolio {', iEsc), indexCrudo.indexOf('#view-watchlist {', iEsc));
+ok(iEsc !== -1 && /\n  \.piewrap \{ flex-direction: row;/.test(trozoEsc) && /\n  \.pieholder \{ width: 150px; height: 150px; \}/.test(trozoEsc),
+  'en el bloque de escritorio la torta va al costado y mide 150 px');
+// Segunda devolucion (22/11/2026): la fila de la leyenda no puede depender del
+// ancho. En escritorio se apila como en el telefono y el nombre no se recorta.
+ok(/\n  \.piewrap \.pierow \{ flex-direction: column;/.test(trozoEsc) && /\n  \.piewrap \.pierow \.lname \{ overflow: visible; text-overflow: clip; white-space: normal; \}/.test(trozoEsc),
+  'en escritorio la fila de la leyenda va apilada y el nombre de la cuenta entero: no depende de cuantos digitos tenga el monto');
+ok((indexCrudo.match(/@media \(min-width: 1100px\)/g) || []).length === 1, 'y sigue habiendo UN solo bloque de escritorio (test-escritorio toma el primero)');
+// El area tactil de las burbujas (.ranpill mide ~22 px de alto): crece solo
+// en vertical, como .filtropill.
+ok(/\n\.ranpill \{ position: relative; /.test(indexCrudo) &&
+   /\n\.ranpill::after \{ content: ''; position: absolute; top: -10px; bottom: -10px; left: 0; right: 0; \}/.test(indexCrudo),
+  'las burbujas tienen area tactil extendida arriba y abajo (no a los lados, que pisaria a la vecina)');
 var configSrc3 = fs.readFileSync(path.join(ruta.RUTA, 'js', 'config.js'), 'utf8');
 ok(configSrc3.indexOf("toggle('active-acento'") !== -1,
   'los botones de Tema tambien: es el mismo concepto (control activo generico), una sola clase');

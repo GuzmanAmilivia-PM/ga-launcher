@@ -3,16 +3,17 @@
 // active-acento, no active-compra: este selector no es un compra/venta y
 // usaba prestada la clase verde de Trades — salía SIEMPRE verde sin importar
 // la paleta elegida (reporte de Guzmán, 26/08/2026, con captura).
+// Desde el 21/11/2026 son dos burbujas (.ranpill) al pie de la tarjeta, y cual
+// esta encendida lo marca renderPortafolio (vistas.js) con .active a partir
+// de pieModo: aca ya no se toca ninguna clase. active-acento sobre una
+// .ranpill no pintaba nada y quedaba de basura. Lo que sigue valiendo de
+// aquella historia: NUNCA active-compra en este selector.
 document.getElementById('pieCuentaBtn').onclick = function () {
 pieModo = 'cuenta';
-this.classList.add('active-acento');
-document.getElementById('pieTipoBtn').classList.remove('active-acento');
 renderPortafolio();
 };
 document.getElementById('pieTipoBtn').onclick = function () {
 pieModo = 'tipo';
-this.classList.add('active-acento');
-document.getElementById('pieCuentaBtn').classList.remove('active-acento');
 renderPortafolio();
 };
 
@@ -129,7 +130,10 @@ var MESES_CORTOS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep
 // borrado de emergencia (seguridad.js) la recorre; una clave nueva que no se
 // anote aca queda viva despues de "Olvide mi clave".
 var GA_CACHES = ['ga_cache_data', 'ga_cache_div', 'ga_cache_apo', 'ga_cache_ops', 'ga_cache_ana', 'ga_cache_wl', 'ga_cache_news', 'ga_cache_disp', 'ga_cache_btg', 'ga_cache_ran',
-  'ga_cache_rend_IB', 'ga_cache_rend_CS', 'ga_cache_rend_BNB'];
+  'ga_cache_rend_IB', 'ga_cache_rend_CS', 'ga_cache_rend_BNB',
+  // El detalle de cada cuenta (21/11/2026): UNA clave con un mapa por cuenta
+  // adentro, justamente para que esta lista fija la alcance (ver vistas.js).
+  'ga_cache_acc'];
 function cacheLeer(clave) {
 try {
 var j = JSON.parse(localStorage.getItem(clave) || 'null');

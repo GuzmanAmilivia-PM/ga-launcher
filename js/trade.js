@@ -145,13 +145,17 @@ mostrarResultado('Error: ' + esc(err.message), false);
 var opsRango = 'ytd', opsTipo = 'todas', opsTicker = 'todos', lastOps = null;
 // t = lo que dice la pantallita de opciones; c = lo que entra en el boton
 // (en un telefono de 375 px el boton mide ~87: "Desde el inicio" se cortaba).
+// Desde el 21/11/2026 (bucle de mejora: la lista primero, filtros en burbujas)
+// el boton es una burbuja SIN rotulo arriba: un "All" pelado ya no dice de
+// que, asi que la etiqueta corta lo aclara ("All time", "All types", "All
+// tickers"). La pantallita sigue diciendo "All": ahi el titulo ya lo explica.
 var OPS_RANGOS = [
 { v: 'ytd', t: 'This year', c: 'This year' },
 { v: '3m', t: 'Last 3 months', c: '3 months' },
-{ v: 'todo', t: 'Since inception', c: 'All' }
+{ v: 'todo', t: 'Since inception', c: 'All time' }
 ];
 var OPS_TIPOS = [
-{ v: 'todas', t: 'All' },
+{ v: 'todas', t: 'All', c: 'All types' },
 { v: 'compra', t: 'Buys' },
 { v: 'venta', t: 'Sells' }
 ];
@@ -188,7 +192,7 @@ if (o.symbol && !vistos[o.symbol]) { vistos[o.symbol] = true; symbols.push(o.sym
 });
 symbols.sort();
 _opsTickersDe = lastOps;
-_opsTickersCache = [{ v: 'todos', t: 'All' }].concat(symbols.map(function (s) { return { v: s, t: s }; }));
+_opsTickersCache = [{ v: 'todos', t: 'All', c: 'All tickers' }].concat(symbols.map(function (s) { return { v: s, t: s }; }));
 return _opsTickersCache;
 }
 function opsTexto(opciones, valor) {
@@ -285,7 +289,9 @@ var compras = 0, ventas = 0;
 lista.forEach(function (o) {
 if (o.tipo === 'compra') compras += Number(o.monto) || 0; else ventas += Number(o.monto) || 0;
 });
-resumenEl.className = 'opsresumen';
+// Una linea liviana, sin recuadro (21/11/2026): el borde propio era otro
+// marco mas antes de llegar a la lista.
+resumenEl.className = 'opslinea';
 resumenEl.innerHTML =
 '<div><span>Trades</span><b>' + lista.length + '</b></div>' +
 '<div><span>Buys</span><b class="up">' + esc(opsMonto(compras)) + '</b></div>' +

@@ -56,6 +56,9 @@ var preambulo = 'var montosOcultos = false;\nvar sparksPorSym = {};\n' +
   fuente('extHtml', /function extHtml\(p\) \{[\s\S]*?\n\}/) + '\n' +
   fuente('daychgHtml', /function daychgHtml\(p\) \{[\s\S]*?\n\}/) + '\n' +
   fuente('gananciaHtml', /function gananciaHtml\(p\) \{[\s\S]*?\n\}/) + '\n' +
+  // El valor sin el "USD " adelante (21/11/2026): renderAccount lo usa y vive
+  // DESPUES del marcador que cierra el bloque de la cuenta.
+  fuente('valorPelado', /function valorPelado\(v\) \{[\s\S]*?\n\}/) + '\n' +
   // El respaldo que saca el tipo del payload del Inicio. Se ancla en su
   // `return null;` final porque el `}` del for queda al principio de una linea
   // y el patron de siempre cortaria la funcion por la mitad.
@@ -163,6 +166,35 @@ ok(clasesCS[2].indexOf('corte-grupo') !== -1,
    'y cae arriba de la PRIMERA accion (META), no abajo del ultimo ETF');
 ok(clasesCS[0].indexOf('corte-grupo') === -1, 'la primera fila de todas NO lleva linea: no abre un grupo nuevo, abre la tabla');
 ok(clasesCS.every(function (c) { return c.indexOf('asset-row') !== -1; }), 'todas las filas siguen siendo asset-row (se puede tocar para abrir el detalle)');
+
+// El % de ganancia entra ENTERO (bucle de mejora del 21/11/2026). El renglon
+// de abajo del simbolo vive en .desc, que corta con puntos suspensivos: con el
+// prefijo, a 375 px se leia "USD 23,593 +6…". Ahora el valor va pelado. Se
+// mira la fila que de verdad se escribio (VOO: 715 contra 431,9 de compra).
+var apiVal = evaluar(ctxCuenta, codigoCuenta,
+  '{ renderAccount: renderAccount, gananciaHtml: gananciaHtml, ocultar: function (v) { montosOcultos = v; } }');
+apiVal.renderAccount({ key: 'CS', nombre: 'CS' }, schwab);
+var filaVoo = ctxCuenta._els.accBody.children[0].innerHTML;
+var pctVoo = apiVal.gananciaHtml(schwab.posiciones[0]);
+ok(/\+65\.55%/.test(pctVoo), 'el % de VOO es el esperado (+65.55%): ' + pctVoo.replace(/<[^>]+>/g, ''));
+ok(filaVoo.indexOf('USD ') === -1, 'la fila ya no lleva "USD " delante del valor');
+ok(filaVoo.indexOf('accval">23,593 ' + pctVoo + '</span>') !== -1, 'el renglon ARRANCA con el valor pelado ("23,593") y sigue, tras un espacio, su % COMPLETO');
+// Segunda vuelta (21/11/2026): con el mini-grafico del mes en la fila quedan
+// 78 px y los dos no entran. El renglon ya no corta con puntos suspensivos:
+// parte ENTRE el valor y el % (por ese espacio) y el % no se corta por dentro.
+// ALCANCE: mira las reglas escritas; la medida a 375 px la hizo el verificador.
+ok(/^<span class="daychg (up|down)">[^<]+<\/span>$/.test(pctVoo), 'el % viaja en su propio elemento (.daychg)');
+var reglaAccval = (html.match(/\n\.holdtable \.desc\.accval \{[^}]*\}/) || [''])[0];
+var reglaAccPct = (html.match(/\n\.accval \.daychg \{[^}]*\}/) || [''])[0];
+ok(/white-space: normal/.test(reglaAccval) && /overflow: visible/.test(reglaAccval) && !/ellipsis|nowrap/.test(reglaAccval),
+   'el renglon del valor (.holdtable .desc.accval) no tiene elipsis ni nowrap: puede partir en dos');
+ok(/white-space: nowrap/.test(reglaAccPct) && /display: inline-block/.test(reglaAccPct), 'y el % tiene su propio nowrap: baja entero, no se corta por dentro');
+ok(/\n\.holdtable \.desc \{[^}]*text-overflow: ellipsis/.test(html), 'los demas .desc de las tablas conservan su elipsis (no se toco)');
+apiVal.ocultar(true);
+apiVal.renderAccount({ key: 'CS', nombre: 'CS' }, schwab);
+var filaOculta = ctxCuenta._els.accBody.children[0].innerHTML;
+ok(filaOculta.indexOf('accval">**** ' + pctVoo) !== -1 &&filaOculta.indexOf('23,593') === -1,
+   'con los montos ocultos el valor sigue siendo "****" (el ojito se respeta) y el % se ve');
 
 // La MISMA cuenta servida por un cache viejo, SIN `tipo` en ninguna fila: el
 // respaldo la saca del payload del Inicio, que lista la cartera entera. Sin
