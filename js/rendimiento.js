@@ -331,10 +331,12 @@ function ranSeries(r) {
       var c = {}; for (var k in a) c[k] = a[k];
       c.aprox = true; previos.push(c);
     });
-    s.push({ key: 'total', label: 'Total', anios: cartera.concat(previos), aprox: previos.length > 0, desde: cartera[cartera.length - 1].desde });
+    s.push({ key: 'total', label: 'Total', anios: cartera.concat(previos), aprox: previos.length > 0, desde: cartera[cartera.length - 1].desde,
+      rangos: (r.rangos && r.rangos.total) || null });
   }
   (r.cuentas || []).forEach(function (c) {
-    s.push({ key: 'c:' + (c.cuenta || c.nombre), label: ranCorto(c.nombre), anios: c.anios || [], cuenta: c });
+    s.push({ key: 'c:' + (c.cuenta || c.nombre), label: ranCorto(c.nombre), anios: c.anios || [], cuenta: c,
+      rangos: (r.rangos && c.cuenta && r.rangos[c.cuenta]) || null });
   });
   return s.filter(function (x) { return x.anios.length; });
 }
@@ -430,7 +432,46 @@ function ranNota(s, r) {
   if (r.indice && r.indice.nota) t += ' Index: ' + esc(r.indice.nota) + '.';
   return '<details class="rannota"><summary>How this is measured</summary><p class="capnota">' + t + '</p></details>';
 }
+// El periodo (23/11/2026, pedido de Guzman: "deberia de tener eleccion YTD,
+// 1 AÑO, 2 AÑOS, 5 AÑOS, DESDE INICIO"). Las barras siguen siendo año por
+// año; el periodo elige las tres cifras de abajo: vos, el indice y la
+// diferencia, del MISMO tramo. Los numeros los calcula el Worker (rangos);
+// aca no se recalcula nada. Un periodo mas largo que la historia lo dice
+// ("Since ..."), y el que mete los brokers antes de la cartera entera,
+// tambien (aprox).
+var RAN_PERIODOS = [
+  { key: 'ytd', label: 'YTD' }, { key: '1a', label: '1Y' }, { key: '2a', label: '2Y' },
+  { key: '5a', label: '5Y' }, { key: 'origen', label: 'All' }
+];
+var ranPeriodo = 'ytd';
+function ranHora(ms) {
+  var d = new Date(ms), hoy = new Date();
+  var hh = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return d.toDateString() === hoy.toDateString() ? 'today ' + hh : rendFechaConAnio(ms);
+}
+function ranPeriodoHtml(s) {
+  var g = s.rangos;
+  if (!g) return '';
+  var h = '<div class="ranpills ranper" id="ranPer">';
+  RAN_PERIODOS.forEach(function (p) {
+    h += '<button type="button" class="ranpill' + (p.key === ranPeriodo ? ' active' : '') + '" data-periodo="' + p.key + '"' + (g[p.key] ? '' : ' disabled') + '>' + p.label + '</button>';
+  });
+  h += '</div>';
+  var x = g[ranPeriodo];
+  if (!x) return h + '<p class="capnota" style="text-align:center">Not enough history for this period.</p>';
+  function anual(v) { return ranTiene(v) ? '<em>' + signoPct(Number(v), 1) + '/yr</em>' : '<em>&nbsp;</em>'; }
+  h += '<div class="rantiles">' +
+    '<div><span>You</span>' + rendPct(x.twr) + anual(x.anual) + '</div>' +
+    '<div><span>Index</span>' + rendPct(x.spy) + anual(x.spyAnual) + '</div>' +
+    '<div><span>Difference</span>' + (ranTiene(x.pp) ? '<b class="' + (x.pp >= 0 ? 'up' : 'down') + '">' + (x.pp >= 0 ? '+' : '−') + Math.abs(x.pp).toFixed(1) + '</b>' : '&mdash;') + '<em>points</em></div>' +
+    '</div>';
+  var t = rendFechaConAnio(x.desde) + ' → ' + ranHora(x.hasta);
+  if (x.parcial) t += ' · all the history there is';
+  if (x.aprox) t += ' · before ' + rendFechaConAnio(x.corte) + ', brokers only (approx.)';
+  return h + '<p class="ranrango">' + esc(t) + '</p>';
+}
 function ranElegir(key) { ranSerie = key; renderRendAnual(); }
+function ranElegirPeriodo(key) { ranPeriodo = key; renderRendAnual(); }
 function renderRendAnual() {
   var elC = document.getElementById('ranCartera');
   if (!elC) return;
@@ -456,7 +497,9 @@ function renderRendAnual() {
       });
       h += '</div>';
     }
-    h += ranResumen(s.anios, idx, s.aprox);
+    // Con rangos, el periodo elegido; sin ellos (un cache de antes del
+    // 23/11/2026), el resumen de siempre.
+    h += s.rangos ? ranPeriodoHtml(s) : ranResumen(s.anios, idx, s.aprox);
     h += ranNota(s, r);
   }
   (r.avisos || []).forEach(function (x) { h += '<p class="newsempty" style="font-size:12px">&#9888; ' + esc(x) + '</p>'; });
@@ -465,6 +508,10 @@ function renderRendAnual() {
   var chips = elC.querySelectorAll('#ranSel [data-serie]');
   for (var i = 0; i < chips.length; i++) {
     chips[i].addEventListener('click', function (ev) { ranElegir(ev.currentTarget.getAttribute('data-serie')); });
+  }
+  var pers = elC.querySelectorAll('#ranPer [data-periodo]');
+  for (var j = 0; j < pers.length; j++) {
+    pers[j].addEventListener('click', function (ev) { ranElegirPeriodo(ev.currentTarget.getAttribute('data-periodo')); });
   }
 }
 (function () {

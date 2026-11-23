@@ -1428,6 +1428,11 @@ a.galink { color: inherit; text-decoration: none; }
    que pisaria a la burbuja vecina. No cambia como se ve. */
 .ranpill::after { content: ''; position: absolute; top: -10px; bottom: -10px; left: 0; right: 0; }
 .ranpill.active { background: var(--gold); color: var(--on-gold); border-color: var(--gold); }
+/* El periodo de Performance (23/11/2026): la segunda fila de burbujas, pegada
+   a las cifras que elige, y la linea de desde-hasta debajo. */
+.ranpills.ranper { margin-top: 10px; }
+.ranpill[disabled] { opacity: .35; cursor: default; }
+.ranrango { margin: 6px 0 0; text-align: center; color: var(--muted); font-size: 11px; }
 html.light .ranpill { background: rgba(20,40,80,.05); }
 html.light .ranpill.active { background: var(--gold); color: #fff; border-color: var(--gold); }
 .rantiles { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; margin-top: 16px; }
