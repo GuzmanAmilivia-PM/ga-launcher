@@ -588,21 +588,50 @@ function pintarFundamentales(r, caja) {
       (viejo ? ' · <b>' + esc(etf.dias) + ' days old</b>' : '') + '</p>';
   }
   var ind = r.indicadores || [];
+  // De CUANDO son los multiplos de una accion (24/11/2026). El proveedor no
+  // siempre tiene el ultimo balance: el PER de ASML salia de balances al
+  // 28/06 con el tercer trimestre publicado hacia 41 dias, y la ficha lo
+  // mostraba como el de hoy. El Worker manda hasta que balance llegan
+  // (datosAl) y si ya se publico uno posterior (atrasado): entonces el aviso
+  // va ARRIBA de la tabla y la tabla se atenua, igual que la ficha vieja de
+  // un ETF. El numero no se corrige a mano: se dice de cuando es.
+  var atrasado = !etf && r.atrasado === true && !!r.datosAl && !!(r.ultimoBalance && r.ultimoBalance.periodo);
+  if (atrasado) {
+    h += '<p class="detfund-aviso"><b>Out of date.</b> These ratios use financial statements through ' + esc(r.datosAl) +
+      '. The quarter ended ' + esc(r.ultimoBalance.periodo) + ' has already been reported and the data provider has not loaded it yet.</p>';
+  }
   if (ind.length) {
-    h += '<div class="detfund-tabla' + (viejo ? ' detfund-viejo' : '') + '">';
+    h += '<div class="detfund-tabla' + ((viejo || atrasado) ? ' detfund-viejo' : '') + '">';
     ind.forEach(function (i) {
       h += '<div class="detfund-fila"><span>' + esc(i.nombre) + '</span><b>' + esc(i.valor) + '</b>' +
         (i.contexto ? '<em>' + esc(i.contexto) + '</em>' : '') + '</div>';
     });
     h += '</div>';
+    if (!etf && r.datosAl && !atrasado) {
+      h += '<p class="detfund-asof">financial statements through ' + esc(r.datosAl) + ', source Finnhub</p>';
+    }
   }
   var e = r.estimaciones || {};
   var pr = e.proximoReporte;
   if (e.forwardPE || pr || e.consenso) {
     h += '<p class="detfund-tit">Looking forward</p><div class="detfund-tabla">';
     if (e.forwardPE) {
-      h += '<div class="detfund-fila"><span>Forward P/E</span><b>' + esc(e.forwardPE) + '</b>' +
-        (e.forwardPEG ? '<em>forward PEG ' + esc(e.forwardPEG) + '</em>' : '') + '</div>';
+      // El PER a futuro no trae fecha y en muchas acciones no se mueve con el
+      // precio: el proveedor lo recalcula cada tanto. El Worker anota desde
+      // cuando no cambia; se dice cuando lleva dias igual (forwardQuieto) y se
+      // marca cuando es anterior al ultimo balance (forwardVencido).
+      var fw = e.forwardPEG ? 'forward PEG ' + esc(e.forwardPEG) : '';
+      var fwFecha = '';
+      if (e.forwardDesde && (e.forwardQuieto || e.forwardVencido)) {
+        fwFecha = 'unchanged since ' + (e.forwardDesdeExacto === false ? 'at least ' : '') + esc(e.forwardDesde);
+        if (e.forwardVencido) {
+          fwFecha = 'Out of date: ' + fwFecha + ', before the last earnings report' +
+            (e.ultimoReporte ? ' (' + esc(e.ultimoReporte) + ')' : '');
+        }
+      }
+      h += '<div class="detfund-fila"><span>Forward P/E</span><b' + (e.forwardVencido ? ' class="detfund-viejo"' : '') + '>' + esc(e.forwardPE) + '</b>' +
+        (fw ? '<em>' + fw + '</em>' : '') +
+        (fwFecha ? '<em' + (e.forwardVencido ? ' class="detfund-alerta"' : '') + '>' + fwFecha + '</em>' : '') + '</div>';
     }
     if (pr) {
       var det = [];
@@ -615,7 +644,7 @@ function pintarFundamentales(r, caja) {
     if (e.consenso) {
       var c = e.consenso;
       h += '<div class="detfund-fila"><span>Analyst consensus</span><b>' + c.compra + ' buy · ' + c.mantener + ' hold · ' + c.venta + ' sell</b>' +
-        '<em>what other analysts publish, not a suggestion from this app</em></div>';
+        '<em>' + (c.periodo ? 'as of ' + esc(c.periodo) + ' · ' : '') + 'what other analysts publish, not a suggestion from this app</em></div>';
     }
     h += '</div>';
   }

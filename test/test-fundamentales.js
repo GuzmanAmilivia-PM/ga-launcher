@@ -224,7 +224,9 @@ ok(/26 holdings \(as of 2026-09-14, source stockanalysis\.com\) · top holdings 
 // Una accion comun NO trae `etf`: su ficha sigue igual que antes.
 var caja10 = m7.nuevoElem();
 m7.api.pintar(FICHA, caja10);
-ok(!/as of/.test(caja10.innerHTML) && !/What to read here/.test(caja10.innerHTML), 'una accion no muestra nada de esto');
+// (Desde el 24/11/2026 el consenso de una accion dice "as of <mes>": lo que no
+// tiene que aparecer es la CABECERA de la ficha curada, no la frase suelta.)
+ok(!/<p class="detfund-asof">as of/.test(caja10.innerHTML) && !/What to read here/.test(caja10.innerHTML), 'una accion no muestra nada de esto');
 
 console.log('\nI) los indicadores abren con lo guardado en el telefono (bucle de mejora, vuelta 2, 22/11/2026)');
 // La cache en memoria moria al cerrar la app: cada reapertura volvia a mostrar
@@ -294,6 +296,98 @@ var simbT = gT.map(function (e) { return e.s; });
 ok(gT.length === 40, '(e) con 41 simbolos quedan 40 guardados (' + gT.length + ')');
 ok(simbT.indexOf('S1') === -1 && simbT.indexOf('S2') !== -1 && simbT[0] === 'S41',
   '(e) el que queda afuera es el mas viejo, y el mas nuevo va primero');
+
+console.log('\nJ) de que fecha es cada dato, y el aviso cuando el proveedor esta atrasado (24/11/2026)');
+// El caso que lo destapo: el proveedor tenia los balances de una empresa
+// hasta junio con el tercer trimestre publicado hacia semanas, y su PER a
+// futuro llevaba dos meses sin moverse. La ficha lo mostraba como el de hoy.
+// Los campos son los que manda el Worker (Fundamentales.js); los numeros son
+// inventados con la forma del caso real.
+var ATRASADA = JSON.parse(JSON.stringify(FICHA));
+ATRASADA.datosAl = '2026-06-28';
+ATRASADA.ultimoBalance = { periodo: '2026-09-30' };
+ATRASADA.atrasado = true;
+ATRASADA.estimaciones.forwardDesde = '2026-09-24';
+ATRASADA.estimaciones.forwardDesdeExacto = true;
+ATRASADA.estimaciones.forwardQuieto = true;
+ATRASADA.estimaciones.forwardVencido = true;
+ATRASADA.estimaciones.ultimoReporte = '2026-10-14';
+var mJ = montar();
+var cajaJ = mJ.nuevoElem();
+mJ.api.pintar(ATRASADA, cajaJ);
+var hJ = cajaJ.innerHTML;
+ok(/<p class="detfund-aviso"><b>Out of date\.<\/b> These ratios use financial statements through 2026-06-28\. The quarter ended 2026-09-30 has already been reported/.test(hJ),
+  'el aviso dice hasta que balance llegan los multiplos y cual ya se publico');
+ok(hJ.indexOf('detfund-aviso') < hJ.indexOf('detfund-tabla'), 'y va ARRIBA de la tabla: se lee antes que el numero');
+ok(/<div class="detfund-tabla detfund-viejo">/.test(hJ), 'la tabla se atenua, como la ficha vieja de un ETF');
+ok(/27\.7x/.test(hJ), 'el numero del proveedor sigue a la vista: el atraso se avisa, no se tapa ni se corrige');
+ok(!/financial statements through 2026-06-28, source Finnhub/.test(hJ), 'la fecha no se repite abajo cuando ya la dijo el aviso');
+ok(/Forward P\/E<\/span><b class="detfund-viejo">22\.9x<\/b>/.test(hJ), 'el PER a futuro vencido se atenua');
+ok(/<em class="detfund-alerta">Out of date: unchanged since 2026-09-24, before the last earnings report \(2026-10-14\)<\/em>/.test(hJ),
+  'y dice desde cuando no cambia y que es anterior al ultimo balance');
+ok(/<em>forward PEG 1\.34<\/em>/.test(hJ), 'el PEG sigue en su renglon');
+ok(/as of 2026-08-01 · what other analysts publish/.test(hJ), 'el consenso dice de que mes es');
+
+// Al dia: la fecha va chica, debajo de la tabla, y nada se atenua.
+var AL_DIA = JSON.parse(JSON.stringify(FICHA));
+AL_DIA.datosAl = '2026-09-30';
+AL_DIA.ultimoBalance = { periodo: '2026-09-30' };
+AL_DIA.atrasado = false;
+AL_DIA.estimaciones.forwardDesde = '2026-11-03';
+AL_DIA.estimaciones.forwardDesdeExacto = true;
+AL_DIA.estimaciones.forwardQuieto = true;
+AL_DIA.estimaciones.ultimoReporte = '2026-10-28';
+var cajaJ2 = mJ.nuevoElem();
+mJ.api.pintar(AL_DIA, cajaJ2);
+var hJ2 = cajaJ2.innerHTML;
+ok(/<p class="detfund-asof">financial statements through 2026-09-30, source Finnhub<\/p>/.test(hJ2), 'al dia: la fecha de los balances, discreta, debajo de la tabla');
+ok(!/detfund-aviso/.test(hJ2) && !/detfund-viejo/.test(hJ2) && !/Out of date/.test(hJ2), 'sin aviso y sin atenuar');
+ok(/<em>unchanged since 2026-11-03<\/em>/.test(hJ2), 'un PER a futuro quieto pero posterior al balance: la fecha, sin alarma');
+
+// "Por lo menos desde": el registro nacio ese dia y no se sabe cuanto llevaba.
+var COTA = JSON.parse(JSON.stringify(AL_DIA));
+COTA.estimaciones.forwardDesdeExacto = false;
+var cajaJ3 = mJ.nuevoElem();
+mJ.api.pintar(COTA, cajaJ3);
+ok(/unchanged since at least 2026-11-03/.test(cajaJ3.innerHTML), 'una cota se dice como cota');
+
+// Uno que se mueve todos los dias no lleva fecha: seria ruido.
+var VIVO = JSON.parse(JSON.stringify(AL_DIA));
+VIVO.estimaciones.forwardDesde = '2026-11-24';
+delete VIVO.estimaciones.forwardQuieto;
+var cajaJ4 = mJ.nuevoElem();
+mJ.api.pintar(VIVO, cajaJ4);
+ok(!/unchanged since/.test(cajaJ4.innerHTML), 'el que cambia todos los dias no dice nada');
+
+// Una ficha guardada en el telefono ANTES del cambio (sin los campos nuevos)
+// se pinta como siempre: ni fecha inventada ni aviso.
+var cajaJ5 = mJ.nuevoElem();
+mJ.api.pintar(FICHA, cajaJ5);
+ok(!/financial statements through/.test(cajaJ5.innerHTML) && !/detfund-aviso/.test(cajaJ5.innerHTML) && !/unchanged since/.test(cajaJ5.innerHTML),
+  'una ficha anterior al cambio no muestra ninguna fecha que no tiene');
+// Marcada atrasada pero sin las dos fechas: no se afirma un atraso a medias.
+var RARA = JSON.parse(JSON.stringify(FICHA));
+RARA.atrasado = true;
+var cajaJ6 = mJ.nuevoElem();
+mJ.api.pintar(RARA, cajaJ6);
+ok(!/detfund-aviso/.test(cajaJ6.innerHTML) && !/detfund-viejo/.test(cajaJ6.innerHTML), 'sin las fechas no hay aviso');
+// La ficha curada de un ETF no se toca: tiene su propia fecha.
+var ETF_CON = JSON.parse(JSON.stringify(FICHA_ETF));
+ETF_CON.datosAl = '2026-06-28'; ETF_CON.atrasado = true; ETF_CON.ultimoBalance = { periodo: '2026-09-30' };
+var cajaJ7 = mJ.nuevoElem();
+mJ.api.pintar(ETF_CON, cajaJ7);
+ok(!/detfund-aviso/.test(cajaJ7.innerHTML) && !/financial statements through/.test(cajaJ7.innerHTML), 'un ETF sigue con su ficha curada, sin estos campos');
+// Las fechas vienen del backend: tambien se escapan.
+var MALA = JSON.parse(JSON.stringify(ATRASADA));
+MALA.datosAl = '<img src=x>'; MALA.estimaciones.forwardDesde = '<i>x</i>';
+var cajaJ8 = mJ.nuevoElem();
+mJ.api.pintar(MALA, cajaJ8);
+ok(cajaJ8.innerHTML.indexOf('<img src=x>') === -1 && cajaJ8.innerHTML.indexOf('<i>x</i>') === -1, 'las fechas del backend se escapan');
+// Los estilos existen y no traen hexadecimales (regla de la paleta).
+var cssJ = require('fs').readFileSync(require('path').join(ruta.RUTA, 'css', 'estilos.css'), 'utf8');
+var reglaAviso = (cssJ.match(/\.detfund-aviso \{[^}]*\}/) || [''])[0];
+ok(reglaAviso && /var\(--gold\)/.test(reglaAviso) && !/#[0-9a-f]{3,6}/i.test(reglaAviso), 'el aviso usa el acento vivo, sin colores fijos (mira la regla escrita, no mide pantalla)');
+ok(/\.detfund-fila > em\.detfund-alerta \{[^}]*var\(--gold\)/.test(cssJ), 'y la alerta del PER a futuro tambien');
 
 var panelesSrc = require('fs').readFileSync(require('path').join(ruta.RUTA, 'js', 'paneles.js'), 'utf8');
 var listaCaches = (panelesSrc.match(/var GA_CACHES = \[[\s\S]*?\];/) || [''])[0];

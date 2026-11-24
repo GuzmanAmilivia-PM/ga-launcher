@@ -334,6 +334,12 @@ canvas { max-width: 100%; }
    se atenua entera: se lee como historia, no como hoy. */
 .detfund-asof { font-size: 10.5px; color: var(--muted); margin: 3px 0 0; letter-spacing: .01em; }
 .detfund-viejo { opacity: .55; }
+/* Los multiplos de una accion que el proveedor todavia no actualizo con el
+   ultimo balance (24/11/2026): el aviso va arriba de la tabla atenuada, con
+   el acento de "atencion" (el mismo de la pagina Analysis). Sin hexadecimales. */
+.detfund-aviso { font-size: 11.5px; color: var(--text); line-height: 1.45; margin: 8px 0 0; padding: 2px 0 2px 9px; border-left: 2px solid var(--gold); }
+.detfund-aviso > b { color: var(--gold); }
+.detfund-fila > em.detfund-alerta { color: var(--gold); }
 .tvwrap { margin-top: 12px; height: 190px; border-radius: 12px; overflow: hidden; }
 tr.asset-row { cursor: pointer; }
 /* La LINEA DE CORTE entre grupos (14/09/2026, pedido de Guzman). Va arriba de
